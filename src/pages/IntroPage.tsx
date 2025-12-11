@@ -7,11 +7,11 @@ const IntroPage = () => {
   const [showText, setShowText] = useState(false);
   const [showButton, setShowButton] = useState(false);
   const navigate = useNavigate();
-  const { country, setCountry } = useStore();
+  const { customer } = useStore();
 
   useEffect(() => {
     const textTimer = setTimeout(() => setShowText(true), 500);
-    const buttonTimer = setTimeout(() => setShowButton(true), 3500);
+    const buttonTimer = setTimeout(() => setShowButton(true), 3000);
     return () => {
       clearTimeout(textTimer);
       clearTimeout(buttonTimer);
@@ -19,16 +19,16 @@ const IntroPage = () => {
   }, []);
 
   const handleEnter = () => {
-    if (country) {
+    if (customer) {
       navigate('/home');
     } else {
-      navigate('/select-country');
+      navigate('/auth');
     }
   };
 
   return (
     <div className="min-h-screen bg-secondary flex flex-col items-center justify-center relative overflow-hidden">
-      {/* Subtle background pattern */}
+      {/* Background pattern */}
       <div className="absolute inset-0 opacity-5">
         <div className="absolute inset-0" style={{
           backgroundImage: `radial-gradient(circle at 25% 25%, hsl(var(--gold)) 1px, transparent 1px)`,
@@ -39,7 +39,7 @@ const IntroPage = () => {
       {/* Ambient glow */}
       <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] rounded-full bg-gold/5 blur-3xl" />
 
-      <div className="relative z-10 text-center">
+      <div className="relative z-10 text-center px-4">
         <AnimatePresence>
           {showText && (
             <motion.div
@@ -61,7 +61,7 @@ const IntroPage = () => {
                       animate={{ opacity: 1, y: 0 }}
                       transition={{
                         duration: 0.5,
-                        delay: i * 0.15,
+                        delay: i * 0.12,
                         ease: "easeOut"
                       }}
                       className="inline-block"
@@ -76,14 +76,14 @@ const IntroPage = () => {
                 className="h-px w-32 mx-auto bg-gradient-to-r from-transparent via-gold to-transparent mb-6"
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
-                transition={{ duration: 1, delay: 1.5 }}
+                transition={{ duration: 1, delay: 1.2 }}
               />
 
               <motion.p
                 className="text-gold-light/60 font-body text-sm md:text-base tracking-[0.5em] uppercase"
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: 1, delay: 2 }}
+                transition={{ duration: 1, delay: 1.5 }}
               >
                 Luxury Jewelry
               </motion.p>
@@ -95,7 +95,7 @@ const IntroPage = () => {
           {showButton && (
             <motion.button
               onClick={handleEnter}
-              className="mt-16 px-10 py-4 border border-gold/50 text-gold font-heading tracking-[0.2em] text-sm uppercase relative overflow-hidden group"
+              className="mt-12 px-10 py-4 border border-gold/50 text-gold font-heading tracking-[0.2em] text-sm uppercase relative overflow-hidden group"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8 }}
@@ -121,7 +121,7 @@ const IntroPage = () => {
         className="absolute bottom-10 left-1/2 -translate-x-1/2 flex items-center gap-4"
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ delay: 4, duration: 1 }}
+        transition={{ delay: 3.5, duration: 1 }}
       >
         <div className="w-16 h-px bg-gold/30" />
         <div className="w-2 h-2 rotate-45 border border-gold/50" />

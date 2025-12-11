@@ -3,6 +3,13 @@ import { persist } from 'zustand/middleware';
 
 export type Country = 'YE' | 'SA';
 
+export interface Customer {
+  id: string;
+  name: string;
+  phone: string;
+  country: Country;
+}
+
 export interface Product {
   id: string;
   name: string;
@@ -29,9 +36,11 @@ export interface CartItem {
 
 interface StoreState {
   country: Country | null;
+  customer: Customer | null;
   cart: CartItem[];
   isCartOpen: boolean;
   setCountry: (country: Country) => void;
+  setCustomer: (customer: Customer | null) => void;
   addToCart: (product: Product, quantity?: number) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
@@ -41,16 +50,19 @@ interface StoreState {
   closeCart: () => void;
   getCartTotal: () => number;
   getCartCount: () => number;
+  logout: () => void;
 }
 
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
       country: null,
+      customer: null,
       cart: [],
       isCartOpen: false,
       
       setCountry: (country) => set({ country }),
+      setCustomer: (customer) => set({ customer }),
       
       addToCart: (product, quantity = 1) => {
         const cart = get().cart;
@@ -103,10 +115,28 @@ export const useStore = create<StoreState>()(
       getCartCount: () => {
         return get().cart.reduce((count, item) => count + item.quantity, 0);
       },
+
+      logout: () => set({ customer: null, cart: [] }),
     }),
     {
       name: 'ermgold-store',
-      partialize: (state) => ({ country: state.country, cart: state.cart }),
+      partialize: (state) => ({ 
+        country: state.country, 
+        customer: state.customer, 
+        cart: state.cart 
+      }),
     }
   )
 );
+
+// Helper to detect country from phone number
+export const detectCountryFromPhone = (phone: string): Country | null => {
+  const cleanPhone = phone.replace(/\D/g, '');
+  if (cleanPhone.startsWith('966') || cleanPhone.startsWith('05')) {
+    return 'SA';
+  }
+  if (cleanPhone.startsWith('967') || cleanPhone.startsWith('07')) {
+    return 'YE';
+  }
+  return null;
+};

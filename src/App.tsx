@@ -14,9 +14,19 @@ import AboutPage from "./pages/AboutPage";
 import OffersPage from "./pages/OffersPage";
 import NotFound from "./pages/NotFound";
 
+// Admin pages
+import AdminLoginPage from "./pages/admin/AdminLoginPage";
+import AdminLayout from "./components/admin/AdminLayout";
+import AdminDashboard from "./pages/admin/AdminDashboard";
+import AdminProductsPage from "./pages/admin/AdminProductsPage";
+import AdminProductFormPage from "./pages/admin/AdminProductFormPage";
+import AdminOrdersPage from "./pages/admin/AdminOrdersPage";
+import AdminCustomersPage from "./pages/admin/AdminCustomersPage";
+import AdminBannersPage from "./pages/admin/AdminBannersPage";
+import AdminSettingsPage from "./pages/admin/AdminSettingsPage";
+
 const queryClient = new QueryClient();
 
-// Protected route wrapper
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { customer } = useStore();
   if (!customer) {
@@ -40,6 +50,20 @@ const App = () => (
           <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
           <Route path="/about" element={<ProtectedRoute><AboutPage /></ProtectedRoute>} />
           <Route path="/offers" element={<ProtectedRoute><OffersPage /></ProtectedRoute>} />
+          
+          {/* Admin Routes */}
+          <Route path="/admin/login" element={<AdminLoginPage />} />
+          <Route path="/admin" element={<AdminLayout />}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="products" element={<AdminProductsPage />} />
+            <Route path="products/new" element={<AdminProductFormPage />} />
+            <Route path="products/:id" element={<AdminProductFormPage />} />
+            <Route path="orders" element={<AdminOrdersPage />} />
+            <Route path="customers" element={<AdminCustomersPage />} />
+            <Route path="banners" element={<AdminBannersPage />} />
+            <Route path="settings" element={<AdminSettingsPage />} />
+          </Route>
+          
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

@@ -94,73 +94,58 @@ const CustomerAuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
+    <div className="min-h-screen bg-gradient-to-br from-secondary via-secondary to-secondary/90 flex items-center justify-center p-4">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="w-full max-w-md"
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ duration: 0.4 }}
+        className="w-full max-w-sm"
       >
-        {/* University-style Card */}
-        <div className="border border-primary/20 bg-card shadow-lg">
-          {/* Header Bar */}
-          <div className="bg-secondary py-4 px-6 border-b border-primary/30">
-            <h1 className="text-xl font-heading text-primary text-center tracking-wide">
-              تسجيل الدخول
+        <div className="backdrop-blur-sm bg-card/80 rounded-2xl shadow-2xl shadow-primary/10 p-8 space-y-8">
+          {/* Welcome Text */}
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-heading text-primary">
+              مرحباً
             </h1>
-          </div>
-
-          {/* Form Body */}
-          <div className="p-6 md:p-8 space-y-6">
-            <form onSubmit={handleSubmit} className="space-y-5">
-              {/* Name Field */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground/80 text-right">
-                  الاسم الكامل
-                </label>
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="أدخل اسمك"
-                  className="bg-background border border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 h-12"
-                  dir="rtl"
-                />
-              </div>
-
-              {/* Phone Field */}
-              <div className="space-y-2">
-                <label className="block text-sm font-medium text-foreground/80 text-right">
-                  رقم الهاتف
-                </label>
-                <Input
-                  value={formData.phone}
-                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                  placeholder="+966 أو +967"
-                  className="bg-background border border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 h-12"
-                  dir="ltr"
-                />
-              </div>
-
-              <Button
-                type="submit"
-                disabled={isLoading}
-                className="w-full btn-gold h-12 font-heading tracking-wider mt-4"
-              >
-                {isLoading ? (
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                ) : (
-                  'دخول'
-                )}
-              </Button>
-            </form>
-          </div>
-
-          {/* Footer */}
-          <div className="bg-secondary/50 py-3 px-6 border-t border-primary/10">
-            <p className="text-xs text-muted-foreground text-center">
-              سيتم إنشاء حساب جديد تلقائياً
+            <p className="text-sm text-muted-foreground">
+              أدخل بياناتك للمتابعة
             </p>
           </div>
+
+          {/* Form */}
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="relative">
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="الاسم"
+                className="bg-background/50 border-0 ring-1 ring-border/50 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary h-12 rounded-xl text-center"
+                dir="rtl"
+              />
+            </div>
+
+            <div className="relative">
+              <Input
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="رقم الهاتف (+966 أو +967)"
+                className="bg-background/50 border-0 ring-1 ring-border/50 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary h-12 rounded-xl text-center"
+                dir="ltr"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 rounded-xl font-heading tracking-wider text-base shadow-lg shadow-primary/20 transition-all hover:shadow-xl hover:shadow-primary/30"
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                'دخول'
+              )}
+            </Button>
+          </form>
         </div>
       </motion.div>
     </div>

@@ -39,10 +39,6 @@ export default {
         cream: "hsl(var(--cream))",
         charcoal: "hsl(var(--charcoal))",
         "royal-black": "hsl(var(--royal-black))",
-        marble: {
-          light: "hsl(var(--marble-light))",
-          vein: "hsl(var(--marble-vein))",
-        },
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -125,8 +121,8 @@ export default {
           "100%": { backgroundPosition: "200% 0" },
         },
         "gold-glow": {
-          "0%, 100%": { boxShadow: "0 0 20px hsl(43 74% 52% / 0.3)" },
-          "50%": { boxShadow: "0 0 40px hsl(43 74% 52% / 0.5)" },
+          "0%, 100%": { boxShadow: "0 0 25px hsl(46 52% 55% / 0.35)" },
+          "50%": { boxShadow: "0 0 50px hsl(43 64% 66% / 0.5)" },
         },
       },
       animation: {
@@ -142,17 +138,17 @@ export default {
         "gold-glow": "gold-glow 2s ease-in-out infinite",
       },
       boxShadow: {
-        gold: "0 4px 30px -4px hsl(43 74% 52% / 0.35)",
-        "gold-glow": "0 0 40px hsl(43 80% 65% / 0.4)",
-        elegant: "0 10px 40px -10px hsl(0 0% 0% / 0.12)",
-        card: "0 4px 20px -4px hsl(0 0% 0% / 0.08)",
-        hover: "0 20px 50px -15px hsl(0 0% 0% / 0.18)",
-        luxury: "0 25px 60px -15px hsl(0 0% 0% / 0.2)",
+        gold: "0 4px 30px -4px hsl(46 52% 55% / 0.4)",
+        "gold-glow": "0 0 50px hsl(43 64% 66% / 0.35)",
+        elegant: "0 10px 40px -10px hsl(0 0% 0% / 0.5)",
+        card: "0 4px 25px -4px hsl(0 0% 0% / 0.4)",
+        hover: "0 20px 50px -15px hsl(0 0% 0% / 0.6)",
+        luxury: "0 25px 60px -15px hsl(0 0% 0% / 0.7)",
       },
       backgroundImage: {
-        "gradient-gold": "linear-gradient(135deg, hsl(43 74% 52%), hsl(43 85% 70%), hsl(43 74% 52%))",
-        "gradient-royal": "linear-gradient(180deg, hsl(0 0% 4%), hsl(0 0% 12%))",
-        "gradient-beige": "linear-gradient(180deg, hsl(40 47% 93%), hsl(45 50% 96%))",
+        "gradient-gold": "linear-gradient(135deg, hsl(46 52% 55%), hsl(43 64% 66%), hsl(46 52% 55%))",
+        "gradient-royal": "linear-gradient(180deg, hsl(0 0% 7%), hsl(0 0% 12%))",
+        "gradient-beige": "linear-gradient(180deg, hsl(33 45% 84%), hsl(40 43% 95%))",
       },
     },
   },

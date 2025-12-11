@@ -4,7 +4,9 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, Edit, Trash2, Eye, EyeOff } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, EyeOff, Package, Filter } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { cn } from '@/lib/utils';
 
 interface Product {
   id: string;
@@ -25,6 +27,7 @@ const AdminProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
+  const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
 
   useEffect(() => {
     fetchProducts();
@@ -71,15 +74,27 @@ const AdminProductsPage = () => {
     }
   };
 
-  const filteredProducts = products.filter(p =>
-    p.name_ar.includes(search) || p.name.toLowerCase().includes(search.toLowerCase())
-  );
+  const filteredProducts = products.filter(p => {
+    const matchesSearch = p.name_ar.includes(search) || p.name.toLowerCase().includes(search.toLowerCase());
+    const matchesFilter = filter === 'all' || (filter === 'active' ? p.is_active : !p.is_active);
+    return matchesSearch && matchesFilter;
+  });
+
+  const stats = {
+    total: products.length,
+    active: products.filter(p => p.is_active).length,
+    inactive: products.filter(p => !p.is_active).length,
+  };
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-3xl text-foreground">المنتجات</h1>
-        <Button asChild className="btn-gold gap-2">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="font-heading text-2xl md:text-3xl text-foreground">المنتجات</h1>
+          <p className="text-muted-foreground text-sm mt-1">{stats.total} منتج • {stats.active} نشط</p>
+        </div>
+        <Button asChild className="btn-gold gap-2 w-full sm:w-auto">
           <Link to="/admin/products/new">
             <Plus className="w-4 h-4" />
             إضافة منتج
@@ -87,23 +102,142 @@ const AdminProductsPage = () => {
         </Button>
       </div>
 
-      {/* Search */}
-      <div className="relative max-w-md">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="بحث عن منتج..."
-          className="pr-10"
-          dir="rtl"
-        />
+      {/* Stats Cards - Mobile */}
+      <div className="grid grid-cols-3 gap-3 md:hidden">
+        {[
+          { label: 'الكل', value: stats.total, filter: 'all' as const, color: 'bg-primary/10 text-primary' },
+          { label: 'نشط', value: stats.active, filter: 'active' as const, color: 'bg-green-500/10 text-green-600' },
+          { label: 'معطل', value: stats.inactive, filter: 'inactive' as const, color: 'bg-red-500/10 text-red-600' },
+        ].map((stat) => (
+          <button
+            key={stat.filter}
+            onClick={() => setFilter(stat.filter)}
+            className={cn(
+              "p-3 rounded-xl text-center transition-all",
+              filter === stat.filter ? stat.color + ' ring-2 ring-offset-2 ring-current' : 'bg-card border border-border'
+            )}
+          >
+            <p className="text-xl font-heading">{stat.value}</p>
+            <p className="text-xs">{stat.label}</p>
+          </button>
+        ))}
       </div>
 
-      {/* Products Table */}
-      <div className="bg-card border border-border rounded overflow-hidden">
+      {/* Search & Filter */}
+      <div className="flex flex-col sm:flex-row gap-3">
+        <div className="relative flex-1">
+          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+          <Input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="بحث عن منتج..."
+            className="pr-10 bg-card"
+            dir="rtl"
+          />
+        </div>
+        <div className="hidden md:flex gap-2">
+          {['all', 'active', 'inactive'].map((f) => (
+            <Button
+              key={f}
+              variant={filter === f ? 'default' : 'outline'}
+              size="sm"
+              onClick={() => setFilter(f as typeof filter)}
+              className={filter === f ? 'btn-gold' : ''}
+            >
+              {f === 'all' ? 'الكل' : f === 'active' ? 'نشط' : 'معطل'}
+            </Button>
+          ))}
+        </div>
+      </div>
+
+      {/* Mobile Cards */}
+      <div className="md:hidden space-y-3">
+        {filteredProducts.map((product, index) => (
+          <motion.div
+            key={product.id}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.05 }}
+            className="bg-card border border-border rounded-xl p-4"
+          >
+            <div className="flex gap-3">
+              <img
+                src={product.images?.[0] || '/placeholder.svg'}
+                alt={product.name_ar}
+                className="w-20 h-20 object-cover rounded-lg"
+              />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <h3 className="font-heading text-foreground truncate">{product.name_ar}</h3>
+                    <p className="text-xs text-muted-foreground">{product.category}</p>
+                  </div>
+                  <span className={cn(
+                    "px-2 py-1 rounded-full text-xs font-medium shrink-0",
+                    product.is_active 
+                      ? 'bg-green-500/15 text-green-600 border border-green-500/30' 
+                      : 'bg-red-500/15 text-red-600 border border-red-500/30'
+                  )}>
+                    {product.is_active ? 'نشط' : 'معطل'}
+                  </span>
+                </div>
+                <div className="flex items-center gap-2 mt-2">
+                  <span className="font-heading text-primary">{product.price} ر.س</span>
+                  {product.discount > 0 && (
+                    <span className="text-xs text-destructive bg-destructive/10 px-1.5 py-0.5 rounded">
+                      -{product.discount}%
+                    </span>
+                  )}
+                </div>
+                <div className="flex gap-1 mt-2">
+                  {product.countries?.map(c => (
+                    <span key={c} className="text-sm">
+                      {c === 'SA' ? '🇸🇦' : '🇾🇪'}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
+              <Button
+                size="sm"
+                variant="outline"
+                className="flex-1 gap-2"
+                onClick={() => toggleActive(product.id, product.is_active)}
+              >
+                {product.is_active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                {product.is_active ? 'تعطيل' : 'تفعيل'}
+              </Button>
+              <Button asChild size="sm" variant="outline" className="flex-1 gap-2">
+                <Link to={`/admin/products/${product.id}`}>
+                  <Edit className="w-4 h-4" />
+                  تعديل
+                </Link>
+              </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                onClick={() => deleteProduct(product.id)}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
+            </div>
+          </motion.div>
+        ))}
+        {filteredProducts.length === 0 && (
+          <div className="text-center py-12 text-muted-foreground">
+            <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+            <p>{isLoading ? 'جاري التحميل...' : 'لا توجد منتجات'}</p>
+          </div>
+        )}
+      </div>
+
+      {/* Desktop Table */}
+      <div className="hidden md:block bg-card border border-border rounded-xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-muted">
+            <thead className="bg-muted/50">
               <tr>
                 <th className="text-right p-4 font-heading text-sm">الصورة</th>
                 <th className="text-right p-4 font-heading text-sm">المنتج</th>
@@ -116,12 +250,12 @@ const AdminProductsPage = () => {
             </thead>
             <tbody>
               {filteredProducts.map((product) => (
-                <tr key={product.id} className="border-b border-border hover:bg-muted/50">
+                <tr key={product.id} className="border-b border-border hover:bg-muted/30 transition-colors">
                   <td className="p-4">
                     <img
                       src={product.images?.[0] || '/placeholder.svg'}
                       alt={product.name_ar}
-                      className="w-12 h-12 object-cover rounded"
+                      className="w-14 h-14 object-cover rounded-lg"
                     />
                   </td>
                   <td className="p-4">
@@ -129,38 +263,44 @@ const AdminProductsPage = () => {
                     <p className="text-xs text-muted-foreground">{product.slug}</p>
                   </td>
                   <td className="p-4">
-                    <span className="font-heading text-gold">${product.price}</span>
+                    <span className="font-heading text-primary">{product.price} ر.س</span>
                     {product.discount > 0 && (
-                      <span className="text-xs text-destructive mr-2">-{product.discount}%</span>
+                      <span className="text-xs text-destructive mr-2 bg-destructive/10 px-1.5 py-0.5 rounded">
+                        -{product.discount}%
+                      </span>
                     )}
                   </td>
                   <td className="p-4 text-sm">{product.category}</td>
                   <td className="p-4">
                     <div className="flex gap-1">
                       {product.countries?.map(c => (
-                        <span key={c} className="text-xs bg-muted px-2 py-1 rounded">
+                        <span key={c} className="text-sm bg-muted px-2 py-1 rounded-lg">
                           {c === 'SA' ? '🇸🇦' : '🇾🇪'}
                         </span>
                       ))}
                     </div>
                   </td>
                   <td className="p-4">
-                    <span className={`px-2 py-1 rounded text-xs ${
-                      product.is_active ? 'bg-green-500/10 text-green-600' : 'bg-red-500/10 text-red-600'
-                    }`}>
+                    <span className={cn(
+                      "px-2.5 py-1 rounded-full text-xs font-medium",
+                      product.is_active 
+                        ? 'bg-green-500/15 text-green-600 border border-green-500/30' 
+                        : 'bg-red-500/15 text-red-600 border border-red-500/30'
+                    )}>
                       {product.is_active ? 'نشط' : 'معطل'}
                     </span>
                   </td>
                   <td className="p-4">
-                    <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-1">
                       <Button
                         size="icon"
                         variant="ghost"
+                        className="hover:bg-muted"
                         onClick={() => toggleActive(product.id, product.is_active)}
                       >
                         {product.is_active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </Button>
-                      <Button asChild size="icon" variant="ghost">
+                      <Button asChild size="icon" variant="ghost" className="hover:bg-muted">
                         <Link to={`/admin/products/${product.id}`}>
                           <Edit className="w-4 h-4" />
                         </Link>
@@ -168,7 +308,7 @@ const AdminProductsPage = () => {
                       <Button
                         size="icon"
                         variant="ghost"
-                        className="text-destructive"
+                        className="text-destructive hover:bg-destructive/10"
                         onClick={() => deleteProduct(product.id)}
                       >
                         <Trash2 className="w-4 h-4" />
@@ -179,8 +319,9 @@ const AdminProductsPage = () => {
               ))}
               {filteredProducts.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                    {isLoading ? 'جاري التحميل...' : 'لا توجد منتجات'}
+                  <td colSpan={7} className="p-12 text-center text-muted-foreground">
+                    <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                    <p>{isLoading ? 'جاري التحميل...' : 'لا توجد منتجات'}</p>
                   </td>
                 </tr>
               )}

@@ -5,9 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
 const CartDrawer = () => {
-  const { cart, isCartOpen, closeCart, removeFromCart, updateQuantity, getCartTotal, clearCart } = useStore();
+  const { cart, isCartOpen, closeCart, removeFromCart, updateQuantity, getCartTotal, clearCart, country } = useStore();
   const navigate = useNavigate();
   const total = getCartTotal();
+  const currency = country === 'SA' ? 'ريال' : 'ريال';
 
   const handleCheckout = () => {
     closeCart();
@@ -91,7 +92,7 @@ const CartDrawer = () => {
                             {item.product.nameAr}
                           </h3>
                           <p className="text-gold font-body text-sm">
-                            ${itemPrice.toFixed(2)}
+                            {itemPrice.toFixed(2)} {currency}
                           </p>
 
                           {/* Quantity Controls */}
@@ -130,7 +131,7 @@ const CartDrawer = () => {
               <div className="p-6 border-t border-border bg-muted/30">
                 <div className="flex items-center justify-between mb-4">
                   <span className="font-body text-muted-foreground">المجموع</span>
-                  <span className="font-heading text-xl text-gold">${total.toFixed(2)}</span>
+                  <span className="font-heading text-xl text-gold">{total.toFixed(2)} {currency}</span>
                 </div>
                 <Button
                   onClick={handleCheckout}

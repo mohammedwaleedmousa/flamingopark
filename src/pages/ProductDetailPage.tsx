@@ -210,9 +210,9 @@ const ProductDetailPage = () => {
               <h2 className="font-heading text-2xl text-foreground mb-8 text-center">
                 منتجات <span className="text-gold">مشابهة</span>
               </h2>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
                 {relatedProducts.map((product, index) => (
-                  <ProductCard key={product.id} product={product} index={index} />
+                  <ProductCard key={product.id} product={product} index={index} compact />
                 ))}
               </div>
             </section>

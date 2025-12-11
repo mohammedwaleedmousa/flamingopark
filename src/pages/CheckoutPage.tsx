@@ -172,37 +172,29 @@ const CheckoutPage = () => {
         payment_method: paymentMethod,
       });
 
-      // Build WhatsApp message with product details
-      const itemsList = orderItems.map(item => 
-        `• ${item.product_name} (${item.quantity}x) - ${item.price.toFixed(2)} ${currency}`
-      ).join('\n');
+      // Prepare order data for confirmation page
+      const orderData = {
+        orderNumber,
+        customerName: customer!.name,
+        customerPhone: customer!.phone,
+        customerAddress: formData.address,
+        customerNotes: formData.notes,
+        items: orderItems,
+        subtotal,
+        deliveryFee,
+        total,
+        paymentMethod,
+        deliveryCompany: selectedCompany?.name || '',
+        country: country!,
+        whatsappNumber: whatsappNumber || (country === 'SA' ? '966123456789' : '967123456789'),
+        createdAt: new Date().toISOString(),
+      };
 
-      const message = `🛒 طلب جديد #${orderNumber}
-
-👤 العميل: ${customer!.name}
-📱 الهاتف: ${customer!.phone}
-📍 العنوان: ${formData.address}
-${formData.notes ? `📝 ملاحظات: ${formData.notes}` : ''}
-
-📦 المنتجات:
-${itemsList}
-
-💰 المجموع الفرعي: ${subtotal.toFixed(2)} ${currency}
-🚚 التوصيل: ${deliveryFee.toFixed(2)} ${currency}
-💵 الإجمالي: ${total.toFixed(2)} ${currency}
-
-💳 طريقة الدفع: ${paymentMethod === 'cod' ? 'عند الاستلام' : 'تحويل بنكي'}`;
-      
-      const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodeURIComponent(message)}`;
-      
-      window.open(whatsappUrl, '_blank');
       clearCart();
-      navigate('/home');
       
-      toast({
-        title: 'تم إرسال الطلب',
-        description: 'سيتم التواصل معك قريباً',
-      });
+      // Navigate to confirmation page with order data
+      navigate('/order-confirmation', { state: { orderData } });
+      
     } catch (error) {
       console.error('Order error:', error);
       toast({

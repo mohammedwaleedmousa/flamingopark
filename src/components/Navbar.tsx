@@ -3,10 +3,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Search, Menu, X, MapPin } from 'lucide-react';
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
+  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const { country, openCart, getCartCount } = useStore();
   const cartCount = getCartCount();
   const navigate = useNavigate();
@@ -18,10 +21,32 @@ const Navbar = () => {
     { href: '/about', label: 'من نحن', labelEn: 'About' },
   ];
 
+  // Fetch brands for the strip
+  const { data: brands = [] } = useQuery({
+    queryKey: ['navbar-brands', country],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('brands')
+        .select('id, name')
+        .eq('is_active', true)
+        .contains('countries', [country])
+        .order('sort_order', { ascending: true })
+        .limit(6);
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!country,
+  });
+
+  const handleBrandClick = (brandName: string) => {
+    setSelectedBrand(brandName);
+    navigate(`/products?brand=${encodeURIComponent(brandName)}`);
+  };
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
-      {/* Main Navbar - White background like the image */}
-      <div className="bg-white border-b border-neutral-200">
+      {/* Main Navbar - White background */}
+      <div className="bg-white border-b border-neutral-100">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-14 md:h-16">
             {/* Left: Menu Button */}
@@ -33,9 +58,8 @@ const Navbar = () => {
               {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
 
-            {/* Center: Logo - Elegant gold styling like the image */}
+            {/* Center: Logo - Elegant gold styling */}
             <Link to="/home" className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-0.5">
-              {/* ERMGOLD Text - Elegant serif with gold gradient */}
               <span 
                 className="font-heading text-xl md:text-2xl tracking-[0.12em] font-medium"
                 style={{
@@ -47,7 +71,7 @@ const Navbar = () => {
               >
                 ERMGOLD
               </span>
-              {/* Chain/Link Icon - matching gold */}
+              {/* Chain/Link Icon */}
               <svg 
                 viewBox="0 0 36 12" 
                 className="w-7 h-2.5"
@@ -60,7 +84,6 @@ const Navbar = () => {
 
             {/* Right: Search & Cart */}
             <div className="flex items-center gap-0.5">
-              {/* Search */}
               <button
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
                 className="p-2 text-neutral-800 hover:text-gold transition-colors"
@@ -69,7 +92,6 @@ const Navbar = () => {
                 <Search className="w-5 h-5" />
               </button>
 
-              {/* Cart */}
               <button
                 onClick={openCart}
                 className="relative p-2 text-neutral-800 hover:text-gold transition-colors"
@@ -91,6 +113,33 @@ const Navbar = () => {
           </div>
         </div>
       </div>
+
+      {/* Brands Strip - Black background with gold text like the image */}
+      {brands.length > 0 && (
+        <div className="bg-black">
+          <div className="container mx-auto px-2">
+            <div className="flex items-center justify-center gap-1 md:gap-2 h-10 md:h-11 overflow-x-auto scrollbar-hide">
+              {brands.map((brand, index) => (
+                <button
+                  key={brand.id}
+                  onClick={() => handleBrandClick(brand.name)}
+                  className={`px-3 md:px-4 py-1.5 text-xs md:text-sm font-body whitespace-nowrap transition-all duration-200 ${
+                    selectedBrand === brand.name
+                      ? 'text-black bg-gold rounded'
+                      : 'text-neutral-300 hover:text-gold'
+                  }`}
+                  style={{
+                    fontFamily: index === 0 ? 'serif' : 'inherit',
+                    fontStyle: index === 0 ? 'italic' : 'normal',
+                  }}
+                >
+                  {brand.name}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Search Bar - Expandable */}
       <AnimatePresence>

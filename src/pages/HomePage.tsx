@@ -155,37 +155,30 @@ const HomePage = () => {
             </motion.div>
           </div>
 
-          {/* Animated Categories Strip */}
-          <div className="relative overflow-hidden px-4">
-            <motion.div
-              className="flex items-center gap-5 md:gap-8"
-              animate={{
-                x: ['0%', '-25%'],
-              }}
-              transition={{
-                x: {
-                  repeat: Infinity,
-                  repeatType: 'loop',
-                  duration: 20,
-                  ease: 'linear',
-                },
-              }}
-            >
-              {[...categories, ...categories, ...categories, ...categories].map((category, index) => (
+          {/* Draggable Categories Strip */}
+          <div 
+            className="relative overflow-x-auto px-4 scrollbar-hide cursor-grab active:cursor-grabbing"
+            style={{
+              scrollbarWidth: 'none',
+              msOverflowStyle: 'none',
+            }}
+          >
+            <div className="flex items-center gap-4 md:gap-6 pb-2">
+              {categories.map((category, index) => (
                 <Link
                   key={`${category.name}-${index}`}
                   to={category.link}
-                  className="group flex-shrink-0 p-5 md:p-8 bg-card rounded-2xl border-2 border-gold/30 hover:border-gold transition-all duration-300 hover:shadow-[0_15px_50px_-10px_hsl(var(--gold)/0.4)] text-center min-w-[140px] md:min-w-[180px]"
+                  className="group flex-shrink-0 p-4 md:p-6 bg-card rounded-xl border-2 border-gold/30 hover:border-gold transition-all duration-300 hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.4)] text-center min-w-[100px] md:min-w-[130px]"
                 >
-                  <span className="text-4xl md:text-5xl block mb-4 group-hover:scale-110 transition-transform duration-300">
+                  <span className="text-3xl md:text-4xl block mb-3 group-hover:scale-110 transition-transform duration-300">
                     {category.icon}
                   </span>
-                  <h3 className="font-heading text-lg md:text-xl text-foreground group-hover:text-gold transition-colors">
+                  <h3 className="font-heading text-base md:text-lg text-foreground group-hover:text-gold transition-colors">
                     {category.name}
                   </h3>
                 </Link>
               ))}
-            </motion.div>
+            </div>
           </div>
         </section>
 

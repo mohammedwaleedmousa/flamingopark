@@ -36,7 +36,7 @@ const Navbar = () => {
             {/* Center: Logo */}
             <Link to="/home" className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
               <span 
-                className="text-2xl md:text-3xl tracking-[0.15em]"
+                className="text-lg md:text-xl tracking-[0.12em]"
                 style={{
                   fontFamily: "'Cinzel', serif",
                   fontWeight: 600,
@@ -51,7 +51,7 @@ const Navbar = () => {
               {/* Chain Icon */}
               <svg 
                 viewBox="0 0 36 12" 
-                className="w-8 h-3 mt-0.5"
+                className="w-6 h-2 mt-0.5"
                 style={{ color: '#D4AF37' }}
               >
                 <ellipse cx="10" cy="6" rx="8" ry="4.5" fill="none" stroke="currentColor" strokeWidth="1.5"/>

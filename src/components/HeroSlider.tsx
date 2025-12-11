@@ -225,7 +225,7 @@ const HeroSlider = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="max-w-2xl text-center"
+              className="max-w-2xl text-center flex flex-col items-center justify-center"
             >
               {/* Subtitle Badge */}
               {currentBanner.subtitle_ar && (
@@ -247,7 +247,7 @@ const HeroSlider = () => {
                 initial={{ opacity: 0, y: 40 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5, duration: 0.6 }}
-                className="font-heading text-5xl md:text-6xl lg:text-7xl text-secondary-foreground leading-[1.1] mb-6"
+                className="font-heading text-5xl md:text-6xl lg:text-7xl text-secondary-foreground leading-[1.1] mb-6 text-center"
               >
                 {currentBanner.title_ar.split(' ').map((word, idx) => (
                   <span key={idx}>
@@ -265,15 +265,15 @@ const HeroSlider = () => {
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
                 transition={{ delay: 0.7, duration: 0.6 }}
-                className="w-24 h-1 bg-gradient-to-r from-gold to-gold-light mb-8 mx-auto"
+                className="w-24 h-1 bg-gradient-to-r from-gold to-gold-light mb-8"
               />
 
-              {/* CTA Buttons - Stacked vertically */}
+              {/* CTA Buttons - Centered */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
-                className="flex flex-col items-start gap-3"
+                className="flex flex-col items-center gap-3"
               >
                 <Link
                   to={currentBanner.cta_link || '/products'}
@@ -286,7 +286,7 @@ const HeroSlider = () => {
                   <ArrowLeft className="w-5 h-5 relative group-hover:-translate-x-1 transition-transform" />
                 </Link>
 
-                {/* Secondary Link - Now with background */}
+                {/* Secondary Link */}
                 <Link
                   to="/about"
                   className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-gold/10 backdrop-blur-sm border border-gold/30 text-gold font-heading tracking-wider text-sm uppercase hover:bg-gold/20 transition-all duration-300 rounded-lg min-w-[200px]"

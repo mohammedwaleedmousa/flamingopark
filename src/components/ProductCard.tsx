@@ -72,9 +72,9 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
       className="group"
     >
       <Link to={`/product/${product.slug}`} className="block">
-        <div className="relative bg-cream rounded-xl overflow-hidden border-2 border-gold/40 transition-all duration-500 hover:border-gold hover:shadow-[0_20px_60px_-15px_hsl(var(--gold)/0.4)]">
-          {/* Image Container */}
-          <div className={`relative overflow-hidden ${compact ? 'aspect-[3/4]' : 'aspect-[4/5]'}`}>
+        <div className="relative bg-cream rounded-lg overflow-hidden border-2 border-gold transition-all duration-500 hover:border-gold-light hover:shadow-[0_15px_40px_-10px_hsl(var(--gold)/0.4)]">
+          {/* Image Container - Fixed square aspect ratio */}
+          <div className="relative overflow-hidden aspect-square">
             {/* Background - Solid cream color */}
             <div className="absolute inset-0 bg-cream" />
             
@@ -89,7 +89,7 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
                 alt={product.nameAr}
                 loading="lazy"
                 onLoad={() => setImageLoaded(true)}
-                className={`w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-110 ${
+                className={`w-full h-full object-contain p-2 transition-all duration-700 ease-out group-hover:scale-105 ${
                   imageLoaded ? 'opacity-100' : 'opacity-0'
                 }`}
               />

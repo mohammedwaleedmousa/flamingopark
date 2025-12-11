@@ -53,8 +53,8 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
       className="group"
     >
       <Link to={`/product/${product.slug}`} className="block">
-        <div className="relative overflow-hidden rounded-xl bg-beige transition-all duration-300 hover:shadow-lg">
-          {/* Image Container - Square aspect ratio */}
+        <div className="relative overflow-hidden rounded-lg bg-beige border-2 border-gold transition-all duration-300 hover:border-gold-light hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.3)]">
+          {/* Image Container - Fixed square aspect ratio */}
           <div className="relative aspect-square overflow-hidden">
             {/* Image Skeleton */}
             {!imageLoaded && product.images[0] && (
@@ -67,7 +67,7 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
                 alt={product.nameAr}
                 loading="lazy"
                 onLoad={() => setImageLoaded(true)}
-                className={`w-full h-full object-contain p-4 transition-transform duration-500 group-hover:scale-105 ${
+                className={`w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105 ${
                   imageLoaded ? 'opacity-100' : 'opacity-0'
                 }`}
               />

@@ -38,7 +38,7 @@ const BrandsStrip = () => {
   const duplicatedBrands = [...brands, ...brands, ...brands, ...brands];
 
   return (
-    <section className="bg-secondary py-5 md:py-6 overflow-hidden border-y border-gold/10">
+    <section className="bg-secondary py-4 md:py-5 overflow-hidden border-y border-gold/10">
       <div className="relative">
         <motion.div
           className="flex items-center"
@@ -49,7 +49,7 @@ const BrandsStrip = () => {
             x: {
               repeat: Infinity,
               repeatType: 'loop',
-              duration: 25,
+              duration: 12,
               ease: 'linear',
             },
           }}
@@ -58,14 +58,14 @@ const BrandsStrip = () => {
             <button
               key={`${brand.id}-${index}`}
               onClick={() => handleBrandClick(brand.name)}
-              className="px-8 md:px-12 whitespace-nowrap transition-all duration-300 hover:scale-105 flex-shrink-0"
+              className="px-6 md:px-10 whitespace-nowrap transition-all duration-300 hover:scale-105 flex-shrink-0"
               style={{
                 fontFamily: "'Playfair Display', 'Cormorant Garamond', serif",
                 fontStyle: index % 2 === 0 ? 'italic' : 'normal',
                 fontWeight: 500,
-                fontSize: '20px',
+                fontSize: '16px',
                 color: '#D4AF37',
-                letterSpacing: '0.1em',
+                letterSpacing: '0.08em',
               }}
             >
               {brand.name}

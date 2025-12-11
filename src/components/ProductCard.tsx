@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
 import { Link } from 'react-router-dom';
-import { ShoppingBag, Share2 } from 'lucide-react';
+import { ShoppingBag, Share2, Heart, Eye } from 'lucide-react';
 import { Product } from '@/store/useStore';
 import { useStore } from '@/store/useStore';
 import { toast } from '@/hooks/use-toast';
+import { useState } from 'react';
 
 interface ProductCardProps {
   product: Product;
@@ -13,7 +14,9 @@ interface ProductCardProps {
 
 const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) => {
   const { addToCart, country } = useStore();
-  const currency = country === 'SA' ? 'ريال' : 'ريال';
+  const currency = country === 'SA' ? 'ر.س' : 'ر.ي';
+  const [isLiked, setIsLiked] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -43,58 +46,110 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
     }
   };
 
+  const handleLike = (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsLiked(!isLiked);
+    toast({
+      title: isLiked ? 'تمت الإزالة' : 'تمت الإضافة',
+      description: isLiked ? 'تمت إزالة المنتج من المفضلة' : 'تمت إضافة المنتج للمفضلة',
+    });
+  };
+
   const discountedPrice = product.discount
     ? product.price * (1 - product.discount / 100)
     : product.price;
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
+      initial={{ opacity: 0, y: 30 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ 
-        duration: 0.4, 
-        delay: index * 0.05,
+        duration: 0.5, 
+        delay: index * 0.08,
         ease: [0.25, 0.46, 0.45, 0.94]
       }}
+      className="group"
     >
-      <Link to={`/product/${product.slug}`} className="block group">
-        <div className="card-luxury overflow-hidden">
+      <Link to={`/product/${product.slug}`} className="block">
+        <div className="relative bg-card rounded-lg overflow-hidden border border-border/30 transition-all duration-500 hover:border-gold/40 hover:shadow-[0_20px_50px_-15px_hsl(var(--gold)/0.2)]">
           {/* Image Container */}
-          <div className={`relative overflow-hidden bg-muted ${compact ? 'aspect-[3/4]' : 'aspect-square'}`}>
+          <div className={`relative overflow-hidden ${compact ? 'aspect-[3/4]' : 'aspect-[4/5]'}`}>
+            {/* Background Gradient */}
+            <div className="absolute inset-0 bg-gradient-to-b from-muted/50 to-muted" />
+            
+            {/* Image Skeleton */}
+            {!imageLoaded && product.images[0] && (
+              <div className="absolute inset-0 bg-muted animate-pulse" />
+            )}
+            
             {product.images[0] ? (
               <img
                 src={product.images[0]}
                 alt={product.nameAr}
                 loading="lazy"
-                className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+                onLoad={() => setImageLoaded(true)}
+                className={`w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-110 ${
+                  imageLoaded ? 'opacity-100' : 'opacity-0'
+                }`}
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
-                لا توجد صورة
+              <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
+                <Eye className="w-8 h-8 opacity-40" />
+                <span className="text-xs">لا توجد صورة</span>
               </div>
             )}
             
-            {/* Discount Badge */}
-            {product.discount && (
-              <div className="absolute top-3 right-3 bg-gold text-secondary text-xs font-bold px-2 py-1 rounded">
-                -{product.discount}%
-              </div>
-            )}
+            {/* Gold Shine Effect on Hover */}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gold/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
 
-            {/* Quick Actions */}
-            <div className="absolute bottom-0 left-0 right-0 p-3 md:p-4 bg-gradient-to-t from-secondary/80 to-transparent translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out">
+            {/* Top Actions */}
+            <div className="absolute top-3 left-3 right-3 flex justify-between items-start">
+              {/* Badges */}
+              <div className="flex flex-col gap-1.5">
+                {product.discount && (
+                  <motion.span 
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="inline-flex items-center justify-center bg-gradient-to-r from-gold to-gold-light text-secondary text-[10px] font-bold px-2.5 py-1 rounded-full shadow-lg"
+                  >
+                    -{product.discount}%
+                  </motion.span>
+                )}
+                {!product.inStock && (
+                  <span className="inline-flex items-center justify-center bg-destructive/90 text-destructive-foreground text-[10px] font-medium px-2.5 py-1 rounded-full">
+                    نفذ المخزون
+                  </span>
+                )}
+              </div>
+              
+              {/* Like Button */}
+              <button
+                onClick={handleLike}
+                className={`p-2 rounded-full backdrop-blur-sm transition-all duration-300 ${
+                  isLiked 
+                    ? 'bg-gold text-secondary shadow-lg scale-110' 
+                    : 'bg-background/70 text-foreground hover:bg-background hover:scale-110'
+                }`}
+              >
+                <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+              </button>
+            </div>
+
+            {/* Bottom Actions - Slide Up */}
+            <div className="absolute bottom-0 left-0 right-0 p-3 translate-y-full group-hover:translate-y-0 transition-transform duration-400 ease-out">
               <div className="flex items-center gap-2">
                 <button
                   onClick={handleAddToCart}
-                  className="flex-1 flex items-center justify-center gap-1.5 md:gap-2 py-2 md:py-2.5 bg-gold text-secondary font-body text-xs md:text-sm rounded hover:bg-gold-light transition-colors duration-200"
+                  disabled={!product.inStock}
+                  className="flex-1 flex items-center justify-center gap-2 py-2.5 bg-gold hover:bg-gold-light text-secondary font-medium text-sm rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg hover:shadow-xl hover:-translate-y-0.5"
                 >
-                  <ShoppingBag className="w-3.5 h-3.5 md:w-4 md:h-4" />
-                  <span className="hidden sm:inline">إضافة للسلة</span>
-                  <span className="sm:hidden">أضف</span>
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>أضف للسلة</span>
                 </button>
                 <button
                   onClick={handleShare}
-                  className="p-2 md:p-2.5 bg-background/90 text-foreground rounded hover:bg-background transition-colors duration-200"
+                  className="p-2.5 bg-background/90 backdrop-blur-sm text-foreground rounded-lg hover:bg-background transition-all duration-300 shadow-lg"
                 >
                   <Share2 className="w-4 h-4" />
                 </button>
@@ -103,22 +158,45 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
           </div>
 
           {/* Content */}
-          <div className={`${compact ? 'p-3' : 'p-4'}`}>
-            <p className={`text-muted-foreground font-body mb-1 ${compact ? 'text-[10px]' : 'text-xs'}`}>{product.brand}</p>
-            <h3 className={`font-heading text-foreground group-hover:text-gold transition-colors duration-200 mb-2 line-clamp-2 ${compact ? 'text-sm' : 'text-base'}`}>
+          <div className={`relative ${compact ? 'p-3' : 'p-4'}`}>
+            {/* Brand */}
+            <div className="flex items-center gap-2 mb-2">
+              <span className="text-[10px] font-medium text-gold uppercase tracking-wider">
+                {product.brand}
+              </span>
+              <div className="flex-1 h-px bg-gradient-to-r from-gold/30 to-transparent" />
+            </div>
+            
+            {/* Product Name */}
+            <h3 className={`font-heading text-foreground group-hover:text-gold transition-colors duration-300 mb-3 line-clamp-2 leading-relaxed ${compact ? 'text-sm' : 'text-base'}`}>
               {product.nameAr}
             </h3>
-            <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
-              <span className={`font-heading text-gold ${compact ? 'text-base' : 'text-lg'}`}>
-                {discountedPrice.toFixed(2)} {currency}
-              </span>
-              {product.originalPrice && (
-                <span className={`text-muted-foreground line-through ${compact ? 'text-xs' : 'text-sm'}`}>
-                  {product.originalPrice.toFixed(2)} {currency}
+            
+            {/* Price Section */}
+            <div className="flex items-end justify-between gap-2">
+              <div className="flex flex-col">
+                <span className={`font-heading font-semibold text-gold ${compact ? 'text-lg' : 'text-xl'}`}>
+                  {discountedPrice.toFixed(0)} <span className="text-xs font-normal">{currency}</span>
                 </span>
+                {product.originalPrice && (
+                  <span className="text-muted-foreground line-through text-xs">
+                    {product.originalPrice.toFixed(0)} {currency}
+                  </span>
+                )}
+              </div>
+              
+              {/* Stock Indicator */}
+              {product.inStock && (
+                <div className="flex items-center gap-1.5">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                  <span className="text-[10px] text-muted-foreground">متوفر</span>
+                </div>
               )}
             </div>
           </div>
+
+          {/* Bottom Accent Line */}
+          <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-gold/50 to-transparent scale-x-0 group-hover:scale-x-100 transition-transform duration-500" />
         </div>
       </Link>
     </motion.div>

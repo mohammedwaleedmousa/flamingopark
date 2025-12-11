@@ -94,58 +94,73 @@ const CustomerAuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-6">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
         className="w-full max-w-md"
       >
-        {/* Luxury Frame */}
-        <div className="relative p-8 md:p-10">
-          {/* Corner decorations */}
-          <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary" />
-          <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary" />
-          <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-primary" />
-          <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary" />
+        {/* University-style Card */}
+        <div className="border border-primary/20 bg-card shadow-lg">
+          {/* Header Bar */}
+          <div className="bg-secondary py-4 px-6 border-b border-primary/30">
+            <h1 className="text-xl font-heading text-primary text-center tracking-wide">
+              تسجيل الدخول
+            </h1>
+          </div>
 
-          <h1 className="text-2xl font-heading text-primary text-center mb-10">
-            مرحباً بك
-          </h1>
+          {/* Form Body */}
+          <div className="p-6 md:p-8 space-y-6">
+            <form onSubmit={handleSubmit} className="space-y-5">
+              {/* Name Field */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground/80 text-right">
+                  الاسم الكامل
+                </label>
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="أدخل اسمك"
+                  className="bg-background border border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 h-12"
+                  dir="rtl"
+                />
+              </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="الاسم"
-                className="bg-transparent border-2 border-primary/40 text-foreground placeholder:text-muted-foreground focus:border-primary h-14 text-center text-lg rounded-none"
-                dir="rtl"
-              />
-            </div>
+              {/* Phone Field */}
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-foreground/80 text-right">
+                  رقم الهاتف
+                </label>
+                <Input
+                  value={formData.phone}
+                  onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                  placeholder="+966 أو +967"
+                  className="bg-background border border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-1 focus:ring-primary/20 h-12"
+                  dir="ltr"
+                />
+              </div>
 
-            <div>
-              <Input
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="رقم الهاتف (+966 أو +967)"
-                className="bg-transparent border-2 border-primary/40 text-foreground placeholder:text-muted-foreground focus:border-primary h-14 text-center text-lg rounded-none"
-                dir="ltr"
-              />
-            </div>
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-full btn-gold h-12 font-heading tracking-wider mt-4"
+              >
+                {isLoading ? (
+                  <Loader2 className="w-5 h-5 animate-spin" />
+                ) : (
+                  'دخول'
+                )}
+              </Button>
+            </form>
+          </div>
 
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full btn-gold h-14 font-heading tracking-wider text-lg rounded-none mt-8"
-            >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                'دخول'
-              )}
-            </Button>
-          </form>
+          {/* Footer */}
+          <div className="bg-secondary/50 py-3 px-6 border-t border-primary/10">
+            <p className="text-xs text-muted-foreground text-center">
+              سيتم إنشاء حساب جديد تلقائياً
+            </p>
+          </div>
         </div>
       </motion.div>
     </div>

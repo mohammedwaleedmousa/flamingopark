@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Outlet, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { SidebarProvider } from '@/components/ui/sidebar';
+import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import AdminSidebar from './AdminSidebar';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Menu } from 'lucide-react';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
@@ -60,9 +60,18 @@ const AdminLayout = () => {
     <SidebarProvider>
       <div className="min-h-screen flex w-full bg-background">
         <AdminSidebar />
-        <main className="flex-1 p-6 overflow-auto">
-          <Outlet />
-        </main>
+        <div className="flex-1 flex flex-col overflow-hidden">
+          {/* Mobile Header */}
+          <header className="md:hidden flex items-center gap-3 p-4 border-b border-border bg-sidebar">
+            <SidebarTrigger className="text-sidebar-foreground hover:text-sidebar-primary">
+              <Menu className="w-6 h-6" />
+            </SidebarTrigger>
+            <h1 className="logo-ermgold text-lg">ERMGOLD</h1>
+          </header>
+          <main className="flex-1 p-4 md:p-6 overflow-auto">
+            <Outlet />
+          </main>
+        </div>
       </div>
     </SidebarProvider>
   );

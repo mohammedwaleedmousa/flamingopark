@@ -1,125 +1,125 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@400;700;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;0,800;0,900;1,400&family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* ═══════════════════════════════════════════════════════════════
+   ERMGOLD LUXURY DESIGN SYSTEM
+   Inspired by Cartier, Gucci & World-Class Luxury Brands
+   ═══════════════════════════════════════════════════════════════ */
+
 @layer base {
   :root {
-    /* ERMGOLD Luxury Palette - Black/Gold/Cream/Marble inspired */
-    --background: 0 0% 98%;
-    --foreground: 0 0% 8%;
-
-    --card: 40 20% 97%;
-    --card-foreground: 0 0% 8%;
-
+    /* ─── Core Luxury Colors ─── */
+    --background: 40 47% 93%;          /* Warm Beige #F5F0E6 */
+    --foreground: 0 0% 4%;             /* Royal Black #0A0A0A */
+    
+    /* ─── Card & Surface Colors ─── */
+    --card: 0 0% 100%;                 /* Pure White */
+    --card-foreground: 0 0% 4%;
+    
+    /* ─── Popover ─── */
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 8%;
-
-    /* Rich Gold - More vibrant */
-    --primary: 42 70% 50%;
-    --primary-foreground: 0 0% 100%;
-
-    /* Deep Black */
-    --secondary: 0 0% 5%;
-    --secondary-foreground: 40 30% 95%;
-
-    /* Warm Cream */
-    --muted: 40 30% 94%;
-    --muted-foreground: 0 0% 40%;
-
-    /* Gold Accent */
-    --accent: 42 80% 45%;
+    --popover-foreground: 0 0% 4%;
+    
+    /* ─── Primary: Luxury Gold ─── */
+    --primary: 43 74% 52%;             /* #D4AF37 */
+    --primary-foreground: 0 0% 4%;
+    
+    /* ─── Secondary: Charcoal ─── */
+    --secondary: 0 0% 18%;             /* #2E2E2E */
+    --secondary-foreground: 40 47% 93%;
+    
+    /* ─── Muted ─── */
+    --muted: 40 30% 88%;
+    --muted-foreground: 0 0% 35%;
+    
+    /* ─── Accent: Gold Variant ─── */
+    --accent: 43 60% 45%;
     --accent-foreground: 0 0% 100%;
-
+    
+    /* ─── Destructive ─── */
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
-
-    --border: 40 15% 90%;
-    --input: 40 15% 90%;
-    --ring: 42 70% 50%;
-
-    --radius: 0.25rem;
-
-    /* Custom ERMGOLD tokens - More vibrant gold */
-    --gold: 42 70% 50%;
-    --gold-light: 42 75% 65%;
-    --gold-dark: 42 65% 40%;
-    --beige: 40 30% 94%;
-    --beige-dark: 40 25% 88%;
-    --cream: 40 40% 97%;
-    --charcoal: 0 0% 12%;
-    --marble: 210 10% 95%;
-
-    /* Gradients */
-    --gradient-gold: linear-gradient(135deg, hsl(42 75% 60%) 0%, hsl(42 70% 45%) 50%, hsl(42 75% 60%) 100%);
-    --gradient-gold-shine: linear-gradient(90deg, transparent 0%, hsl(42 80% 75% / 0.6) 50%, transparent 100%);
-    --gradient-beige: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(40 30% 94%) 100%);
-    --gradient-dark: linear-gradient(180deg, hsl(0 0% 5%) 0%, hsl(0 0% 12%) 100%);
-    --gradient-marble: linear-gradient(135deg, hsl(0 0% 98%) 0%, hsl(210 10% 95%) 50%, hsl(0 0% 98%) 100%);
-
-    /* Shadows */
-    --shadow-gold: 0 4px 20px -4px hsl(42 70% 50% / 0.35);
+    
+    /* ─── Border & Input ─── */
+    --border: 43 40% 75%;
+    --input: 43 30% 80%;
+    --ring: 43 74% 52%;
+    
+    /* ─── Radius ─── */
+    --radius: 0.5rem;
+    
+    /* ═══ ERMGOLD Brand Tokens ═══ */
+    --gold: 43 74% 52%;                /* Luxury Gold #D4AF37 */
+    --gold-light: 43 80% 65%;          /* Light Gold */
+    --gold-dark: 43 70% 40%;           /* Dark Gold */
+    --gold-shimmer: 43 85% 70%;        /* Shimmer Effect */
+    
+    --beige: 40 47% 93%;               /* Warm Beige #F5F0E6 */
+    --beige-dark: 40 35% 85%;
+    
+    --cream: 45 50% 96%;               /* Off-White Cream */
+    --charcoal: 0 0% 18%;              /* Charcoal Gray #2E2E2E */
+    --royal-black: 0 0% 4%;            /* Royal Black #0A0A0A */
+    
+    /* ─── Marble Texture Tones ─── */
+    --marble-light: 45 30% 95%;
+    --marble-vein: 40 20% 75%;
+    
+    /* ═══ Gradient Definitions ═══ */
+    --gradient-gold: linear-gradient(135deg, hsl(43 74% 52%), hsl(43 85% 70%), hsl(43 74% 52%));
+    --gradient-gold-subtle: linear-gradient(135deg, hsl(43 74% 52% / 0.1), hsl(43 80% 65% / 0.2));
+    --gradient-royal: linear-gradient(180deg, hsl(0 0% 4%), hsl(0 0% 12%));
+    --gradient-beige: linear-gradient(180deg, hsl(40 47% 93%), hsl(45 50% 96%));
+    
+    /* ═══ Luxury Shadows ═══ */
+    --shadow-gold: 0 4px 30px -4px hsl(43 74% 52% / 0.35);
+    --shadow-gold-glow: 0 0 40px hsl(43 80% 65% / 0.4);
     --shadow-elegant: 0 10px 40px -10px hsl(0 0% 0% / 0.12);
-    --shadow-card: 0 2px 12px -2px hsl(0 0% 0% / 0.06);
+    --shadow-card: 0 4px 20px -4px hsl(0 0% 0% / 0.08);
     --shadow-hover: 0 20px 50px -15px hsl(0 0% 0% / 0.18);
-
-    /* Sidebar */
-    --sidebar-background: 0 0% 5%;
-    --sidebar-foreground: 40 30% 95%;
-    --sidebar-primary: 42 70% 50%;
-    --sidebar-primary-foreground: 0 0% 100%;
+    
+    /* ─── Sidebar (Admin) ─── */
+    --sidebar-background: 0 0% 4%;
+    --sidebar-foreground: 40 47% 93%;
+    --sidebar-primary: 43 74% 52%;
+    --sidebar-primary-foreground: 0 0% 4%;
     --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 40 30% 95%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 42 70% 50%;
+    --sidebar-accent-foreground: 40 47% 93%;
+    --sidebar-border: 0 0% 20%;
+    --sidebar-ring: 43 74% 52%;
   }
 
   .dark {
-    --background: 0 0% 5%;
-    --foreground: 40 25% 95%;
-
+    --background: 0 0% 4%;
+    --foreground: 40 47% 93%;
+    
     --card: 0 0% 8%;
-    --card-foreground: 40 25% 95%;
-
-    --popover: 0 0% 6%;
-    --popover-foreground: 40 25% 95%;
-
-    --primary: 42 70% 55%;
-    --primary-foreground: 0 0% 5%;
-
-    --secondary: 40 20% 12%;
-    --secondary-foreground: 40 25% 95%;
-
-    --muted: 0 0% 12%;
-    --muted-foreground: 40 15% 65%;
-
-    --accent: 42 70% 50%;
-    --accent-foreground: 0 0% 5%;
-
-    --destructive: 0 62% 50%;
+    --card-foreground: 40 47% 93%;
+    
+    --popover: 0 0% 8%;
+    --popover-foreground: 40 47% 93%;
+    
+    --primary: 43 74% 52%;
+    --primary-foreground: 0 0% 4%;
+    
+    --secondary: 0 0% 15%;
+    --secondary-foreground: 40 47% 93%;
+    
+    --muted: 0 0% 15%;
+    --muted-foreground: 40 30% 70%;
+    
+    --accent: 43 60% 45%;
+    --accent-foreground: 0 0% 100%;
+    
+    --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
-
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 42 70% 55%;
-
-    --gold: 42 70% 55%;
-    --gold-light: 42 75% 65%;
-    --gold-dark: 42 65% 42%;
-    --beige: 0 0% 10%;
-    --beige-dark: 0 0% 6%;
-    --cream: 0 0% 5%;
-    --charcoal: 40 25% 95%;
-
-    --sidebar-background: 0 0% 4%;
-    --sidebar-foreground: 40 25% 95%;
-    --sidebar-primary: 42 70% 55%;
-    --sidebar-primary-foreground: 0 0% 5%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 40 25% 95%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 42 70% 55%;
+    
+    --border: 0 0% 20%;
+    --input: 0 0% 20%;
+    --ring: 43 74% 52%;
   }
 }
 
@@ -127,177 +127,305 @@
   * {
     @apply border-border;
   }
-
+  
   html {
     scroll-behavior: smooth;
   }
-
+  
   body {
-    @apply bg-background text-foreground font-body antialiased;
+    @apply bg-background text-foreground antialiased;
+    font-family: 'Lora', 'Cormorant Garamond', Georgia, serif;
+    letter-spacing: 0.01em;
   }
-
+  
   h1, h2, h3, h4, h5, h6 {
-    @apply font-heading;
+    font-family: 'Cinzel Decorative', 'Playfair Display', serif;
+    font-weight: 600;
+    letter-spacing: 0.05em;
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   LUXURY COMPONENT STYLES
+   ═══════════════════════════════════════════════════════════════ */
+
 @layer components {
+  /* ─── Gold Text Gradient ─── */
   .text-gold-gradient {
-    background: linear-gradient(135deg, hsl(42 75% 60%) 0%, hsl(42 70% 45%) 50%, hsl(42 75% 60%) 100%);
+    background: linear-gradient(135deg, hsl(43 74% 52%), hsl(43 85% 70%), hsl(43 70% 45%));
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
   }
-
+  
+  /* ─── Gold Background Gradient ─── */
   .bg-gold-gradient {
-    background: var(--gradient-gold);
+    background: linear-gradient(135deg, hsl(43 74% 52%), hsl(43 85% 70%), hsl(43 74% 52%));
   }
-
-  .bg-beige-gradient {
-    background: var(--gradient-beige);
-  }
-
-  .bg-marble {
-    background: var(--gradient-marble);
-    background-size: 400% 400%;
-  }
-
+  
+  /* ─── Primary Gold Button ─── */
   .btn-gold {
-    @apply bg-primary text-primary-foreground hover:bg-accent transition-all duration-300;
-    box-shadow: var(--shadow-gold);
+    @apply relative overflow-hidden px-8 py-3;
+    background: linear-gradient(135deg, hsl(43 74% 52%), hsl(43 80% 60%));
+    color: hsl(0 0% 4%);
+    font-family: 'Cinzel Decorative', serif;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid hsl(43 74% 52%);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+    box-shadow: 0 4px 20px -4px hsl(43 74% 52% / 0.4);
   }
-
+  
   .btn-gold:hover {
-    box-shadow: 0 6px 25px -4px hsl(42 70% 50% / 0.45);
-    transform: translateY(-1px);
+    background: linear-gradient(135deg, hsl(43 80% 60%), hsl(43 85% 70%));
+    box-shadow: 0 8px 30px -4px hsl(43 74% 52% / 0.5);
+    transform: translateY(-2px);
   }
-
+  
+  /* ─── Dark Luxury Button ─── */
   .btn-dark {
-    @apply bg-secondary text-secondary-foreground hover:bg-charcoal transition-all duration-300;
+    @apply relative overflow-hidden px-8 py-3;
+    background: hsl(0 0% 4%);
+    color: hsl(43 74% 52%);
+    font-family: 'Cinzel Decorative', serif;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    border: 1px solid hsl(43 74% 52%);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
-
+  
+  .btn-dark:hover {
+    background: hsl(43 74% 52%);
+    color: hsl(0 0% 4%);
+    box-shadow: 0 8px 30px -4px hsl(43 74% 52% / 0.5);
+    transform: translateY(-2px);
+  }
+  
+  /* ─── Luxury Card ─── */
   .card-luxury {
-    @apply bg-card border border-border/40 rounded;
-    box-shadow: var(--shadow-card);
-    transition: all 0.35s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+    @apply relative overflow-hidden rounded-lg;
+    background: hsl(0 0% 100%);
+    border: 1px solid hsl(43 40% 80%);
+    box-shadow: 0 4px 20px -4px hsl(0 0% 0% / 0.08);
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
-
+  
   .card-luxury:hover {
-    box-shadow: var(--shadow-hover);
-    transform: translateY(-3px);
+    border-color: hsl(43 74% 52%);
+    box-shadow: 0 20px 50px -15px hsl(0 0% 0% / 0.15),
+                0 0 0 1px hsl(43 74% 52% / 0.3);
+    transform: translateY(-4px);
   }
-
+  
+  /* ─── Beige Section Background ─── */
   .section-beige {
-    @apply bg-muted py-16 md:py-24;
+    background: linear-gradient(180deg, hsl(40 47% 93%), hsl(45 50% 96%));
   }
-
+  
+  /* ─── Royal Black Section ─── */
+  .section-royal {
+    background: linear-gradient(180deg, hsl(0 0% 4%), hsl(0 0% 8%));
+    color: hsl(40 47% 93%);
+  }
+  
+  /* ─── Gold Underline Effect ─── */
   .gold-underline {
     @apply relative inline-block;
   }
-
+  
   .gold-underline::after {
     content: '';
-    @apply absolute left-0 bottom-0 w-full h-0.5 bg-primary transform scale-x-0 origin-left transition-transform duration-300;
+    @apply absolute bottom-0 left-0 w-full h-0.5;
+    background: linear-gradient(90deg, transparent, hsl(43 74% 52%), transparent);
+    transform: scaleX(0);
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   }
-
+  
   .gold-underline:hover::after {
-    @apply scale-x-100;
+    transform: scaleX(1);
   }
-
+  
+  /* ─── Shine Effect ─── */
   .shine-effect {
-    position: relative;
-    overflow: hidden;
+    @apply relative overflow-hidden;
   }
-
+  
   .shine-effect::before {
     content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: var(--gradient-gold-shine);
-    transition: left 0.5s ease;
+    @apply absolute inset-0;
+    background: linear-gradient(
+      120deg,
+      transparent 0%,
+      hsl(43 80% 65% / 0.3) 50%,
+      transparent 100%
+    );
+    transform: translateX(-100%);
+    transition: transform 0.8s ease;
   }
-
+  
   .shine-effect:hover::before {
-    left: 100%;
+    transform: translateX(100%);
   }
-
-  /* ERMGOLD Logo styling */
+  
+  /* ─── ERMGOLD Logo Style ─── */
   .logo-ermgold {
-    font-family: 'Cinzel', serif;
-    font-weight: 600;
+    font-family: 'Cinzel Decorative', serif;
+    font-weight: 700;
     letter-spacing: 0.15em;
-    color: hsl(var(--gold));
-    text-shadow: 1px 1px 2px hsl(0 0% 0% / 0.1);
+    background: linear-gradient(135deg, hsl(43 74% 52%), hsl(43 85% 70%), hsl(43 70% 45%));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: 0 2px 20px hsl(43 74% 52% / 0.3);
+  }
+  
+  /* ─── Luxury Input Fields ─── */
+  .input-luxury {
+    @apply w-full px-4 py-3 rounded-lg transition-all duration-300;
+    background: hsl(0 0% 100%);
+    border: 1px solid hsl(43 40% 80%);
+    font-family: 'Lora', serif;
+  }
+  
+  .input-luxury:focus {
+    outline: none;
+    border-color: hsl(43 74% 52%);
+    box-shadow: 0 0 0 3px hsl(43 74% 52% / 0.2);
+  }
+  
+  /* ─── Gold Border Frame ─── */
+  .gold-frame {
+    border: 2px solid hsl(43 74% 52%);
+    position: relative;
+  }
+  
+  .gold-frame::before {
+    content: '';
+    position: absolute;
+    inset: 4px;
+    border: 1px solid hsl(43 74% 52% / 0.3);
+    pointer-events: none;
   }
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   ANIMATIONS
+   ═══════════════════════════════════════════════════════════════ */
+
 @layer utilities {
+  /* ─── Typewriter Animation ─── */
   .animate-typewriter {
+    animation: typing 2s steps(7) forwards, blink 0.7s step-end infinite alternate;
     overflow: hidden;
-    border-right: 2px solid hsl(var(--primary));
     white-space: nowrap;
-    animation: typing 3s steps(8) forwards, blink 0.75s step-end infinite;
+    border-right: 3px solid hsl(43 74% 52%);
+    width: 0;
   }
-
+  
   @keyframes typing {
-    from { width: 0 }
-    to { width: 100% }
+    from { width: 0; }
+    to { width: 100%; }
   }
-
+  
   @keyframes blink {
-    50% { border-color: transparent }
+    50% { border-color: transparent; }
   }
-
+  
+  /* ─── Fade Up Animation ─── */
   .animate-fade-up {
-    animation: fadeUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    animation: fadeUp 0.8s ease-out forwards;
   }
-
+  
   @keyframes fadeUp {
     from {
       opacity: 0;
-      transform: translateY(20px);
+      transform: translateY(30px);
     }
     to {
       opacity: 1;
       transform: translateY(0);
     }
   }
-
+  
+  /* ─── Scale In Animation ─── */
   .animate-scale-in {
-    animation: scaleIn 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94) forwards;
+    animation: scaleIn 0.5s ease-out forwards;
   }
-
+  
   @keyframes scaleIn {
     from {
       opacity: 0;
-      transform: scale(0.95);
+      transform: scale(0.9);
     }
     to {
       opacity: 1;
       transform: scale(1);
     }
   }
-
+  
+  /* ─── Shimmer Animation ─── */
   .animate-shimmer {
-    animation: shimmer 2s infinite;
-    background: linear-gradient(
-      90deg,
-      hsl(var(--primary)) 0%,
-      hsl(42 80% 70%) 50%,
-      hsl(var(--primary)) 100%
-    );
-    background-size: 200% 100%;
+    animation: shimmer 3s ease-in-out infinite;
   }
-
+  
   @keyframes shimmer {
-    0% { background-position: -200% 0 }
-    100% { background-position: 200% 0 }
+    0%, 100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0.7;
+    }
   }
-
+  
+  /* ─── Gold Glow Pulse ─── */
+  .animate-gold-glow {
+    animation: goldGlow 2s ease-in-out infinite;
+  }
+  
+  @keyframes goldGlow {
+    0%, 100% {
+      box-shadow: 0 0 20px hsl(43 74% 52% / 0.3);
+    }
+    50% {
+      box-shadow: 0 0 40px hsl(43 74% 52% / 0.5);
+    }
+  }
+  
+  /* ─── Text Balance ─── */
   .text-balance {
     text-wrap: balance;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SCROLLBAR STYLING
+   ═══════════════════════════════════════════════════════════════ */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: hsl(40 47% 93%);
+}
+
+::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, hsl(43 74% 52%), hsl(43 70% 45%));
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, hsl(43 80% 60%), hsl(43 74% 52%));
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   SELECTION STYLING
+   ═══════════════════════════════════════════════════════════════ */
+
+::selection {
+  background: hsl(43 74% 52% / 0.3);
+  color: hsl(0 0% 4%);
 }

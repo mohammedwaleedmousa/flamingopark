@@ -4,7 +4,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import ReviewsSection from '@/components/ReviewsSection';
-import { Heart, Award, Users, Globe, FileText, X } from 'lucide-react';
+import { Heart, Award, Users, Globe, FileText, X, Gem, Shield, Truck, Clock, Star, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 
@@ -19,7 +19,6 @@ const AboutPage = () => {
 
   const fetchCertificationData = async () => {
     try {
-      // Fetch PDF URL from settings
       const { data: pdfSetting } = await supabase
         .from('site_settings')
         .select('value')
@@ -33,7 +32,6 @@ const AboutPage = () => {
         if (url) setCertPdfUrl(url);
       }
 
-      // Fetch certification images
       const { data: images } = await supabase
         .from('certification_images')
         .select('*')
@@ -53,27 +51,40 @@ const AboutPage = () => {
     {
       icon: Heart,
       title: 'الجودة',
-      titleEn: 'Quality',
       description: 'نلتزم بأعلى معايير الجودة في جميع منتجاتنا',
+      color: 'from-rose-500/20 to-rose-500/5',
     },
     {
       icon: Award,
       title: 'الأصالة',
-      titleEn: 'Authenticity',
       description: 'ذهب حقيقي بشهادات معتمدة من أفضل المختبرات',
+      color: 'from-gold/20 to-gold/5',
     },
     {
       icon: Users,
       title: 'خدمة العملاء',
-      titleEn: 'Customer Service',
       description: 'فريق متخصص لخدمتك على مدار الساعة',
+      color: 'from-blue-500/20 to-blue-500/5',
     },
     {
       icon: Globe,
       title: 'توصيل عالمي',
-      titleEn: 'Global Delivery',
       description: 'نوصل إلى جميع أنحاء المنطقة بأمان',
+      color: 'from-emerald-500/20 to-emerald-500/5',
     },
+  ];
+
+  const stats = [
+    { value: '+5000', label: 'عميل سعيد', icon: Users },
+    { value: '+10', label: 'سنوات خبرة', icon: Clock },
+    { value: '100%', label: 'ذهب أصلي', icon: Gem },
+    { value: '4.9', label: 'تقييم العملاء', icon: Star },
+  ];
+
+  const features = [
+    { icon: Shield, title: 'ضمان الجودة', desc: 'جميع منتجاتنا مضمونة 100%' },
+    { icon: Truck, title: 'شحن مجاني', desc: 'للطلبات فوق 500 ريال' },
+    { icon: Clock, title: 'دعم 24/7', desc: 'نحن هنا لمساعدتك دائماً' },
   ];
 
   return (
@@ -82,97 +93,295 @@ const AboutPage = () => {
       <CartDrawer />
 
       <main className="pt-20">
-        {/* Hero */}
-        <section className="relative py-24 bg-secondary overflow-hidden">
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute inset-0" style={{
-              backgroundImage: `radial-gradient(circle at 50% 50%, hsl(var(--gold)) 1px, transparent 1px)`,
-              backgroundSize: '40px 40px'
+        {/* Hero Section */}
+        <section className="relative min-h-[80vh] flex items-center justify-center bg-gradient-to-b from-secondary via-secondary to-charcoal overflow-hidden">
+          {/* Animated Background */}
+          <div className="absolute inset-0">
+            {/* Floating Gold Particles */}
+            {[...Array(30)].map((_, i) => (
+              <motion.div
+                key={i}
+                className="absolute w-1 h-1 bg-gold rounded-full"
+                initial={{ 
+                  x: `${Math.random() * 100}%`, 
+                  y: `${Math.random() * 100}%`,
+                  opacity: 0,
+                  scale: 0
+                }}
+                animate={{ 
+                  y: [`${Math.random() * 100}%`, `${Math.random() * 100}%`],
+                  opacity: [0, 0.6, 0],
+                  scale: [0, 1.5, 0]
+                }}
+                transition={{ 
+                  duration: 4 + Math.random() * 3,
+                  repeat: Infinity,
+                  delay: Math.random() * 3
+                }}
+              />
+            ))}
+            
+            {/* Radial Gradient */}
+            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_hsl(var(--gold)/0.15)_0%,_transparent_70%)]" />
+            
+            {/* Grid Pattern */}
+            <div className="absolute inset-0 opacity-5" style={{
+              backgroundImage: `linear-gradient(hsl(var(--gold)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--gold)) 1px, transparent 1px)`,
+              backgroundSize: '60px 60px'
             }} />
           </div>
+
           <div className="container mx-auto px-4 text-center relative z-10">
-            <motion.h1
-              initial={{ opacity: 0, y: 20 }}
+            {/* Badge */}
+            <motion.div
+              initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="font-heading text-4xl md:text-6xl text-gold mb-6"
+              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gold/10 backdrop-blur-sm rounded-full mb-8 border border-gold/20"
             >
-              من نحن
+              <Gem className="w-4 h-4 text-gold" />
+              <span className="font-body text-sm text-gold">منذ 2014</span>
+            </motion.div>
+
+            {/* Title */}
+            <motion.h1
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.1 }}
+              className="font-heading text-5xl md:text-7xl lg:text-8xl mb-6"
+            >
+              <span className="text-secondary-foreground">قصة</span>
+              <br />
+              <span className="text-gold-gradient">ERMGOLD</span>
             </motion.h1>
+
+            {/* Subtitle */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 }}
-              className="font-body text-lg text-gold-light/80 max-w-2xl mx-auto"
+              transition={{ delay: 0.2 }}
+              className="font-body text-lg md:text-xl text-gold-light/70 max-w-2xl mx-auto mb-12"
             >
-              رحلة من التميز والأناقة في عالم المجوهرات الذهبية
+              رحلة من التميز والأناقة في عالم المجوهرات الذهبية الفاخرة
             </motion.p>
+
+            {/* Stats */}
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto"
+            >
+              {stats.map((stat, index) => (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.4 + index * 0.1 }}
+                  className="bg-secondary/50 backdrop-blur-sm border border-gold/20 rounded-xl p-4 md:p-6"
+                >
+                  <stat.icon className="w-6 h-6 text-gold mx-auto mb-2" />
+                  <div className="font-heading text-2xl md:text-3xl text-gold">{stat.value}</div>
+                  <div className="text-xs md:text-sm text-gold-light/60 font-body">{stat.label}</div>
+                </motion.div>
+              ))}
+            </motion.div>
+
+            {/* Scroll Indicator */}
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1, y: [0, 10, 0] }}
+              transition={{ delay: 1, y: { repeat: Infinity, duration: 1.5 } }}
+              className="absolute bottom-8 left-1/2 -translate-x-1/2"
+            >
+              <ChevronDown className="w-8 h-8 text-gold/50" />
+            </motion.div>
           </div>
         </section>
 
-        {/* Story */}
-        <section className="py-20">
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
+        {/* Story Section */}
+        <section className="py-20 md:py-28 relative overflow-hidden">
+          {/* Background Decoration */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-gold/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-gold/5 rounded-full blur-3xl" />
+          
+          <div className="container mx-auto px-4 relative z-10">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20 items-center">
+              {/* Image */}
               <motion.div
-                initial={{ opacity: 0, x: -30 }}
+                initial={{ opacity: 0, x: -50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
+                transition={{ duration: 0.6 }}
+                className="relative"
               >
-                <img
-                  src="https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=800"
-                  alt="ERMGOLD Story"
-                  className="rounded shadow-elegant"
-                />
+                <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
+                  <img
+                    src="https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=800"
+                    alt="ERMGOLD Story"
+                    className="w-full h-full object-cover"
+                  />
+                  {/* Overlay Gradient */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-secondary/60 via-transparent to-transparent" />
+                </div>
+                
+                {/* Floating Card */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: 0.3 }}
+                  className="absolute -bottom-6 -left-6 md:left-auto md:-right-6 bg-card border border-border/50 rounded-xl p-5 shadow-elegant max-w-[200px]"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center">
+                      <Award className="w-5 h-5 text-gold" />
+                    </div>
+                    <div className="font-heading text-2xl text-gold">+10</div>
+                  </div>
+                  <p className="text-sm text-muted-foreground font-body">سنوات من التميز في صناعة المجوهرات</p>
+                </motion.div>
               </motion.div>
+
+              {/* Content */}
               <motion.div
-                initial={{ opacity: 0, x: 30 }}
+                initial={{ opacity: 0, x: 50 }}
                 whileInView={{ opacity: 1, x: 0 }}
                 viewport={{ once: true }}
-                className="space-y-6"
+                transition={{ duration: 0.6 }}
+                className="space-y-8"
               >
-                <h2 className="font-heading text-3xl md:text-4xl text-foreground">
-                  قصة <span className="text-gold">ERMGOLD</span>
-                </h2>
-                <div className="w-20 h-px bg-gold" />
-                <p className="font-body text-foreground/80 leading-relaxed">
-                  بدأت رحلتنا من شغف عميق بفن صناعة المجوهرات وتقديم أفضل ما في عالم الذهب. 
-                  منذ تأسيسنا، نسعى لنكون الوجهة الأولى لعشاق المجوهرات الفاخرة في المنطقة.
-                </p>
-                <p className="font-body text-foreground/80 leading-relaxed">
-                  نفخر بتقديم تشكيلة متميزة من المجوهرات المصممة بعناية فائقة، 
-                  حيث يجتمع الإبداع مع الحرفية العالية لخلق قطع استثنائية تدوم مدى الحياة.
-                </p>
+                <div>
+                  <span className="text-gold font-body text-sm tracking-widest uppercase">قصتنا</span>
+                  <h2 className="font-heading text-4xl md:text-5xl text-foreground mt-3 leading-tight">
+                    نصنع <span className="text-gold">الأناقة</span>
+                    <br />
+                    منذ عام 2014
+                  </h2>
+                </div>
+                
+                <div className="w-24 h-1 bg-gradient-to-r from-gold to-transparent" />
+                
+                <div className="space-y-5">
+                  <p className="font-body text-foreground/80 leading-relaxed text-lg">
+                    بدأت رحلتنا من شغف عميق بفن صناعة المجوهرات وتقديم أفضل ما في عالم الذهب. 
+                    منذ تأسيسنا، نسعى لنكون الوجهة الأولى لعشاق المجوهرات الفاخرة في المنطقة.
+                  </p>
+                  <p className="font-body text-foreground/80 leading-relaxed text-lg">
+                    نفخر بتقديم تشكيلة متميزة من المجوهرات المصممة بعناية فائقة، 
+                    حيث يجتمع الإبداع مع الحرفية العالية لخلق قطع استثنائية تدوم مدى الحياة.
+                  </p>
+                </div>
+
+                {/* Features */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+                  {features.map((feature, index) => (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      whileInView={{ opacity: 1, y: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: 0.2 + index * 0.1 }}
+                      className="flex items-start gap-3 p-4 bg-muted/50 rounded-xl border border-border/30"
+                    >
+                      <feature.icon className="w-5 h-5 text-gold flex-shrink-0 mt-0.5" />
+                      <div>
+                        <h4 className="font-heading text-sm text-foreground">{feature.title}</h4>
+                        <p className="text-xs text-muted-foreground font-body mt-1">{feature.desc}</p>
+                      </div>
+                    </motion.div>
+                  ))}
+                </div>
               </motion.div>
             </div>
           </div>
         </section>
 
-        {/* Certification Section */}
-        <section className="py-16 bg-muted">
+        {/* Values Section */}
+        <section className="py-20 bg-gradient-to-b from-muted/50 to-background">
           <div className="container mx-auto px-4">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              className="text-center mb-16"
+            >
+              <span className="text-gold font-body text-sm tracking-widest uppercase">مبادئنا</span>
+              <h2 className="font-heading text-4xl md:text-5xl text-foreground mt-3 mb-4">
+                قيمنا <span className="text-gold">ورؤيتنا</span>
+              </h2>
+              <div className="w-24 h-1 bg-gradient-to-r from-transparent via-gold to-transparent mx-auto" />
+            </motion.div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {values.map((value, index) => (
+                <motion.div
+                  key={value.title}
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ delay: index * 0.1 }}
+                  className="group relative"
+                >
+                  <div className={`absolute inset-0 bg-gradient-to-b ${value.color} rounded-2xl transition-opacity group-hover:opacity-100 opacity-50`} />
+                  <div className="relative bg-card/80 backdrop-blur-sm border border-border/30 p-8 rounded-2xl text-center transition-all duration-300 group-hover:border-gold/30 group-hover:-translate-y-2">
+                    <div className="w-20 h-20 mx-auto mb-6 flex items-center justify-center bg-gradient-to-br from-gold/20 to-gold/5 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                      <value.icon className="w-10 h-10 text-gold" />
+                    </div>
+                    <h3 className="font-heading text-xl text-foreground mb-3 group-hover:text-gold transition-colors">
+                      {value.title}
+                    </h3>
+                    <p className="font-body text-sm text-muted-foreground leading-relaxed">
+                      {value.description}
+                    </p>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Certification Section */}
+        <section className="py-20 bg-secondary relative overflow-hidden">
+          {/* Background Pattern */}
+          <div className="absolute inset-0 opacity-5" style={{
+            backgroundImage: `radial-gradient(circle at 50% 50%, hsl(var(--gold)) 1px, transparent 1px)`,
+            backgroundSize: '30px 30px'
+          }} />
+          
+          <div className="container mx-auto px-4 relative z-10">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
               className="text-center mb-12"
             >
-              <h2 className="font-heading text-3xl md:text-4xl text-foreground mb-4">
+              <span className="text-gold font-body text-sm tracking-widest uppercase">موثوقية</span>
+              <h2 className="font-heading text-4xl md:text-5xl text-secondary-foreground mt-3 mb-4">
                 <span className="text-gold">توثيق</span> المتجر
               </h2>
-              <div className="w-20 h-px bg-gold mx-auto" />
+              <div className="w-24 h-1 bg-gradient-to-r from-transparent via-gold to-transparent mx-auto mb-6" />
+              <p className="text-gold-light/70 font-body max-w-lg mx-auto">
+                نفتخر بحصولنا على شهادات الجودة والتوثيق من الجهات المعتمدة
+              </p>
             </motion.div>
 
             {/* PDF Button */}
             {certPdfUrl && (
-              <div className="text-center mb-12">
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                className="text-center mb-12"
+              >
                 <Button
                   onClick={() => setShowPdfModal(true)}
-                  className="btn-gold gap-2"
+                  size="lg"
+                  className="btn-gold gap-3 px-8 py-6 text-lg rounded-xl"
                 >
-                  <FileText className="w-5 h-5" />
+                  <FileText className="w-6 h-6" />
                   عرض شهادات التوثيق
                 </Button>
-              </div>
+              </motion.div>
             )}
 
             {/* Certification Images */}
@@ -185,17 +394,19 @@ const AboutPage = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: index * 0.1 }}
-                    className="aspect-square bg-background rounded shadow-card overflow-hidden"
+                    className="group relative aspect-square rounded-2xl overflow-hidden border-2 border-gold/20 hover:border-gold/50 transition-colors"
                   >
                     <img
                       src={img}
                       alt={`توثيق ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                     />
+                    <div className="absolute inset-0 bg-gradient-to-t from-secondary/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-6">
+                      <span className="text-gold font-heading">شهادة التوثيق {index + 1}</span>
+                    </div>
                   </motion.div>
                 ))
               ) : (
-                // Placeholder images
                 [1, 2, 3].map((_, index) => (
                   <motion.div
                     key={index}
@@ -203,11 +414,13 @@ const AboutPage = () => {
                     whileInView={{ opacity: 1, y: 0 }}
                     viewport={{ once: true }}
                     transition={{ delay: index * 0.1 }}
-                    className="aspect-square bg-background rounded shadow-card flex items-center justify-center"
+                    className="aspect-square bg-charcoal rounded-2xl border border-gold/20 flex items-center justify-center"
                   >
-                    <div className="text-center text-muted-foreground">
-                      <Award className="w-12 h-12 mx-auto mb-2 text-gold/30" />
-                      <p className="text-sm font-body">صورة التوثيق {index + 1}</p>
+                    <div className="text-center">
+                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gold/10 flex items-center justify-center">
+                        <Award className="w-8 h-8 text-gold/50" />
+                      </div>
+                      <p className="text-sm font-body text-gold-light/50">صورة التوثيق {index + 1}</p>
                     </div>
                   </motion.div>
                 ))
@@ -216,69 +429,66 @@ const AboutPage = () => {
           </div>
         </section>
 
-        {/* Values */}
-        <section className="py-20">
+        {/* Reviews Section */}
+        <ReviewsSection />
+
+        {/* CTA Section */}
+        <section className="py-20 bg-gradient-to-b from-background to-muted/50">
           <div className="container mx-auto px-4">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 30 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-center mb-12"
+              className="max-w-3xl mx-auto text-center"
             >
+              <Gem className="w-12 h-12 text-gold mx-auto mb-6" />
               <h2 className="font-heading text-3xl md:text-4xl text-foreground mb-4">
-                <span className="text-gold">قيمنا</span> ومبادئنا
+                ابدأ رحلتك معنا
               </h2>
-              <div className="w-20 h-px bg-gold mx-auto" />
+              <p className="text-muted-foreground font-body text-lg mb-8 max-w-xl mx-auto">
+                اكتشف تشكيلتنا الفاخرة من المجوهرات الذهبية واختر قطعتك المميزة
+              </p>
+              <Button
+                onClick={() => window.location.href = '/products'}
+                size="lg"
+                className="btn-gold px-10 py-6 text-lg rounded-xl gap-2"
+              >
+                <Gem className="w-5 h-5" />
+                تصفح المنتجات
+              </Button>
             </motion.div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8">
-              {values.map((value, index) => (
-                <motion.div
-                  key={value.title}
-                  initial={{ opacity: 0, y: 30 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className="text-center bg-card p-8 rounded shadow-card"
-                >
-                  <div className="w-16 h-16 mx-auto mb-6 flex items-center justify-center bg-gold/10 rounded-full">
-                    <value.icon className="w-8 h-8 text-gold" />
-                  </div>
-                  <h3 className="font-heading text-xl text-foreground mb-2">{value.title}</h3>
-                  <p className="font-body text-sm text-muted-foreground">{value.description}</p>
-                </motion.div>
-              ))}
-            </div>
           </div>
         </section>
-
-        {/* Reviews */}
-        <ReviewsSection />
       </main>
 
       <Footer />
 
       {/* PDF Modal */}
       {showPdfModal && certPdfUrl && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-secondary/80 backdrop-blur-sm">
+        <motion.div 
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-secondary/90 backdrop-blur-md"
+        >
           <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
+            initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className="relative w-full max-w-4xl h-[80vh] bg-background rounded shadow-elegant"
+            className="relative w-full max-w-5xl h-[85vh] bg-background rounded-2xl shadow-elegant overflow-hidden"
           >
             <button
               onClick={() => setShowPdfModal(false)}
-              className="absolute top-4 right-4 z-10 p-2 bg-secondary text-gold rounded-full hover:bg-charcoal transition-colors"
+              className="absolute top-4 right-4 z-10 p-3 bg-secondary text-gold rounded-full hover:bg-charcoal transition-colors shadow-lg"
             >
               <X className="w-5 h-5" />
             </button>
             <iframe
               src={certPdfUrl}
-              className="w-full h-full rounded"
+              className="w-full h-full"
               title="شهادات التوثيق"
             />
           </motion.div>
-        </div>
+        </motion.div>
       )}
     </div>
   );

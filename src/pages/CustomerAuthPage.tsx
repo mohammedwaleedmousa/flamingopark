@@ -101,7 +101,7 @@ const CustomerAuthPage = () => {
         transition={{ duration: 0.4 }}
         className="w-full max-w-sm"
       >
-        <div className="backdrop-blur-sm bg-card/80 rounded-2xl shadow-2xl shadow-primary/10 p-8 space-y-8">
+        <div className="backdrop-blur-sm bg-card/80 rounded-2xl shadow-2xl shadow-primary/10 p-8 space-y-8 border border-primary/40">
           {/* Welcome Text */}
           <div className="text-center space-y-2">
             <h1 className="text-3xl font-heading text-primary">

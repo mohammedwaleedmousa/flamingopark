@@ -4,7 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
-import ProductCard from '@/components/ProductCard';
+import ProductCardMinimal from '@/components/ProductCardMinimal';
 import { useStore, Product } from '@/store/useStore';
 import { supabase } from '@/integrations/supabase/client';
 import { Search, SlidersHorizontal, Loader2 } from 'lucide-react';
@@ -244,9 +244,9 @@ const ProductsPage = () => {
                   <p className="text-muted-foreground font-body">لا توجد منتجات مطابقة</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
                   {filteredProducts.map((product, index) => (
-                    <ProductCard key={product.id} product={product} index={index} compact />
+                    <ProductCardMinimal key={product.id} product={product} index={index} />
                   ))}
                 </div>
               )}

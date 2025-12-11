@@ -12,7 +12,8 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) => {
-  const { addToCart } = useStore();
+  const { addToCart, country } = useStore();
+  const currency = country === 'SA' ? 'ريال' : 'ريال';
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -60,12 +61,18 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
         <div className="card-luxury overflow-hidden">
           {/* Image Container */}
           <div className={`relative overflow-hidden bg-muted ${compact ? 'aspect-[3/4]' : 'aspect-square'}`}>
-            <img
-              src={product.images[0]}
-              alt={product.nameAr}
-              loading="lazy"
-              className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
-            />
+            {product.images[0] ? (
+              <img
+                src={product.images[0]}
+                alt={product.nameAr}
+                loading="lazy"
+                className="w-full h-full object-cover transition-transform duration-500 ease-out group-hover:scale-105"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
+                لا توجد صورة
+              </div>
+            )}
             
             {/* Discount Badge */}
             {product.discount && (
@@ -103,11 +110,11 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
             </h3>
             <div className="flex items-center gap-1.5 md:gap-2 flex-wrap">
               <span className={`font-heading text-gold ${compact ? 'text-base' : 'text-lg'}`}>
-                ${discountedPrice.toFixed(2)}
+                {discountedPrice.toFixed(2)} {currency}
               </span>
               {product.originalPrice && (
                 <span className={`text-muted-foreground line-through ${compact ? 'text-xs' : 'text-sm'}`}>
-                  ${product.originalPrice.toFixed(2)}
+                  {product.originalPrice.toFixed(2)} {currency}
                 </span>
               )}
             </div>

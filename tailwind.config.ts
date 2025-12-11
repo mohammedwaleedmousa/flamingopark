@@ -16,6 +16,7 @@ export default {
       fontFamily: {
         heading: ["Cinzel", "serif"],
         body: ["Poppins", "sans-serif"],
+        brand: ["Cormorant Garamond", "Playfair Display", "serif"],
       },
       colors: {
         border: "hsl(var(--border))",

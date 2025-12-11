@@ -139,9 +139,12 @@ const HomePage = () => {
       <Navbar />
       <CartDrawer />
 
-      <main className="pt-20">
+      <main className="pt-14 md:pt-16">
         {/* Hero Slider */}
         <HeroSlider />
+
+        {/* Brands Strip - Right after banner */}
+        <BrandsStrip />
 
         {/* Features Bar */}
         <section className="py-6 bg-secondary border-b border-gold/10">
@@ -168,9 +171,6 @@ const HomePage = () => {
             </div>
           </div>
         </section>
-
-        {/* Brands Strip */}
-        <BrandsStrip />
 
         {/* Categories Section */}
         <section className="py-12 md:py-16 bg-gradient-to-b from-muted/30 to-background">

@@ -1,16 +1,49 @@
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import ProductCard from '@/components/ProductCard';
-import { useStore } from '@/store/useStore';
-import { getProductsByCountry } from '@/data/products';
-import { Percent, Clock } from 'lucide-react';
+import { useStore, Product } from '@/store/useStore';
+import { supabase } from '@/integrations/supabase/client';
+import { Percent, Clock, Loader2 } from 'lucide-react';
 
 const OffersPage = () => {
   const { country } = useStore();
-  const products = country ? getProductsByCountry(country) : [];
-  const discountedProducts = products.filter(p => p.discount && p.discount > 0);
+
+  // Fetch discounted products
+  const { data: discountedProducts = [], isLoading } = useQuery({
+    queryKey: ['discounted-products', country],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .gt('discount', 0)
+        .contains('countries', [country])
+        .order('discount', { ascending: false });
+      if (error) throw error;
+      return data.map(p => ({
+        id: p.id,
+        name: p.name,
+        nameAr: p.name_ar,
+        slug: p.slug,
+        price: Number(p.price),
+        originalPrice: p.original_price ? Number(p.original_price) : undefined,
+        discount: p.discount || undefined,
+        description: p.description || '',
+        descriptionAr: p.description_ar || '',
+        images: p.images || [],
+        category: p.category,
+        brand: p.brand,
+        inStock: p.in_stock ?? true,
+        countries: (p.countries || ['SA', 'YE']) as ('SA' | 'YE')[],
+        isFeatured: p.is_featured,
+        isBestSeller: p.is_best_seller,
+      })) as Product[];
+    },
+    enabled: !!country,
+  });
 
   return (
     <div className="min-h-screen bg-background">
@@ -68,7 +101,11 @@ const OffersPage = () => {
         {/* Products */}
         <section className="py-16">
           <div className="container mx-auto px-4">
-            {discountedProducts.length === 0 ? (
+            {isLoading ? (
+              <div className="flex items-center justify-center py-20">
+                <Loader2 className="w-8 h-8 animate-spin text-gold" />
+              </div>
+            ) : discountedProducts.length === 0 ? (
               <div className="text-center py-20">
                 <p className="text-muted-foreground font-body text-lg">
                   لا توجد عروض متاحة حالياً

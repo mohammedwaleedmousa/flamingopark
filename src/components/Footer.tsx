@@ -75,7 +75,7 @@ const Footer = () => {
 
         <div className="mt-16 pt-8 border-t border-gold/20 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="font-body text-xs opacity-60">
-            © 2024 ERMGOLD. جميع الحقوق محفوظة
+            © 2025 ERMGOLD. جميع الحقوق محفوظة
           </p>
           <div className="flex items-center gap-6 font-body text-xs opacity-60">
             <Link to="/privacy" className="hover:text-gold transition-colors">سياسة الخصوصية</Link>

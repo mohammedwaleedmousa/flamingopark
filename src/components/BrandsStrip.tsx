@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/store/useStore';
+import { motion } from 'framer-motion';
 
 interface Brand {
   id: string;
@@ -33,28 +34,44 @@ const BrandsStrip = () => {
     navigate(`/products?brand=${encodeURIComponent(brandName)}`);
   };
 
+  // Duplicate brands for seamless infinite scroll
+  const duplicatedBrands = [...brands, ...brands, ...brands];
+
   return (
-    <section className="bg-black">
-      <div className="container mx-auto px-2">
-        <div className="flex items-center justify-center gap-2 md:gap-6 h-11 md:h-12 overflow-x-auto scrollbar-hide">
-          {brands.map((brand, index) => (
+    <section className="bg-secondary py-4 overflow-hidden">
+      <div className="relative">
+        <motion.div
+          className="flex gap-8 md:gap-12"
+          animate={{
+            x: ['0%', '-33.33%'],
+          }}
+          transition={{
+            x: {
+              repeat: Infinity,
+              repeatType: 'loop',
+              duration: 20,
+              ease: 'linear',
+            },
+          }}
+        >
+          {duplicatedBrands.map((brand, index) => (
             <button
-              key={brand.id}
+              key={`${brand.id}-${index}`}
               onClick={() => handleBrandClick(brand.name)}
-              className="px-2 md:px-4 py-1.5 whitespace-nowrap transition-all duration-200 hover:opacity-80"
+              className="px-4 md:px-6 py-2 whitespace-nowrap transition-all duration-300 hover:scale-110 flex-shrink-0"
               style={{
-                fontFamily: "'Cormorant Garamond', 'Playfair Display', serif",
-                fontStyle: index === 0 ? 'italic' : 'normal',
+                fontFamily: "'Playfair Display', 'Cormorant Garamond', serif",
+                fontStyle: index % 2 === 0 ? 'italic' : 'normal',
                 fontWeight: 500,
-                fontSize: '14px',
+                fontSize: '18px',
                 color: '#D4AF37',
-                letterSpacing: '0.05em',
+                letterSpacing: '0.08em',
               }}
             >
               {brand.name}
             </button>
           ))}
-        </div>
+        </motion.div>
       </div>
     </section>
   );

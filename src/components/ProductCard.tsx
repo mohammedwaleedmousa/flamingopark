@@ -72,11 +72,11 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
       className="group"
     >
       <Link to={`/product/${product.slug}`} className="block">
-        <div className="relative bg-card rounded-lg overflow-hidden border border-border/30 transition-all duration-500 hover:border-gold/40 hover:shadow-[0_20px_50px_-15px_hsl(var(--gold)/0.2)]">
+        <div className="relative bg-card rounded-lg overflow-hidden border-2 border-gold/30 transition-all duration-500 hover:border-gold hover:shadow-[0_20px_50px_-15px_hsl(var(--gold)/0.3)]">
           {/* Image Container */}
           <div className={`relative overflow-hidden ${compact ? 'aspect-[3/4]' : 'aspect-[4/5]'}`}>
-            {/* Background Gradient */}
-            <div className="absolute inset-0 bg-gradient-to-b from-muted/50 to-muted" />
+            {/* Background - Solid cream color */}
+            <div className="absolute inset-0 bg-cream" />
             
             {/* Image Skeleton */}
             {!imageLoaded && product.images[0] && (

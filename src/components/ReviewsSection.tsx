@@ -1,14 +1,38 @@
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import { Star } from 'lucide-react';
-import { reviews } from '@/data/products';
+import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/store/useStore';
+
+interface Review {
+  id: string;
+  customer_name: string;
+  message: string;
+  message_ar: string | null;
+  rating: number;
+  country: string;
+}
 
 const ReviewsSection = () => {
   const { country } = useStore();
-  
-  const countryReviews = country 
-    ? reviews.filter(r => r.country === country)
-    : reviews;
+
+  const { data: reviews = [] } = useQuery({
+    queryKey: ['reviews', country],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('reviews')
+        .select('*')
+        .eq('is_approved', true)
+        .eq('country', country)
+        .order('created_at', { ascending: false })
+        .limit(6);
+      if (error) throw error;
+      return data as Review[];
+    },
+    enabled: !!country,
+  });
+
+  if (reviews.length === 0) return null;
 
   return (
     <section className="section-beige">
@@ -26,7 +50,7 @@ const ReviewsSection = () => {
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {countryReviews.map((review, index) => (
+          {reviews.map((review, index) => (
             <motion.div
               key={review.id}
               initial={{ opacity: 0, y: 30 }}
@@ -46,9 +70,9 @@ const ReviewsSection = () => {
                 ))}
               </div>
               <p className="text-foreground/80 font-body mb-4 leading-relaxed">
-                "{review.messageAr}"
+                "{review.message_ar || review.message}"
               </p>
-              <p className="font-heading text-sm text-gold">{review.nameAr}</p>
+              <p className="font-heading text-sm text-gold">{review.customer_name}</p>
             </motion.div>
           ))}
         </div>

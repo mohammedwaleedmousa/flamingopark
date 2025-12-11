@@ -1,7 +1,34 @@
 import { motion } from 'framer-motion';
-import { brands } from '@/data/products';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
+import { useStore } from '@/store/useStore';
+
+interface Brand {
+  id: string;
+  name: string;
+  logo_url: string | null;
+}
 
 const BrandsStrip = () => {
+  const { country } = useStore();
+
+  const { data: brands = [] } = useQuery({
+    queryKey: ['brands-strip', country],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('brands')
+        .select('*')
+        .eq('is_active', true)
+        .contains('countries', [country])
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data as Brand[];
+    },
+    enabled: !!country,
+  });
+
+  if (brands.length === 0) return null;
+
   return (
     <section className="py-12 bg-muted border-y border-border/50">
       <div className="container mx-auto px-4">
@@ -21,12 +48,24 @@ const BrandsStrip = () => {
               transition={{ delay: index * 0.1 }}
               className="text-center group cursor-pointer"
             >
-              <div className="text-4xl mb-2 transition-transform duration-300 group-hover:scale-110">
-                {brand.logo}
-              </div>
-              <p className="text-xs text-muted-foreground font-body tracking-wider opacity-0 group-hover:opacity-100 transition-opacity">
-                {brand.name}
-              </p>
+              {brand.logo_url ? (
+                <img 
+                  src={brand.logo_url} 
+                  alt={brand.name}
+                  className="h-12 md:h-16 w-auto object-contain transition-transform duration-300 group-hover:scale-110 opacity-70 hover:opacity-100"
+                />
+              ) : (
+                <div className="h-12 md:h-16 flex items-center justify-center">
+                  <span className="font-heading text-lg md:text-xl text-muted-foreground group-hover:text-gold transition-colors">
+                    {brand.name}
+                  </span>
+                </div>
+              )}
+              {brand.logo_url && (
+                <p className="text-xs text-muted-foreground font-body tracking-wider mt-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  {brand.name}
+                </p>
+              )}
             </motion.div>
           ))}
         </motion.div>

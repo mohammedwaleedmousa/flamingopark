@@ -219,13 +219,13 @@ const HeroSlider = () => {
             ))}
           </div>
 
-          {/* Content */}
-          <div className="relative h-full container mx-auto px-4 flex items-center">
+          {/* Content - Centered */}
+          <div className="relative h-full container mx-auto px-4 flex items-center justify-center">
             <motion.div
-              initial={{ opacity: 0, x: -50 }}
-              animate={{ opacity: 1, x: 0 }}
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="max-w-2xl"
+              className="max-w-2xl text-center"
             >
               {/* Subtitle Badge */}
               {currentBanner.subtitle_ar && (
@@ -260,24 +260,24 @@ const HeroSlider = () => {
                 ))}
               </motion.h1>
 
-              {/* Decorative Line */}
+              {/* Decorative Line - Centered */}
               <motion.div
                 initial={{ scaleX: 0 }}
                 animate={{ scaleX: 1 }}
                 transition={{ delay: 0.7, duration: 0.6 }}
-                className="w-24 h-1 bg-gradient-to-r from-gold to-gold-light mb-8 origin-right"
+                className="w-24 h-1 bg-gradient-to-r from-gold to-gold-light mb-8 mx-auto"
               />
 
-              {/* CTA Button */}
+              {/* CTA Buttons - Stacked vertically */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.8 }}
-                className="flex flex-wrap items-center gap-4"
+                className="flex flex-col items-start gap-3"
               >
                 <Link
                   to={currentBanner.cta_link || '/products'}
-                  className="group relative inline-flex items-center gap-3 px-10 py-5 bg-gold text-secondary font-heading tracking-wider text-sm uppercase overflow-hidden rounded-lg transition-all duration-300 hover:shadow-[0_10px_40px_-10px_hsl(var(--gold)/0.5)]"
+                  className="group relative inline-flex items-center justify-center gap-3 px-10 py-4 bg-gold text-secondary font-heading tracking-wider text-sm uppercase overflow-hidden rounded-lg transition-all duration-300 hover:shadow-[0_10px_40px_-10px_hsl(var(--gold)/0.5)] min-w-[200px]"
                 >
                   {/* Shine Effect */}
                   <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
@@ -286,10 +286,10 @@ const HeroSlider = () => {
                   <ArrowLeft className="w-5 h-5 relative group-hover:-translate-x-1 transition-transform" />
                 </Link>
 
-                {/* Secondary Link */}
+                {/* Secondary Link - Now with background */}
                 <Link
                   to="/about"
-                  className="inline-flex items-center gap-2 px-6 py-5 text-gold font-heading tracking-wider text-sm uppercase hover:text-gold-light transition-colors"
+                  className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-gold/10 backdrop-blur-sm border border-gold/30 text-gold font-heading tracking-wider text-sm uppercase hover:bg-gold/20 transition-all duration-300 rounded-lg min-w-[200px]"
                 >
                   اعرف المزيد
                   <ChevronLeft className="w-4 h-4" />
@@ -300,25 +300,7 @@ const HeroSlider = () => {
         </motion.div>
       </AnimatePresence>
 
-      {/* Navigation Arrows */}
-      {banners.length > 1 && (
-        <>
-          <button
-            onClick={goPrev}
-            className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 p-4 bg-background/10 backdrop-blur-md border border-gold/20 text-gold hover:bg-gold hover:text-secondary transition-all duration-300 rounded-full opacity-0 hover:opacity-100 focus:opacity-100 group-hover:opacity-100"
-            style={{ opacity: isHovered ? 1 : 0.5 }}
-          >
-            <ChevronRight className="w-6 h-6" />
-          </button>
-          <button
-            onClick={goNext}
-            className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 p-4 bg-background/10 backdrop-blur-md border border-gold/20 text-gold hover:bg-gold hover:text-secondary transition-all duration-300 rounded-full"
-            style={{ opacity: isHovered ? 1 : 0.5 }}
-          >
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-        </>
-      )}
+      {/* Navigation Arrows - Hidden on mobile */}
 
       {/* Progress Bar & Dots */}
       {banners.length > 1 && (

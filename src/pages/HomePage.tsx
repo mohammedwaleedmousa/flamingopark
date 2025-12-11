@@ -9,7 +9,7 @@ import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import { useStore, Product } from '@/store/useStore';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Sparkles, Crown, Gem, Shield, Truck, RotateCcw, Star, Percent } from 'lucide-react';
+import { ArrowLeft, Sparkles, Crown, Gem, Shield, Truck, Star, Percent } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 const HomePage = () => {
@@ -120,13 +120,6 @@ const HomePage = () => {
 
   if (!country) return null;
 
-  const features = [
-    { icon: Shield, title: 'ضمان الجودة', desc: 'منتجات أصلية 100%' },
-    { icon: Truck, title: 'شحن سريع', desc: 'توصيل خلال 2-5 أيام' },
-    { icon: RotateCcw, title: 'إرجاع سهل', desc: 'خلال 14 يوم' },
-    { icon: Gem, title: 'ذهب حقيقي', desc: 'عيار 18 و 21 قيراط' },
-  ];
-
   const categories = [
     { name: 'خواتم', icon: '💍', link: '/products?category=rings' },
     { name: 'قلائد', icon: '📿', link: '/products?category=necklaces' },
@@ -142,74 +135,57 @@ const HomePage = () => {
       <main className="pt-14 md:pt-16">
         {/* Hero Slider */}
         <HeroSlider />
-
+        
         {/* Brands Strip - Right after banner */}
         <BrandsStrip />
 
-        {/* Features Bar */}
-        <section className="py-6 bg-secondary border-b border-gold/10">
-          <div className="container mx-auto px-4">
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-8">
-              {features.map((feature, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className="flex items-center gap-3 justify-center md:justify-start"
-                >
-                  <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center flex-shrink-0">
-                    <feature.icon className="w-5 h-5 text-gold" />
-                  </div>
-                  <div>
-                    <h4 className="font-heading text-sm text-secondary-foreground">{feature.title}</h4>
-                    <p className="text-xs text-gold-light/60 font-body hidden sm:block">{feature.desc}</p>
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Categories Section */}
-        <section className="py-12 md:py-16 bg-gradient-to-b from-muted/30 to-background">
-          <div className="container mx-auto px-4">
+        {/* Categories Section - Horizontal scrolling */}
+        <section className="py-8 md:py-12 bg-gradient-to-b from-muted/30 to-background overflow-hidden">
+          <div className="container mx-auto px-4 mb-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              className="text-center mb-10"
+              className="text-center"
             >
               <span className="text-gold font-body text-sm tracking-widest uppercase">تصفح</span>
               <h2 className="font-heading text-3xl md:text-4xl text-foreground mt-2">
                 الفئات <span className="text-gold">الرئيسية</span>
               </h2>
             </motion.div>
+          </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {categories.map((category, index) => (
-                <motion.div
-                  key={category.name}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
+          {/* Animated Categories Strip */}
+          <div className="relative overflow-hidden">
+            <motion.div
+              className="flex gap-6 md:gap-8"
+              animate={{
+                x: ['0%', '-50%'],
+              }}
+              transition={{
+                x: {
+                  repeat: Infinity,
+                  repeatType: 'loop',
+                  duration: 15,
+                  ease: 'linear',
+                },
+              }}
+            >
+              {[...categories, ...categories, ...categories, ...categories].map((category, index) => (
+                <Link
+                  key={`${category.name}-${index}`}
+                  to={category.link}
+                  className="group flex-shrink-0 p-4 md:p-6 bg-card rounded-xl border-2 border-gold/20 hover:border-gold transition-all duration-300 hover:shadow-[0_10px_40px_-10px_hsl(var(--gold)/0.3)] text-center min-w-[120px] md:min-w-[150px]"
                 >
-                  <Link
-                    to={category.link}
-                    className="group block p-6 md:p-8 bg-card rounded-2xl border border-border/30 hover:border-gold/40 transition-all duration-300 hover:shadow-[0_10px_40px_-10px_hsl(var(--gold)/0.2)] text-center"
-                  >
-                    <span className="text-4xl md:text-5xl block mb-4 group-hover:scale-110 transition-transform duration-300">
-                      {category.icon}
-                    </span>
-                    <h3 className="font-heading text-lg text-foreground group-hover:text-gold transition-colors">
-                      {category.name}
-                    </h3>
-                  </Link>
-                </motion.div>
+                  <span className="text-3xl md:text-4xl block mb-3 group-hover:scale-110 transition-transform duration-300">
+                    {category.icon}
+                  </span>
+                  <h3 className="font-heading text-base md:text-lg text-foreground group-hover:text-gold transition-colors">
+                    {category.name}
+                  </h3>
+                </Link>
               ))}
-            </div>
+            </motion.div>
           </div>
         </section>
 

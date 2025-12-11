@@ -262,7 +262,7 @@ ${itemsList}
                     <Input
                       value={customer?.name || ''}
                       disabled
-                      className="bg-muted border-border"
+                      className="bg-muted/50 border-border text-foreground"
                       dir="rtl"
                     />
                   </div>
@@ -271,7 +271,7 @@ ${itemsList}
                     <Input
                       value={customer?.phone || ''}
                       disabled
-                      className="bg-muted border-border"
+                      className="bg-muted/50 border-border text-foreground"
                       dir="ltr"
                     />
                   </div>
@@ -280,20 +280,21 @@ ${itemsList}
                     <Textarea
                       value={formData.address}
                       onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      className="bg-muted border-border"
+                      className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
                       rows={3}
                       dir="rtl"
-                      placeholder={country === 'SA' ? 'جدة، المملكة العربية السعودية' : 'عدن، اليمن'}
+                      placeholder="مثال: شارع الملك فهد، حي النزهة، مبنى رقم 15"
                     />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-sm font-body text-muted-foreground mb-2">ملاحظات</label>
+                    <label className="block text-sm font-body text-muted-foreground mb-2">ملاحظات (اختياري)</label>
                     <Textarea
                       value={formData.notes}
                       onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      className="bg-muted border-border"
+                      className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
                       rows={2}
                       dir="rtl"
+                      placeholder="مثال: الرجاء التواصل قبل التوصيل"
                     />
                   </div>
                 </div>

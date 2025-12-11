@@ -20,24 +20,26 @@ const Navbar = () => {
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
-      {/* Main Navbar - White background */}
-      <div className="bg-white border-b border-neutral-100">
+      {/* Main Navbar - Black background */}
+      <div className="bg-secondary border-b border-gold/10">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-14 md:h-16">
             {/* Left: Menu Button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 text-neutral-800 hover:text-gold transition-colors"
+              className="p-2 text-gold hover:text-gold-light transition-colors"
               aria-label="Toggle menu"
             >
               {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
 
-            {/* Center: Logo - Elegant gold styling */}
+            {/* Center: Logo - Elegant gold styling with script font */}
             <Link to="/home" className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-0.5">
               <span 
-                className="font-heading text-xl md:text-2xl tracking-[0.12em] font-medium"
+                className="text-xl md:text-2xl tracking-[0.08em] font-medium"
                 style={{
+                  fontFamily: "'Cinzel', serif",
+                  fontWeight: 600,
                   background: 'linear-gradient(135deg, #C9A227 0%, #D4AF37 25%, #E8C547 50%, #D4AF37 75%, #C9A227 100%)',
                   WebkitBackgroundClip: 'text',
                   WebkitTextFillColor: 'transparent',
@@ -61,7 +63,7 @@ const Navbar = () => {
             <div className="flex items-center gap-0.5">
               <button
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
-                className="p-2 text-neutral-800 hover:text-gold transition-colors"
+                className="p-2 text-gold hover:text-gold-light transition-colors"
                 aria-label="Search"
               >
                 <Search className="w-5 h-5" />
@@ -69,7 +71,7 @@ const Navbar = () => {
 
               <button
                 onClick={openCart}
-                className="relative p-2 text-neutral-800 hover:text-gold transition-colors"
+                className="relative p-2 text-gold hover:text-gold-light transition-colors"
                 aria-label="Shopping cart"
               >
                 <ShoppingBag className="w-5 h-5" />
@@ -77,8 +79,7 @@ const Navbar = () => {
                   <motion.span
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute -top-0.5 -right-0.5 w-4 h-4 text-[10px] font-bold rounded-full flex items-center justify-center"
-                    style={{ backgroundColor: '#D4AF37', color: '#000' }}
+                    className="absolute -top-0.5 -right-0.5 w-4 h-4 text-[10px] font-bold rounded-full flex items-center justify-center bg-gold text-secondary"
                   >
                     {cartCount}
                   </motion.span>
@@ -97,16 +98,16 @@ const Navbar = () => {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
-            className="overflow-hidden bg-white border-b border-neutral-200"
+            className="overflow-hidden bg-secondary border-b border-gold/10"
           >
             <div className="container mx-auto px-4 py-3">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-neutral-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gold/50" />
                 <input
                   type="text"
                   placeholder="ابحث عن المنتجات..."
                   autoFocus
-                  className="w-full pl-10 pr-4 py-2.5 bg-neutral-100 border border-neutral-200 rounded-lg font-body text-sm text-neutral-800 placeholder:text-neutral-400 focus:outline-none focus:border-gold transition-colors"
+                  className="w-full pl-10 pr-4 py-2.5 bg-secondary/50 border border-gold/20 rounded-lg font-body text-sm text-gold-light placeholder:text-gold/40 focus:outline-none focus:border-gold transition-colors"
                   dir="rtl"
                 />
               </div>
@@ -123,21 +124,22 @@ const Navbar = () => {
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
-            className="overflow-hidden bg-white border-b border-neutral-200 shadow-lg"
+            className="overflow-hidden bg-secondary border-b border-gold/10 shadow-lg"
           >
             <nav className="container mx-auto px-4 py-6">
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {/* Navigation Links - Stacked vertically */}
+              <div className="flex flex-col gap-2">
                 {navLinks.map((link, index) => (
                   <motion.div
                     key={link.href}
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
                     transition={{ delay: index * 0.05 }}
                   >
                     <Link
                       to={link.href}
                       onClick={() => setIsMenuOpen(false)}
-                      className="block p-4 text-center font-body text-neutral-800 hover:text-gold hover:bg-neutral-50 rounded-lg transition-all duration-200"
+                      className="block p-4 text-right font-body text-gold-light hover:text-gold hover:bg-gold/5 rounded-lg transition-all duration-200 border border-transparent hover:border-gold/20"
                     >
                       <span className="text-sm">{link.label}</span>
                     </Link>
@@ -146,13 +148,13 @@ const Navbar = () => {
               </div>
               
               {/* Country Selector */}
-              <div className="mt-6 pt-4 border-t border-neutral-200">
+              <div className="mt-6 pt-4 border-t border-gold/20">
                 <button
                   onClick={() => {
                     navigate('/select-country');
                     setIsMenuOpen(false);
                   }}
-                  className="flex items-center justify-center gap-2 w-full py-3 text-neutral-500 hover:text-gold transition-colors"
+                  className="flex items-center justify-center gap-2 w-full py-3 text-gold/70 hover:text-gold transition-colors"
                 >
                   <MapPin className="w-4 h-4" />
                   <span className="font-body text-sm">

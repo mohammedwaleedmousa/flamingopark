@@ -94,52 +94,33 @@ const AboutPage = () => {
 
       <main className="pt-20">
         {/* Hero Section */}
-        <section className="relative min-h-[80vh] flex items-center justify-center bg-gradient-to-b from-secondary via-secondary to-charcoal overflow-hidden">
-          {/* Animated Background */}
+        <section className="relative min-h-[70vh] flex items-center justify-center overflow-hidden">
+          {/* Background Image with Overlay */}
           <div className="absolute inset-0">
-            {/* Floating Gold Particles */}
-            {[...Array(30)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute w-1 h-1 bg-gold rounded-full"
-                initial={{ 
-                  x: `${Math.random() * 100}%`, 
-                  y: `${Math.random() * 100}%`,
-                  opacity: 0,
-                  scale: 0
-                }}
-                animate={{ 
-                  y: [`${Math.random() * 100}%`, `${Math.random() * 100}%`],
-                  opacity: [0, 0.6, 0],
-                  scale: [0, 1.5, 0]
-                }}
-                transition={{ 
-                  duration: 4 + Math.random() * 3,
-                  repeat: Infinity,
-                  delay: Math.random() * 3
-                }}
-              />
-            ))}
+            <img
+              src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=1920"
+              alt="ERMGOLD Background"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/80" />
             
-            {/* Radial Gradient */}
-            <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_hsl(var(--gold)/0.15)_0%,_transparent_70%)]" />
-            
-            {/* Grid Pattern */}
-            <div className="absolute inset-0 opacity-5" style={{
-              backgroundImage: `linear-gradient(hsl(var(--gold)) 1px, transparent 1px), linear-gradient(90deg, hsl(var(--gold)) 1px, transparent 1px)`,
-              backgroundSize: '60px 60px'
-            }} />
+            {/* Subtle Gold Shimmer */}
+            <motion.div 
+              className="absolute inset-0 bg-gradient-to-r from-transparent via-gold/5 to-transparent"
+              animate={{ x: ['-100%', '100%'] }}
+              transition={{ duration: 4, repeat: Infinity, ease: 'linear' }}
+            />
           </div>
 
-          <div className="container mx-auto px-4 text-center relative z-10">
+          <div className="container mx-auto px-4 text-center relative z-10 py-16">
             {/* Badge */}
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 px-5 py-2.5 bg-gold/10 backdrop-blur-sm rounded-full mb-8 border border-gold/20"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gold/20 backdrop-blur-md rounded-full mb-6 border border-gold/30"
             >
               <Gem className="w-4 h-4 text-gold" />
-              <span className="font-body text-sm text-gold">منذ 2014</span>
+              <span className="font-body text-sm text-gold-light">منذ 2014</span>
             </motion.div>
 
             {/* Title */}
@@ -147,29 +128,36 @@ const AboutPage = () => {
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.1 }}
-              className="font-heading text-5xl md:text-7xl lg:text-8xl mb-6"
+              className="font-heading text-4xl md:text-6xl lg:text-7xl mb-4"
             >
-              <span className="text-secondary-foreground">قصة</span>
-              <br />
-              <span className="text-gold-gradient">ERMGOLD</span>
+              <span className="text-white">من</span>
+              <span className="text-gold mx-3">نحن</span>
             </motion.h1>
+
+            {/* Decorative Line */}
+            <motion.div
+              initial={{ scaleX: 0 }}
+              animate={{ scaleX: 1 }}
+              transition={{ delay: 0.3, duration: 0.6 }}
+              className="w-24 h-0.5 bg-gradient-to-r from-transparent via-gold to-transparent mx-auto mb-6"
+            />
 
             {/* Subtitle */}
             <motion.p
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.2 }}
-              className="font-body text-lg md:text-xl text-gold-light/70 max-w-2xl mx-auto mb-12"
+              className="font-body text-base md:text-lg text-white/80 max-w-xl mx-auto mb-10"
             >
               رحلة من التميز والأناقة في عالم المجوهرات الذهبية الفاخرة
             </motion.p>
 
-            {/* Stats */}
+            {/* Stats Grid */}
             <motion.div
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="grid grid-cols-2 md:grid-cols-4 gap-4 max-w-3xl mx-auto"
+              className="grid grid-cols-2 md:grid-cols-4 gap-3 max-w-2xl mx-auto"
             >
               {stats.map((stat, index) => (
                 <motion.div
@@ -177,25 +165,26 @@ const AboutPage = () => {
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.4 + index * 0.1 }}
-                  className="bg-secondary/50 backdrop-blur-sm border border-gold/20 rounded-xl p-4 md:p-6"
+                  whileHover={{ scale: 1.05, y: -5 }}
+                  className="bg-black/40 backdrop-blur-md border border-gold/30 rounded-xl p-4 hover:border-gold/60 transition-all duration-300"
                 >
-                  <stat.icon className="w-6 h-6 text-gold mx-auto mb-2" />
-                  <div className="font-heading text-2xl md:text-3xl text-gold">{stat.value}</div>
-                  <div className="text-xs md:text-sm text-gold-light/60 font-body">{stat.label}</div>
+                  <stat.icon className="w-5 h-5 text-gold mx-auto mb-2" />
+                  <div className="font-heading text-xl md:text-2xl text-gold">{stat.value}</div>
+                  <div className="text-xs text-white/60 font-body">{stat.label}</div>
                 </motion.div>
               ))}
             </motion.div>
-
-            {/* Scroll Indicator */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1, y: [0, 10, 0] }}
-              transition={{ delay: 1, y: { repeat: Infinity, duration: 1.5 } }}
-              className="absolute bottom-8 left-1/2 -translate-x-1/2"
-            >
-              <ChevronDown className="w-8 h-8 text-gold/50" />
-            </motion.div>
           </div>
+
+          {/* Scroll Indicator */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1, y: [0, 8, 0] }}
+            transition={{ delay: 1, y: { repeat: Infinity, duration: 1.5 } }}
+            className="absolute bottom-6 left-1/2 -translate-x-1/2"
+          >
+            <ChevronDown className="w-6 h-6 text-gold/60" />
+          </motion.div>
         </section>
 
         {/* Story Section */}

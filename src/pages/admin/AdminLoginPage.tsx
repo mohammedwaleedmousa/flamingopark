@@ -156,41 +156,28 @@ const AdminLoginPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-secondary flex flex-col items-center justify-center p-6">
-      {/* Background Pattern */}
-      <div className="absolute inset-0 opacity-5" style={{
-        backgroundImage: `radial-gradient(circle at 50% 50%, hsl(var(--gold)) 1px, transparent 1px)`,
-        backgroundSize: '30px 30px'
-      }} />
-
+    <div className="min-h-screen bg-background flex flex-col items-center justify-center p-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md relative z-10"
+        transition={{ duration: 0.4 }}
+        className="w-full max-w-sm"
       >
-        <div className="text-center mb-10">
-          <motion.h1 
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="logo-ermgold text-4xl mb-2"
-          >
-            ERMGOLD
-          </motion.h1>
-          <p className="text-gold/60 text-sm font-body">لوحة التحكم</p>
-        </div>
+        <div className="backdrop-blur-sm bg-card/80 rounded-2xl shadow-2xl shadow-primary/10 p-8 space-y-8 border border-primary/40">
+          {/* Welcome Text */}
+          <div className="text-center space-y-2">
+            <h1 className="text-3xl font-heading text-primary">ERMGOLD</h1>
+            <p className="text-muted-foreground text-sm">لوحة التحكم</p>
+          </div>
 
-        <motion.div 
-          layout
-          className="bg-charcoal/50 backdrop-blur-sm border border-gold/20 p-8 rounded-2xl shadow-[0_20px_60px_-20px_hsl(var(--gold)/0.2)]"
-        >
           {/* Tabs */}
-          <div className="flex mb-8 bg-secondary/50 rounded-xl p-1">
+          <div className="flex bg-muted rounded-xl p-1">
             <button
               onClick={() => setIsSignUp(false)}
               className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-heading text-sm transition-all ${
                 !isSignUp 
-                  ? 'bg-gold text-secondary' 
-                  : 'text-gold/60 hover:text-gold'
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <LogIn className="w-4 h-4" />
@@ -200,8 +187,8 @@ const AdminLoginPage = () => {
               onClick={() => setIsSignUp(true)}
               className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-heading text-sm transition-all ${
                 isSignUp 
-                  ? 'bg-gold text-secondary' 
-                  : 'text-gold/60 hover:text-gold'
+                  ? 'bg-primary text-primary-foreground' 
+                  : 'text-muted-foreground hover:text-foreground'
               }`}
             >
               <UserPlus className="w-4 h-4" />
@@ -213,41 +200,41 @@ const AdminLoginPage = () => {
             key={isSignUp ? 'signup' : 'login'}
             initial={{ opacity: 0, x: isSignUp ? 20 : -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="font-heading text-xl text-gold text-center mb-6"
+            className="font-heading text-lg text-foreground text-center"
           >
             {isSignUp ? 'إنشاء حساب أدمن جديد' : 'تسجيل دخول الأدمن'}
           </motion.h2>
 
           <form onSubmit={handleSubmit} className="space-y-5">
-            <div>
-              <label className="block text-sm font-body text-gold/70 mb-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-body text-muted-foreground">
                 البريد الإلكتروني
               </label>
               <div className="relative">
-                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gold/50" />
+                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   placeholder="admin@ermgold.com"
-                  className="bg-secondary/50 border-gold/30 text-gold-light pr-10 placeholder:text-gold/30 focus:border-gold rounded-xl h-12"
+                  className="bg-background/50 border-0 ring-1 ring-border/50 focus:ring-2 focus:ring-primary pr-10 rounded-xl h-12 transition-all"
                   dir="ltr"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-body text-gold/70 mb-2">
+            <div className="space-y-2">
+              <label className="block text-sm font-body text-muted-foreground">
                 كلمة المرور
               </label>
               <div className="relative">
-                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gold/50" />
+                <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="••••••••"
-                  className="bg-secondary/50 border-gold/30 text-gold-light pr-10 placeholder:text-gold/30 focus:border-gold rounded-xl h-12"
+                  className="bg-background/50 border-0 ring-1 ring-border/50 focus:ring-2 focus:ring-primary pr-10 rounded-xl h-12 transition-all"
                 />
               </div>
             </div>
@@ -257,18 +244,19 @@ const AdminLoginPage = () => {
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
                 exit={{ opacity: 0, height: 0 }}
+                className="space-y-2"
               >
-                <label className="block text-sm font-body text-gold/70 mb-2">
+                <label className="block text-sm font-body text-muted-foreground">
                   تأكيد كلمة المرور
                 </label>
                 <div className="relative">
-                  <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gold/50" />
+                  <Lock className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                   <Input
                     type="password"
                     value={formData.confirmPassword}
                     onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
                     placeholder="••••••••"
-                    className="bg-secondary/50 border-gold/30 text-gold-light pr-10 placeholder:text-gold/30 focus:border-gold rounded-xl h-12"
+                    className="bg-background/50 border-0 ring-1 ring-border/50 focus:ring-2 focus:ring-primary pr-10 rounded-xl h-12 transition-all"
                   />
                 </div>
               </motion.div>
@@ -277,7 +265,7 @@ const AdminLoginPage = () => {
             <Button
               type="submit"
               disabled={isLoading}
-              className="w-full btn-gold py-6 font-heading tracking-wider rounded-xl text-base"
+              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground py-6 font-heading tracking-wider rounded-xl text-base shadow-lg shadow-primary/20"
             >
               {isLoading ? (
                 <Loader2 className="w-5 h-5 animate-spin" />
@@ -296,18 +284,18 @@ const AdminLoginPage = () => {
           </form>
 
           {/* Info Text */}
-          <p className="text-center text-gold/40 text-xs font-body mt-6">
+          <p className="text-center text-muted-foreground text-xs font-body">
             {isSignUp 
               ? 'بعد إنشاء الحساب ستتمكن من الوصول للوحة التحكم' 
               : 'أدخل بيانات حسابك للوصول للوحة التحكم'}
           </p>
-        </motion.div>
+        </div>
 
         {/* Back to Store */}
         <div className="text-center mt-6">
           <a 
             href="/home" 
-            className="text-gold/50 hover:text-gold text-sm font-body transition-colors"
+            className="text-muted-foreground hover:text-primary text-sm font-body transition-colors"
           >
             العودة للمتجر
           </a>

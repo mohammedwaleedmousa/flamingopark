@@ -14,11 +14,9 @@ export default {
     },
     extend: {
       fontFamily: {
-        heading: ["Cinzel Decorative", "Playfair Display", "serif"],
-        body: ["Lora", "Cormorant Garamond", "Georgia", "serif"],
-        brand: ["Cinzel Decorative", "Playfair Display", "serif"],
-        display: ["Playfair Display", "serif"],
-        serif: ["Cormorant Garamond", "Lora", "Georgia", "serif"],
+        heading: ["Cinzel", "serif"],
+        body: ["Poppins", "sans-serif"],
+        brand: ["Cormorant Garamond", "Playfair Display", "serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -30,7 +28,6 @@ export default {
           DEFAULT: "hsl(var(--gold))",
           light: "hsl(var(--gold-light))",
           dark: "hsl(var(--gold-dark))",
-          shimmer: "hsl(var(--gold-shimmer))",
         },
         beige: {
           DEFAULT: "hsl(var(--beige))",
@@ -38,7 +35,6 @@ export default {
         },
         cream: "hsl(var(--cream))",
         charcoal: "hsl(var(--charcoal))",
-        "royal-black": "hsl(var(--royal-black))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
@@ -116,14 +112,6 @@ export default {
           "0%, 100%": { opacity: "1" },
           "50%": { opacity: "0.5" },
         },
-        shimmer: {
-          "0%": { backgroundPosition: "-200% 0" },
-          "100%": { backgroundPosition: "200% 0" },
-        },
-        "gold-glow": {
-          "0%, 100%": { boxShadow: "0 0 25px hsl(46 52% 55% / 0.35)" },
-          "50%": { boxShadow: "0 0 50px hsl(43 64% 66% / 0.5)" },
-        },
       },
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
@@ -134,21 +122,12 @@ export default {
         "slide-out-right": "slide-out-right 0.3s ease-out",
         float: "float 3s ease-in-out infinite",
         pulse: "pulse 2s ease-in-out infinite",
-        shimmer: "shimmer 2s linear infinite",
-        "gold-glow": "gold-glow 2s ease-in-out infinite",
       },
       boxShadow: {
-        gold: "0 4px 30px -4px hsl(46 52% 55% / 0.4)",
-        "gold-glow": "0 0 50px hsl(43 64% 66% / 0.35)",
-        elegant: "0 10px 40px -10px hsl(0 0% 0% / 0.5)",
-        card: "0 4px 25px -4px hsl(0 0% 0% / 0.4)",
-        hover: "0 20px 50px -15px hsl(0 0% 0% / 0.6)",
-        luxury: "0 25px 60px -15px hsl(0 0% 0% / 0.7)",
-      },
-      backgroundImage: {
-        "gradient-gold": "linear-gradient(135deg, hsl(46 52% 55%), hsl(43 64% 66%), hsl(46 52% 55%))",
-        "gradient-royal": "linear-gradient(180deg, hsl(0 0% 7%), hsl(0 0% 12%))",
-        "gradient-beige": "linear-gradient(180deg, hsl(33 45% 84%), hsl(40 43% 95%))",
+        gold: "0 4px 20px -4px hsl(43 45% 59% / 0.3)",
+        elegant: "0 10px 40px -10px hsl(0 0% 0% / 0.1)",
+        card: "0 2px 12px -2px hsl(0 0% 0% / 0.08)",
+        hover: "0 20px 50px -15px hsl(0 0% 0% / 0.15)",
       },
     },
   },

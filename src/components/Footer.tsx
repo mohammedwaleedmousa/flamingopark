@@ -1,14 +1,21 @@
 import { Link } from 'react-router-dom';
 import { Instagram, Facebook, Twitter, Mail, Phone, MapPin } from 'lucide-react';
+import { useStore } from '@/store/useStore';
 
 const Footer = () => {
+  const { country } = useStore();
+  
+  // Location based on country
+  const location = country === 'YE' ? 'عدن، اليمن' : 'جدة، المملكة العربية السعودية';
+  const phoneNumber = country === 'YE' ? '+967 123 456 789' : '+966 12 345 6789';
+
   return (
     <footer className="bg-secondary text-gold-light/80">
       <div className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="md:col-span-1">
-            <h2 className="font-heading text-3xl text-gold mb-4 tracking-wider">ERMGOLD</h2>
+            <h2 className="logo-ermgold text-3xl mb-4">ERMGOLD</h2>
             <p className="font-body text-sm leading-relaxed opacity-70">
               مجوهرات فاخرة بأعلى معايير الجودة والأناقة
             </p>
@@ -32,7 +39,6 @@ const Footer = () => {
               <li><Link to="/products" className="hover:text-gold transition-colors">المنتجات</Link></li>
               <li><Link to="/offers" className="hover:text-gold transition-colors">العروض</Link></li>
               <li><Link to="/about" className="hover:text-gold transition-colors">من نحن</Link></li>
-              <li><Link to="/contact" className="hover:text-gold transition-colors">تواصل معنا</Link></li>
             </ul>
           </div>
 
@@ -53,7 +59,7 @@ const Footer = () => {
             <ul className="space-y-4 font-body text-sm">
               <li className="flex items-center gap-3">
                 <Phone className="w-4 h-4 text-gold" />
-                <span dir="ltr">+966 12 345 6789</span>
+                <span dir="ltr">{phoneNumber}</span>
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-gold" />
@@ -61,7 +67,7 @@ const Footer = () => {
               </li>
               <li className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 text-gold mt-1" />
-                <span>الرياض، المملكة العربية السعودية</span>
+                <span>{location}</span>
               </li>
             </ul>
           </div>

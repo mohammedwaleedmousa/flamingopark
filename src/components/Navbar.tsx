@@ -3,13 +3,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Search, Menu, X, MapPin } from 'lucide-react';
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
-import { useQuery } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [selectedBrand, setSelectedBrand] = useState<string | null>(null);
   const { country, openCart, getCartCount } = useStore();
   const cartCount = getCartCount();
   const navigate = useNavigate();
@@ -20,28 +17,6 @@ const Navbar = () => {
     { href: '/offers', label: 'العروض', labelEn: 'Offers' },
     { href: '/about', label: 'من نحن', labelEn: 'About' },
   ];
-
-  // Fetch brands for the strip
-  const { data: brands = [] } = useQuery({
-    queryKey: ['navbar-brands', country],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('brands')
-        .select('id, name')
-        .eq('is_active', true)
-        .contains('countries', [country])
-        .order('sort_order', { ascending: true })
-        .limit(6);
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!country,
-  });
-
-  const handleBrandClick = (brandName: string) => {
-    setSelectedBrand(brandName);
-    navigate(`/products?brand=${encodeURIComponent(brandName)}`);
-  };
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
@@ -113,33 +88,6 @@ const Navbar = () => {
           </div>
         </div>
       </div>
-
-      {/* Brands Strip - Black background with gold text like the image */}
-      {brands.length > 0 && (
-        <div className="bg-black">
-          <div className="container mx-auto px-2">
-            <div className="flex items-center justify-center gap-1 md:gap-2 h-10 md:h-11 overflow-x-auto scrollbar-hide">
-              {brands.map((brand, index) => (
-                <button
-                  key={brand.id}
-                  onClick={() => handleBrandClick(brand.name)}
-                  className={`px-3 md:px-4 py-1.5 text-xs md:text-sm font-body whitespace-nowrap transition-all duration-200 ${
-                    selectedBrand === brand.name
-                      ? 'text-black bg-gold rounded'
-                      : 'text-neutral-300 hover:text-gold'
-                  }`}
-                  style={{
-                    fontFamily: index === 0 ? 'serif' : 'inherit',
-                    fontStyle: index === 0 ? 'italic' : 'normal',
-                  }}
-                >
-                  {brand.name}
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Search Bar - Expandable */}
       <AnimatePresence>

@@ -23,20 +23,20 @@ const Navbar = () => {
       {/* Main Navbar - Black background */}
       <div className="bg-secondary border-b border-gold/10">
         <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-14 md:h-16">
+          <div className="flex items-center justify-between h-16 md:h-18">
             {/* Left: Menu Button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2 text-gold hover:text-gold-light transition-colors"
+              className="p-2.5 text-gold hover:text-gold-light transition-colors"
               aria-label="Toggle menu"
             >
-              {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
             </button>
 
-            {/* Center: Logo - Elegant gold styling with script font */}
-            <Link to="/home" className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center gap-0.5">
+            {/* Center: Logo */}
+            <Link to="/home" className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
               <span 
-                className="text-xl md:text-2xl tracking-[0.08em] font-medium"
+                className="text-2xl md:text-3xl tracking-[0.15em]"
                 style={{
                   fontFamily: "'Cinzel', serif",
                   fontWeight: 600,
@@ -48,10 +48,10 @@ const Navbar = () => {
               >
                 ERMGOLD
               </span>
-              {/* Chain/Link Icon */}
+              {/* Chain Icon */}
               <svg 
                 viewBox="0 0 36 12" 
-                className="w-7 h-2.5"
+                className="w-8 h-3 mt-0.5"
                 style={{ color: '#D4AF37' }}
               >
                 <ellipse cx="10" cy="6" rx="8" ry="4.5" fill="none" stroke="currentColor" strokeWidth="1.5"/>
@@ -60,26 +60,26 @@ const Navbar = () => {
             </Link>
 
             {/* Right: Search & Cart */}
-            <div className="flex items-center gap-0.5">
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
-                className="p-2 text-gold hover:text-gold-light transition-colors"
+                className="p-2.5 text-gold hover:text-gold-light transition-colors"
                 aria-label="Search"
               >
-                <Search className="w-5 h-5" />
+                <Search className="w-6 h-6" />
               </button>
 
               <button
                 onClick={openCart}
-                className="relative p-2 text-gold hover:text-gold-light transition-colors"
+                className="relative p-2.5 text-gold hover:text-gold-light transition-colors"
                 aria-label="Shopping cart"
               >
-                <ShoppingBag className="w-5 h-5" />
+                <ShoppingBag className="w-6 h-6" />
                 {cartCount > 0 && (
                   <motion.span
                     initial={{ scale: 0 }}
                     animate={{ scale: 1 }}
-                    className="absolute -top-0.5 -right-0.5 w-4 h-4 text-[10px] font-bold rounded-full flex items-center justify-center bg-gold text-secondary"
+                    className="absolute top-0.5 right-0.5 w-5 h-5 text-[11px] font-bold rounded-full flex items-center justify-center bg-gold text-secondary"
                   >
                     {cartCount}
                   </motion.span>

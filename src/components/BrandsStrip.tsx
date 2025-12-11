@@ -35,21 +35,21 @@ const BrandsStrip = () => {
   };
 
   // Duplicate brands for seamless infinite scroll
-  const duplicatedBrands = [...brands, ...brands, ...brands];
+  const duplicatedBrands = [...brands, ...brands, ...brands, ...brands];
 
   return (
-    <section className="bg-secondary py-4 overflow-hidden">
+    <section className="bg-secondary py-5 md:py-6 overflow-hidden border-y border-gold/10">
       <div className="relative">
         <motion.div
-          className="flex gap-8 md:gap-12"
+          className="flex items-center"
           animate={{
-            x: ['0%', '-33.33%'],
+            x: ['0%', '-25%'],
           }}
           transition={{
             x: {
               repeat: Infinity,
               repeatType: 'loop',
-              duration: 20,
+              duration: 25,
               ease: 'linear',
             },
           }}
@@ -58,14 +58,14 @@ const BrandsStrip = () => {
             <button
               key={`${brand.id}-${index}`}
               onClick={() => handleBrandClick(brand.name)}
-              className="px-4 md:px-6 py-2 whitespace-nowrap transition-all duration-300 hover:scale-110 flex-shrink-0"
+              className="px-8 md:px-12 whitespace-nowrap transition-all duration-300 hover:scale-105 flex-shrink-0"
               style={{
                 fontFamily: "'Playfair Display', 'Cormorant Garamond', serif",
                 fontStyle: index % 2 === 0 ? 'italic' : 'normal',
                 fontWeight: 500,
-                fontSize: '18px',
+                fontSize: '20px',
                 color: '#D4AF37',
-                letterSpacing: '0.08em',
+                letterSpacing: '0.1em',
               }}
             >
               {brand.name}

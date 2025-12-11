@@ -129,26 +129,26 @@ ${itemsList}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-card border-2 border-gold rounded-lg p-6 md:p-8 mb-8"
+            className="bg-white border-2 border-gold rounded-lg p-6 md:p-8 mb-8"
             id="invoice"
           >
             {/* Invoice Header */}
-            <div className="flex items-center justify-between mb-6 pb-4 border-b border-border">
+            <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
               <div>
-                <h2 className="font-heading text-2xl text-gold">ERMGOLD</h2>
-                <p className="text-sm text-muted-foreground">فاتورة طلب</p>
+                <h2 className="font-heading text-2xl text-amber-600">ERMGOLD</h2>
+                <p className="text-sm text-gray-500">فاتورة طلب</p>
               </div>
               <div className="text-left">
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm text-foreground">{orderData.orderNumber}</span>
+                  <span className="font-mono text-sm text-gray-900">{orderData.orderNumber}</span>
                   <button
                     onClick={handleCopyOrderNumber}
-                    className="p-1 hover:bg-gold/10 rounded print:hidden"
+                    className="p-1 hover:bg-amber-50 rounded print:hidden"
                   >
-                    <Copy className="w-4 h-4 text-gold" />
+                    <Copy className="w-4 h-4 text-amber-600" />
                   </button>
                 </div>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-xs text-gray-500">
                   {new Date(orderData.createdAt).toLocaleDateString('ar-SA', {
                     year: 'numeric',
                     month: 'long',
@@ -161,39 +161,39 @@ ${itemsList}
             </div>
 
             {/* Customer Info */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 pb-4 border-b border-border">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6 pb-4 border-b border-gray-200">
               <div>
-                <h3 className="text-sm font-heading text-muted-foreground mb-2">معلومات العميل</h3>
-                <p className="text-foreground font-body">{orderData.customerName}</p>
-                <p className="text-foreground font-mono text-sm" dir="ltr">{orderData.customerPhone}</p>
+                <h3 className="text-sm font-heading text-gray-500 mb-2">معلومات العميل</h3>
+                <p className="text-gray-900 font-body">{orderData.customerName}</p>
+                <p className="text-gray-900 font-mono text-sm" dir="ltr">{orderData.customerPhone}</p>
               </div>
               <div>
-                <h3 className="text-sm font-heading text-muted-foreground mb-2">عنوان التوصيل</h3>
-                <p className="text-foreground font-body">{orderData.customerAddress}</p>
+                <h3 className="text-sm font-heading text-gray-500 mb-2">عنوان التوصيل</h3>
+                <p className="text-gray-900 font-body">{orderData.customerAddress}</p>
                 {orderData.customerNotes && (
-                  <p className="text-muted-foreground text-sm mt-1">{orderData.customerNotes}</p>
+                  <p className="text-gray-500 text-sm mt-1">{orderData.customerNotes}</p>
                 )}
               </div>
             </div>
 
             {/* Order Items */}
             <div className="mb-6">
-              <h3 className="text-sm font-heading text-muted-foreground mb-4">المنتجات</h3>
+              <h3 className="text-sm font-heading text-gray-500 mb-4">المنتجات</h3>
               <div className="space-y-3">
                 {orderData.items.map((item, index) => (
-                  <div key={index} className="flex items-center gap-4 p-3 bg-muted/50 rounded-lg">
+                  <div key={index} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
                     <img
                       src={item.product_image}
                       alt={item.product_name}
                       className="w-16 h-16 object-cover rounded-md print:w-12 print:h-12"
                     />
                     <div className="flex-1">
-                      <h4 className="font-heading text-foreground">{item.product_name}</h4>
-                      <p className="text-sm text-muted-foreground">
+                      <h4 className="font-heading text-gray-900">{item.product_name}</h4>
+                      <p className="text-sm text-gray-500">
                         {item.quantity} × {item.price.toFixed(2)} {currency}
                       </p>
                     </div>
-                    <span className="font-heading text-gold">
+                    <span className="font-heading text-amber-600">
                       {(item.price * item.quantity).toFixed(2)} {currency}
                     </span>
                   </div>
@@ -202,23 +202,23 @@ ${itemsList}
             </div>
 
             {/* Totals */}
-            <div className="bg-muted/50 rounded-lg p-4 space-y-2">
+            <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <div className="flex justify-between text-sm font-body">
-                <span className="text-muted-foreground">المجموع الفرعي</span>
-                <span className="text-foreground">{orderData.subtotal.toFixed(2)} {currency}</span>
+                <span className="text-gray-500">المجموع الفرعي</span>
+                <span className="text-gray-900">{orderData.subtotal.toFixed(2)} {currency}</span>
               </div>
               <div className="flex justify-between text-sm font-body">
-                <span className="text-muted-foreground">رسوم التوصيل ({orderData.deliveryCompany})</span>
-                <span className="text-foreground">{orderData.deliveryFee.toFixed(2)} {currency}</span>
+                <span className="text-gray-500">رسوم التوصيل ({orderData.deliveryCompany})</span>
+                <span className="text-gray-900">{orderData.deliveryFee.toFixed(2)} {currency}</span>
               </div>
-              <div className="h-px bg-border my-2" />
+              <div className="h-px bg-gray-200 my-2" />
               <div className="flex justify-between font-heading text-lg">
-                <span className="text-foreground">الإجمالي</span>
-                <span className="text-gold">{orderData.total.toFixed(2)} {currency}</span>
+                <span className="text-gray-900">الإجمالي</span>
+                <span className="text-amber-600">{orderData.total.toFixed(2)} {currency}</span>
               </div>
               <div className="flex justify-between text-sm font-body pt-2">
-                <span className="text-muted-foreground">طريقة الدفع</span>
-                <span className="text-foreground">
+                <span className="text-gray-500">طريقة الدفع</span>
+                <span className="text-gray-900">
                   {orderData.paymentMethod === 'cod' ? 'الدفع عند الاستلام' : 'تحويل بنكي'}
                 </span>
               </div>
@@ -230,30 +230,29 @@ ${itemsList}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="flex flex-col sm:flex-row gap-4 print:hidden"
+            className="grid grid-cols-3 gap-3 print:hidden"
           >
             <Button
               onClick={handleWhatsApp}
-              className="flex-1 bg-green-600 hover:bg-green-700 text-white gap-2"
+              className="bg-green-600 hover:bg-green-700 text-white gap-2"
             >
               <MessageCircle className="w-5 h-5" />
-              إرسال عبر واتساب
+              <span className="hidden sm:inline">واتساب</span>
             </Button>
             <Button
               onClick={handlePrintInvoice}
-              variant="outline"
-              className="flex-1 border-gold text-gold hover:bg-gold/10 gap-2"
+              className="bg-gold hover:bg-gold/90 text-black gap-2"
             >
               <FileText className="w-5 h-5" />
-              طباعة الفاتورة
+              <span className="hidden sm:inline">طباعة/PDF</span>
             </Button>
-            <Link to="/home" className="flex-1">
+            <Link to="/home">
               <Button
                 variant="outline"
                 className="w-full border-border text-foreground hover:bg-muted gap-2"
               >
                 <Home className="w-5 h-5" />
-                العودة للرئيسية
+                <span className="hidden sm:inline">الرئيسية</span>
               </Button>
             </Link>
           </motion.div>

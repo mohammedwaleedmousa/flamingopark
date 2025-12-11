@@ -94,50 +94,59 @@ const CustomerAuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-secondary flex items-center justify-center p-6">
+    <div className="min-h-screen bg-background flex items-center justify-center p-6">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="w-full max-w-sm"
+        className="w-full max-w-md"
       >
-        <h1 className="text-2xl font-heading text-gold text-center mb-8">
-          مرحباً بك
-        </h1>
+        {/* Luxury Frame */}
+        <div className="relative p-8 md:p-10">
+          {/* Corner decorations */}
+          <div className="absolute top-0 left-0 w-8 h-8 border-t-2 border-l-2 border-primary" />
+          <div className="absolute top-0 right-0 w-8 h-8 border-t-2 border-r-2 border-primary" />
+          <div className="absolute bottom-0 left-0 w-8 h-8 border-b-2 border-l-2 border-primary" />
+          <div className="absolute bottom-0 right-0 w-8 h-8 border-b-2 border-r-2 border-primary" />
 
-        <form onSubmit={handleSubmit} className="space-y-5">
-          <div>
-            <Input
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              placeholder="الاسم"
-              className="bg-secondary border-gold/30 text-gold-light placeholder:text-gold/40 focus:border-gold h-12 text-center"
-              dir="rtl"
-            />
-          </div>
+          <h1 className="text-2xl font-heading text-primary text-center mb-10">
+            مرحباً بك
+          </h1>
 
-          <div>
-            <Input
-              value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-              placeholder="رقم الهاتف (+966 أو +967)"
-              className="bg-secondary border-gold/30 text-gold-light placeholder:text-gold/40 focus:border-gold h-12 text-center"
-              dir="ltr"
-            />
-          </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <Input
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                placeholder="الاسم"
+                className="bg-transparent border-2 border-primary/40 text-foreground placeholder:text-muted-foreground focus:border-primary h-14 text-center text-lg rounded-none"
+                dir="rtl"
+              />
+            </div>
 
-          <Button
-            type="submit"
-            disabled={isLoading}
-            className="w-full btn-gold h-12 font-heading tracking-wider"
-          >
-            {isLoading ? (
-              <Loader2 className="w-5 h-5 animate-spin" />
-            ) : (
-              'دخول'
-            )}
-          </Button>
-        </form>
+            <div>
+              <Input
+                value={formData.phone}
+                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                placeholder="رقم الهاتف (+966 أو +967)"
+                className="bg-transparent border-2 border-primary/40 text-foreground placeholder:text-muted-foreground focus:border-primary h-14 text-center text-lg rounded-none"
+                dir="ltr"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isLoading}
+              className="w-full btn-gold h-14 font-heading tracking-wider text-lg rounded-none mt-8"
+            >
+              {isLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                'دخول'
+              )}
+            </Button>
+          </form>
+        </div>
       </motion.div>
     </div>
   );

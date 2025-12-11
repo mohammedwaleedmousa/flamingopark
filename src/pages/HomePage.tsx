@@ -55,9 +55,9 @@ const HomePage = () => {
               <div className="w-20 h-px bg-gold mx-auto" />
             </motion.div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
               {featuredProducts.slice(0, 4).map((product, index) => (
-                <ProductCard key={product.id} product={product} index={index} />
+                <ProductCard key={product.id} product={product} index={index} compact />
               ))}
             </div>
 
@@ -88,9 +88,9 @@ const HomePage = () => {
               <div className="w-20 h-px bg-gold mx-auto" />
             </motion.div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
               {bestSellers.slice(0, 3).map((product, index) => (
-                <ProductCard key={product.id} product={product} index={index} />
+                <ProductCard key={product.id} product={product} index={index} compact />
               ))}
             </div>
           </div>

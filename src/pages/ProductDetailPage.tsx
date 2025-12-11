@@ -1,27 +1,100 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import ProductCard from '@/components/ProductCard';
-import { getProductBySlug, getProductsByCountry } from '@/data/products';
-import { useStore } from '@/store/useStore';
+import { useStore, Product } from '@/store/useStore';
+import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
-import { ShoppingBag, Share2, ChevronLeft, Minus, Plus, Check } from 'lucide-react';
+import { ShoppingBag, Share2, ChevronLeft, Minus, Plus, Check, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 const ProductDetailPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { country, addToCart, openCart } = useStore();
+  const { country, addToCart } = useStore();
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
 
-  const product = slug ? getProductBySlug(slug) : null;
-  const relatedProducts = country 
-    ? getProductsByCountry(country).filter(p => p.id !== product?.id).slice(0, 4)
-    : [];
+  // Fetch product by slug
+  const { data: product, isLoading } = useQuery({
+    queryKey: ['product', slug],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('slug', slug)
+        .eq('is_active', true)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) return null;
+      return {
+        id: data.id,
+        name: data.name,
+        nameAr: data.name_ar,
+        slug: data.slug,
+        price: Number(data.price),
+        originalPrice: data.original_price ? Number(data.original_price) : undefined,
+        discount: data.discount || undefined,
+        description: data.description || '',
+        descriptionAr: data.description_ar || '',
+        images: data.images || [],
+        category: data.category,
+        brand: data.brand,
+        inStock: data.in_stock ?? true,
+        countries: (data.countries || ['SA', 'YE']) as ('SA' | 'YE')[],
+        isFeatured: data.is_featured,
+        isBestSeller: data.is_best_seller,
+      } as Product;
+    },
+    enabled: !!slug,
+  });
+
+  // Fetch related products
+  const { data: relatedProducts = [] } = useQuery({
+    queryKey: ['related-products', product?.category, product?.id, country],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .eq('category', product!.category)
+        .neq('id', product!.id)
+        .contains('countries', [country])
+        .limit(4);
+      if (error) throw error;
+      return data.map(p => ({
+        id: p.id,
+        name: p.name,
+        nameAr: p.name_ar,
+        slug: p.slug,
+        price: Number(p.price),
+        originalPrice: p.original_price ? Number(p.original_price) : undefined,
+        discount: p.discount || undefined,
+        description: p.description || '',
+        descriptionAr: p.description_ar || '',
+        images: p.images || [],
+        category: p.category,
+        brand: p.brand,
+        inStock: p.in_stock ?? true,
+        countries: (p.countries || ['SA', 'YE']) as ('SA' | 'YE')[],
+        isFeatured: p.is_featured,
+        isBestSeller: p.is_best_seller,
+      })) as Product[];
+    },
+    enabled: !!product && !!country,
+  });
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-gold" />
+      </div>
+    );
+  }
 
   if (!product) {
     return (
@@ -39,6 +112,8 @@ const ProductDetailPage = () => {
   const discountedPrice = product.discount
     ? product.price * (1 - product.discount / 100)
     : product.price;
+
+  const currency = country === 'SA' ? 'ريال' : 'ريال';
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
@@ -92,11 +167,17 @@ const ProductDetailPage = () => {
               transition={{ duration: 0.5 }}
             >
               <div className="aspect-square rounded-lg overflow-hidden bg-muted mb-4">
-                <img
-                  src={product.images[selectedImage]}
-                  alt={product.nameAr}
-                  className="w-full h-full object-cover"
-                />
+                {product.images[selectedImage] ? (
+                  <img
+                    src={product.images[selectedImage]}
+                    alt={product.nameAr}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                    لا توجد صورة
+                  </div>
+                )}
               </div>
               {product.images.length > 1 && (
                 <div className="flex gap-3">
@@ -130,11 +211,11 @@ const ProductDetailPage = () => {
                 
                 <div className="flex items-center gap-4">
                   <span className="font-heading text-3xl text-gold">
-                    ${discountedPrice.toFixed(2)}
+                    {discountedPrice.toFixed(2)} {currency}
                   </span>
                   {product.originalPrice && (
                     <span className="text-xl text-muted-foreground line-through">
-                      ${product.originalPrice.toFixed(2)}
+                      {product.originalPrice.toFixed(2)} {currency}
                     </span>
                   )}
                   {product.discount && (
@@ -211,8 +292,8 @@ const ProductDetailPage = () => {
                 منتجات <span className="text-gold">مشابهة</span>
               </h2>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-                {relatedProducts.map((product, index) => (
-                  <ProductCard key={product.id} product={product} index={index} compact />
+                {relatedProducts.map((p, index) => (
+                  <ProductCard key={p.id} product={p} index={index} compact />
                 ))}
               </div>
             </section>

@@ -1,21 +1,13 @@
 import { useState, useMemo } from 'react';
 import { motion } from 'framer-motion';
+import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import ProductCard from '@/components/ProductCard';
-import { useStore } from '@/store/useStore';
-import { getProductsByCountry, brands } from '@/data/products';
-import { Search, SlidersHorizontal, X } from 'lucide-react';
-
-const categories = [
-  { id: 'all', name: 'الكل', nameEn: 'All' },
-  { id: 'necklaces', name: 'القلائد', nameEn: 'Necklaces' },
-  { id: 'rings', name: 'الخواتم', nameEn: 'Rings' },
-  { id: 'bracelets', name: 'الأساور', nameEn: 'Bracelets' },
-  { id: 'earrings', name: 'الأقراط', nameEn: 'Earrings' },
-  { id: 'sets', name: 'الأطقم', nameEn: 'Sets' },
-];
+import { useStore, Product } from '@/store/useStore';
+import { supabase } from '@/integrations/supabase/client';
+import { Search, SlidersHorizontal, Loader2 } from 'lucide-react';
 
 const ProductsPage = () => {
   const { country } = useStore();
@@ -24,7 +16,68 @@ const ProductsPage = () => {
   const [selectedBrand, setSelectedBrand] = useState('all');
   const [showFilters, setShowFilters] = useState(false);
 
-  const products = country ? getProductsByCountry(country) : [];
+  // Fetch categories
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order');
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  // Fetch brands
+  const { data: brands = [] } = useQuery({
+    queryKey: ['brands', country],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('brands')
+        .select('*')
+        .eq('is_active', true)
+        .contains('countries', [country])
+        .order('sort_order');
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!country,
+  });
+
+  // Fetch products
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ['products', country],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .contains('countries', [country])
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      return data.map(p => ({
+        id: p.id,
+        name: p.name,
+        nameAr: p.name_ar,
+        slug: p.slug,
+        price: Number(p.price),
+        originalPrice: p.original_price ? Number(p.original_price) : undefined,
+        discount: p.discount || undefined,
+        description: p.description || '',
+        descriptionAr: p.description_ar || '',
+        images: p.images || [],
+        category: p.category,
+        brand: p.brand,
+        inStock: p.in_stock ?? true,
+        countries: (p.countries || ['SA', 'YE']) as ('SA' | 'YE')[],
+        isFeatured: p.is_featured,
+        isBestSeller: p.is_best_seller,
+      })) as Product[];
+    },
+    enabled: !!country,
+  });
 
   const filteredProducts = useMemo(() => {
     return products.filter((product) => {
@@ -117,17 +170,27 @@ const ProductsPage = () => {
                 <div className="mb-6">
                   <h4 className="font-heading text-sm text-foreground mb-3">التصنيفات</h4>
                   <div className="space-y-2">
+                    <button
+                      onClick={() => setSelectedCategory('all')}
+                      className={`w-full text-right px-3 py-2 rounded-md font-body text-sm transition-colors ${
+                        selectedCategory === 'all'
+                          ? 'bg-gold text-secondary'
+                          : 'hover:bg-muted text-foreground'
+                      }`}
+                    >
+                      الكل
+                    </button>
                     {categories.map((cat) => (
                       <button
                         key={cat.id}
-                        onClick={() => setSelectedCategory(cat.id)}
+                        onClick={() => setSelectedCategory(cat.slug)}
                         className={`w-full text-right px-3 py-2 rounded-md font-body text-sm transition-colors ${
-                          selectedCategory === cat.id
+                          selectedCategory === cat.slug
                             ? 'bg-gold text-secondary'
                             : 'hover:bg-muted text-foreground'
                         }`}
                       >
-                        {cat.name}
+                        {cat.name_ar}
                       </button>
                     ))}
                   </div>
@@ -172,12 +235,16 @@ const ProductsPage = () => {
                 عرض {filteredProducts.length} منتج
               </p>
 
-              {filteredProducts.length === 0 ? (
+              {isLoading ? (
+                <div className="flex items-center justify-center py-16">
+                  <Loader2 className="w-8 h-8 animate-spin text-gold" />
+                </div>
+              ) : filteredProducts.length === 0 ? (
                 <div className="text-center py-16">
                   <p className="text-muted-foreground font-body">لا توجد منتجات مطابقة</p>
                 </div>
               ) : (
-              <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
+                <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 md:gap-6">
                   {filteredProducts.map((product, index) => (
                     <ProductCard key={product.id} product={product} index={index} compact />
                   ))}

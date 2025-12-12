@@ -1,4 +1,4 @@
-import ermgoldLogo from '@/assets/ermgold-logo-clean.png';
+import ermgoldLogo from '@/assets/ermgold-logo-cropped.png';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -6,10 +6,10 @@ interface LogoProps {
 }
 
 const sizeClasses = {
-  sm: 'h-12 w-auto',
-  md: 'h-20 w-auto',
-  lg: 'h-28 w-auto',
-  xl: 'h-40 w-auto',
+  sm: 'h-14 w-auto',
+  md: 'h-24 w-auto',
+  lg: 'h-32 w-auto',
+  xl: 'h-44 w-auto',
 };
 
 const Logo = ({ size = 'md', className = '' }: LogoProps) => {

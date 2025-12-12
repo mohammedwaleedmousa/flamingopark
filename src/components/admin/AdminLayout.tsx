@@ -5,6 +5,7 @@ import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import AdminSidebar from './AdminSidebar';
 import { Loader2, Menu, Bell } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Logo from '@/components/Logo';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
@@ -71,8 +72,8 @@ const AdminLayout = () => {
               <SidebarTrigger className="text-foreground hover:text-primary hover:bg-muted p-2 rounded-lg transition-colors">
                 <Menu className="w-5 h-5" />
               </SidebarTrigger>
-              <div className="hidden sm:block">
-                <h1 className="logo-ermgold text-lg">ERMGOLD</h1>
+              <div className="hidden sm:flex items-center gap-3">
+                <Logo size="sm" />
                 <p className="text-xs text-muted-foreground">لوحة الإدارة</p>
               </div>
             </div>

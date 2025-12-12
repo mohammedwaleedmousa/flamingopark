@@ -7,6 +7,7 @@ import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2 } from 'lucide-react';
+import Logo from '@/components/Logo';
 
 const CustomerAuthPage = () => {
   const navigate = useNavigate();
@@ -102,9 +103,14 @@ const CustomerAuthPage = () => {
         className="w-full max-w-sm"
       >
         <div className="backdrop-blur-sm bg-card/80 rounded-2xl shadow-2xl shadow-primary/10 p-8 space-y-8 border border-primary/40">
+          {/* Logo */}
+          <div className="flex justify-center">
+            <Logo size="lg" />
+          </div>
+
           {/* Welcome Text */}
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-heading text-primary">
+            <h1 className="text-2xl font-heading text-primary">
               مرحباً
             </h1>
             <p className="text-sm text-muted-foreground">

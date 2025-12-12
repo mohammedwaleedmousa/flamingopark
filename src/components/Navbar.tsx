@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ShoppingBag, Search, Menu, X, MapPin } from 'lucide-react';
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import Logo from '@/components/Logo';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -34,29 +35,8 @@ const Navbar = () => {
             </button>
 
             {/* Center: Logo */}
-            <Link to="/home" className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center">
-              <span 
-                className="text-lg md:text-xl tracking-[0.12em]"
-                style={{
-                  fontFamily: "'Cinzel', serif",
-                  fontWeight: 600,
-                  background: 'linear-gradient(135deg, #C9A227 0%, #D4AF37 25%, #E8C547 50%, #D4AF37 75%, #C9A227 100%)',
-                  WebkitBackgroundClip: 'text',
-                  WebkitTextFillColor: 'transparent',
-                  backgroundClip: 'text',
-                }}
-              >
-                ERMGOLD
-              </span>
-              {/* Chain Icon */}
-              <svg 
-                viewBox="0 0 36 12" 
-                className="w-6 h-2 mt-0.5"
-                style={{ color: '#D4AF37' }}
-              >
-                <ellipse cx="10" cy="6" rx="8" ry="4.5" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-                <ellipse cx="26" cy="6" rx="8" ry="4.5" fill="none" stroke="currentColor" strokeWidth="1.5"/>
-              </svg>
+            <Link to="/home" className="absolute left-1/2 -translate-x-1/2">
+              <Logo size="sm" />
             </Link>
 
             {/* Right: Search & Cart */}

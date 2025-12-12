@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Instagram, Facebook, Twitter, Mail, Phone, MapPin } from 'lucide-react';
 import { useStore } from '@/store/useStore';
+import Logo from '@/components/Logo';
 
 const Footer = () => {
   const { country } = useStore();
@@ -15,7 +16,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="md:col-span-1">
-            <h2 className="logo-ermgold text-3xl mb-4">ERMGOLD</h2>
+            <Logo size="lg" className="mb-4" />
             <p className="font-body text-sm leading-relaxed opacity-70">
               مجوهرات فاخرة بأعلى معايير الجودة والأناقة
             </p>

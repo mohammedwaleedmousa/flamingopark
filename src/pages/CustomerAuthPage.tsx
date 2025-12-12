@@ -1,31 +1,31 @@
-import { useState } from 'react';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { useStore, detectCountryFromPhone } from '@/store/useStore';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Loader2 } from 'lucide-react';
-import Logo from '@/components/Logo';
+import { useState } from "react";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { useStore, detectCountryFromPhone } from "@/store/useStore";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Loader2 } from "lucide-react";
+import Logo from "@/components/Logo";
 
 const CustomerAuthPage = () => {
   const navigate = useNavigate();
   const { setCustomer, setCountry } = useStore();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
+    name: "",
+    phone: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim() || !formData.phone.trim()) {
       toast({
-        title: 'خطأ',
-        description: 'يرجى ملء جميع الحقول',
-        variant: 'destructive',
+        title: "خطأ",
+        description: "يرجى ملء جميع الحقول",
+        variant: "destructive",
       });
       return;
     }
@@ -33,9 +33,9 @@ const CustomerAuthPage = () => {
     const detectedCountry = detectCountryFromPhone(formData.phone);
     if (!detectedCountry) {
       toast({
-        title: 'خطأ',
-        description: 'يرجى إدخال رقم هاتف سعودي أو يمني صحيح',
-        variant: 'destructive',
+        title: "خطأ",
+        description: "يرجى إدخال رقم هاتف سعودي أو يمني صحيح",
+        variant: "destructive",
       });
       return;
     }
@@ -44,18 +44,18 @@ const CustomerAuthPage = () => {
 
     try {
       const { data: existingCustomer } = await supabase
-        .from('customers')
-        .select('*')
-        .eq('phone', formData.phone)
+        .from("customers")
+        .select("*")
+        .eq("phone", formData.phone)
         .maybeSingle();
 
       let customer;
-      
+
       if (existingCustomer) {
         customer = existingCustomer;
       } else {
         const { data: newCustomer, error } = await supabase
-          .from('customers')
+          .from("customers")
           .insert({
             name: formData.name,
             phone: formData.phone,
@@ -72,22 +72,22 @@ const CustomerAuthPage = () => {
         id: customer.id,
         name: customer.name,
         phone: customer.phone,
-        country: customer.country as 'YE' | 'SA',
+        country: customer.country as "YE" | "SA",
       });
-      setCountry(customer.country as 'YE' | 'SA');
+      setCountry(customer.country as "YE" | "SA");
 
       toast({
-        title: 'مرحباً بك',
+        title: "مرحباً بك",
         description: `أهلاً ${customer.name}`,
       });
 
-      navigate('/home');
+      navigate("/home");
     } catch (error: any) {
-      console.error('Auth error:', error);
+      console.error("Auth error:", error);
       toast({
-        title: 'خطأ',
-        description: 'حدث خطأ أثناء التسجيل',
-        variant: 'destructive',
+        title: "خطأ",
+        description: "حدث خطأ أثناء التسجيل",
+        variant: "destructive",
       });
     } finally {
       setIsLoading(false);
@@ -110,12 +110,8 @@ const CustomerAuthPage = () => {
 
           {/* Welcome Text */}
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-heading text-primary">
-              مرحباً
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              أدخل بياناتك للمتابعة
-            </p>
+            <h1 className="text-2xl font-heading text-primary">مرحباً</h1>
+            <p className="text-sm text-muted-foreground">أدخل بياناتك للمتابعة</p>
           </div>
 
           {/* Form */}
@@ -134,7 +130,7 @@ const CustomerAuthPage = () => {
               <Input
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="رقم الهاتف (+966 أو +967)"
+                placeholder="رقم الهاتف"
                 className="bg-background/50 border-0 ring-1 ring-border/50 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary h-12 rounded-xl text-center"
                 dir="ltr"
               />
@@ -145,11 +141,7 @@ const CustomerAuthPage = () => {
               disabled={isLoading}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 rounded-xl font-heading tracking-wider text-base shadow-lg shadow-primary/20 transition-all hover:shadow-xl hover:shadow-primary/30"
             >
-              {isLoading ? (
-                <Loader2 className="w-5 h-5 animate-spin" />
-              ) : (
-                'دخول'
-              )}
+              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "دخول"}
             </Button>
           </form>
         </div>

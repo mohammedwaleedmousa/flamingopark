@@ -1,4 +1,4 @@
-import ermgoldLogo from '@/assets/ermgold-logo.jpeg';
+import ermgoldLogo from '@/assets/ermgold-logo-clean.png';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';
@@ -6,10 +6,10 @@ interface LogoProps {
 }
 
 const sizeClasses = {
-  sm: 'h-10 w-auto',
-  md: 'h-14 w-auto',
-  lg: 'h-20 w-auto',
-  xl: 'h-28 w-auto',
+  sm: 'h-12 w-auto',
+  md: 'h-20 w-auto',
+  lg: 'h-28 w-auto',
+  xl: 'h-40 w-auto',
 };
 
 const Logo = ({ size = 'md', className = '' }: LogoProps) => {
@@ -17,7 +17,7 @@ const Logo = ({ size = 'md', className = '' }: LogoProps) => {
     <img 
       src={ermgoldLogo} 
       alt="ERMGOLD Logo" 
-      className={`object-contain rounded ${sizeClasses[size]} ${className}`}
+      className={`object-contain ${sizeClasses[size]} ${className}`}
     />
   );
 };

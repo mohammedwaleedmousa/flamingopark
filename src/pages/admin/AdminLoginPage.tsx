@@ -6,6 +6,7 @@ import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Lock, Mail, Loader2, UserPlus, LogIn } from 'lucide-react';
+import Logo from '@/components/Logo';
 
 const AdminLoginPage = () => {
   const navigate = useNavigate();
@@ -164,11 +165,11 @@ const AdminLoginPage = () => {
         className="w-full max-w-sm"
       >
         <div className="backdrop-blur-sm bg-card/80 rounded-2xl shadow-2xl shadow-primary/10 p-8 space-y-8 border border-primary/40">
-          {/* Welcome Text */}
-          <div className="text-center space-y-2">
-            <h1 className="text-3xl font-heading text-primary">ERMGOLD</h1>
-            <p className="text-muted-foreground text-sm">لوحة التحكم</p>
+          {/* Logo */}
+          <div className="flex justify-center">
+            <Logo size="lg" />
           </div>
+          <p className="text-muted-foreground text-sm text-center">لوحة التحكم</p>
 
           {/* Tabs */}
           <div className="flex bg-muted rounded-xl p-1">

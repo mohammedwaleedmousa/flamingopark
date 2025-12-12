@@ -7,6 +7,7 @@ import CartDrawer from '@/components/CartDrawer';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, MessageCircle, FileText, Home, Copy } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
+import Logo from '@/components/Logo';
 
 interface OrderItem {
   product_id: string;
@@ -135,8 +136,8 @@ ${itemsList}
             {/* Invoice Header */}
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
               <div>
-                <h2 className="font-heading text-2xl text-amber-600">ERMGOLD</h2>
-                <p className="text-sm text-gray-500">فاتورة طلب</p>
+                <Logo size="md" />
+                <p className="text-sm text-gray-500 mt-1">فاتورة طلب</p>
               </div>
               <div className="text-left">
                 <div className="flex items-center gap-2">

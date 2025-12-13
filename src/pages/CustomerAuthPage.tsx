@@ -34,7 +34,7 @@ const CustomerAuthPage = () => {
     if (!detectedCountry) {
       toast({
         title: "خطأ",
-        description: "يرجى إدخال رقم هاتف مع رمز البلد",
+        description: "يرجى إدخال رقم هاتف صحيح (يبدأ بـ 05 للسعودية أو 07 لليمن)",
         variant: "destructive",
       });
       return;

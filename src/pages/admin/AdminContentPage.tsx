@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Save, FileText, Search } from 'lucide-react';
+import { Loader2, Save, FileText, Search, Upload, Image, X } from 'lucide-react';
 import {
   Accordion,
   AccordionContent,
@@ -29,6 +29,8 @@ const AdminContentPage = () => {
   const queryClient = useQueryClient();
   const [searchTerm, setSearchTerm] = useState('');
   const [editedContent, setEditedContent] = useState<Record<string, { content: string; content_ar: string }>>({});
+  const [uploadingKey, setUploadingKey] = useState<string | null>(null);
+  const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
   const { data: contents = [], isLoading } = useQuery({
     queryKey: ['site-content'],
@@ -60,6 +62,10 @@ const AdminContentPage = () => {
     },
   });
 
+  const isImageContent = (key: string) => {
+    return key.toLowerCase().includes('image') || key.toLowerCase().includes('logo') || key.toLowerCase().includes('banner');
+  };
+
   const handleContentChange = (key: string, field: 'content' | 'content_ar', value: string) => {
     setEditedContent(prev => ({
       ...prev,
@@ -77,6 +83,55 @@ const AdminContentPage = () => {
       content: edited?.content ?? item.content,
       content_ar: edited?.content_ar ?? item.content_ar,
     });
+  };
+
+  const handleImageUpload = async (item: SiteContent, file: File) => {
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'خطأ', description: 'يرجى اختيار ملف صورة', variant: 'destructive' });
+      return;
+    }
+
+    // Validate file size (max 5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast({ title: 'خطأ', description: 'حجم الصورة يجب أن يكون أقل من 5MB', variant: 'destructive' });
+      return;
+    }
+
+    setUploadingKey(item.key);
+
+    try {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `content/${item.key}_${Date.now()}.${fileExt}`;
+
+      const { error: uploadError, data } = await supabase.storage
+        .from('uploads')
+        .upload(fileName, file, { upsert: true });
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('uploads')
+        .getPublicUrl(fileName);
+
+      // Update both content and content_ar with the same image URL
+      const { error: updateError } = await supabase
+        .from('site_content')
+        .update({ content: publicUrl, content_ar: publicUrl })
+        .eq('id', item.id);
+
+      if (updateError) throw updateError;
+
+      queryClient.invalidateQueries({ queryKey: ['site-content'] });
+      toast({ title: 'تم الرفع', description: 'تم رفع الصورة بنجاح' });
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast({ title: 'خطأ', description: 'حدث خطأ أثناء رفع الصورة', variant: 'destructive' });
+    } finally {
+      setUploadingKey(null);
+    }
   };
 
   const getDisplayValue = (item: SiteContent, field: 'content' | 'content_ar') => {
@@ -108,6 +163,8 @@ const AdminContentPage = () => {
       about: 'صفحة من نحن',
       footer: 'الفوتر',
       contact: 'معلومات التواصل',
+      gold: 'الذهب والجودة',
+      experience: 'الخبرة',
     };
     return titles[category] || category;
   };
@@ -125,7 +182,7 @@ const AdminContentPage = () => {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-heading text-foreground">إدارة المحتوى</h1>
-          <p className="text-muted-foreground font-body mt-1">تعديل جميع النصوص الموجودة في المتجر</p>
+          <p className="text-muted-foreground font-body mt-1">تعديل جميع النصوص والصور الموجودة في المتجر</p>
         </div>
       </div>
 
@@ -158,7 +215,10 @@ const AdminContentPage = () => {
                 <Card key={item.id} className="border-border/50">
                   <CardHeader className="pb-3">
                     <CardTitle className="text-base font-heading flex items-center justify-between">
-                      <span>{item.title}</span>
+                      <div className="flex items-center gap-2">
+                        {isImageContent(item.key) && <Image className="w-4 h-4 text-primary" />}
+                        <span>{item.title}</span>
+                      </div>
                       {hasChanges(item) && (
                         <span className="text-xs bg-orange-500/10 text-orange-500 px-2 py-1 rounded-full">
                           غير محفوظ
@@ -170,57 +230,135 @@ const AdminContentPage = () => {
                     )}
                   </CardHeader>
                   <CardContent className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">English</label>
-                        {item.content.length > 100 ? (
-                          <Textarea
-                            value={getDisplayValue(item, 'content')}
-                            onChange={(e) => handleContentChange(item.key, 'content', e.target.value)}
-                            rows={4}
-                            dir="ltr"
-                          />
-                        ) : (
-                          <Input
-                            value={getDisplayValue(item, 'content')}
-                            onChange={(e) => handleContentChange(item.key, 'content', e.target.value)}
-                            dir="ltr"
-                          />
+                    {isImageContent(item.key) ? (
+                      // Image upload UI
+                      <div className="space-y-4">
+                        {/* Image Preview */}
+                        {item.content_ar && (
+                          <div className="relative w-full max-w-md mx-auto">
+                            <img
+                              src={item.content_ar}
+                              alt={item.title}
+                              className="w-full h-48 object-cover rounded-lg border border-border"
+                            />
+                          </div>
                         )}
+                        
+                        {/* Upload Button */}
+                        <div className="flex flex-col items-center gap-3">
+                          <input
+                            type="file"
+                            accept="image/*"
+                            ref={(el) => { fileInputRefs.current[item.key] = el; }}
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              if (file) handleImageUpload(item, file);
+                            }}
+                            className="hidden"
+                          />
+                          <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => fileInputRefs.current[item.key]?.click()}
+                            disabled={uploadingKey === item.key}
+                            className="gap-2"
+                          >
+                            {uploadingKey === item.key ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Upload className="w-4 h-4" />
+                            )}
+                            {uploadingKey === item.key ? 'جاري الرفع...' : 'رفع صورة جديدة'}
+                          </Button>
+                          <p className="text-xs text-muted-foreground">
+                            الحجم الأقصى: 5MB | الأنواع المدعومة: JPG, PNG, WEBP
+                          </p>
+                        </div>
+
+                        {/* URL Input as fallback */}
+                        <div className="pt-4 border-t border-border">
+                          <p className="text-xs text-muted-foreground mb-2">أو أدخل رابط الصورة مباشرة:</p>
+                          <div className="flex gap-2">
+                            <Input
+                              value={getDisplayValue(item, 'content_ar')}
+                              onChange={(e) => {
+                                handleContentChange(item.key, 'content', e.target.value);
+                                handleContentChange(item.key, 'content_ar', e.target.value);
+                              }}
+                              placeholder="https://..."
+                              dir="ltr"
+                              className="flex-1"
+                            />
+                            <Button
+                              onClick={() => handleSave(item)}
+                              disabled={!hasChanges(item) || updateMutation.isPending}
+                              size="icon"
+                            >
+                              {updateMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Save className="w-4 h-4" />
+                              )}
+                            </Button>
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <label className="text-sm font-medium mb-2 block">العربية</label>
-                        {item.content_ar.length > 100 ? (
-                          <Textarea
-                            value={getDisplayValue(item, 'content_ar')}
-                            onChange={(e) => handleContentChange(item.key, 'content_ar', e.target.value)}
-                            rows={4}
-                            dir="rtl"
-                          />
-                        ) : (
-                          <Input
-                            value={getDisplayValue(item, 'content_ar')}
-                            onChange={(e) => handleContentChange(item.key, 'content_ar', e.target.value)}
-                            dir="rtl"
-                          />
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex justify-end">
-                      <Button
-                        onClick={() => handleSave(item)}
-                        disabled={!hasChanges(item) || updateMutation.isPending}
-                        size="sm"
-                        className="gap-2"
-                      >
-                        {updateMutation.isPending ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Save className="w-4 h-4" />
-                        )}
-                        حفظ
-                      </Button>
-                    </div>
+                    ) : (
+                      // Text content UI
+                      <>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <label className="text-sm font-medium mb-2 block">English</label>
+                            {item.content.length > 100 ? (
+                              <Textarea
+                                value={getDisplayValue(item, 'content')}
+                                onChange={(e) => handleContentChange(item.key, 'content', e.target.value)}
+                                rows={4}
+                                dir="ltr"
+                              />
+                            ) : (
+                              <Input
+                                value={getDisplayValue(item, 'content')}
+                                onChange={(e) => handleContentChange(item.key, 'content', e.target.value)}
+                                dir="ltr"
+                              />
+                            )}
+                          </div>
+                          <div>
+                            <label className="text-sm font-medium mb-2 block">العربية</label>
+                            {item.content_ar.length > 100 ? (
+                              <Textarea
+                                value={getDisplayValue(item, 'content_ar')}
+                                onChange={(e) => handleContentChange(item.key, 'content_ar', e.target.value)}
+                                rows={4}
+                                dir="rtl"
+                              />
+                            ) : (
+                              <Input
+                                value={getDisplayValue(item, 'content_ar')}
+                                onChange={(e) => handleContentChange(item.key, 'content_ar', e.target.value)}
+                                dir="rtl"
+                              />
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex justify-end">
+                          <Button
+                            onClick={() => handleSave(item)}
+                            disabled={!hasChanges(item) || updateMutation.isPending}
+                            size="sm"
+                            className="gap-2"
+                          >
+                            {updateMutation.isPending ? (
+                              <Loader2 className="w-4 h-4 animate-spin" />
+                            ) : (
+                              <Save className="w-4 h-4" />
+                            )}
+                            حفظ
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </CardContent>
                 </Card>
               ))}

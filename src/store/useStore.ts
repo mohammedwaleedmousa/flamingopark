@@ -29,9 +29,19 @@ export interface Product {
   isBestSeller?: boolean;
 }
 
+export interface SelectedAccessory {
+  name: string;
+  name_ar: string;
+  price: number;
+  quantity: number;
+  image_url?: string;
+}
+
 export interface CartItem {
   product: Product;
   quantity: number;
+  selectedSize?: string;
+  selectedAccessories?: SelectedAccessory[];
 }
 
 interface StoreState {
@@ -41,7 +51,7 @@ interface StoreState {
   isCartOpen: boolean;
   setCountry: (country: Country) => void;
   setCustomer: (customer: Customer | null) => void;
-  addToCart: (product: Product, quantity?: number) => void;
+  addToCart: (product: Product, quantity?: number, selectedSize?: string, selectedAccessories?: SelectedAccessory[]) => void;
   removeFromCart: (productId: string) => void;
   updateQuantity: (productId: string, quantity: number) => void;
   clearCart: () => void;
@@ -64,20 +74,32 @@ export const useStore = create<StoreState>()(
       setCountry: (country) => set({ country }),
       setCustomer: (customer) => set({ customer }),
       
-      addToCart: (product, quantity = 1) => {
+      addToCart: (product, quantity = 1, selectedSize, selectedAccessories) => {
         const cart = get().cart;
-        const existingItem = cart.find(item => item.product.id === product.id);
+        // Create a unique key based on product + size + accessories
+        const accessoriesKey = selectedAccessories
+          ? selectedAccessories.map(a => `${a.name_ar}:${a.quantity}`).sort().join('|')
+          : '';
+        const itemKey = `${product.id}-${selectedSize || ''}-${accessoriesKey}`;
         
-        if (existingItem) {
+        const existingItemIndex = cart.findIndex(item => {
+          const existingAccessoriesKey = item.selectedAccessories
+            ? item.selectedAccessories.map(a => `${a.name_ar}:${a.quantity}`).sort().join('|')
+            : '';
+          const existingKey = `${item.product.id}-${item.selectedSize || ''}-${existingAccessoriesKey}`;
+          return existingKey === itemKey;
+        });
+        
+        if (existingItemIndex !== -1) {
           set({
-            cart: cart.map(item =>
-              item.product.id === product.id
+            cart: cart.map((item, index) =>
+              index === existingItemIndex
                 ? { ...item, quantity: item.quantity + quantity }
                 : item
             ),
           });
         } else {
-          set({ cart: [...cart, { product, quantity }] });
+          set({ cart: [...cart, { product, quantity, selectedSize, selectedAccessories }] });
         }
       },
       
@@ -108,7 +130,13 @@ export const useStore = create<StoreState>()(
           const price = item.product.discount
             ? item.product.price * (1 - item.product.discount / 100)
             : item.product.price;
-          return total + price * item.quantity;
+          
+          // Add accessories total
+          const accessoriesTotal = item.selectedAccessories
+            ? item.selectedAccessories.reduce((sum, acc) => sum + (acc.price * acc.quantity), 0)
+            : 0;
+          
+          return total + (price + accessoriesTotal) * item.quantity;
         }, 0);
       },
       

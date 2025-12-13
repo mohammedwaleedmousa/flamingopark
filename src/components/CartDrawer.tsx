@@ -68,14 +68,21 @@ const CartDrawer = () => {
                 </div>
               ) : (
                 <div className="space-y-6">
-                  {cart.map((item) => {
+                  {cart.map((item, cartIndex) => {
                     const itemPrice = item.product.discount
                       ? item.product.price * (1 - item.product.discount / 100)
                       : item.product.price;
+                    
+                    // Calculate accessories total for this item
+                    const accessoriesTotal = item.selectedAccessories
+                      ? item.selectedAccessories.reduce((sum, acc) => sum + (acc.price * acc.quantity), 0)
+                      : 0;
+                    
+                    const itemTotalPrice = itemPrice + accessoriesTotal;
 
                     return (
                       <motion.div
-                        key={item.product.id}
+                        key={`${item.product.id}-${cartIndex}`}
                         layout
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -91,8 +98,29 @@ const CartDrawer = () => {
                           <h3 className="font-heading text-sm text-foreground mb-1">
                             {item.product.nameAr}
                           </h3>
+                          
+                          {/* Show selected size */}
+                          {item.selectedSize && (
+                            <p className="text-xs text-muted-foreground mb-1">
+                              الحجم: {item.selectedSize}
+                            </p>
+                          )}
+                          
+                          {/* Show selected accessories */}
+                          {item.selectedAccessories && item.selectedAccessories.length > 0 && (
+                            <div className="text-xs text-muted-foreground mb-1">
+                              <span>الملحقات: </span>
+                              {item.selectedAccessories.map((acc, i) => (
+                                <span key={acc.name_ar}>
+                                  {acc.name_ar} (×{acc.quantity})
+                                  {i < item.selectedAccessories!.length - 1 ? '، ' : ''}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          
                           <p className="text-gold font-body text-sm">
-                            {itemPrice.toFixed(2)} {currency}
+                            {itemTotalPrice.toFixed(2)} {currency}
                           </p>
 
                           {/* Quantity Controls */}

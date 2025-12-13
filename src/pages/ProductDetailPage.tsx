@@ -168,7 +168,25 @@ const ProductDetailPage = () => {
   };
 
   const handleAddToCart = () => {
-    addToCart(product, quantity);
+    // Prepare selected accessories with quantities
+    const selectedAccs = product.accessories
+      ? product.accessories
+          .filter(acc => (accessoryQuantities[acc.name_ar] || 0) > 0)
+          .map(acc => ({
+            name: acc.name,
+            name_ar: acc.name_ar,
+            price: acc.price,
+            quantity: accessoryQuantities[acc.name_ar],
+            image_url: acc.image_url,
+          }))
+      : [];
+
+    addToCart(
+      product, 
+      quantity, 
+      selectedSize || undefined, 
+      selectedAccs.length > 0 ? selectedAccs : undefined
+    );
     toast({
       title: 'تمت الإضافة بنجاح',
       description: `${product.nameAr} (${quantity}) أُضيف إلى السلة`,

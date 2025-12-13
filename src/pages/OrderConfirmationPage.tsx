@@ -1,8 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import html2canvas from 'html2canvas';
-import jsPDF from 'jspdf';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
@@ -94,41 +92,50 @@ ${invoiceUrl}`;
     setIsGeneratingPdf(true);
     
     try {
-      // Generate PDF from invoice element
-      const canvas = await html2canvas(invoiceRef.current, {
+      // Dynamic imports
+      const html2canvasModule = await import('html2canvas');
+      const jsPDFModule = await import('jspdf');
+      const html2canvasFn = html2canvasModule.default;
+      const jsPDFClass = jsPDFModule.default;
+
+      const canvas = await html2canvasFn(invoiceRef.current, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
+        logging: false,
       });
       
       const imgData = canvas.toDataURL('image/png');
-      const pdf = new jsPDF({
+      const pdf = new jsPDFClass({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
       });
       
-      const imgWidth = 210; // A4 width in mm
+      const imgWidth = 210;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, 297));
       
-      // Convert PDF to blob
+      // Save PDF locally first
+      pdf.save(`فاتورة-${orderData.orderNumber}.pdf`);
+      
+      // Then upload to storage
       const pdfBlob = pdf.output('blob');
-      
-      // Upload to Supabase storage
       const fileName = `invoice-${orderData.orderNumber}-${Date.now()}.pdf`;
-      const { data, error } = await supabase.storage
+      
+      const { error } = await supabase.storage
         .from('invoices')
         .upload(fileName, pdfBlob, {
           contentType: 'application/pdf',
           cacheControl: '3600',
         });
       
-      if (error) throw error;
+      if (error) {
+        console.error('Upload error:', error);
+      }
       
-      // Get public URL
       const { data: urlData } = supabase.storage
         .from('invoices')
         .getPublicUrl(fileName);
@@ -136,18 +143,15 @@ ${invoiceUrl}`;
       setInvoiceUrl(urlData.publicUrl);
       setInvoiceSaved(true);
       
-      // Also trigger download for user
-      pdf.save(`فاتورة-${orderData.orderNumber}.pdf`);
-      
       toast({
-        title: 'تم حفظ الفاتورة بنجاح',
-        description: 'يمكنك الآن إرسال الرابط عبر الواتساب',
+        title: 'تم حفظ الفاتورة',
+        description: 'يمكنك إرسال الرابط عبر الواتساب',
       });
     } catch (error) {
-      console.error('Error generating PDF:', error);
+      console.error('PDF Error:', error);
       toast({
         title: 'خطأ',
-        description: 'حدث خطأ أثناء إنشاء الفاتورة',
+        description: 'فشل في إنشاء الفاتورة',
         variant: 'destructive',
       });
     } finally {

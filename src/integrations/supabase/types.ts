@@ -375,6 +375,7 @@ export type Database = {
           description: string | null
           description_ar: string | null
           discount: number | null
+          features: Json | null
           has_sizes: boolean | null
           id: string
           images: string[] | null
@@ -400,6 +401,7 @@ export type Database = {
           description?: string | null
           description_ar?: string | null
           discount?: number | null
+          features?: Json | null
           has_sizes?: boolean | null
           id?: string
           images?: string[] | null
@@ -425,6 +427,7 @@ export type Database = {
           description?: string | null
           description_ar?: string | null
           discount?: number | null
+          features?: Json | null
           has_sizes?: boolean | null
           id?: string
           images?: string[] | null

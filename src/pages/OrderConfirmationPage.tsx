@@ -202,40 +202,59 @@ ${itemsList}
               <h3 className="text-sm font-heading text-gray-500 mb-4">المنتجات</h3>
               <div className="space-y-3">
                 {orderData.items.map((item, index) => (
-                  <div key={index} className="flex items-start gap-4 p-3 bg-gray-50 rounded-lg">
-                    <img
-                      src={item.product_image}
-                      alt={item.product_name}
-                      className="w-16 h-16 object-cover rounded-md print:w-12 print:h-12"
-                    />
-                    <div className="flex-1">
-                      <h4 className="font-heading text-gray-900">{item.product_name}</h4>
-                      
-                      {/* Size */}
-                      {item.selected_size && (
-                        <p className="text-xs text-gray-500">الحجم: {item.selected_size}</p>
-                      )}
-                      
-                      {/* Accessories */}
-                      {item.selected_accessories && item.selected_accessories.length > 0 && (
-                        <div className="text-xs text-gray-500">
-                          <span>الملحقات: </span>
+                  <div key={index} className="p-3 bg-gray-50 rounded-lg">
+                    <div className="flex items-start gap-4">
+                      <img
+                        src={item.product_image}
+                        alt={item.product_name}
+                        className="w-16 h-16 object-cover rounded-md print:w-12 print:h-12"
+                      />
+                      <div className="flex-1">
+                        <h4 className="font-heading text-gray-900">{item.product_name}</h4>
+                        
+                        {/* Size */}
+                        {item.selected_size && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            <span className="font-medium">الحجم:</span> {item.selected_size}
+                          </p>
+                        )}
+                        
+                        <p className="text-sm text-gray-500">
+                          {item.quantity} × {item.price.toFixed(2)} {currency}
+                        </p>
+                      </div>
+                      <span className="font-heading text-amber-600">
+                        {(item.price * item.quantity).toFixed(2)} {currency}
+                      </span>
+                    </div>
+                    
+                    {/* Accessories with images */}
+                    {item.selected_accessories && item.selected_accessories.length > 0 && (
+                      <div className="mt-3 pt-3 border-t border-gray-200">
+                        <p className="text-xs text-gray-500 mb-2">الملحقات:</p>
+                        <div className="flex flex-wrap gap-2">
                           {item.selected_accessories.map((acc, i) => (
-                            <span key={acc.name_ar}>
-                              {acc.name_ar} (×{acc.quantity})
-                              {i < item.selected_accessories!.length - 1 ? '، ' : ''}
-                            </span>
+                            <div 
+                              key={i} 
+                              className="flex items-center gap-2 bg-white px-2 py-1 rounded border border-gray-200"
+                            >
+                              {acc.image_url && (
+                                <img 
+                                  src={acc.image_url} 
+                                  alt={acc.name_ar} 
+                                  className="w-8 h-8 object-cover rounded"
+                                />
+                              )}
+                              <div className="text-xs">
+                                <span className="text-gray-700">{acc.name_ar}</span>
+                                <span className="text-gray-500 mx-1">×{acc.quantity}</span>
+                                <span className="text-amber-600">+{(acc.price * acc.quantity).toFixed(0)}</span>
+                              </div>
+                            </div>
                           ))}
                         </div>
-                      )}
-                      
-                      <p className="text-sm text-gray-500">
-                        {item.quantity} × {item.price.toFixed(2)} {currency}
-                      </p>
-                    </div>
-                    <span className="font-heading text-amber-600">
-                      {(item.price * item.quantity).toFixed(2)} {currency}
-                    </span>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>

@@ -206,6 +206,54 @@ export type Database = {
         }
         Relationships: []
       }
+      homepage_sections: {
+        Row: {
+          countries: string[] | null
+          created_at: string
+          filter_type: string | null
+          id: string
+          is_active: boolean | null
+          max_products: number | null
+          section_type: string
+          show_view_all: boolean | null
+          sort_order: number | null
+          title: string
+          title_ar: string
+          updated_at: string
+          view_all_link: string | null
+        }
+        Insert: {
+          countries?: string[] | null
+          created_at?: string
+          filter_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_products?: number | null
+          section_type?: string
+          show_view_all?: boolean | null
+          sort_order?: number | null
+          title: string
+          title_ar: string
+          updated_at?: string
+          view_all_link?: string | null
+        }
+        Update: {
+          countries?: string[] | null
+          created_at?: string
+          filter_type?: string | null
+          id?: string
+          is_active?: boolean | null
+          max_products?: number | null
+          section_type?: string
+          show_view_all?: boolean | null
+          sort_order?: number | null
+          title?: string
+          title_ar?: string
+          updated_at?: string
+          view_all_link?: string | null
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           country: string

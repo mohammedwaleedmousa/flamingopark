@@ -48,6 +48,7 @@ const OrderConfirmationPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [orderData, setOrderData] = useState<OrderData | null>(null);
+  const [invoiceSaved, setInvoiceSaved] = useState(false);
   
   const currency = orderData?.country === 'SA' ? 'ريال' : 'ريال';
 
@@ -108,6 +109,14 @@ ${itemsList}
 
   const handlePrintInvoice = () => {
     window.print();
+    // Mark invoice as saved after printing
+    setTimeout(() => {
+      setInvoiceSaved(true);
+      toast({
+        title: 'تم حفظ الفاتورة',
+        description: 'يمكنك الآن إرسالها عبر الواتساب لتأكيد الطلب',
+      });
+    }, 1000);
   };
 
   if (!orderData) {
@@ -289,31 +298,59 @@ ${itemsList}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.4 }}
-            className="grid grid-cols-3 gap-3 print:hidden"
+            className="space-y-4 print:hidden"
           >
-            <Button
-              onClick={handleWhatsApp}
-              className="bg-green-600 hover:bg-green-700 text-white gap-2"
-            >
-              <MessageCircle className="w-5 h-5" />
-              <span className="hidden sm:inline">واتساب</span>
-            </Button>
-            <Button
-              onClick={handlePrintInvoice}
-              className="bg-gold hover:bg-gold/90 text-black gap-2"
-            >
-              <FileText className="w-5 h-5" />
-              <span className="hidden sm:inline">طباعة/PDF</span>
-            </Button>
-            <Link to="/home">
-              <Button
-                variant="outline"
-                className="w-full border-border text-foreground hover:bg-muted gap-2"
+            {/* Step 1: Save Invoice */}
+            {!invoiceSaved && (
+              <div className="bg-gold/10 border border-gold/30 rounded-lg p-4 text-center">
+                <p className="text-foreground font-body mb-3">
+                  الخطوة ١: قم بحفظ الفاتورة أولاً
+                </p>
+                <Button
+                  onClick={handlePrintInvoice}
+                  className="btn-gold gap-2"
+                  size="lg"
+                >
+                  <FileText className="w-5 h-5" />
+                  حفظ الفاتورة PDF
+                </Button>
+              </div>
+            )}
+
+            {/* Step 2: Send via WhatsApp (shown after saving) */}
+            {invoiceSaved && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="bg-green-50 border border-green-200 rounded-lg p-4 text-center"
               >
-                <Home className="w-5 h-5" />
-                <span className="hidden sm:inline">الرئيسية</span>
-              </Button>
-            </Link>
+                <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
+                <p className="text-foreground font-body mb-3">
+                  الخطوة ٢: أرسل الفاتورة عبر الواتساب لتأكيد الطلب
+                </p>
+                <Button
+                  onClick={handleWhatsApp}
+                  className="bg-green-600 hover:bg-green-700 text-white gap-2"
+                  size="lg"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  إرسال للواتساب
+                </Button>
+              </motion.div>
+            )}
+
+            {/* Home button always visible */}
+            <div className="flex justify-center">
+              <Link to="/home">
+                <Button
+                  variant="outline"
+                  className="border-border text-foreground hover:bg-muted gap-2"
+                >
+                  <Home className="w-5 h-5" />
+                  العودة للرئيسية
+                </Button>
+              </Link>
+            </div>
           </motion.div>
         </div>
       </main>

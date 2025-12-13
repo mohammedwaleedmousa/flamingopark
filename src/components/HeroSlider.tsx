@@ -16,6 +16,9 @@ interface Banner {
   cta_text: string | null;
   cta_text_ar: string | null;
   cta_link: string | null;
+  image_zoom: number | null;
+  image_position_x: number | null;
+  image_position_y: number | null;
 }
 
 const HeroSlider = () => {
@@ -187,6 +190,10 @@ const HeroSlider = () => {
               className={`w-full h-full object-cover transition-opacity duration-500 ${
                 imageLoaded ? 'opacity-100' : 'opacity-0'
               }`}
+              style={{
+                transform: `scale(${currentBanner.image_zoom || 1})`,
+                objectPosition: `${currentBanner.image_position_x ?? 50}% ${currentBanner.image_position_y ?? 50}%`,
+              }}
             />
             
             {/* Multi-layer Gradient Overlay */}

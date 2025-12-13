@@ -22,7 +22,10 @@ export type Database = {
           cta_text: string | null
           cta_text_ar: string | null
           id: string
+          image_position_x: number | null
+          image_position_y: number | null
           image_url: string
+          image_zoom: number | null
           is_active: boolean | null
           sort_order: number | null
           subtitle: string | null
@@ -37,7 +40,10 @@ export type Database = {
           cta_text?: string | null
           cta_text_ar?: string | null
           id?: string
+          image_position_x?: number | null
+          image_position_y?: number | null
           image_url: string
+          image_zoom?: number | null
           is_active?: boolean | null
           sort_order?: number | null
           subtitle?: string | null
@@ -52,7 +58,10 @@ export type Database = {
           cta_text?: string | null
           cta_text_ar?: string | null
           id?: string
+          image_position_x?: number | null
+          image_position_y?: number | null
           image_url?: string
+          image_zoom?: number | null
           is_active?: boolean | null
           sort_order?: number | null
           subtitle?: string | null

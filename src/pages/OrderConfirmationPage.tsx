@@ -1,13 +1,16 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useLocation, useNavigate, Link } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import html2canvas from 'html2canvas';
+import jsPDF from 'jspdf';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, MessageCircle, FileText, Home, Copy, Download, Paperclip, Send } from 'lucide-react';
+import { CheckCircle, MessageCircle, FileText, Home, Copy, Download, Loader2, ExternalLink } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import Logo from '@/components/Logo';
+import { supabase } from '@/integrations/supabase/client';
 
 interface SelectedAccessory {
   name: string;
@@ -49,6 +52,9 @@ const OrderConfirmationPage = () => {
   const navigate = useNavigate();
   const [orderData, setOrderData] = useState<OrderData | null>(null);
   const [invoiceSaved, setInvoiceSaved] = useState(false);
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+  const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
+  const invoiceRef = useRef<HTMLDivElement>(null);
   
   const currency = orderData?.country === 'SA' ? 'ريال' : 'ريال';
 
@@ -71,26 +77,82 @@ const OrderConfirmationPage = () => {
   };
 
   const handleWhatsApp = () => {
-    if (!orderData) return;
+    if (!orderData || !invoiceUrl) return;
 
     const message = `مرحباً، أرغب في تأكيد الطلب رقم: ${orderData.orderNumber}
 
-سأقوم بإرسال الفاتورة PDF في الرسالة التالية.`;
+رابط الفاتورة:
+${invoiceUrl}`;
     
     const whatsappUrl = `https://wa.me/${orderData.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
   };
 
-  const handlePrintInvoice = () => {
-    window.print();
-    // Mark invoice as saved after printing
-    setTimeout(() => {
-      setInvoiceSaved(true);
-      toast({
-        title: 'تم حفظ الفاتورة',
-        description: 'يمكنك الآن إرسالها عبر الواتساب لتأكيد الطلب',
+  const handleGenerateAndUploadPdf = async () => {
+    if (!orderData || !invoiceRef.current) return;
+    
+    setIsGeneratingPdf(true);
+    
+    try {
+      // Generate PDF from invoice element
+      const canvas = await html2canvas(invoiceRef.current, {
+        scale: 2,
+        useCORS: true,
+        allowTaint: true,
+        backgroundColor: '#ffffff',
       });
-    }, 1000);
+      
+      const imgData = canvas.toDataURL('image/png');
+      const pdf = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: 'a4',
+      });
+      
+      const imgWidth = 210; // A4 width in mm
+      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      
+      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, imgHeight);
+      
+      // Convert PDF to blob
+      const pdfBlob = pdf.output('blob');
+      
+      // Upload to Supabase storage
+      const fileName = `invoice-${orderData.orderNumber}-${Date.now()}.pdf`;
+      const { data, error } = await supabase.storage
+        .from('invoices')
+        .upload(fileName, pdfBlob, {
+          contentType: 'application/pdf',
+          cacheControl: '3600',
+        });
+      
+      if (error) throw error;
+      
+      // Get public URL
+      const { data: urlData } = supabase.storage
+        .from('invoices')
+        .getPublicUrl(fileName);
+      
+      setInvoiceUrl(urlData.publicUrl);
+      setInvoiceSaved(true);
+      
+      // Also trigger download for user
+      pdf.save(`فاتورة-${orderData.orderNumber}.pdf`);
+      
+      toast({
+        title: 'تم حفظ الفاتورة بنجاح',
+        description: 'يمكنك الآن إرسال الرابط عبر الواتساب',
+      });
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ أثناء إنشاء الفاتورة',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   if (!orderData) {
@@ -130,6 +192,7 @@ const OrderConfirmationPage = () => {
 
           {/* Invoice */}
           <motion.div
+            ref={invoiceRef}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
@@ -282,21 +345,31 @@ const OrderConfirmationPage = () => {
                 </div>
                 <h3 className="font-heading text-lg text-foreground mb-2">الخطوة ١</h3>
                 <p className="text-foreground font-body mb-4">
-                  اضغط الزر أدناه لحفظ الفاتورة كملف PDF على جهازك
+                  اضغط الزر أدناه لحفظ الفاتورة ورفعها
                 </p>
                 <Button
-                  onClick={handlePrintInvoice}
+                  onClick={handleGenerateAndUploadPdf}
+                  disabled={isGeneratingPdf}
                   className="btn-gold gap-2"
                   size="lg"
                 >
-                  <FileText className="w-5 h-5" />
-                  حفظ الفاتورة PDF
+                  {isGeneratingPdf ? (
+                    <>
+                      <Loader2 className="w-5 h-5 animate-spin" />
+                      جاري الحفظ...
+                    </>
+                  ) : (
+                    <>
+                      <FileText className="w-5 h-5" />
+                      حفظ الفاتورة PDF
+                    </>
+                  )}
                 </Button>
               </div>
             )}
 
             {/* Step 2: Send via WhatsApp (shown after saving) */}
-            {invoiceSaved && (
+            {invoiceSaved && invoiceUrl && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -308,45 +381,53 @@ const OrderConfirmationPage = () => {
                   <p className="text-green-700 font-heading">تم حفظ الفاتورة بنجاح!</p>
                 </div>
 
-                {/* Step 2 instructions */}
-                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <MessageCircle className="w-6 h-6 text-blue-600" />
+                {/* Invoice Link */}
+                <div className="bg-muted rounded-lg p-4">
+                  <p className="text-sm text-muted-foreground mb-2 text-center">رابط الفاتورة:</p>
+                  <div className="flex items-center gap-2 bg-background rounded-lg p-2">
+                    <input 
+                      type="text" 
+                      value={invoiceUrl} 
+                      readOnly 
+                      className="flex-1 bg-transparent text-sm text-foreground truncate outline-none"
+                      dir="ltr"
+                    />
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(invoiceUrl);
+                        toast({ title: 'تم النسخ', description: 'تم نسخ رابط الفاتورة' });
+                      }}
+                    >
+                      <Copy className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => window.open(invoiceUrl, '_blank')}
+                    >
+                      <ExternalLink className="w-4 h-4" />
+                    </Button>
                   </div>
-                  <h3 className="font-heading text-lg text-foreground mb-4 text-center">الخطوة ٢: إرسال الفاتورة</h3>
-                  
-                  <div className="space-y-3 text-right mb-6">
-                    <div className="flex items-start gap-3 bg-white/50 p-3 rounded-lg">
-                      <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm flex-shrink-0">1</span>
-                      <p className="text-foreground text-sm">اضغط على زر "فتح الواتساب" أدناه</p>
-                    </div>
-                    <div className="flex items-start gap-3 bg-white/50 p-3 rounded-lg">
-                      <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm flex-shrink-0">2</span>
-                      <div className="text-sm">
-                        <p className="text-foreground">اضغط على أيقونة المرفقات</p>
-                        <Paperclip className="w-4 h-4 text-muted-foreground mt-1 inline" />
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3 bg-white/50 p-3 rounded-lg">
-                      <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm flex-shrink-0">3</span>
-                      <p className="text-foreground text-sm">اختر ملف الفاتورة PDF الذي حفظته</p>
-                    </div>
-                    <div className="flex items-start gap-3 bg-white/50 p-3 rounded-lg">
-                      <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm flex-shrink-0">4</span>
-                      <div className="text-sm">
-                        <p className="text-foreground">اضغط إرسال</p>
-                        <Send className="w-4 h-4 text-muted-foreground mt-1 inline" />
-                      </div>
-                    </div>
-                  </div>
+                </div>
 
+                {/* WhatsApp Button */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
+                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <MessageCircle className="w-6 h-6 text-green-600" />
+                  </div>
+                  <h3 className="font-heading text-lg text-foreground mb-2">الخطوة ٢</h3>
+                  <p className="text-foreground font-body mb-4">
+                    اضغط الزر لإرسال رابط الفاتورة عبر الواتساب
+                  </p>
                   <Button
                     onClick={handleWhatsApp}
-                    className="w-full bg-green-600 hover:bg-green-700 text-white gap-2"
+                    className="bg-green-600 hover:bg-green-700 text-white gap-2"
                     size="lg"
                   >
                     <MessageCircle className="w-5 h-5" />
-                    فتح الواتساب
+                    إرسال للواتساب
                   </Button>
                 </div>
               </motion.div>

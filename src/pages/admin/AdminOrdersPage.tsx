@@ -4,7 +4,7 @@ import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
-import { Eye, MessageCircle, Search, ShoppingCart, X, Phone, MapPin, Package } from 'lucide-react';
+import { Eye, MessageCircle, Search, ShoppingCart, X, Phone, MapPin, Package, Trash2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -88,6 +88,20 @@ const AdminOrdersPage = () => {
     const message = `مرحباً ${order.customer_name}، بخصوص طلبك رقم ${order.order_number}`;
     const phone = order.customer_phone.replace(/\D/g, '');
     window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+  };
+
+  const deleteOrder = async (id: string) => {
+    if (!confirm('هل أنت متأكد من حذف هذا الطلب؟')) return;
+
+    const { error } = await supabase.from('orders').delete().eq('id', id);
+
+    if (error) {
+      toast({ title: 'خطأ', description: 'فشل في حذف الطلب', variant: 'destructive' });
+    } else {
+      setOrders(orders.filter(o => o.id !== id));
+      if (selectedOrder?.id === id) setSelectedOrder(null);
+      toast({ title: 'تم', description: 'تم حذف الطلب' });
+    }
   };
 
   const filteredOrders = orders.filter(order => {
@@ -233,6 +247,14 @@ const AdminOrdersPage = () => {
               >
                 <MessageCircle className="w-4 h-4" />
               </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                className="text-destructive border-destructive/30 hover:bg-destructive/10"
+                onClick={() => deleteOrder(order.id)}
+              >
+                <Trash2 className="w-4 h-4" />
+              </Button>
             </div>
           </motion.div>
         ))}
@@ -308,6 +330,14 @@ const AdminOrdersPage = () => {
                         onClick={() => openWhatsApp(order)}
                       >
                         <MessageCircle className="w-4 h-4" />
+                      </Button>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="text-destructive hover:bg-destructive/10"
+                        onClick={() => deleteOrder(order.id)}
+                      >
+                        <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
                   </td>

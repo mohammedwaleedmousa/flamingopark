@@ -160,9 +160,11 @@ export const useStore = create<StoreState>()(
 // Helper to detect country from phone number
 export const detectCountryFromPhone = (phone: string): Country | null => {
   const cleanPhone = phone.replace(/\D/g, '');
-  if (cleanPhone.startsWith('966') || cleanPhone.startsWith('5')) {
+  // Saudi: must start with 055 (or 966 with country code)
+  if (cleanPhone.startsWith('966') || cleanPhone.startsWith('055')) {
     return 'SA';
   }
+  // Yemen: starts with 7
   if (cleanPhone.startsWith('967') || cleanPhone.startsWith('7')) {
     return 'YE';
   }

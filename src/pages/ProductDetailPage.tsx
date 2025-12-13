@@ -6,7 +6,9 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import ProductCard from '@/components/ProductCard';
+import ProductReviews from '@/components/ProductReviews';
 import { useStore, Product } from '@/store/useStore';
+import { useFavorites } from '@/hooks/useFavorites';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { 
@@ -30,9 +32,9 @@ const ProductDetailPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
   const { country, addToCart } = useStore();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
-  const [isLiked, setIsLiked] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
 
   // Fetch product by slug
@@ -162,11 +164,14 @@ const ProductDetailPage = () => {
     }
   };
 
+  const isLiked = product ? isFavorite(product.id) : false;
+
   const handleLike = () => {
-    setIsLiked(!isLiked);
+    if (!product) return;
+    const nowLiked = toggleFavorite(product);
     toast({
-      title: isLiked ? 'تمت الإزالة' : 'تمت الإضافة',
-      description: isLiked ? 'تمت إزالة المنتج من المفضلة' : 'تمت إضافة المنتج للمفضلة',
+      title: nowLiked ? 'تمت الإضافة' : 'تمت الإزالة',
+      description: nowLiked ? 'تمت إضافة المنتج للمفضلة' : 'تمت إزالة المنتج من المفضلة',
     });
   };
 
@@ -475,6 +480,9 @@ const ProductDetailPage = () => {
               </div>
             </motion.section>
           )}
+
+          {/* Product Reviews Section */}
+          <ProductReviews productId={product.id} productName={product.nameAr} />
         </div>
       </main>
 

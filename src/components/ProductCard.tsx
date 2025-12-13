@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { ShoppingBag, Share2, Heart, Eye } from 'lucide-react';
 import { Product } from '@/store/useStore';
 import { useStore } from '@/store/useStore';
+import { useFavorites } from '@/hooks/useFavorites';
 import { toast } from '@/hooks/use-toast';
 import { useState } from 'react';
 
@@ -14,9 +15,10 @@ interface ProductCardProps {
 
 const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) => {
   const { addToCart, country } = useStore();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const currency = country === 'SA' ? 'ر.س' : 'ر.ي';
-  const [isLiked, setIsLiked] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const isLiked = isFavorite(product.id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -49,10 +51,10 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
   const handleLike = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    setIsLiked(!isLiked);
+    const nowLiked = toggleFavorite(product);
     toast({
-      title: isLiked ? 'تمت الإزالة' : 'تمت الإضافة',
-      description: isLiked ? 'تمت إزالة المنتج من المفضلة' : 'تمت إضافة المنتج للمفضلة',
+      title: nowLiked ? 'تمت الإضافة' : 'تمت الإزالة',
+      description: nowLiked ? 'تمت إضافة المنتج للمفضلة' : 'تمت إزالة المنتج من المفضلة',
     });
   };
 

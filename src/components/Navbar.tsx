@@ -1,14 +1,16 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, Search, Menu, X, MapPin } from 'lucide-react';
+import { ShoppingBag, Search, Menu, X, MapPin, Heart } from 'lucide-react';
 import { useState } from 'react';
 import { useStore } from '@/store/useStore';
+import { useFavorites } from '@/hooks/useFavorites';
 import Logo from '@/components/Logo';
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const { country, openCart, getCartCount } = useStore();
+  const { favorites } = useFavorites();
   const cartCount = getCartCount();
   const navigate = useNavigate();
 
@@ -16,6 +18,7 @@ const Navbar = () => {
     { href: '/home', label: 'الرئيسية', labelEn: 'Home' },
     { href: '/products', label: 'المنتجات', labelEn: 'Products' },
     { href: '/offers', label: 'العروض', labelEn: 'Offers' },
+    { href: '/favorites', label: 'المفضلة', labelEn: 'Favorites' },
     { href: '/reviews', label: 'التقييمات', labelEn: 'Reviews' },
     { href: '/about', label: 'من نحن', labelEn: 'About' },
   ];
@@ -40,8 +43,25 @@ const Navbar = () => {
               <Logo size="sm" />
             </Link>
 
-            {/* Right: Search & Cart */}
+            {/* Right: Favorites, Search & Cart */}
             <div className="flex items-center gap-1">
+              <Link
+                to="/favorites"
+                className="relative p-2.5 text-icon-light hover:text-gold transition-colors"
+                aria-label="Favorites"
+              >
+                <Heart className="w-6 h-6" />
+                {favorites.length > 0 && (
+                  <motion.span
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    className="absolute top-0.5 right-0.5 w-5 h-5 text-[11px] font-bold rounded-full flex items-center justify-center bg-gold text-secondary"
+                  >
+                    {favorites.length}
+                  </motion.span>
+                )}
+              </Link>
+
               <button
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
                 className="p-2.5 text-icon-light hover:text-gold transition-colors"

@@ -332,6 +332,39 @@ export type Database = {
           },
         ]
       }
+      product_reviews: {
+        Row: {
+          comment: string | null
+          country: string
+          created_at: string
+          customer_name: string
+          id: string
+          is_approved: boolean | null
+          product_id: string
+          rating: number
+        }
+        Insert: {
+          comment?: string | null
+          country: string
+          created_at?: string
+          customer_name: string
+          id?: string
+          is_approved?: boolean | null
+          product_id: string
+          rating: number
+        }
+        Update: {
+          comment?: string | null
+          country?: string
+          created_at?: string
+          customer_name?: string
+          id?: string
+          is_approved?: boolean | null
+          product_id?: string
+          rating?: number
+        }
+        Relationships: []
+      }
       products: {
         Row: {
           brand: string

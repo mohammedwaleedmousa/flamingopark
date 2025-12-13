@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, FileText, ExternalLink, Trash2, Calendar, Loader2, Printer, Eye, Pencil } from 'lucide-react';
+import { Search, FileText, ExternalLink, Trash2, Calendar, Loader2, Printer, Eye, Pencil, Plus } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -20,6 +20,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import InvoiceEditor from '@/components/admin/InvoiceEditor';
+import NewInvoiceCreator from '@/components/admin/NewInvoiceCreator';
 
 interface InvoiceFile {
   name: string;
@@ -78,6 +79,7 @@ const AdminInvoicesPage = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showInvoiceEditor, setShowInvoiceEditor] = useState(false);
+  const [showNewInvoice, setShowNewInvoice] = useState(false);
 
   useEffect(() => {
     fetchInvoices();
@@ -262,11 +264,17 @@ const AdminInvoicesPage = () => {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <h1 className="text-2xl font-heading text-foreground">إدارة الفواتير</h1>
-        <Button onClick={() => { fetchInvoices(); fetchOrders(); }} variant="outline" disabled={isLoading || isLoadingOrders}>
-          {(isLoading || isLoadingOrders) ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تحديث'}
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setShowNewInvoice(true)} className="gap-2">
+            <Plus className="w-4 h-4" />
+            فاتورة جديدة
+          </Button>
+          <Button onClick={() => { fetchInvoices(); fetchOrders(); }} variant="outline" disabled={isLoading || isLoadingOrders}>
+            {(isLoading || isLoadingOrders) ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تحديث'}
+          </Button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -478,6 +486,13 @@ const AdminInvoicesPage = () => {
         open={showInvoiceEditor}
         onClose={handleCloseInvoiceEditor}
         onUpdate={handleOrderUpdated}
+      />
+
+      {/* New Invoice Creator Modal */}
+      <NewInvoiceCreator
+        open={showNewInvoice}
+        onClose={() => setShowNewInvoice(false)}
+        onCreated={handleOrderUpdated}
       />
     </div>
   );

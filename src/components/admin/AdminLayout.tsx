@@ -3,9 +3,9 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import AdminSidebar from './AdminSidebar';
-import { Loader2, Menu, Bell } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { Loader2, Menu } from 'lucide-react';
 import Logo from '@/components/Logo';
+import NotificationsDropdown from './NotificationsDropdown';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
@@ -78,12 +78,7 @@ const AdminLayout = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <Button variant="ghost" size="icon" className="relative">
-                <Bell className="w-5 h-5" />
-                <span className="absolute -top-1 -right-1 w-4 h-4 bg-destructive text-destructive-foreground text-[10px] rounded-full flex items-center justify-center">
-                  3
-                </span>
-              </Button>
+              <NotificationsDropdown />
             </div>
           </header>
           <main className="flex-1 p-4 md:p-6 overflow-auto bg-muted/30">

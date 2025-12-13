@@ -2,8 +2,19 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Input } from '@/components/ui/input';
-import { Search, MessageCircle } from 'lucide-react';
+import { Search, MessageCircle, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 
 interface Customer {
   id: string;
@@ -39,6 +50,16 @@ const AdminCustomersPage = () => {
   const openWhatsApp = (customer: Customer) => {
     const phone = customer.phone.replace(/\D/g, '');
     window.open(`https://wa.me/${phone}`, '_blank');
+  };
+
+  const deleteCustomer = async (id: string) => {
+    const { error } = await supabase.from('customers').delete().eq('id', id);
+    if (error) {
+      toast({ title: 'خطأ', description: 'فشل في حذف العميل', variant: 'destructive' });
+    } else {
+      toast({ title: 'تم الحذف', description: 'تم حذف العميل بنجاح' });
+      setCustomers(customers.filter(c => c.id !== id));
+    }
   };
 
   const filteredCustomers = customers.filter(c =>
@@ -82,13 +103,39 @@ const AdminCustomersPage = () => {
                     {new Date(customer.created_at).toLocaleDateString('ar-SA')}
                   </td>
                   <td className="p-4">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      onClick={() => openWhatsApp(customer)}
-                    >
-                      <MessageCircle className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => openWhatsApp(customer)}
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </Button>
+                      <AlertDialog>
+                        <AlertDialogTrigger asChild>
+                          <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive">
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </AlertDialogTrigger>
+                        <AlertDialogContent dir="rtl">
+                          <AlertDialogHeader>
+                            <AlertDialogTitle>حذف العميل</AlertDialogTitle>
+                            <AlertDialogDescription>
+                              هل أنت متأكد من حذف العميل "{customer.name}"؟ لا يمكن التراجع عن هذا الإجراء.
+                            </AlertDialogDescription>
+                          </AlertDialogHeader>
+                          <AlertDialogFooter className="gap-2">
+                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+                            <AlertDialogAction
+                              onClick={() => deleteCustomer(customer.id)}
+                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                            >
+                              حذف
+                            </AlertDialogAction>
+                          </AlertDialogFooter>
+                        </AlertDialogContent>
+                      </AlertDialog>
+                    </div>
                   </td>
                 </tr>
               ))}

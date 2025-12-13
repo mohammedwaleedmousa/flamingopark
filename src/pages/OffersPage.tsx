@@ -8,47 +8,66 @@ import ProductCard from '@/components/ProductCard';
 import { useStore, Product } from '@/store/useStore';
 import { supabase } from '@/integrations/supabase/client';
 import { Percent, Clock, Loader2, Sparkles, Tag, Flame, Gift, Zap } from 'lucide-react';
+import { Link } from 'react-router-dom';
+
+interface Offer {
+  id: string;
+  title_ar: string;
+  subtitle_ar: string | null;
+  description_ar: string | null;
+  image_url: string | null;
+  discount_code: string | null;
+  discount_percentage: number;
+  is_featured: boolean;
+}
+
+interface OffersSettings {
+  page_title: string;
+  page_subtitle: string;
+  countdown_end_date: string | null;
+  promo_banner_text: string;
+  show_countdown: boolean;
+  show_promo_banner: boolean;
+}
 
 const OffersPage = () => {
   const { country } = useStore();
   const [timeLeft, setTimeLeft] = useState({
-    days: 3,
-    hours: 12,
-    minutes: 45,
-    seconds: 30,
+    days: 0,
+    hours: 0,
+    minutes: 0,
+    seconds: 0,
   });
 
-  // Countdown timer
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setTimeLeft(prev => {
-        let { days, hours, minutes, seconds } = prev;
-        
-        if (seconds > 0) {
-          seconds--;
-        } else {
-          seconds = 59;
-          if (minutes > 0) {
-            minutes--;
-          } else {
-            minutes = 59;
-            if (hours > 0) {
-              hours--;
-            } else {
-              hours = 23;
-              if (days > 0) {
-                days--;
-              }
-            }
-          }
-        }
-        
-        return { days, hours, minutes, seconds };
-      });
-    }, 1000);
+  // Fetch offers settings
+  const { data: settings } = useQuery({
+    queryKey: ['offers-settings'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('offers_settings')
+        .select('*')
+        .limit(1)
+        .maybeSingle();
+      if (error) throw error;
+      return data as OffersSettings | null;
+    },
+  });
 
-    return () => clearInterval(timer);
-  }, []);
+  // Fetch active offers
+  const { data: offers = [] } = useQuery({
+    queryKey: ['offers', country],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('offers')
+        .select('*')
+        .eq('is_active', true)
+        .contains('countries', [country])
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data as Offer[];
+    },
+    enabled: !!country,
+  });
 
   // Fetch discounted products
   const { data: discountedProducts = [], isLoading } = useQuery({
@@ -84,6 +103,33 @@ const OffersPage = () => {
     enabled: !!country,
   });
 
+  // Countdown timer
+  useEffect(() => {
+    if (!settings?.countdown_end_date || !settings.show_countdown) return;
+
+    const calculateTimeLeft = () => {
+      const endDate = new Date(settings.countdown_end_date!).getTime();
+      const now = new Date().getTime();
+      const diff = endDate - now;
+
+      if (diff <= 0) {
+        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+        return;
+      }
+
+      setTimeLeft({
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((diff % (1000 * 60)) / 1000),
+      });
+    };
+
+    calculateTimeLeft();
+    const timer = setInterval(calculateTimeLeft, 1000);
+    return () => clearInterval(timer);
+  }, [settings?.countdown_end_date, settings?.show_countdown]);
+
   const TimeBox = ({ value, label }: { value: number; label: string }) => (
     <div className="flex flex-col items-center">
       <div className="relative">
@@ -103,6 +149,8 @@ const OffersPage = () => {
     { icon: Gift, text: 'هدايا مجانية', color: 'text-emerald-400' },
     { icon: Zap, text: 'شحن سريع', color: 'text-blue-400' },
   ];
+
+  const featuredOffers = offers.filter(o => o.is_featured);
 
   return (
     <div className="min-h-screen bg-background">
@@ -169,9 +217,9 @@ const OffersPage = () => {
                 transition={{ delay: 0.1 }}
                 className="font-heading text-5xl md:text-7xl lg:text-8xl mb-6"
               >
-                <span className="text-secondary-foreground">عروض</span>
+                <span className="text-secondary-foreground">{settings?.page_title?.split(' ')[0] || 'عروض'}</span>
                 <br />
-                <span className="text-gold-gradient">استثنائية</span>
+                <span className="text-gold-gradient">{settings?.page_title?.split(' ').slice(1).join(' ') || 'استثنائية'}</span>
               </motion.h1>
 
               {/* Subtitle */}
@@ -181,30 +229,32 @@ const OffersPage = () => {
                 transition={{ delay: 0.2 }}
                 className="font-body text-lg md:text-xl text-gold-light/70 max-w-2xl mx-auto mb-12"
               >
-                اغتنم الفرصة واحصل على أفخم القطع الذهبية بأسعار لا تُقاوم
+                {settings?.page_subtitle || 'اغتنم الفرصة واحصل على أفخم القطع الذهبية بأسعار لا تُقاوم'}
               </motion.p>
 
               {/* Countdown Timer */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.9 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.3 }}
-                className="mb-12"
-              >
-                <p className="text-gold-light/60 text-sm mb-4 font-body flex items-center justify-center gap-2">
-                  <Clock className="w-4 h-4" />
-                  ينتهي العرض خلال
-                </p>
-                <div className="flex items-center justify-center gap-3 md:gap-6">
-                  <TimeBox value={timeLeft.days} label="يوم" />
-                  <span className="text-gold text-2xl font-heading mt-[-20px]">:</span>
-                  <TimeBox value={timeLeft.hours} label="ساعة" />
-                  <span className="text-gold text-2xl font-heading mt-[-20px]">:</span>
-                  <TimeBox value={timeLeft.minutes} label="دقيقة" />
-                  <span className="text-gold text-2xl font-heading mt-[-20px]">:</span>
-                  <TimeBox value={timeLeft.seconds} label="ثانية" />
-                </div>
-              </motion.div>
+              {settings?.show_countdown && (
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.9 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ delay: 0.3 }}
+                  className="mb-12"
+                >
+                  <p className="text-gold-light/60 text-sm mb-4 font-body flex items-center justify-center gap-2">
+                    <Clock className="w-4 h-4" />
+                    ينتهي العرض خلال
+                  </p>
+                  <div className="flex items-center justify-center gap-3 md:gap-6">
+                    <TimeBox value={timeLeft.days} label="يوم" />
+                    <span className="text-gold text-2xl font-heading mt-[-20px]">:</span>
+                    <TimeBox value={timeLeft.hours} label="ساعة" />
+                    <span className="text-gold text-2xl font-heading mt-[-20px]">:</span>
+                    <TimeBox value={timeLeft.minutes} label="دقيقة" />
+                    <span className="text-gold text-2xl font-heading mt-[-20px]">:</span>
+                    <TimeBox value={timeLeft.seconds} label="ثانية" />
+                  </div>
+                </motion.div>
+              )}
 
               {/* Features */}
               <motion.div
@@ -235,18 +285,79 @@ const OffersPage = () => {
         </section>
 
         {/* Promo Banner */}
-        <section className="py-6 bg-gradient-to-r from-gold via-gold-light to-gold relative overflow-hidden">
-          <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiLz48cGF0aCBkPSJNMjAgMjBtLTIgMGEyIDIgMCAxIDAgNCAwIDIgMiAwIDEgMC00IDB6IiBmaWxsPSJyZ2JhKDAsMCwwLDAuMSkiLz48L2c+PC9zdmc+')] opacity-30" />
-          <div className="container mx-auto px-4">
-            <div className="flex items-center justify-center gap-4 md:gap-8">
-              <Percent className="w-6 h-6 text-secondary animate-bounce" />
-              <span className="font-heading text-secondary text-lg md:text-xl">
-                استخدم كود GOLD50 للحصول على خصم إضافي 10%
-              </span>
-              <Percent className="w-6 h-6 text-secondary animate-bounce" />
+        {settings?.show_promo_banner && settings.promo_banner_text && (
+          <section className="py-6 bg-gradient-to-r from-gold via-gold-light to-gold relative overflow-hidden">
+            <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDAiIGhlaWdodD0iNDAiIHZpZXdCb3g9IjAgMCA0MCA0MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxwYXRoIGQ9Ik0wIDBoNDB2NDBIMHoiLz48cGF0aCBkPSJNMjAgMjBtLTIgMGEyIDIgMCAxIDAgNCAwIDIgMiAwIDEgMC00IDB6IiBmaWxsPSJyZ2JhKDAsMCwwLDAuMSkiLz48L2c+PC9zdmc+')] opacity-30" />
+            <div className="container mx-auto px-4">
+              <div className="flex items-center justify-center gap-4 md:gap-8">
+                <Percent className="w-6 h-6 text-secondary animate-bounce" />
+                <span className="font-heading text-secondary text-lg md:text-xl">
+                  {settings.promo_banner_text}
+                </span>
+                <Percent className="w-6 h-6 text-secondary animate-bounce" />
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
+
+        {/* Featured Offers Section */}
+        {featuredOffers.length > 0 && (
+          <section className="py-12 md:py-16">
+            <div className="container mx-auto px-4">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                className="text-center mb-8"
+              >
+                <h2 className="font-heading text-3xl md:text-4xl text-foreground mb-4">
+                  عروض <span className="text-gold">مميزة</span>
+                </h2>
+                <div className="w-24 h-1 bg-gradient-to-r from-transparent via-gold to-transparent mx-auto" />
+              </motion.div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {featuredOffers.map((offer, index) => (
+                  <motion.div
+                    key={offer.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: index * 0.1 }}
+                    className="relative group overflow-hidden rounded-xl bg-card border border-border"
+                  >
+                    {offer.image_url && (
+                      <div className="aspect-video overflow-hidden">
+                        <img 
+                          src={offer.image_url} 
+                          alt={offer.title_ar} 
+                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                        />
+                      </div>
+                    )}
+                    <div className="p-6">
+                      {offer.discount_percentage > 0 && (
+                        <span className="absolute top-4 left-4 bg-destructive text-destructive-foreground px-3 py-1 rounded-full text-sm font-bold">
+                          {offer.discount_percentage}% خصم
+                        </span>
+                      )}
+                      <h3 className="font-heading text-xl text-foreground mb-2">{offer.title_ar}</h3>
+                      {offer.subtitle_ar && (
+                        <p className="text-muted-foreground text-sm mb-3">{offer.subtitle_ar}</p>
+                      )}
+                      {offer.discount_code && (
+                        <div className="inline-block bg-muted px-4 py-2 rounded-lg">
+                          <span className="text-sm text-muted-foreground">كود الخصم: </span>
+                          <span className="font-mono font-bold text-gold">{offer.discount_code}</span>
+                        </div>
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
 
         {/* Products Section */}
         <section className="py-16 md:py-20">

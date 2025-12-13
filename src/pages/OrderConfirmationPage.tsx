@@ -9,12 +9,22 @@ import { CheckCircle, MessageCircle, FileText, Home, Copy } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import Logo from '@/components/Logo';
 
+interface SelectedAccessory {
+  name: string;
+  name_ar: string;
+  price: number;
+  quantity: number;
+  image_url?: string;
+}
+
 interface OrderItem {
   product_id: string;
   product_name: string;
   product_image: string;
   quantity: number;
   price: number;
+  selected_size?: string | null;
+  selected_accessories?: SelectedAccessory[];
 }
 
 interface OrderData {
@@ -62,9 +72,19 @@ const OrderConfirmationPage = () => {
   const handleWhatsApp = () => {
     if (!orderData) return;
 
-    const itemsList = orderData.items.map(item => 
-      `• ${item.product_name} (${item.quantity}x) - ${item.price.toFixed(2)} ${currency}`
-    ).join('\n');
+    const itemsList = orderData.items.map(item => {
+      let itemText = `• ${item.product_name} (${item.quantity}x) - ${item.price.toFixed(2)} ${currency}`;
+      if (item.selected_size) {
+        itemText += `\n   الحجم: ${item.selected_size}`;
+      }
+      if (item.selected_accessories && item.selected_accessories.length > 0) {
+        const accessoriesText = item.selected_accessories
+          .map(acc => `${acc.name_ar} (×${acc.quantity})`)
+          .join('، ');
+        itemText += `\n   الملحقات: ${accessoriesText}`;
+      }
+      return itemText;
+    }).join('\n');
 
     const message = `🛒 طلب جديد #${orderData.orderNumber}
 
@@ -182,7 +202,7 @@ ${itemsList}
               <h3 className="text-sm font-heading text-gray-500 mb-4">المنتجات</h3>
               <div className="space-y-3">
                 {orderData.items.map((item, index) => (
-                  <div key={index} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                  <div key={index} className="flex items-start gap-4 p-3 bg-gray-50 rounded-lg">
                     <img
                       src={item.product_image}
                       alt={item.product_name}
@@ -190,6 +210,25 @@ ${itemsList}
                     />
                     <div className="flex-1">
                       <h4 className="font-heading text-gray-900">{item.product_name}</h4>
+                      
+                      {/* Size */}
+                      {item.selected_size && (
+                        <p className="text-xs text-gray-500">الحجم: {item.selected_size}</p>
+                      )}
+                      
+                      {/* Accessories */}
+                      {item.selected_accessories && item.selected_accessories.length > 0 && (
+                        <div className="text-xs text-gray-500">
+                          <span>الملحقات: </span>
+                          {item.selected_accessories.map((acc, i) => (
+                            <span key={acc.name_ar}>
+                              {acc.name_ar} (×{acc.quantity})
+                              {i < item.selected_accessories!.length - 1 ? '، ' : ''}
+                            </span>
+                          ))}
+                        </div>
+                      )}
+                      
                       <p className="text-sm text-gray-500">
                         {item.quantity} × {item.price.toFixed(2)} {currency}
                       </p>

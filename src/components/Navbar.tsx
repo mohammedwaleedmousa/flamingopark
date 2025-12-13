@@ -29,22 +29,16 @@ const Navbar = () => {
       <div className="bg-secondary border-b border-gold/10">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16 md:h-18">
-            {/* Left: Menu Button */}
-            <button
-              onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2.5 text-icon-light hover:text-gold transition-colors"
-              aria-label="Toggle menu"
-            >
-              {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
-            </button>
-
-            {/* Center: Logo */}
-            <Link to="/home" className="absolute left-1/2 -translate-x-1/2">
-              <Logo size="sm" />
-            </Link>
-
-            {/* Right: Favorites, Search & Cart */}
+            {/* Left: Menu Button & Favorites */}
             <div className="flex items-center gap-1">
+              <button
+                onClick={() => setIsMenuOpen(!isMenuOpen)}
+                className="p-2.5 text-icon-light hover:text-gold transition-colors"
+                aria-label="Toggle menu"
+              >
+                {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
+              </button>
+
               <Link
                 to="/favorites"
                 className="relative p-2.5 text-icon-light hover:text-gold transition-colors"
@@ -61,7 +55,15 @@ const Navbar = () => {
                   </motion.span>
                 )}
               </Link>
+            </div>
 
+            {/* Center: Logo */}
+            <Link to="/home" className="absolute left-1/2 -translate-x-1/2">
+              <Logo size="sm" />
+            </Link>
+
+            {/* Right: Search & Cart */}
+            <div className="flex items-center gap-1">
               <button
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
                 className="p-2.5 text-icon-light hover:text-gold transition-colors"

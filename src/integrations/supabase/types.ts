@@ -434,6 +434,39 @@ export type Database = {
         }
         Relationships: []
       }
+      site_content: {
+        Row: {
+          content: string
+          content_ar: string
+          created_at: string
+          description: string | null
+          id: string
+          key: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          content?: string
+          content_ar?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          content?: string
+          content_ar?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          key?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       site_settings: {
         Row: {
           id: string

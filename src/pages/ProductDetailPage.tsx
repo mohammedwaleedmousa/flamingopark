@@ -74,7 +74,7 @@ const ProductDetailPage = () => {
         isBestSeller: data.is_best_seller,
         hasSizes: (data as any).has_sizes ?? false,
         sizes: (data as any).sizes || [],
-        accessories: accessories as { name: string; name_ar: string; price: number }[],
+        accessories: accessories as { name: string; name_ar: string; price: number; image_url?: string }[],
       };
     },
     enabled: !!slug,
@@ -460,7 +460,7 @@ const ProductDetailPage = () => {
                         }`}
                       >
                         <div className="flex items-center gap-3">
-                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
                             selectedAccessories.includes(acc.name_ar)
                               ? 'border-gold bg-gold'
                               : 'border-muted-foreground'
@@ -469,6 +469,13 @@ const ProductDetailPage = () => {
                               <Check className="w-3 h-3 text-secondary" />
                             )}
                           </div>
+                          {acc.image_url && (
+                            <img 
+                              src={acc.image_url} 
+                              alt={acc.name_ar} 
+                              className="w-10 h-10 object-cover rounded"
+                            />
+                          )}
                           <span className="font-medium">{acc.name_ar}</span>
                         </div>
                         <span className="text-gold font-heading">+{acc.price} {currency}</span>

@@ -21,6 +21,7 @@ interface Accessory {
   name: string;
   name_ar: string;
   price: number;
+  image_url?: string;
 }
 
 const AdminProductFormPage = () => {
@@ -54,7 +55,8 @@ const AdminProductFormPage = () => {
   });
 
   const [newSize, setNewSize] = useState('');
-  const [newAccessory, setNewAccessory] = useState({ name: '', name_ar: '', price: '' });
+  const [newAccessory, setNewAccessory] = useState({ name: '', name_ar: '', price: '', image_url: '' });
+  const [uploadingAccessoryImage, setUploadingAccessoryImage] = useState(false);
 
   // Fetch all homepage sections
   const { data: sections = [] } = useQuery({
@@ -532,44 +534,94 @@ const AdminProductFormPage = () => {
             أضف ملحقات اختيارية للمنتج. عند اختيار أي ملحق سيُضاف سعره للسعر الأساسي.
           </p>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-            <Input
-              value={newAccessory.name}
-              onChange={(e) => setNewAccessory(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="الاسم (إنجليزي)"
-            />
-            <Input
-              value={newAccessory.name_ar}
-              onChange={(e) => setNewAccessory(prev => ({ ...prev, name_ar: e.target.value }))}
-              placeholder="الاسم (عربي)"
-              dir="rtl"
-            />
-            <div className="flex gap-2">
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input
+                value={newAccessory.name}
+                onChange={(e) => setNewAccessory(prev => ({ ...prev, name: e.target.value }))}
+                placeholder="الاسم (إنجليزي)"
+              />
+              <Input
+                value={newAccessory.name_ar}
+                onChange={(e) => setNewAccessory(prev => ({ ...prev, name_ar: e.target.value }))}
+                placeholder="الاسم (عربي)"
+                dir="rtl"
+              />
+            </div>
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               <Input
                 type="number"
                 value={newAccessory.price}
                 onChange={(e) => setNewAccessory(prev => ({ ...prev, price: e.target.value }))}
                 placeholder="السعر الإضافي"
               />
-              <Button
-                type="button"
-                variant="outline"
-                onClick={() => {
-                  if (newAccessory.name_ar.trim() && newAccessory.price) {
-                    setFormData(prev => ({
-                      ...prev,
-                      accessories: [...prev.accessories, {
-                        name: newAccessory.name.trim(),
-                        name_ar: newAccessory.name_ar.trim(),
-                        price: parseFloat(newAccessory.price),
-                      }],
-                    }));
-                    setNewAccessory({ name: '', name_ar: '', price: '' });
-                  }
-                }}
-              >
-                <Plus className="w-4 h-4" />
-              </Button>
+              <div className="flex gap-2">
+                {newAccessory.image_url ? (
+                  <div className="relative w-12 h-12 flex-shrink-0">
+                    <img src={newAccessory.image_url} alt="" className="w-full h-full object-cover rounded" />
+                    <button
+                      type="button"
+                      onClick={() => setNewAccessory(prev => ({ ...prev, image_url: '' }))}
+                      className="absolute -top-1 -right-1 p-0.5 bg-destructive text-destructive-foreground rounded-full"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
+                ) : (
+                  <label className="flex-1 h-12 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-gold transition-colors">
+                    {uploadingAccessoryImage ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <span className="text-sm text-muted-foreground flex items-center gap-2">
+                        <Upload className="w-4 h-4" />
+                        صورة الملحق
+                      </span>
+                    )}
+                    <input
+                      type="file"
+                      accept="image/*"
+                      className="hidden"
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0];
+                        if (!file) return;
+                        setUploadingAccessoryImage(true);
+                        const fileName = `${Date.now()}-${file.name}`;
+                        const { error } = await supabase.storage
+                          .from('uploads')
+                          .upload(`accessories/${fileName}`, file);
+                        if (!error) {
+                          const { data: urlData } = supabase.storage
+                            .from('uploads')
+                            .getPublicUrl(`accessories/${fileName}`);
+                          setNewAccessory(prev => ({ ...prev, image_url: urlData.publicUrl }));
+                        }
+                        setUploadingAccessoryImage(false);
+                      }}
+                    />
+                  </label>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (newAccessory.name_ar.trim() && newAccessory.price) {
+                      setFormData(prev => ({
+                        ...prev,
+                        accessories: [...prev.accessories, {
+                          name: newAccessory.name.trim(),
+                          name_ar: newAccessory.name_ar.trim(),
+                          price: parseFloat(newAccessory.price),
+                          image_url: newAccessory.image_url || undefined,
+                        }],
+                      }));
+                      setNewAccessory({ name: '', name_ar: '', price: '', image_url: '' });
+                    }
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
             </div>
           </div>
 
@@ -580,9 +632,14 @@ const AdminProductFormPage = () => {
                   key={index}
                   className="flex items-center justify-between p-3 bg-muted rounded-lg"
                 >
-                  <div>
-                    <span className="font-medium">{acc.name_ar}</span>
-                    {acc.name && <span className="text-muted-foreground text-sm mr-2">({acc.name})</span>}
+                  <div className="flex items-center gap-3">
+                    {acc.image_url && (
+                      <img src={acc.image_url} alt={acc.name_ar} className="w-10 h-10 object-cover rounded" />
+                    )}
+                    <div>
+                      <span className="font-medium">{acc.name_ar}</span>
+                      {acc.name && <span className="text-muted-foreground text-sm mr-2">({acc.name})</span>}
+                    </div>
                   </div>
                   <div className="flex items-center gap-4">
                     <span className="text-gold font-heading">+{acc.price}</span>

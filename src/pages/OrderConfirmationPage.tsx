@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, MessageCircle, FileText, Home, Copy } from 'lucide-react';
+import { CheckCircle, MessageCircle, FileText, Home, Copy, Download, Paperclip, Send } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import Logo from '@/components/Logo';
 
@@ -276,9 +276,13 @@ const OrderConfirmationPage = () => {
           >
             {/* Step 1: Save Invoice */}
             {!invoiceSaved && (
-              <div className="bg-gold/10 border border-gold/30 rounded-lg p-4 text-center">
-                <p className="text-foreground font-body mb-3">
-                  الخطوة ١: قم بحفظ الفاتورة أولاً
+              <div className="bg-gold/10 border border-gold/30 rounded-lg p-6 text-center">
+                <div className="w-12 h-12 bg-gold/20 rounded-full flex items-center justify-center mx-auto mb-3">
+                  <Download className="w-6 h-6 text-gold" />
+                </div>
+                <h3 className="font-heading text-lg text-foreground mb-2">الخطوة ١</h3>
+                <p className="text-foreground font-body mb-4">
+                  اضغط الزر أدناه لحفظ الفاتورة كملف PDF على جهازك
                 </p>
                 <Button
                   onClick={handlePrintInvoice}
@@ -294,25 +298,57 @@ const OrderConfirmationPage = () => {
             {/* Step 2: Send via WhatsApp (shown after saving) */}
             {invoiceSaved && (
               <motion.div
-                initial={{ opacity: 0, scale: 0.95 }}
-                animate={{ opacity: 1, scale: 1 }}
-                className="bg-green-50 border border-green-200 rounded-lg p-4 text-center"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="space-y-4"
               >
-                <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                <p className="text-foreground font-body mb-2">
-                  الخطوة ٢: أرسل الفاتورة عبر الواتساب لتأكيد الطلب
-                </p>
-                <p className="text-sm text-muted-foreground mb-3">
-                  اضغط الزر ثم أرفق ملف الفاتورة PDF الذي حفظته
-                </p>
-                <Button
-                  onClick={handleWhatsApp}
-                  className="bg-green-600 hover:bg-green-700 text-white gap-2"
-                  size="lg"
-                >
-                  <MessageCircle className="w-5 h-5" />
-                  فتح الواتساب
-                </Button>
+                {/* Success message */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+                  <CheckCircle className="w-10 h-10 text-green-500 mx-auto mb-2" />
+                  <p className="text-green-700 font-heading">تم حفظ الفاتورة بنجاح!</p>
+                </div>
+
+                {/* Step 2 instructions */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <MessageCircle className="w-6 h-6 text-blue-600" />
+                  </div>
+                  <h3 className="font-heading text-lg text-foreground mb-4 text-center">الخطوة ٢: إرسال الفاتورة</h3>
+                  
+                  <div className="space-y-3 text-right mb-6">
+                    <div className="flex items-start gap-3 bg-white/50 p-3 rounded-lg">
+                      <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm flex-shrink-0">1</span>
+                      <p className="text-foreground text-sm">اضغط على زر "فتح الواتساب" أدناه</p>
+                    </div>
+                    <div className="flex items-start gap-3 bg-white/50 p-3 rounded-lg">
+                      <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm flex-shrink-0">2</span>
+                      <div className="text-sm">
+                        <p className="text-foreground">اضغط على أيقونة المرفقات</p>
+                        <Paperclip className="w-4 h-4 text-muted-foreground mt-1 inline" />
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3 bg-white/50 p-3 rounded-lg">
+                      <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm flex-shrink-0">3</span>
+                      <p className="text-foreground text-sm">اختر ملف الفاتورة PDF الذي حفظته</p>
+                    </div>
+                    <div className="flex items-start gap-3 bg-white/50 p-3 rounded-lg">
+                      <span className="w-6 h-6 bg-blue-600 text-white rounded-full flex items-center justify-center text-sm flex-shrink-0">4</span>
+                      <div className="text-sm">
+                        <p className="text-foreground">اضغط إرسال</p>
+                        <Send className="w-4 h-4 text-muted-foreground mt-1 inline" />
+                      </div>
+                    </div>
+                  </div>
+
+                  <Button
+                    onClick={handleWhatsApp}
+                    className="w-full bg-green-600 hover:bg-green-700 text-white gap-2"
+                    size="lg"
+                  >
+                    <MessageCircle className="w-5 h-5" />
+                    فتح الواتساب
+                  </Button>
+                </div>
               </motion.div>
             )}
 

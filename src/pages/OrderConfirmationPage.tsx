@@ -73,35 +73,9 @@ const OrderConfirmationPage = () => {
   const handleWhatsApp = () => {
     if (!orderData) return;
 
-    const itemsList = orderData.items.map(item => {
-      let itemText = `• ${item.product_name} (${item.quantity}x) - ${item.price.toFixed(2)} ${currency}`;
-      if (item.selected_size) {
-        itemText += `\n   الحجم: ${item.selected_size}`;
-      }
-      if (item.selected_accessories && item.selected_accessories.length > 0) {
-        const accessoriesText = item.selected_accessories
-          .map(acc => `${acc.name_ar} (×${acc.quantity})`)
-          .join('، ');
-        itemText += `\n   الملحقات: ${accessoriesText}`;
-      }
-      return itemText;
-    }).join('\n');
+    const message = `مرحباً، أرغب في تأكيد الطلب رقم: ${orderData.orderNumber}
 
-    const message = `🛒 طلب جديد #${orderData.orderNumber}
-
-👤 العميل: ${orderData.customerName}
-📱 الهاتف: ${orderData.customerPhone}
-📍 العنوان: ${orderData.customerAddress}
-${orderData.customerNotes ? `📝 ملاحظات: ${orderData.customerNotes}` : ''}
-
-📦 المنتجات:
-${itemsList}
-
-💰 المجموع الفرعي: ${orderData.subtotal.toFixed(2)} ${currency}
-🚚 التوصيل: ${orderData.deliveryFee.toFixed(2)} ${currency}
-💵 الإجمالي: ${orderData.total.toFixed(2)} ${currency}
-
-💳 طريقة الدفع: ${orderData.paymentMethod === 'cod' ? 'عند الاستلام' : 'تحويل بنكي'}`;
+سأقوم بإرسال الفاتورة PDF في الرسالة التالية.`;
     
     const whatsappUrl = `https://wa.me/${orderData.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
     window.open(whatsappUrl, '_blank');
@@ -325,8 +299,11 @@ ${itemsList}
                 className="bg-green-50 border border-green-200 rounded-lg p-4 text-center"
               >
                 <CheckCircle className="w-8 h-8 text-green-500 mx-auto mb-2" />
-                <p className="text-foreground font-body mb-3">
+                <p className="text-foreground font-body mb-2">
                   الخطوة ٢: أرسل الفاتورة عبر الواتساب لتأكيد الطلب
+                </p>
+                <p className="text-sm text-muted-foreground mb-3">
+                  اضغط الزر ثم أرفق ملف الفاتورة PDF الذي حفظته
                 </p>
                 <Button
                   onClick={handleWhatsApp}
@@ -334,7 +311,7 @@ ${itemsList}
                   size="lg"
                 >
                   <MessageCircle className="w-5 h-5" />
-                  إرسال للواتساب
+                  فتح الواتساب
                 </Button>
               </motion.div>
             )}

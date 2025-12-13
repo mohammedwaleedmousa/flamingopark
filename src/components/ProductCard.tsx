@@ -175,7 +175,7 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
             {/* Price Section */}
             <div className="flex items-end justify-between gap-2">
               <div className="flex flex-col">
-                <span className={`font-heading font-semibold text-gold ${compact ? 'text-lg' : 'text-xl'}`}>
+                <span className={`font-heading font-semibold text-foreground ${compact ? 'text-lg' : 'text-xl'}`}>
                   {discountedPrice.toFixed(0)} <span className="text-xs font-normal">{currency}</span>
                 </span>
                 {product.originalPrice && (

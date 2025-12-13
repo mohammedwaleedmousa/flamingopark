@@ -1,12 +1,21 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowRight, Loader2, Upload, X } from 'lucide-react';
+import { ArrowRight, Loader2, Upload, X, LayoutGrid } from 'lucide-react';
+
+interface HomepageSection {
+  id: string;
+  title: string;
+  title_ar: string;
+  filter_type: string;
+  is_active: boolean;
+}
 
 const AdminProductFormPage = () => {
   const { id } = useParams();
@@ -32,6 +41,20 @@ const AdminProductFormPage = () => {
     is_active: true,
     countries: ['SA', 'YE'] as string[],
     images: [] as string[],
+    section_ids: [] as string[],
+  });
+
+  // Fetch all homepage sections
+  const { data: sections = [] } = useQuery({
+    queryKey: ['all-sections'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('homepage_sections')
+        .select('id, title, title_ar, filter_type, is_active')
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data as HomepageSection[];
+    },
   });
 
   useEffect(() => {
@@ -67,6 +90,7 @@ const AdminProductFormPage = () => {
         is_active: data.is_active ?? true,
         countries: data.countries || ['SA', 'YE'],
         images: data.images || [],
+        section_ids: (data as any).section_ids || [],
       });
     }
     setIsLoading(false);
@@ -125,6 +149,15 @@ const AdminProductFormPage = () => {
     }));
   };
 
+  const toggleSection = (sectionId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      section_ids: prev.section_ids.includes(sectionId)
+        ? prev.section_ids.filter(id => id !== sectionId)
+        : [...prev.section_ids, sectionId],
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -152,6 +185,7 @@ const AdminProductFormPage = () => {
       is_active: formData.is_active,
       countries: formData.countries,
       images: formData.images,
+      section_ids: formData.section_ids,
     };
 
     try {
@@ -375,6 +409,37 @@ const AdminProductFormPage = () => {
               </label>
             </div>
           </div>
+
+          {/* Sections */}
+          {sections.length > 0 && (
+            <div>
+              <label className="flex items-center gap-2 text-sm font-body text-muted-foreground mb-3">
+                <LayoutGrid className="w-4 h-4" />
+                أقسام الصفحة الرئيسية
+              </label>
+              <div className="flex flex-wrap gap-3">
+                {sections.map((section) => (
+                  <label 
+                    key={section.id} 
+                    className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-all ${
+                      formData.section_ids.includes(section.id)
+                        ? 'border-primary bg-primary/10 text-primary'
+                        : 'border-border hover:border-primary/50'
+                    }`}
+                  >
+                    <Checkbox
+                      checked={formData.section_ids.includes(section.id)}
+                      onCheckedChange={() => toggleSection(section.id)}
+                    />
+                    <span className="text-sm">{section.title_ar}</span>
+                  </label>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                اختر الأقسام التي تريد عرض هذا المنتج فيها
+              </p>
+            </div>
+          )}
         </div>
 
         {/* Submit */}

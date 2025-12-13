@@ -43,7 +43,38 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
         .eq('is_active', true)
         .contains('countries', [country]);
 
-      // Apply filter based on type
+      // First try to get products assigned directly to this section
+      const { data: directProducts, error: directError } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .contains('countries', [country])
+        .contains('section_ids', [section.id])
+        .limit(section.max_products);
+
+      // If there are directly assigned products, use them
+      if (!directError && directProducts && directProducts.length > 0) {
+        return directProducts.map((p) => ({
+          id: p.id,
+          name: p.name,
+          nameAr: p.name_ar,
+          slug: p.slug,
+          price: Number(p.price),
+          originalPrice: p.original_price ? Number(p.original_price) : undefined,
+          discount: p.discount || undefined,
+          description: p.description || '',
+          descriptionAr: p.description_ar || '',
+          images: p.images || [],
+          category: p.category,
+          brand: p.brand,
+          inStock: p.in_stock ?? true,
+          countries: (p.countries || ['SA', 'YE']) as ('SA' | 'YE')[],
+          isFeatured: p.is_featured,
+          isBestSeller: p.is_best_seller,
+        })) as Product[];
+      }
+
+      // Otherwise, fall back to filter_type based filtering
       switch (section.filter_type) {
         case 'featured':
           query = query.eq('is_featured', true);

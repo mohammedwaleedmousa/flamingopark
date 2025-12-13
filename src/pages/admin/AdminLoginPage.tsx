@@ -172,28 +172,30 @@ const AdminLoginPage = () => {
           <p className="text-muted-foreground text-sm text-center">لوحة التحكم</p>
 
           {/* Tabs */}
-          <div className="flex bg-muted rounded-xl p-1">
+          <div className="flex bg-muted rounded-xl p-1.5 gap-1">
             <button
+              type="button"
               onClick={() => setIsSignUp(false)}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-heading text-sm transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-heading text-sm transition-all ${
                 !isSignUp 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground shadow-sm' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10'
               }`}
             >
-              <LogIn className="w-4 h-4" />
-              تسجيل الدخول
+              <LogIn className="w-4 h-4 shrink-0" />
+              <span>الدخول</span>
             </button>
             <button
+              type="button"
               onClick={() => setIsSignUp(true)}
-              className={`flex-1 flex items-center justify-center gap-2 py-3 rounded-lg font-heading text-sm transition-all ${
+              className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-4 rounded-lg font-heading text-sm transition-all ${
                 isSignUp 
-                  ? 'bg-primary text-primary-foreground' 
-                  : 'text-muted-foreground hover:text-foreground'
+                  ? 'bg-primary text-primary-foreground shadow-sm' 
+                  : 'text-muted-foreground hover:text-foreground hover:bg-muted-foreground/10'
               }`}
             >
-              <UserPlus className="w-4 h-4" />
-              إنشاء حساب
+              <UserPlus className="w-4 h-4 shrink-0" />
+              <span>إنشاء حساب</span>
             </button>
           </div>
 

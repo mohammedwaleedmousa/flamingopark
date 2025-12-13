@@ -61,7 +61,6 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
               <img
                 src={product.images[0]}
                 alt={product.nameAr}
-                loading="lazy"
                 className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105"
               />
             ) : (

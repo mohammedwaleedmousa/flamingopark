@@ -134,7 +134,7 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
             
             {/* Price Section */}
             <div className="flex items-center gap-2">
-              <span className="font-heading font-semibold text-base text-gold">
+              <span className="font-heading font-semibold text-base text-foreground">
                 {discountedPrice.toFixed(0)} <span className="text-xs font-normal">{currency}</span>
               </span>
               {product.originalPrice && (

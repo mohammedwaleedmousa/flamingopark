@@ -1,8 +1,10 @@
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { Star } from 'lucide-react';
+import { Star, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/store/useStore';
+import { Button } from '@/components/ui/button';
 
 interface Review {
   id: string;
@@ -32,6 +34,21 @@ const ReviewsSection = () => {
     enabled: !!country,
   });
 
+  // Fetch total reviews count
+  const { data: totalCount = 0 } = useQuery({
+    queryKey: ['reviews-count', country],
+    queryFn: async () => {
+      const { count, error } = await supabase
+        .from('reviews')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_approved', true)
+        .eq('country', country);
+      if (error) throw error;
+      return count || 0;
+    },
+    enabled: !!country,
+  });
+
   if (reviews.length === 0) return null;
 
   return (
@@ -46,7 +63,10 @@ const ReviewsSection = () => {
           <h2 className="font-heading text-3xl md:text-4xl text-gold mb-4">
             آراء عملائنا
           </h2>
-          <div className="w-20 h-px bg-gold mx-auto" />
+          <div className="w-20 h-px bg-gold mx-auto mb-4" />
+          <p className="text-muted-foreground font-body">
+            {totalCount} تقييم من عملائنا الكرام
+          </p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -76,6 +96,21 @@ const ReviewsSection = () => {
             </motion.div>
           ))}
         </div>
+
+        {/* View All Button */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          className="text-center mt-10"
+        >
+          <Link to="/reviews">
+            <Button variant="outline" className="gap-2 border-gold text-gold hover:bg-gold hover:text-secondary">
+              عرض جميع التقييمات
+              <ArrowLeft className="w-4 h-4" />
+            </Button>
+          </Link>
+        </motion.div>
       </div>
     </section>
   );

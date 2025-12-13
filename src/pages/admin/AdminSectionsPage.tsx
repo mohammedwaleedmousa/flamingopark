@@ -64,6 +64,29 @@ const AdminSectionsPage = () => {
     },
   });
 
+  // Fetch product counts for each section
+  const { data: productCounts = {} } = useQuery({
+    queryKey: ['section-product-counts', sections.map(s => s.id)],
+    queryFn: async () => {
+      const counts: Record<string, number> = {};
+      
+      for (const section of sections) {
+        const { count, error } = await supabase
+          .from('products')
+          .select('*', { count: 'exact', head: true })
+          .eq('is_active', true)
+          .contains('section_ids', [section.id]);
+        
+        if (!error) {
+          counts[section.id] = count || 0;
+        }
+      }
+      
+      return counts;
+    },
+    enabled: sections.length > 0,
+  });
+
   const createMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
       const { error } = await supabase.from('homepage_sections').insert({
@@ -349,7 +372,8 @@ const AdminSectionsPage = () => {
                     <TableHead className="w-10"></TableHead>
                     <TableHead>العنوان</TableHead>
                     <TableHead>نوع الفلتر</TableHead>
-                    <TableHead>عدد المنتجات</TableHead>
+                    <TableHead>المنتجات المُعينة</TableHead>
+                    <TableHead>الحد الأقصى</TableHead>
                     <TableHead>الدول</TableHead>
                     <TableHead>نشط</TableHead>
                     <TableHead>إجراءات</TableHead>
@@ -368,6 +392,15 @@ const AdminSectionsPage = () => {
                         </div>
                       </TableCell>
                       <TableCell>{getFilterLabel(section.filter_type)}</TableCell>
+                      <TableCell>
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          (productCounts[section.id] || 0) > 0 
+                            ? 'bg-primary/10 text-primary' 
+                            : 'bg-muted text-muted-foreground'
+                        }`}>
+                          {productCounts[section.id] || 0} منتج
+                        </span>
+                      </TableCell>
                       <TableCell>{section.max_products}</TableCell>
                       <TableCell>{section.countries?.join(', ')}</TableCell>
                       <TableCell>

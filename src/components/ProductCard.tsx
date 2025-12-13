@@ -73,7 +73,7 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
       className="group"
     >
       <Link to={`/product/${product.slug}`} className="block">
-        <div className="relative bg-cream rounded-lg overflow-hidden border-2 border-gold transition-all duration-500 hover:border-gold-light hover:shadow-[0_15px_40px_-10px_hsl(var(--gold)/0.4)]">
+        <div className="relative bg-cream rounded-lg overflow-hidden border-2 border-gold transition-all duration-500 hover:border-gold-light hover:shadow-[0_15px_40px_-10px_hsl(var(--gold)/0.4)] h-full flex flex-col">
           {/* Image Container - Fixed square aspect ratio */}
           <div className="relative overflow-hidden aspect-square bg-cream">
             {/* Background layer behind image */}
@@ -153,8 +153,8 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
             </div>
           </div>
 
-          {/* Content */}
-          <div className={`relative ${compact ? 'p-3' : 'p-4'}`}>
+          {/* Content - Fixed height */}
+          <div className={`relative flex-1 flex flex-col ${compact ? 'p-3' : 'p-4'}`}>
             {/* Brand */}
             <div className="flex items-center gap-2 mb-2">
               <span className="text-[10px] font-medium text-gold uppercase tracking-wider">
@@ -163,13 +163,13 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
               <div className="flex-1 h-px bg-gradient-to-r from-gold/30 to-transparent" />
             </div>
             
-            {/* Product Name */}
-            <h3 className={`font-heading text-foreground group-hover:text-gold transition-colors duration-300 mb-3 line-clamp-2 leading-relaxed ${compact ? 'text-sm' : 'text-base'}`}>
+            {/* Product Name - Fixed height with line clamp */}
+            <h3 className={`font-heading text-foreground group-hover:text-gold transition-colors duration-300 mb-3 line-clamp-2 leading-relaxed min-h-[2.5rem] ${compact ? 'text-sm' : 'text-base'}`}>
               {product.nameAr}
             </h3>
             
-            {/* Price Section */}
-            <div className="flex items-end justify-between gap-2">
+            {/* Price Section - Push to bottom */}
+            <div className="flex items-end justify-between gap-2 mt-auto">
               <div className="flex flex-col">
                 <span className={`font-heading font-semibold text-foreground ${compact ? 'text-lg' : 'text-xl'}`}>
                   {discountedPrice.toFixed(0)} <span className="text-xs font-normal">{currency}</span>

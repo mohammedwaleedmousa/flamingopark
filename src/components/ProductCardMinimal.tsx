@@ -54,7 +54,7 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
       className="group"
     >
       <Link to={`/product/${product.slug}`} className="block">
-        <div className="relative overflow-hidden rounded-lg bg-beige border-2 border-gold transition-all duration-300 hover:border-gold-light hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.3)]">
+        <div className="relative overflow-hidden rounded-lg bg-beige border-2 border-gold transition-all duration-300 hover:border-gold-light hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.3)] h-full flex flex-col">
           {/* Image Container - Fixed square aspect ratio */}
           <div className="relative aspect-square overflow-hidden">
             {product.images[0] ? (
@@ -113,20 +113,20 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
             )}
           </div>
 
-          {/* Content */}
-          <div className="p-4 bg-background border-t border-border/20">
+          {/* Content - Fixed height */}
+          <div className="p-4 bg-background border-t border-border/20 flex-1 flex flex-col">
             {/* Brand */}
             <span className="text-[11px] font-medium text-gold uppercase tracking-wider">
               {product.brand}
             </span>
             
-            {/* Product Name */}
-            <h3 className="font-heading text-sm text-foreground mt-1 mb-2 line-clamp-1 group-hover:text-gold transition-colors">
+            {/* Product Name - Fixed height */}
+            <h3 className="font-heading text-sm text-foreground mt-1 mb-2 line-clamp-1 group-hover:text-gold transition-colors min-h-[1.25rem]">
               {product.nameAr}
             </h3>
             
-            {/* Price Section */}
-            <div className="flex items-center gap-2">
+            {/* Price Section - Push to bottom */}
+            <div className="flex items-center gap-2 mt-auto">
               <span className="font-heading font-semibold text-base text-foreground">
                 {discountedPrice.toFixed(0)} <span className="text-xs font-normal">{currency}</span>
               </span>

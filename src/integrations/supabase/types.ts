@@ -303,6 +303,7 @@ export type Database = {
           image_url: string | null
           is_active: boolean | null
           is_featured: boolean | null
+          product_ids: string[] | null
           sort_order: number | null
           start_date: string | null
           subtitle: string | null
@@ -323,6 +324,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean | null
           is_featured?: boolean | null
+          product_ids?: string[] | null
           sort_order?: number | null
           start_date?: string | null
           subtitle?: string | null
@@ -343,6 +345,7 @@ export type Database = {
           image_url?: string | null
           is_active?: boolean | null
           is_featured?: boolean | null
+          product_ids?: string[] | null
           sort_order?: number | null
           start_date?: string | null
           subtitle?: string | null

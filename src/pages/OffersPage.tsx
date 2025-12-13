@@ -19,6 +19,7 @@ interface Offer {
   discount_code: string | null;
   discount_percentage: number;
   is_featured: boolean;
+  product_ids: string[] | null;
 }
 
 interface OffersSettings {
@@ -67,6 +68,42 @@ const OffersPage = () => {
       return data as Offer[];
     },
     enabled: !!country,
+  });
+
+  // Collect all product IDs from offers
+  const offerProductIds = offers.flatMap(o => o.product_ids || []);
+
+  // Fetch products linked to offers
+  const { data: offerProducts = [] } = useQuery({
+    queryKey: ['offer-products', offerProductIds],
+    queryFn: async () => {
+      if (offerProductIds.length === 0) return [];
+      const { data, error } = await supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .in('id', offerProductIds);
+      if (error) throw error;
+      return data.map(p => ({
+        id: p.id,
+        name: p.name,
+        nameAr: p.name_ar,
+        slug: p.slug,
+        price: Number(p.price),
+        originalPrice: p.original_price ? Number(p.original_price) : undefined,
+        discount: p.discount || undefined,
+        description: p.description || '',
+        descriptionAr: p.description_ar || '',
+        images: p.images || [],
+        category: p.category,
+        brand: p.brand,
+        inStock: p.in_stock ?? true,
+        countries: (p.countries || ['SA', 'YE']) as ('SA' | 'YE')[],
+        isFeatured: p.is_featured,
+        isBestSeller: p.is_best_seller,
+      })) as Product[];
+    },
+    enabled: offerProductIds.length > 0,
   });
 
   // Fetch discounted products
@@ -300,64 +337,65 @@ const OffersPage = () => {
           </section>
         )}
 
-        {/* Featured Offers Section */}
-        {featuredOffers.length > 0 && (
-          <section className="py-12 md:py-16">
-            <div className="container mx-auto px-4">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="text-center mb-8"
-              >
-                <h2 className="font-heading text-3xl md:text-4xl text-foreground mb-4">
-                  عروض <span className="text-gold">مميزة</span>
-                </h2>
-                <div className="w-24 h-1 bg-gradient-to-r from-transparent via-gold to-transparent mx-auto" />
-              </motion.div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {featuredOffers.map((offer, index) => (
-                  <motion.div
-                    key={offer.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.1 }}
-                    className="relative group overflow-hidden rounded-xl bg-card border border-border"
-                  >
+        {/* Featured Offers Section with Products */}
+        {offers.length > 0 && offers.map((offer, offerIndex) => {
+          const offerLinkedProducts = offerProducts.filter(p => offer.product_ids?.includes(p.id));
+          
+          return (
+            <section key={offer.id} className="py-12 md:py-16">
+              <div className="container mx-auto px-4">
+                {/* Offer Header Card */}
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-secondary via-charcoal to-secondary mb-8 border border-gold/20"
+                >
+                  <div className="flex flex-col md:flex-row">
                     {offer.image_url && (
-                      <div className="aspect-video overflow-hidden">
+                      <div className="md:w-1/3 aspect-video md:aspect-auto">
                         <img 
                           src={offer.image_url} 
                           alt={offer.title_ar} 
-                          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                          className="w-full h-full object-cover"
                         />
                       </div>
                     )}
-                    <div className="p-6">
+                    <div className={`p-6 md:p-8 flex flex-col justify-center ${offer.image_url ? 'md:w-2/3' : 'w-full text-center'}`}>
                       {offer.discount_percentage > 0 && (
-                        <span className="absolute top-4 left-4 bg-destructive text-destructive-foreground px-3 py-1 rounded-full text-sm font-bold">
+                        <span className="inline-block w-fit bg-destructive text-destructive-foreground px-4 py-1.5 rounded-full text-sm font-bold mb-4">
                           {offer.discount_percentage}% خصم
                         </span>
                       )}
-                      <h3 className="font-heading text-xl text-foreground mb-2">{offer.title_ar}</h3>
+                      <h2 className="font-heading text-2xl md:text-3xl text-gold mb-2">{offer.title_ar}</h2>
                       {offer.subtitle_ar && (
-                        <p className="text-muted-foreground text-sm mb-3">{offer.subtitle_ar}</p>
+                        <p className="text-gold-light/70 text-base mb-4">{offer.subtitle_ar}</p>
+                      )}
+                      {offer.description_ar && (
+                        <p className="text-muted-foreground text-sm mb-4">{offer.description_ar}</p>
                       )}
                       {offer.discount_code && (
-                        <div className="inline-block bg-muted px-4 py-2 rounded-lg">
-                          <span className="text-sm text-muted-foreground">كود الخصم: </span>
-                          <span className="font-mono font-bold text-gold">{offer.discount_code}</span>
+                        <div className="inline-flex items-center gap-2 bg-gold/10 border border-gold/30 px-5 py-3 rounded-lg w-fit">
+                          <span className="text-gold-light/70">كود الخصم:</span>
+                          <span className="font-mono font-bold text-gold text-lg">{offer.discount_code}</span>
                         </div>
                       )}
                     </div>
-                  </motion.div>
-                ))}
+                  </div>
+                </motion.div>
+
+                {/* Offer Products */}
+                {offerLinkedProducts.length > 0 && (
+                  <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                    {offerLinkedProducts.map((product, index) => (
+                      <ProductCard key={product.id} product={product} index={index} />
+                    ))}
+                  </div>
+                )}
               </div>
-            </div>
-          </section>
-        )}
+            </section>
+          );
+        })}
 
         {/* Products Section */}
         <section className="py-16 md:py-20">

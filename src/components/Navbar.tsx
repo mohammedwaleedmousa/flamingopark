@@ -16,6 +16,7 @@ const Navbar = () => {
     { href: '/home', label: 'الرئيسية', labelEn: 'Home' },
     { href: '/products', label: 'المنتجات', labelEn: 'Products' },
     { href: '/offers', label: 'العروض', labelEn: 'Offers' },
+    { href: '/reviews', label: 'التقييمات', labelEn: 'Reviews' },
     { href: '/about', label: 'من نحن', labelEn: 'About' },
   ];
 

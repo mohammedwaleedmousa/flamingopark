@@ -132,10 +132,10 @@ export const useStore = create<StoreState>()(
 // Helper to detect country from phone number
 export const detectCountryFromPhone = (phone: string): Country | null => {
   const cleanPhone = phone.replace(/\D/g, '');
-  if (cleanPhone.startsWith('966') || cleanPhone.startsWith('05')) {
+  if (cleanPhone.startsWith('966') || cleanPhone.startsWith('5')) {
     return 'SA';
   }
-  if (cleanPhone.startsWith('967') || cleanPhone.startsWith('07')) {
+  if (cleanPhone.startsWith('967') || cleanPhone.startsWith('7')) {
     return 'YE';
   }
   return null;

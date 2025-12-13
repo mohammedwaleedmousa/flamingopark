@@ -351,6 +351,7 @@ export type Database = {
           name_ar: string
           original_price: number | null
           price: number
+          section_ids: string[] | null
           slug: string
           updated_at: string
         }
@@ -372,6 +373,7 @@ export type Database = {
           name_ar: string
           original_price?: number | null
           price: number
+          section_ids?: string[] | null
           slug: string
           updated_at?: string
         }
@@ -393,6 +395,7 @@ export type Database = {
           name_ar?: string
           original_price?: number | null
           price?: number
+          section_ids?: string[] | null
           slug?: string
           updated_at?: string
         }

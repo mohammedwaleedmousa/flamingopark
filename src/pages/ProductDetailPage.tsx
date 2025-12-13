@@ -459,6 +459,9 @@ const ProductDetailPage = () => {
             </motion.div>
           </div>
 
+          {/* Product Reviews Section */}
+          <ProductReviews productId={product.id} productName={product.nameAr} />
+
           {/* Related Products */}
           {relatedProducts.length > 0 && (
             <motion.section 
@@ -480,9 +483,6 @@ const ProductDetailPage = () => {
               </div>
             </motion.section>
           )}
-
-          {/* Product Reviews Section */}
-          <ProductReviews productId={product.id} productName={product.nameAr} />
         </div>
       </main>
 

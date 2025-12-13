@@ -7,11 +7,74 @@ import ReviewsSection from '@/components/ReviewsSection';
 import { Heart, Award, Users, Globe, FileText, X, Gem, Shield, Truck, Clock, Star, ChevronDown } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
+import { useQuery } from '@tanstack/react-query';
 
 const AboutPage = () => {
   const [certPdfUrl, setCertPdfUrl] = useState<string | null>(null);
   const [certImages, setCertImages] = useState<string[]>([]);
   const [showPdfModal, setShowPdfModal] = useState(false);
+
+  // Fetch dynamic stats
+  const { data: dynamicStats } = useQuery({
+    queryKey: ['about-stats'],
+    queryFn: async () => {
+      // Get customer count
+      const { count: customerCount } = await supabase
+        .from('customers')
+        .select('*', { count: 'exact', head: true });
+
+      // Get average rating from approved reviews
+      const { data: reviews } = await supabase
+        .from('reviews')
+        .select('rating')
+        .eq('is_approved', true);
+
+      const avgRating = reviews && reviews.length > 0
+        ? (reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length).toFixed(1)
+        : '0';
+
+      // Get experience start date and gold text from site_content
+      const { data: contentData } = await supabase
+        .from('site_content')
+        .select('key, content_ar')
+        .in('key', ['experience_start_date', 'gold_quality_text']);
+
+      const startDateContent = contentData?.find(c => c.key === 'experience_start_date');
+      const goldTextContent = contentData?.find(c => c.key === 'gold_quality_text');
+
+      // Calculate years of experience
+      let yearsOfExperience = 0;
+      if (startDateContent?.content_ar) {
+        const startDate = new Date(startDateContent.content_ar);
+        const now = new Date();
+        yearsOfExperience = now.getFullYear() - startDate.getFullYear();
+      }
+
+      return {
+        customerCount: customerCount || 0,
+        avgRating,
+        yearsOfExperience,
+        goldText: goldTextContent?.content_ar || 'ذهب أصلي 100%'
+      };
+    }
+  });
+
+  // Fetch about page content
+  const { data: aboutContent } = useQuery({
+    queryKey: ['about-content'],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from('site_content')
+        .select('key, content_ar')
+        .like('key', 'about_%');
+
+      const contentMap: Record<string, string> = {};
+      data?.forEach(item => {
+        contentMap[item.key] = item.content_ar;
+      });
+      return contentMap;
+    }
+  });
 
   useEffect(() => {
     fetchCertificationData();
@@ -75,10 +138,26 @@ const AboutPage = () => {
   ];
 
   const stats = [
-    { value: '+5000', label: 'عميل سعيد', icon: Users },
-    { value: '+10', label: 'سنوات خبرة', icon: Clock },
-    { value: '100%', label: 'ذهب أصلي', icon: Gem },
-    { value: '4.9', label: 'تقييم العملاء', icon: Star },
+    { 
+      value: dynamicStats?.customerCount ? `+${dynamicStats.customerCount}` : '0', 
+      label: 'عميل سعيد', 
+      icon: Users 
+    },
+    { 
+      value: dynamicStats?.yearsOfExperience ? `+${dynamicStats.yearsOfExperience}` : '0', 
+      label: 'سنوات خبرة', 
+      icon: Clock 
+    },
+    { 
+      value: dynamicStats?.goldText || 'ذهب أصلي 100%', 
+      label: 'ذهب أصلي', 
+      icon: Gem 
+    },
+    { 
+      value: dynamicStats?.avgRating || '0', 
+      label: 'تقييم العملاء', 
+      icon: Star 
+    },
   ];
 
   const features = [
@@ -86,6 +165,11 @@ const AboutPage = () => {
     { icon: Truck, title: 'شحن مجاني', desc: 'للطلبات فوق 500 ريال' },
     { icon: Clock, title: 'دعم 24/7', desc: 'نحن هنا لمساعدتك دائماً' },
   ];
+
+  // Get section content with fallbacks
+  const getContent = (key: string, fallback: string) => {
+    return aboutContent?.[key] || fallback;
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -98,7 +182,7 @@ const AboutPage = () => {
           {/* Background Image with Overlay */}
           <div className="absolute inset-0">
             <img
-              src="https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=1920"
+              src={getContent('about_hero_image', 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=1920')}
               alt="ERMGOLD Background"
               className="w-full h-full object-cover"
             />
@@ -120,7 +204,7 @@ const AboutPage = () => {
               className="inline-flex items-center gap-2 px-4 py-2 bg-gold/20 backdrop-blur-md rounded-full mb-6 border border-gold/30"
             >
               <Gem className="w-4 h-4 text-gold" />
-              <span className="font-body text-sm text-gold-light">منذ 2014</span>
+              <span className="font-body text-sm text-gold-light">منذ 2020</span>
             </motion.div>
 
             {/* Title */}
@@ -149,7 +233,7 @@ const AboutPage = () => {
               transition={{ delay: 0.2 }}
               className="font-body text-base md:text-lg text-white/80 max-w-xl mx-auto mb-10"
             >
-              رحلة من التميز والأناقة في عالم المجوهرات الذهبية الفاخرة
+              {getContent('about_hero_subtitle', 'رحلة من التميز والأناقة في عالم المجوهرات الذهبية الفاخرة')}
             </motion.p>
 
             {/* Stats Grid */}
@@ -205,7 +289,7 @@ const AboutPage = () => {
               >
                 <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
                   <img
-                    src="https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=800"
+                    src={getContent('about_section_1_image', 'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=800')}
                     alt="ERMGOLD Story"
                     className="w-full h-full object-cover"
                   />
@@ -225,7 +309,7 @@ const AboutPage = () => {
                     <div className="w-10 h-10 rounded-full bg-gold/20 flex items-center justify-center">
                       <Award className="w-5 h-5 text-gold" />
                     </div>
-                    <div className="font-heading text-2xl text-gold">+10</div>
+                    <div className="font-heading text-2xl text-gold">+{dynamicStats?.yearsOfExperience || 0}</div>
                   </div>
                   <p className="text-sm text-muted-foreground font-body">سنوات من التميز في صناعة المجوهرات</p>
                 </motion.div>
@@ -240,11 +324,13 @@ const AboutPage = () => {
                 className="space-y-8"
               >
                 <div>
-                  <span className="text-gold font-body text-sm tracking-widest uppercase">قصتنا</span>
+                  <span className="text-gold font-body text-sm tracking-widest uppercase">
+                    {getContent('about_section_1_title', 'قصتنا')}
+                  </span>
                   <h2 className="font-heading text-4xl md:text-5xl text-foreground mt-3 leading-tight">
                     نصنع <span className="text-gold">الأناقة</span>
                     <br />
-                    منذ عام 2014
+                    منذ عام 2020
                   </h2>
                 </div>
                 
@@ -252,12 +338,10 @@ const AboutPage = () => {
                 
                 <div className="space-y-5">
                   <p className="font-body text-foreground/80 leading-relaxed text-lg">
-                    بدأت رحلتنا من شغف عميق بفن صناعة المجوهرات وتقديم أفضل ما في عالم الذهب. 
-                    منذ تأسيسنا، نسعى لنكون الوجهة الأولى لعشاق المجوهرات الفاخرة في المنطقة.
+                    {getContent('about_section_1_text', 'بدأت رحلتنا من شغف عميق بفن صناعة المجوهرات وتقديم أفضل ما في عالم الذهب. منذ تأسيسنا، نسعى لنكون الوجهة الأولى لعشاق المجوهرات الفاخرة في المنطقة.')}
                   </p>
                   <p className="font-body text-foreground/80 leading-relaxed text-lg">
-                    نفخر بتقديم تشكيلة متميزة من المجوهرات المصممة بعناية فائقة، 
-                    حيث يجتمع الإبداع مع الحرفية العالية لخلق قطع استثنائية تدوم مدى الحياة.
+                    {getContent('about_section_2_text', 'نفخر بتقديم تشكيلة متميزة من المجوهرات المصممة بعناية فائقة، حيث يجتمع الإبداع مع الحرفية العالية لخلق قطع استثنائية تدوم مدى الحياة.')}
                   </p>
                 </div>
 

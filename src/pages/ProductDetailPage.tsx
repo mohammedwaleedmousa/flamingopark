@@ -36,6 +36,8 @@ const ProductDetailPage = () => {
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
+  const [selectedSize, setSelectedSize] = useState<string | null>(null);
+  const [selectedAccessories, setSelectedAccessories] = useState<string[]>([]);
 
   // Fetch product by slug
   const { data: product, isLoading } = useQuery({
@@ -49,6 +51,10 @@ const ProductDetailPage = () => {
         .maybeSingle();
       if (error) throw error;
       if (!data) return null;
+      
+      // Parse accessories from JSON
+      const accessories = (data as any).accessories || [];
+      
       return {
         id: data.id,
         name: data.name,
@@ -66,7 +72,10 @@ const ProductDetailPage = () => {
         countries: (data.countries || ['SA', 'YE']) as ('SA' | 'YE')[],
         isFeatured: data.is_featured,
         isBestSeller: data.is_best_seller,
-      } as Product;
+        hasSizes: (data as any).has_sizes ?? false,
+        sizes: (data as any).sizes || [],
+        accessories: accessories as { name: string; name_ar: string; price: number }[],
+      };
     },
     enabled: !!slug,
   });
@@ -134,11 +143,28 @@ const ProductDetailPage = () => {
     );
   }
 
+  // Calculate total with accessories
+  const accessoriesTotal = product.accessories
+    ? product.accessories
+        .filter(acc => selectedAccessories.includes(acc.name_ar))
+        .reduce((sum, acc) => sum + acc.price, 0)
+    : 0;
+
   const discountedPrice = product.discount
     ? product.price * (1 - product.discount / 100)
     : product.price;
 
+  const totalPrice = discountedPrice + accessoriesTotal;
+
   const currency = country === 'SA' ? 'ر.س' : 'ر.ي';
+
+  const toggleAccessory = (accessoryName: string) => {
+    setSelectedAccessories(prev =>
+      prev.includes(accessoryName)
+        ? prev.filter(a => a !== accessoryName)
+        : [...prev, accessoryName]
+    );
+  };
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
@@ -396,6 +422,62 @@ const ProductDetailPage = () => {
                 )}
               </div>
 
+              {/* Size Selector */}
+              {product.hasSizes && product.sizes && product.sizes.length > 0 && (
+                <div className="space-y-3">
+                  <span className="font-body text-foreground">الحجم:</span>
+                  <div className="flex flex-wrap gap-2">
+                    {product.sizes.map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(size)}
+                        className={`px-4 py-2 rounded-lg border-2 transition-all font-medium ${
+                          selectedSize === size
+                            ? 'border-gold bg-gold/10 text-gold'
+                            : 'border-border hover:border-gold/50'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Accessories Selector */}
+              {product.accessories && product.accessories.length > 0 && (
+                <div className="space-y-3">
+                  <span className="font-body text-foreground">الملحقات الإضافية:</span>
+                  <div className="space-y-2">
+                    {product.accessories.map((acc) => (
+                      <button
+                        key={acc.name_ar}
+                        onClick={() => toggleAccessory(acc.name_ar)}
+                        className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
+                          selectedAccessories.includes(acc.name_ar)
+                            ? 'border-gold bg-gold/10'
+                            : 'border-border hover:border-gold/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${
+                            selectedAccessories.includes(acc.name_ar)
+                              ? 'border-gold bg-gold'
+                              : 'border-muted-foreground'
+                          }`}>
+                            {selectedAccessories.includes(acc.name_ar) && (
+                              <Check className="w-3 h-3 text-secondary" />
+                            )}
+                          </div>
+                          <span className="font-medium">{acc.name_ar}</span>
+                        </div>
+                        <span className="text-gold font-heading">+{acc.price} {currency}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Quantity Selector */}
               <div className="flex items-center gap-6">
                 <span className="font-body text-foreground">الكمية:</span>
@@ -415,7 +497,7 @@ const ProductDetailPage = () => {
                   </button>
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  الإجمالي: <span className="text-gold font-heading">{(discountedPrice * quantity).toFixed(0)} {currency}</span>
+                  الإجمالي: <span className="text-gold font-heading">{(totalPrice * quantity).toFixed(0)} {currency}</span>
                 </span>
               </div>
 

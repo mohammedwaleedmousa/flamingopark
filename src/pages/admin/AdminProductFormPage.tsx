@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowRight, Loader2, Upload, X, LayoutGrid } from 'lucide-react';
+import { ArrowRight, Loader2, Upload, X, LayoutGrid, Plus, Trash2 } from 'lucide-react';
 
 interface HomepageSection {
   id: string;
@@ -15,6 +15,12 @@ interface HomepageSection {
   title_ar: string;
   filter_type: string;
   is_active: boolean;
+}
+
+interface Accessory {
+  name: string;
+  name_ar: string;
+  price: number;
 }
 
 const AdminProductFormPage = () => {
@@ -42,7 +48,13 @@ const AdminProductFormPage = () => {
     countries: ['SA', 'YE'] as string[],
     images: [] as string[],
     section_ids: [] as string[],
+    has_sizes: false,
+    sizes: [] as string[],
+    accessories: [] as Accessory[],
   });
+
+  const [newSize, setNewSize] = useState('');
+  const [newAccessory, setNewAccessory] = useState({ name: '', name_ar: '', price: '' });
 
   // Fetch all homepage sections
   const { data: sections = [] } = useQuery({
@@ -91,6 +103,9 @@ const AdminProductFormPage = () => {
         countries: data.countries || ['SA', 'YE'],
         images: data.images || [],
         section_ids: (data as any).section_ids || [],
+        has_sizes: (data as any).has_sizes ?? false,
+        sizes: (data as any).sizes || [],
+        accessories: ((data as any).accessories || []) as Accessory[],
       });
     }
     setIsLoading(false);
@@ -186,6 +201,9 @@ const AdminProductFormPage = () => {
       countries: formData.countries,
       images: formData.images,
       section_ids: formData.section_ids,
+      has_sizes: formData.has_sizes,
+      sizes: formData.sizes,
+      accessories: formData.accessories as unknown as any,
     };
 
     try {
@@ -438,6 +456,149 @@ const AdminProductFormPage = () => {
               <p className="text-xs text-muted-foreground mt-2">
                 اختر الأقسام التي تريد عرض هذا المنتج فيها
               </p>
+            </div>
+          )}
+        </div>
+
+        {/* Sizes Section */}
+        <div className="bg-card border border-border rounded p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading text-lg text-foreground">الأحجام</h2>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <Checkbox
+                checked={formData.has_sizes}
+                onCheckedChange={(checked) => setFormData({ ...formData, has_sizes: !!checked })}
+              />
+              <span className="text-sm">هذا المنتج له أحجام</span>
+            </label>
+          </div>
+
+          {formData.has_sizes && (
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Input
+                  value={newSize}
+                  onChange={(e) => setNewSize(e.target.value)}
+                  placeholder="أضف حجم (مثال: S, M, L, XL)"
+                  dir="rtl"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    if (newSize.trim() && !formData.sizes.includes(newSize.trim())) {
+                      setFormData(prev => ({
+                        ...prev,
+                        sizes: [...prev.sizes, newSize.trim()],
+                      }));
+                      setNewSize('');
+                    }
+                  }}
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+              
+              {formData.sizes.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {formData.sizes.map((size, index) => (
+                    <div
+                      key={index}
+                      className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg"
+                    >
+                      <span className="text-sm">{size}</span>
+                      <button
+                        type="button"
+                        onClick={() => setFormData(prev => ({
+                          ...prev,
+                          sizes: prev.sizes.filter((_, i) => i !== index),
+                        }))}
+                        className="text-destructive hover:text-destructive/80"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Accessories Section */}
+        <div className="bg-card border border-border rounded p-6 space-y-4">
+          <h2 className="font-heading text-lg text-foreground">الملحقات الإضافية</h2>
+          <p className="text-sm text-muted-foreground">
+            أضف ملحقات اختيارية للمنتج. عند اختيار أي ملحق سيُضاف سعره للسعر الأساسي.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+            <Input
+              value={newAccessory.name}
+              onChange={(e) => setNewAccessory(prev => ({ ...prev, name: e.target.value }))}
+              placeholder="الاسم (إنجليزي)"
+            />
+            <Input
+              value={newAccessory.name_ar}
+              onChange={(e) => setNewAccessory(prev => ({ ...prev, name_ar: e.target.value }))}
+              placeholder="الاسم (عربي)"
+              dir="rtl"
+            />
+            <div className="flex gap-2">
+              <Input
+                type="number"
+                value={newAccessory.price}
+                onChange={(e) => setNewAccessory(prev => ({ ...prev, price: e.target.value }))}
+                placeholder="السعر الإضافي"
+              />
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => {
+                  if (newAccessory.name_ar.trim() && newAccessory.price) {
+                    setFormData(prev => ({
+                      ...prev,
+                      accessories: [...prev.accessories, {
+                        name: newAccessory.name.trim(),
+                        name_ar: newAccessory.name_ar.trim(),
+                        price: parseFloat(newAccessory.price),
+                      }],
+                    }));
+                    setNewAccessory({ name: '', name_ar: '', price: '' });
+                  }
+                }}
+              >
+                <Plus className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+
+          {formData.accessories.length > 0 && (
+            <div className="space-y-2">
+              {formData.accessories.map((acc, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                >
+                  <div>
+                    <span className="font-medium">{acc.name_ar}</span>
+                    {acc.name && <span className="text-muted-foreground text-sm mr-2">({acc.name})</span>}
+                  </div>
+                  <div className="flex items-center gap-4">
+                    <span className="text-gold font-heading">+{acc.price}</span>
+                    <button
+                      type="button"
+                      onClick={() => setFormData(prev => ({
+                        ...prev,
+                        accessories: prev.accessories.filter((_, i) => i !== index),
+                      }))}
+                      className="text-destructive hover:text-destructive/80"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>

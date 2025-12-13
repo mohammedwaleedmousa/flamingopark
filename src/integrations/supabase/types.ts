@@ -397,6 +397,7 @@ export type Database = {
           accessories: Json | null
           brand: string
           category: string
+          cost_price: number | null
           countries: string[] | null
           created_at: string
           description: string | null
@@ -423,6 +424,7 @@ export type Database = {
           accessories?: Json | null
           brand: string
           category: string
+          cost_price?: number | null
           countries?: string[] | null
           created_at?: string
           description?: string | null
@@ -449,6 +451,7 @@ export type Database = {
           accessories?: Json | null
           brand?: string
           category?: string
+          cost_price?: number | null
           countries?: string[] | null
           created_at?: string
           description?: string | null

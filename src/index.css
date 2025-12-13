@@ -50,6 +50,7 @@
     --cream: 40 40% 97%;
     --charcoal: 0 0% 12%;
     --marble: 210 10% 95%;
+    --icon-light: 45 25% 92%;
 
     /* Gradients */
     --gradient-gold: linear-gradient(135deg, hsl(42 75% 60%) 0%, hsl(42 70% 45%) 50%, hsl(42 75% 60%) 100%);

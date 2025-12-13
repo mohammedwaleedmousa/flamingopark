@@ -35,6 +35,7 @@ export default {
         },
         cream: "hsl(var(--cream))",
         charcoal: "hsl(var(--charcoal))",
+        "icon-light": "hsl(var(--icon-light))",
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",

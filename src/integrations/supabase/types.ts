@@ -290,6 +290,105 @@ export type Database = {
         }
         Relationships: []
       }
+      offers: {
+        Row: {
+          countries: string[] | null
+          created_at: string
+          description: string | null
+          description_ar: string | null
+          discount_code: string | null
+          discount_percentage: number | null
+          end_date: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean | null
+          is_featured: boolean | null
+          sort_order: number | null
+          start_date: string | null
+          subtitle: string | null
+          subtitle_ar: string | null
+          title: string
+          title_ar: string
+          updated_at: string
+        }
+        Insert: {
+          countries?: string[] | null
+          created_at?: string
+          description?: string | null
+          description_ar?: string | null
+          discount_code?: string | null
+          discount_percentage?: number | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          sort_order?: number | null
+          start_date?: string | null
+          subtitle?: string | null
+          subtitle_ar?: string | null
+          title: string
+          title_ar: string
+          updated_at?: string
+        }
+        Update: {
+          countries?: string[] | null
+          created_at?: string
+          description?: string | null
+          description_ar?: string | null
+          discount_code?: string | null
+          discount_percentage?: number | null
+          end_date?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean | null
+          is_featured?: boolean | null
+          sort_order?: number | null
+          start_date?: string | null
+          subtitle?: string | null
+          subtitle_ar?: string | null
+          title?: string
+          title_ar?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      offers_settings: {
+        Row: {
+          countdown_end_date: string | null
+          countries: string[] | null
+          id: string
+          page_subtitle: string | null
+          page_title: string | null
+          promo_banner_text: string | null
+          show_countdown: boolean | null
+          show_promo_banner: boolean | null
+          updated_at: string
+        }
+        Insert: {
+          countdown_end_date?: string | null
+          countries?: string[] | null
+          id?: string
+          page_subtitle?: string | null
+          page_title?: string | null
+          promo_banner_text?: string | null
+          show_countdown?: boolean | null
+          show_promo_banner?: boolean | null
+          updated_at?: string
+        }
+        Update: {
+          countdown_end_date?: string | null
+          countries?: string[] | null
+          id?: string
+          page_subtitle?: string | null
+          page_title?: string | null
+          promo_banner_text?: string | null
+          show_countdown?: boolean | null
+          show_promo_banner?: boolean | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       orders: {
         Row: {
           country: string

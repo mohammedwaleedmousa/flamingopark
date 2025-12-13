@@ -160,16 +160,28 @@ const AboutPage = () => {
     },
   ];
 
-  const features = [
-    { icon: Shield, title: 'ضمان الجودة', desc: 'جميع منتجاتنا مضمونة 100%' },
-    { icon: Truck, title: 'شحن مجاني', desc: 'للطلبات فوق 500 ريال' },
-    { icon: Clock, title: 'دعم 24/7', desc: 'نحن هنا لمساعدتك دائماً' },
-  ];
-
   // Get section content with fallbacks
   const getContent = (key: string, fallback: string) => {
     return aboutContent?.[key] || fallback;
   };
+
+  const features = [
+    { 
+      icon: Shield, 
+      title: getContent('about_feature_1_title', 'ضمان الجودة'), 
+      desc: getContent('about_feature_1_desc', 'جميع منتجاتنا مضمونة 100%') 
+    },
+    { 
+      icon: Truck, 
+      title: getContent('about_feature_2_title', 'شحن مجاني'), 
+      desc: getContent('about_feature_2_desc', 'للطلبات فوق 500 ريال') 
+    },
+    { 
+      icon: Clock, 
+      title: getContent('about_feature_3_title', 'دعم 24/7'), 
+      desc: getContent('about_feature_3_desc', 'نحن هنا لمساعدتك دائماً') 
+    },
+  ];
 
   return (
     <div className="min-h-screen bg-background">

@@ -75,6 +75,7 @@ const ProductDetailPage = () => {
         hasSizes: (data as any).has_sizes ?? false,
         sizes: (data as any).sizes || [],
         accessories: accessories as { name: string; name_ar: string; price: number; image_url?: string }[],
+        features: ((data as any).features || []) as { icon: string; title: string; desc: string }[],
       };
     },
     enabled: !!slug,
@@ -220,11 +221,27 @@ const ProductDetailPage = () => {
     });
   };
 
-  const features = [
-    { icon: Truck, title: 'شحن سريع', desc: 'توصيل خلال 2-5 أيام' },
-    { icon: Shield, title: 'ضمان الجودة', desc: 'منتجات أصلية 100%' },
-    { icon: RotateCcw, title: 'إرجاع سهل', desc: 'خلال 14 يوم' },
+  const defaultFeatures = [
+    { icon: 'truck', title: 'شحن سريع', desc: 'توصيل خلال 2-5 أيام' },
+    { icon: 'shield', title: 'ضمان الجودة', desc: 'منتجات أصلية 100%' },
+    { icon: 'rotate', title: 'إرجاع سهل', desc: 'خلال 14 يوم' },
   ];
+
+  const features = product.features && product.features.length > 0 
+    ? product.features 
+    : defaultFeatures;
+
+  const getFeatureIcon = (iconName: string) => {
+    switch (iconName) {
+      case 'truck': return Truck;
+      case 'shield': return Shield;
+      case 'rotate': return RotateCcw;
+      case 'star': return Star;
+      case 'clock': return Loader2;
+      case 'check': return Check;
+      default: return Truck;
+    }
+  };
 
   return (
     <div className="min-h-screen bg-background">
@@ -560,19 +577,22 @@ const ProductDetailPage = () => {
 
               {/* Features */}
               <div className="grid grid-cols-3 gap-4 pt-6">
-                {features.map((feature, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 + index * 0.1 }}
-                    className="text-center p-4 rounded-xl bg-muted/50 border border-border/30 hover:border-gold/30 transition-colors"
-                  >
-                    <feature.icon className="w-6 h-6 text-gold mx-auto mb-2" />
-                    <h4 className="font-heading text-sm text-foreground mb-1">{feature.title}</h4>
-                    <p className="text-xs text-muted-foreground">{feature.desc}</p>
-                  </motion.div>
-                ))}
+                {features.map((feature, index) => {
+                  const IconComponent = getFeatureIcon(feature.icon);
+                  return (
+                    <motion.div
+                      key={index}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 + index * 0.1 }}
+                      className="text-center p-4 rounded-xl bg-muted/50 border border-border/30 hover:border-gold/30 transition-colors"
+                    >
+                      <IconComponent className="w-6 h-6 text-gold mx-auto mb-2" />
+                      <h4 className="font-heading text-sm text-foreground mb-1">{feature.title}</h4>
+                      <p className="text-xs text-muted-foreground">{feature.desc}</p>
+                    </motion.div>
+                  );
+                })}
               </div>
             </motion.div>
           </div>

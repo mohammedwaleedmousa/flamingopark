@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { ArrowRight, Loader2, Upload, X, LayoutGrid, Plus, Trash2 } from 'lucide-react';
+import { ArrowRight, Loader2, Upload, X, LayoutGrid, Plus, Trash2, Truck, Shield, RotateCcw } from 'lucide-react';
 
 interface HomepageSection {
   id: string;
@@ -22,6 +22,12 @@ interface Accessory {
   name_ar: string;
   price: number;
   image_url?: string;
+}
+
+interface ProductFeature {
+  icon: string;
+  title: string;
+  desc: string;
 }
 
 const AdminProductFormPage = () => {
@@ -52,10 +58,12 @@ const AdminProductFormPage = () => {
     has_sizes: false,
     sizes: [] as string[],
     accessories: [] as Accessory[],
+    features: [] as ProductFeature[],
   });
 
   const [newSize, setNewSize] = useState('');
   const [newAccessory, setNewAccessory] = useState({ name: '', name_ar: '', price: '', image_url: '' });
+  const [newFeature, setNewFeature] = useState({ icon: 'truck', title: '', desc: '' });
   const [uploadingAccessoryImage, setUploadingAccessoryImage] = useState(false);
 
   // Fetch all homepage sections
@@ -108,6 +116,7 @@ const AdminProductFormPage = () => {
         has_sizes: (data as any).has_sizes ?? false,
         sizes: (data as any).sizes || [],
         accessories: ((data as any).accessories || []) as Accessory[],
+        features: ((data as any).features || []) as ProductFeature[],
       });
     }
     setIsLoading(false);
@@ -206,6 +215,7 @@ const AdminProductFormPage = () => {
       has_sizes: formData.has_sizes,
       sizes: formData.sizes,
       accessories: formData.accessories as unknown as any,
+      features: formData.features as unknown as any,
     };
 
     try {
@@ -660,7 +670,113 @@ const AdminProductFormPage = () => {
           )}
         </div>
 
-        {/* Submit */}
+        {/* Product Features Section */}
+        <div className="bg-card border border-border rounded p-6 space-y-4">
+          <h2 className="font-heading text-lg text-foreground">ميزات المنتج</h2>
+          <p className="text-sm text-muted-foreground">أضف ميزات تظهر تحت المنتج (مثل: التوصيل، الضمان، الإرجاع)</p>
+          
+          <div className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">الأيقونة</label>
+                <select
+                  value={newFeature.icon}
+                  onChange={(e) => setNewFeature(prev => ({ ...prev, icon: e.target.value }))}
+                  className="w-full h-10 px-3 rounded-md border border-input bg-background text-sm"
+                >
+                  <option value="truck">🚚 شحن</option>
+                  <option value="shield">🛡️ ضمان</option>
+                  <option value="rotate">🔄 إرجاع</option>
+                  <option value="star">⭐ جودة</option>
+                  <option value="clock">⏰ وقت</option>
+                  <option value="check">✓ تأكيد</option>
+                </select>
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">العنوان</label>
+                <Input
+                  value={newFeature.title}
+                  onChange={(e) => setNewFeature(prev => ({ ...prev, title: e.target.value }))}
+                  placeholder="مثال: شحن سريع"
+                  dir="rtl"
+                />
+              </div>
+              <div>
+                <label className="block text-xs text-muted-foreground mb-1">الوصف</label>
+                <div className="flex gap-2">
+                  <Input
+                    value={newFeature.desc}
+                    onChange={(e) => setNewFeature(prev => ({ ...prev, desc: e.target.value }))}
+                    placeholder="مثال: توصيل خلال 2-5 أيام"
+                    dir="rtl"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => {
+                      if (newFeature.title.trim() && newFeature.desc.trim()) {
+                        setFormData(prev => ({
+                          ...prev,
+                          features: [...prev.features, {
+                            icon: newFeature.icon,
+                            title: newFeature.title.trim(),
+                            desc: newFeature.desc.trim(),
+                          }],
+                        }));
+                        setNewFeature({ icon: 'truck', title: '', desc: '' });
+                      }
+                    }}
+                  >
+                    <Plus className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {formData.features.length > 0 && (
+            <div className="space-y-2">
+              {formData.features.map((feature, index) => (
+                <div
+                  key={index}
+                  className="flex items-center justify-between p-3 bg-muted rounded-lg"
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="text-xl">
+                      {feature.icon === 'truck' && '🚚'}
+                      {feature.icon === 'shield' && '🛡️'}
+                      {feature.icon === 'rotate' && '🔄'}
+                      {feature.icon === 'star' && '⭐'}
+                      {feature.icon === 'clock' && '⏰'}
+                      {feature.icon === 'check' && '✓'}
+                    </span>
+                    <div>
+                      <span className="font-medium">{feature.title}</span>
+                      <span className="text-muted-foreground text-sm mr-2">- {feature.desc}</span>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setFormData(prev => ({
+                      ...prev,
+                      features: prev.features.filter((_, i) => i !== index),
+                    }))}
+                    className="text-destructive hover:text-destructive/80"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {formData.features.length === 0 && (
+            <div className="text-center py-4 border-2 border-dashed border-border rounded-lg">
+              <p className="text-muted-foreground text-sm">لم تضف أي ميزات بعد</p>
+              <p className="text-xs text-muted-foreground mt-1">أضف ميزات مثل: شحن سريع، ضمان الجودة، إرجاع سهل</p>
+            </div>
+          )}
+        </div>
         <div className="flex gap-4">
           <Button type="submit" disabled={isSaving} className="btn-gold">
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? 'تحديث' : 'إضافة'}

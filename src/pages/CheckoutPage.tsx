@@ -144,16 +144,26 @@ const CheckoutPage = () => {
 
     const orderNumber = `ORD-${Date.now()}`;
     
-    // Prepare cart items with product images
-    const orderItems = cart.map(item => ({
-      product_id: item.product.id,
-      product_name: item.product.nameAr,
-      product_image: item.product.images[0],
-      quantity: item.quantity,
-      price: item.product.discount
+    // Prepare cart items with product images, sizes, and accessories
+    const orderItems = cart.map(item => {
+      const basePrice = item.product.discount
         ? item.product.price * (1 - item.product.discount / 100)
-        : item.product.price,
-    }));
+        : item.product.price;
+      
+      const accessoriesTotal = item.selectedAccessories
+        ? item.selectedAccessories.reduce((sum, acc) => sum + (acc.price * acc.quantity), 0)
+        : 0;
+
+      return {
+        product_id: item.product.id,
+        product_name: item.product.nameAr,
+        product_image: item.product.images[0],
+        quantity: item.quantity,
+        price: basePrice + accessoriesTotal,
+        selected_size: item.selectedSize || null,
+        selected_accessories: item.selectedAccessories || [],
+      };
+    });
 
     try {
       await createOrderMutation.mutateAsync({
@@ -401,12 +411,19 @@ const CheckoutPage = () => {
                 <h2 className="font-heading text-xl text-foreground mb-6">ملخص الطلب</h2>
                 
                 <div className="space-y-4 mb-6">
-                  {cart.map((item) => {
-                    const price = item.product.discount
+                  {cart.map((item, index) => {
+                    const basePrice = item.product.discount
                       ? item.product.price * (1 - item.product.discount / 100)
                       : item.product.price;
+                    
+                    const accessoriesTotal = item.selectedAccessories
+                      ? item.selectedAccessories.reduce((sum, acc) => sum + (acc.price * acc.quantity), 0)
+                      : 0;
+                    
+                    const itemTotalPrice = basePrice + accessoriesTotal;
+
                     return (
-                      <div key={item.product.id} className="flex items-center gap-3">
+                      <div key={`${item.product.id}-${index}`} className="flex items-start gap-3">
                         <img
                           src={item.product.images[0]}
                           alt={item.product.nameAr}
@@ -414,12 +431,31 @@ const CheckoutPage = () => {
                         />
                         <div className="flex-1">
                           <h3 className="font-heading text-sm text-foreground">{item.product.nameAr}</h3>
+                          
+                          {/* Size */}
+                          {item.selectedSize && (
+                            <p className="text-xs text-muted-foreground">الحجم: {item.selectedSize}</p>
+                          )}
+                          
+                          {/* Accessories */}
+                          {item.selectedAccessories && item.selectedAccessories.length > 0 && (
+                            <div className="text-xs text-muted-foreground">
+                              <span>الملحقات: </span>
+                              {item.selectedAccessories.map((acc, i) => (
+                                <span key={acc.name_ar}>
+                                  {acc.name_ar} (×{acc.quantity})
+                                  {i < item.selectedAccessories!.length - 1 ? '، ' : ''}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                          
                           <p className="text-xs text-muted-foreground font-body">
-                            {item.quantity} × {price.toFixed(2)} {currency}
+                            {item.quantity} × {itemTotalPrice.toFixed(2)} {currency}
                           </p>
                         </div>
                         <span className="font-heading text-sm text-gold">
-                          {(price * item.quantity).toFixed(2)} {currency}
+                          {(itemTotalPrice * item.quantity).toFixed(2)} {currency}
                         </span>
                       </div>
                     );

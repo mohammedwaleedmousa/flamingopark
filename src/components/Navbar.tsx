@@ -28,7 +28,7 @@ const Navbar = () => {
             {/* Left: Menu Button */}
             <button
               onClick={() => setIsMenuOpen(!isMenuOpen)}
-              className="p-2.5 text-gold hover:text-gold-light transition-colors"
+              className="p-2.5 text-icon-light hover:text-gold transition-colors"
               aria-label="Toggle menu"
             >
               {isMenuOpen ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
@@ -43,7 +43,7 @@ const Navbar = () => {
             <div className="flex items-center gap-1">
               <button
                 onClick={() => setIsSearchOpen(!isSearchOpen)}
-                className="p-2.5 text-gold hover:text-gold-light transition-colors"
+                className="p-2.5 text-icon-light hover:text-gold transition-colors"
                 aria-label="Search"
               >
                 <Search className="w-6 h-6" />
@@ -51,7 +51,7 @@ const Navbar = () => {
 
               <button
                 onClick={openCart}
-                className="relative p-2.5 text-gold hover:text-gold-light transition-colors"
+                className="relative p-2.5 text-icon-light hover:text-gold transition-colors"
                 aria-label="Shopping cart"
               >
                 <ShoppingBag className="w-6 h-6" />

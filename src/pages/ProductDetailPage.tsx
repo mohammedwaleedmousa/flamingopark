@@ -37,7 +37,7 @@ const ProductDetailPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [selectedAccessories, setSelectedAccessories] = useState<string[]>([]);
+  const [accessoryQuantities, setAccessoryQuantities] = useState<Record<string, number>>({});
 
   // Fetch product by slug
   const { data: product, isLoading } = useQuery({
@@ -145,9 +145,10 @@ const ProductDetailPage = () => {
 
   // Calculate total with accessories
   const accessoriesTotal = product.accessories
-    ? product.accessories
-        .filter(acc => selectedAccessories.includes(acc.name_ar))
-        .reduce((sum, acc) => sum + acc.price, 0)
+    ? product.accessories.reduce((sum, acc) => {
+        const qty = accessoryQuantities[acc.name_ar] || 0;
+        return sum + (acc.price * qty);
+      }, 0)
     : 0;
 
   const discountedPrice = product.discount
@@ -158,12 +159,12 @@ const ProductDetailPage = () => {
 
   const currency = country === 'SA' ? 'ر.س' : 'ر.ي';
 
-  const toggleAccessory = (accessoryName: string) => {
-    setSelectedAccessories(prev =>
-      prev.includes(accessoryName)
-        ? prev.filter(a => a !== accessoryName)
-        : [...prev, accessoryName]
-    );
+  const updateAccessoryQuantity = (accessoryName: string, delta: number) => {
+    setAccessoryQuantities(prev => {
+      const current = prev[accessoryName] || 0;
+      const newQty = Math.max(0, current + delta);
+      return { ...prev, [accessoryName]: newQty };
+    });
   };
 
   const handleAddToCart = () => {
@@ -449,38 +450,48 @@ const ProductDetailPage = () => {
                 <div className="space-y-3">
                   <span className="font-body text-foreground">الملحقات الإضافية:</span>
                   <div className="space-y-2">
-                    {product.accessories.map((acc) => (
-                      <button
-                        key={acc.name_ar}
-                        onClick={() => toggleAccessory(acc.name_ar)}
-                        className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
-                          selectedAccessories.includes(acc.name_ar)
-                            ? 'border-gold bg-gold/10'
-                            : 'border-border hover:border-gold/50'
-                        }`}
-                      >
-                        <div className="flex items-center gap-3">
-                          <div className={`w-5 h-5 rounded border-2 flex items-center justify-center flex-shrink-0 ${
-                            selectedAccessories.includes(acc.name_ar)
-                              ? 'border-gold bg-gold'
-                              : 'border-muted-foreground'
-                          }`}>
-                            {selectedAccessories.includes(acc.name_ar) && (
-                              <Check className="w-3 h-3 text-secondary" />
+                    {product.accessories.map((acc) => {
+                      const qty = accessoryQuantities[acc.name_ar] || 0;
+                      return (
+                        <div
+                          key={acc.name_ar}
+                          className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
+                            qty > 0
+                              ? 'border-gold bg-gold/10'
+                              : 'border-border'
+                          }`}
+                        >
+                          <div className="flex items-center gap-3">
+                            {acc.image_url && (
+                              <img 
+                                src={acc.image_url} 
+                                alt={acc.name_ar} 
+                                className="w-12 h-12 object-cover rounded"
+                              />
                             )}
+                            <div>
+                              <span className="font-medium block">{acc.name_ar}</span>
+                              <span className="text-gold text-sm">+{acc.price} {currency}</span>
+                            </div>
                           </div>
-                          {acc.image_url && (
-                            <img 
-                              src={acc.image_url} 
-                              alt={acc.name_ar} 
-                              className="w-10 h-10 object-cover rounded"
-                            />
-                          )}
-                          <span className="font-medium">{acc.name_ar}</span>
+                          <div className="flex items-center gap-2">
+                            <button
+                              onClick={() => updateAccessoryQuantity(acc.name_ar, -1)}
+                              className="w-8 h-8 rounded-full bg-muted flex items-center justify-center hover:bg-muted-foreground/20 transition-colors"
+                            >
+                              <Minus className="w-4 h-4" />
+                            </button>
+                            <span className="w-8 text-center font-heading">{qty}</span>
+                            <button
+                              onClick={() => updateAccessoryQuantity(acc.name_ar, 1)}
+                              className="w-8 h-8 rounded-full bg-muted flex items-center justify-center hover:bg-muted-foreground/20 transition-colors"
+                            >
+                              <Plus className="w-4 h-4" />
+                            </button>
+                          </div>
                         </div>
-                        <span className="text-gold font-heading">+{acc.price} {currency}</span>
-                      </button>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
               )}

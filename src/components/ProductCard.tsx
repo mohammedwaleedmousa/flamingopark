@@ -5,7 +5,7 @@ import { Product } from '@/store/useStore';
 import { useStore } from '@/store/useStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import { toast } from '@/hooks/use-toast';
-import { useState } from 'react';
+
 
 interface ProductCardProps {
   product: Product;
@@ -17,7 +17,6 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
   const { addToCart, country } = useStore();
   const { isFavorite, toggleFavorite } = useFavorites();
   const currency = country === 'SA' ? 'ر.س' : 'ر.ي';
-  const [imageLoaded, setImageLoaded] = useState(false);
   const isLiked = isFavorite(product.id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -80,20 +79,12 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
             {/* Background - Solid cream color */}
             <div className="absolute inset-0 bg-cream" />
             
-            {/* Image Skeleton */}
-            {!imageLoaded && product.images[0] && (
-              <div className="absolute inset-0 bg-muted animate-pulse" />
-            )}
-            
             {product.images[0] ? (
               <img
                 src={product.images[0]}
                 alt={product.nameAr}
                 loading="lazy"
-                onLoad={() => setImageLoaded(true)}
-                className={`w-full h-full object-contain p-2 transition-all duration-700 ease-out group-hover:scale-105 ${
-                  imageLoaded ? 'opacity-100' : 'opacity-0'
-                }`}
+                className="w-full h-full object-contain p-2 transition-all duration-700 ease-out group-hover:scale-105"
               />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
@@ -104,6 +95,15 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
             
             {/* Gold Shine Effect on Hover */}
             <div className="absolute inset-0 bg-gradient-to-r from-transparent via-gold/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 ease-out" />
+
+            {/* OUT OF STOCK - Big Red Badge */}
+            {!product.inStock && (
+              <div className="absolute inset-0 bg-secondary/40 flex items-center justify-center">
+                <span className="bg-destructive text-white text-xl font-bold px-6 py-3 rounded-xl shadow-lg transform -rotate-12">
+                  OUT
+                </span>
+              </div>
+            )}
 
             {/* Top Actions */}
             <div className="absolute top-3 left-3 right-3 flex justify-between items-start">
@@ -117,11 +117,6 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
                   >
                     -{product.discount}%
                   </motion.span>
-                )}
-                {!product.inStock && (
-                  <span className="inline-flex items-center justify-center bg-destructive/90 text-destructive-foreground text-[10px] font-medium px-2.5 py-1 rounded-full">
-                    نفذ المخزون
-                  </span>
                 )}
               </div>
               

@@ -5,7 +5,7 @@ import { Product } from '@/store/useStore';
 import { useStore } from '@/store/useStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import { toast } from '@/hooks/use-toast';
-import { useState } from 'react';
+
 
 interface ProductCardMinimalProps {
   product: Product;
@@ -16,7 +16,6 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
   const { addToCart, country } = useStore();
   const { isFavorite, toggleFavorite } = useFavorites();
   const currency = country === 'SA' ? 'ر.س' : 'ر.ي';
-  const [imageLoaded, setImageLoaded] = useState(false);
   const isLiked = isFavorite(product.id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -58,24 +57,25 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
         <div className="relative overflow-hidden rounded-lg bg-beige border-2 border-gold transition-all duration-300 hover:border-gold-light hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.3)]">
           {/* Image Container - Fixed square aspect ratio */}
           <div className="relative aspect-square overflow-hidden">
-            {/* Image Skeleton */}
-            {!imageLoaded && product.images[0] && (
-              <div className="absolute inset-0 bg-beige/80 animate-pulse" />
-            )}
-            
             {product.images[0] ? (
               <img
                 src={product.images[0]}
                 alt={product.nameAr}
                 loading="lazy"
-                onLoad={() => setImageLoaded(true)}
-                className={`w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105 ${
-                  imageLoaded ? 'opacity-100' : 'opacity-0'
-                }`}
+                className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
               <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2 bg-beige">
                 <Eye className="w-8 h-8 opacity-40" />
+              </div>
+            )}
+
+            {/* OUT OF STOCK - Big Red Badge */}
+            {!product.inStock && (
+              <div className="absolute inset-0 bg-secondary/40 flex items-center justify-center">
+                <span className="bg-destructive text-white text-xl font-bold px-6 py-3 rounded-xl shadow-lg transform -rotate-12">
+                  OUT
+                </span>
               </div>
             )}
 
@@ -101,23 +101,15 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
             </button>
 
             {/* Quick Add Button - Appears on hover */}
-            <div className="absolute bottom-3 left-3 right-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-              <button
-                onClick={handleAddToCart}
-                disabled={!product.inStock}
-                className="w-full flex items-center justify-center gap-2 py-2.5 bg-secondary text-secondary-foreground font-medium text-sm rounded-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed hover:bg-secondary/90"
-              >
-                <ShoppingBag className="w-4 h-4" />
-                <span>أضف للسلة</span>
-              </button>
-            </div>
-
-            {/* Out of Stock Overlay */}
-            {!product.inStock && (
-              <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-                <span className="bg-destructive text-destructive-foreground text-xs font-medium px-3 py-1 rounded-full">
-                  نفذ المخزون
-                </span>
+            {product.inStock && (
+              <div className="absolute bottom-3 left-3 right-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
+                <button
+                  onClick={handleAddToCart}
+                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-secondary text-secondary-foreground font-medium text-sm rounded-lg transition-all duration-300 hover:bg-secondary/90"
+                >
+                  <ShoppingBag className="w-4 h-4" />
+                  <span>أضف للسلة</span>
+                </button>
               </div>
             )}
           </div>

@@ -4,7 +4,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Search, FileText, ExternalLink, Trash2, Calendar, Loader2 } from 'lucide-react';
+import { Search, FileText, ExternalLink, Trash2, Calendar, Loader2, Printer } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
@@ -141,6 +141,15 @@ const AdminInvoicesPage = () => {
     setDateFilter('');
   };
 
+  const handlePrint = (url: string) => {
+    const printWindow = window.open(url, '_blank');
+    if (printWindow) {
+      printWindow.onload = () => {
+        printWindow.print();
+      };
+    }
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -251,14 +260,24 @@ const AdminInvoicesPage = () => {
                             variant="ghost"
                             size="sm"
                             onClick={() => window.open(invoice.url, '_blank')}
+                            title="فتح"
                           >
                             <ExternalLink className="w-4 h-4" />
                           </Button>
                           <Button
                             variant="ghost"
                             size="sm"
+                            onClick={() => handlePrint(invoice.url)}
+                            title="طباعة"
+                          >
+                            <Printer className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
                             className="text-destructive hover:text-destructive"
                             onClick={() => setDeleteTarget(invoice.name)}
+                            title="حذف"
                           >
                             <Trash2 className="w-4 h-4" />
                           </Button>

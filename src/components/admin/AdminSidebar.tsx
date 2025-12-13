@@ -9,7 +9,8 @@ import {
   Star, 
   Settings,
   LogOut,
-  ChevronRight
+  ChevronRight,
+  Grid3X3
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -35,6 +36,7 @@ const menuItems = [
   { title: 'الطلبات', url: '/admin/orders', icon: ShoppingCart },
   { title: 'العملاء', url: '/admin/customers', icon: Users },
   { title: 'البانرات', url: '/admin/banners', icon: Image },
+  { title: 'الفئات', url: '/admin/categories', icon: Grid3X3 },
   { title: 'الماركات', url: '/admin/brands', icon: Tag },
   { title: 'شركات التوصيل', url: '/admin/delivery', icon: Truck },
   { title: 'التقييمات', url: '/admin/reviews', icon: Star },

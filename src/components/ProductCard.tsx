@@ -75,9 +75,9 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
       <Link to={`/product/${product.slug}`} className="block">
         <div className="relative bg-cream rounded-lg overflow-hidden border-2 border-gold transition-all duration-500 hover:border-gold-light hover:shadow-[0_15px_40px_-10px_hsl(var(--gold)/0.4)]">
           {/* Image Container - Fixed square aspect ratio */}
-          <div className="relative overflow-hidden aspect-square">
-            {/* Background - Solid cream color */}
-            <div className="absolute inset-0 bg-cream" />
+          <div className="relative overflow-hidden aspect-square bg-cream">
+            {/* Background layer behind image */}
+            <div className="absolute inset-0 bg-cream -z-10" />
             
             {product.images[0] ? (
               <img

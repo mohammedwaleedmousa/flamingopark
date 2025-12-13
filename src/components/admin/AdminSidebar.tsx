@@ -13,7 +13,8 @@ import {
   Grid3X3,
   LayoutGrid,
   FileText,
-  Receipt
+  Receipt,
+  MapPin
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -43,6 +44,7 @@ const menuItems = [
   { title: 'الفئات', url: '/admin/categories', icon: Grid3X3 },
   { title: 'الماركات', url: '/admin/brands', icon: Tag },
   { title: 'شركات التوصيل', url: '/admin/delivery', icon: Truck },
+  { title: 'مناطق الدفع عند الاستلام', url: '/admin/cod-regions', icon: MapPin },
   { title: 'التقييمات', url: '/admin/reviews', icon: Star },
   { title: 'الأقسام', url: '/admin/sections', icon: LayoutGrid },
   { title: 'المحتوى', url: '/admin/content', icon: FileText },

@@ -11,7 +11,7 @@ import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2 } from 'lucide-react';
+import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle } from 'lucide-react';
 
 interface DeliveryCompany {
   id: string;
@@ -24,6 +24,12 @@ interface BankAccount {
   bank: string;
   account: string;
   name: string;
+}
+
+interface CODRegion {
+  id: string;
+  region_name: string;
+  region_name_ar: string;
 }
 
 const CheckoutPage = () => {
@@ -85,6 +91,22 @@ const CheckoutPage = () => {
         .maybeSingle();
       if (error) throw error;
       return (data?.value as string) || (country === 'SA' ? '966123456789' : '967123456789');
+    },
+    enabled: !!country,
+  });
+
+  // Fetch COD regions
+  const { data: codRegions = [] } = useQuery({
+    queryKey: ['cod-regions', country],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('cod_regions')
+        .select('id, region_name, region_name_ar')
+        .eq('country', country)
+        .eq('is_active', true)
+        .order('region_name_ar');
+      if (error) throw error;
+      return data as CODRegion[];
     },
     enabled: !!country,
   });
@@ -358,7 +380,34 @@ const CheckoutPage = () => {
                     <div className="text-right">
                       <h3 className="font-heading text-foreground">الدفع عند الاستلام</h3>
                       <p className="text-xs text-muted-foreground font-body">Cash on Delivery</p>
+                </div>
+
+                {/* COD Regions */}
+                {paymentMethod === 'cod' && (
+                  <div className="bg-muted rounded-lg p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <MapPin className="w-4 h-4 text-gold" />
+                      <span>المناطق المتاحة للدفع عند الاستلام:</span>
                     </div>
+                    {codRegions.length > 0 ? (
+                      <div className="flex flex-wrap gap-2">
+                        {codRegions.map((region) => (
+                          <span
+                            key={region.id}
+                            className="px-3 py-1.5 bg-background border border-border rounded-full text-xs font-medium text-foreground"
+                          >
+                            {region.region_name_ar}
+                          </span>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-3 rounded-lg">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="text-sm">لا توجد مناطق محددة حالياً للدفع عند الاستلام</span>
+                      </div>
+                    )}
+                  </div>
+                )}
                   </button>
                   <button
                     onClick={() => setPaymentMethod('bank')}

@@ -149,6 +149,33 @@ export type Database = {
         }
         Relationships: []
       }
+      cod_regions: {
+        Row: {
+          country: string
+          created_at: string
+          id: string
+          is_active: boolean | null
+          region_name: string
+          region_name_ar: string
+        }
+        Insert: {
+          country: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          region_name: string
+          region_name_ar: string
+        }
+        Update: {
+          country?: string
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          region_name?: string
+          region_name_ar?: string
+        }
+        Relationships: []
+      }
       customers: {
         Row: {
           country: string

@@ -7,7 +7,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Plus, Edit, Trash2, Upload, X, Loader2, Settings, Tag, Calendar } from 'lucide-react';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { Plus, Edit, Trash2, Upload, X, Loader2, Settings, Tag, Package, Search } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -32,6 +33,7 @@ interface Offer {
   is_active: boolean;
   is_featured: boolean;
   sort_order: number;
+  product_ids: string[];
 }
 
 interface OffersSettings {
@@ -44,14 +46,24 @@ interface OffersSettings {
   show_promo_banner: boolean;
 }
 
+interface Product {
+  id: string;
+  name_ar: string;
+  images: string[];
+  price: number;
+  discount: number | null;
+}
+
 const AdminOffersPage = () => {
   const [offers, setOffers] = useState<Offer[]>([]);
+  const [products, setProducts] = useState<Product[]>([]);
   const [settings, setSettings] = useState<OffersSettings | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  const [productSearch, setProductSearch] = useState('');
 
   const [formData, setFormData] = useState({
     title: '',
@@ -69,6 +81,7 @@ const AdminOffersPage = () => {
     is_active: true,
     is_featured: false,
     sort_order: 0,
+    product_ids: [] as string[],
   });
 
   useEffect(() => {
@@ -89,6 +102,15 @@ const AdminOffersPage = () => {
     } else {
       setOffers(offersData || []);
     }
+
+    // Fetch products
+    const { data: productsData } = await supabase
+      .from('products')
+      .select('id, name_ar, images, price, discount')
+      .eq('is_active', true)
+      .order('name_ar', { ascending: true });
+    
+    setProducts(productsData || []);
 
     // Fetch settings
     const { data: settingsData, error: settingsError } = await supabase
@@ -121,8 +143,10 @@ const AdminOffersPage = () => {
       is_active: true,
       is_featured: false,
       sort_order: offers.length,
+      product_ids: [],
     });
     setEditingOffer(null);
+    setProductSearch('');
   };
 
   const openDialog = (offer?: Offer) => {
@@ -144,6 +168,7 @@ const AdminOffersPage = () => {
         is_active: offer.is_active ?? true,
         is_featured: offer.is_featured ?? false,
         sort_order: offer.sort_order || 0,
+        product_ids: offer.product_ids || [],
       });
     } else {
       resetForm();
@@ -248,6 +273,15 @@ const AdminOffersPage = () => {
     }));
   };
 
+  const toggleProduct = (productId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      product_ids: prev.product_ids.includes(productId)
+        ? prev.product_ids.filter(id => id !== productId)
+        : [...prev.product_ids, productId],
+    }));
+  };
+
   const saveSettings = async () => {
     if (!settings) return;
     
@@ -273,6 +307,12 @@ const AdminOffersPage = () => {
       setIsSaving(false);
     }
   };
+
+  const filteredProducts = products.filter(p => 
+    p.name_ar.toLowerCase().includes(productSearch.toLowerCase())
+  );
+
+  const selectedProducts = products.filter(p => formData.product_ids.includes(p.id));
 
   if (isLoading) {
     return (
@@ -338,8 +378,14 @@ const AdminOffersPage = () => {
                     <p className="text-sm text-muted-foreground mb-2">{offer.subtitle_ar}</p>
                   )}
                   {offer.discount_code && (
-                    <div className="bg-muted px-2 py-1 rounded text-sm mb-3">
+                    <div className="bg-muted px-2 py-1 rounded text-sm mb-2">
                       كود: <span className="font-mono font-bold">{offer.discount_code}</span>
+                    </div>
+                  )}
+                  {offer.product_ids && offer.product_ids.length > 0 && (
+                    <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
+                      <Package className="w-4 h-4" />
+                      <span>{offer.product_ids.length} منتج مرتبط</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between">
@@ -437,7 +483,7 @@ const AdminOffersPage = () => {
 
       {/* Offer Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingOffer ? 'تعديل العرض' : 'إضافة عرض جديد'}</DialogTitle>
           </DialogHeader>
@@ -486,7 +532,7 @@ const AdminOffersPage = () => {
                 value={formData.description_ar}
                 onChange={(e) => setFormData({ ...formData, description_ar: e.target.value })}
                 dir="rtl"
-                rows={3}
+                rows={2}
               />
             </div>
 
@@ -494,7 +540,7 @@ const AdminOffersPage = () => {
               <label className="block text-sm text-muted-foreground mb-2">الصورة</label>
               {formData.image_url ? (
                 <div className="relative">
-                  <img src={formData.image_url} alt="" className="w-full h-40 object-cover rounded" />
+                  <img src={formData.image_url} alt="" className="w-full h-32 object-cover rounded" />
                   <button
                     onClick={() => setFormData({ ...formData, image_url: '' })}
                     className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
@@ -503,13 +549,13 @@ const AdminOffersPage = () => {
                   </button>
                 </div>
               ) : (
-                <label className="block w-full h-40 border-2 border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-gold transition-colors">
+                <label className="block w-full h-32 border-2 border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-gold transition-colors">
                   {isUploading ? (
                     <Loader2 className="w-8 h-8 text-gold animate-spin" />
                   ) : (
                     <>
-                      <Upload className="w-8 h-8 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground mt-2">اضغط لرفع صورة</span>
+                      <Upload className="w-6 h-6 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground mt-1">اضغط لرفع صورة</span>
                     </>
                   )}
                   <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={isUploading} />
@@ -559,6 +605,82 @@ const AdminOffersPage = () => {
                   dir="ltr"
                 />
               </div>
+            </div>
+
+            {/* Products Selection */}
+            <div className="border border-border rounded-lg p-4">
+              <label className="block text-sm font-medium text-foreground mb-3">
+                <Package className="w-4 h-4 inline ml-2" />
+                المنتجات المرتبطة بالعرض ({formData.product_ids.length})
+              </label>
+              
+              {/* Selected Products */}
+              {selectedProducts.length > 0 && (
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {selectedProducts.map(product => (
+                    <div 
+                      key={product.id}
+                      className="flex items-center gap-2 bg-gold/10 text-gold px-3 py-1.5 rounded-full text-sm"
+                    >
+                      {product.images?.[0] && (
+                        <img src={product.images[0]} alt="" className="w-5 h-5 rounded object-cover" />
+                      )}
+                      <span>{product.name_ar}</span>
+                      <button onClick={() => toggleProduct(product.id)} className="hover:text-destructive">
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {/* Search */}
+              <div className="relative mb-3">
+                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  value={productSearch}
+                  onChange={(e) => setProductSearch(e.target.value)}
+                  placeholder="ابحث عن منتج..."
+                  className="pr-10"
+                  dir="rtl"
+                />
+              </div>
+
+              {/* Products List */}
+              <ScrollArea className="h-48 border border-border rounded">
+                <div className="p-2 space-y-1">
+                  {filteredProducts.map(product => (
+                    <label
+                      key={product.id}
+                      className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${
+                        formData.product_ids.includes(product.id) 
+                          ? 'bg-gold/10 border border-gold/30' 
+                          : 'hover:bg-muted'
+                      }`}
+                    >
+                      <Checkbox
+                        checked={formData.product_ids.includes(product.id)}
+                        onCheckedChange={() => toggleProduct(product.id)}
+                      />
+                      {product.images?.[0] && (
+                        <img src={product.images[0]} alt="" className="w-10 h-10 rounded object-cover" />
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-medium truncate">{product.name_ar}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {product.price} ر.س
+                          {product.discount && product.discount > 0 && (
+                            <span className="text-destructive mr-2">(-{product.discount}%)</span>
+                          )}
+                        </p>
+                      </div>
+                    </label>
+                  ))}
+                  {filteredProducts.length === 0 && (
+                    <p className="text-center text-muted-foreground py-4 text-sm">لا توجد منتجات</p>
+                  )}
+                </div>
+              </ScrollArea>
             </div>
 
             <div className="flex flex-wrap gap-4">

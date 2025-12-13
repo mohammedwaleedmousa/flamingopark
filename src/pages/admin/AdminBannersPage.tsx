@@ -4,7 +4,8 @@ import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
-import { Plus, Edit, Trash2, Upload, X, Loader2 } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { Plus, Edit, Trash2, Upload, X, Loader2, ZoomIn, Move } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -25,6 +26,9 @@ interface Banner {
   countries: string[];
   is_active: boolean;
   sort_order: number;
+  image_zoom: number;
+  image_position_x: number;
+  image_position_y: number;
 }
 
 const AdminBannersPage = () => {
@@ -33,6 +37,7 @@ const AdminBannersPage = () => {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingBanner, setEditingBanner] = useState<Banner | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -46,6 +51,9 @@ const AdminBannersPage = () => {
     countries: ['SA', 'YE'] as string[],
     is_active: true,
     sort_order: 0,
+    image_zoom: 1,
+    image_position_x: 50,
+    image_position_y: 50,
   });
 
   useEffect(() => {
@@ -79,6 +87,9 @@ const AdminBannersPage = () => {
       countries: ['SA', 'YE'],
       is_active: true,
       sort_order: banners.length,
+      image_zoom: 1,
+      image_position_x: 50,
+      image_position_y: 50,
     });
     setEditingBanner(null);
   };
@@ -98,6 +109,9 @@ const AdminBannersPage = () => {
         countries: banner.countries || ['SA', 'YE'],
         is_active: banner.is_active ?? true,
         sort_order: banner.sort_order || 0,
+        image_zoom: banner.image_zoom || 1,
+        image_position_x: banner.image_position_x ?? 50,
+        image_position_y: banner.image_position_y ?? 50,
       });
     } else {
       resetForm();
@@ -109,14 +123,43 @@ const AdminBannersPage = () => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    const fileName = `banners/${Date.now()}-${file.name}`;
-    const { error } = await supabase.storage.from('uploads').upload(fileName, file);
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({ title: 'خطأ', description: 'يرجى اختيار ملف صورة صحيح', variant: 'destructive' });
+      return;
+    }
 
-    if (error) {
-      toast({ title: 'خطأ', description: 'فشل في رفع الصورة', variant: 'destructive' });
-    } else {
-      const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName);
-      setFormData(prev => ({ ...prev, image_url: urlData.publicUrl }));
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast({ title: 'خطأ', description: 'حجم الصورة كبير جداً (الحد الأقصى 10MB)', variant: 'destructive' });
+      return;
+    }
+
+    setIsUploading(true);
+
+    try {
+      // Create unique file name with proper extension
+      const fileExt = file.name.split('.').pop() || 'jpg';
+      const fileName = `banners/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
+      
+      const { error } = await supabase.storage.from('uploads').upload(fileName, file, {
+        cacheControl: '3600',
+        upsert: false,
+      });
+
+      if (error) {
+        console.error('Upload error:', error);
+        toast({ title: 'خطأ', description: `فشل في رفع الصورة: ${error.message}`, variant: 'destructive' });
+      } else {
+        const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName);
+        setFormData(prev => ({ ...prev, image_url: urlData.publicUrl }));
+        toast({ title: 'تم', description: 'تم رفع الصورة بنجاح' });
+      }
+    } catch (err: any) {
+      console.error('Upload exception:', err);
+      toast({ title: 'خطأ', description: 'حدث خطأ غير متوقع', variant: 'destructive' });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -227,7 +270,7 @@ const AdminBannersPage = () => {
 
       {/* Dialog */}
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingBanner ? 'تعديل البانر' : 'إضافة بانر جديد'}</DialogTitle>
           </DialogHeader>
@@ -251,19 +294,98 @@ const AdminBannersPage = () => {
             <div>
               <label className="block text-sm text-muted-foreground mb-2">الصورة *</label>
               {formData.image_url ? (
-                <div className="relative">
-                  <img src={formData.image_url} alt="" className="w-full h-40 object-cover rounded" />
-                  <button
-                    onClick={() => setFormData({ ...formData, image_url: '' })}
-                    className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                <div className="space-y-4">
+                  {/* Image Preview with positioning */}
+                  <div className="relative border border-border rounded overflow-hidden" style={{ height: '200px' }}>
+                    <img 
+                      src={formData.image_url} 
+                      alt="" 
+                      className="w-full h-full"
+                      style={{
+                        objectFit: 'cover',
+                        transform: `scale(${formData.image_zoom})`,
+                        objectPosition: `${formData.image_position_x}% ${formData.image_position_y}%`,
+                      }}
+                    />
+                    <button
+                      onClick={() => setFormData({ ...formData, image_url: '' })}
+                      className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  {/* Image Controls */}
+                  <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+                    {/* Zoom */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <ZoomIn className="w-4 h-4 text-muted-foreground" />
+                        <label className="text-sm text-muted-foreground">التكبير: {formData.image_zoom.toFixed(1)}x</label>
+                      </div>
+                      <Slider
+                        value={[formData.image_zoom]}
+                        onValueChange={([v]) => setFormData({ ...formData, image_zoom: v })}
+                        min={1}
+                        max={2}
+                        step={0.1}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Position X */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Move className="w-4 h-4 text-muted-foreground" />
+                        <label className="text-sm text-muted-foreground">الموضع الأفقي: {formData.image_position_x}%</label>
+                      </div>
+                      <Slider
+                        value={[formData.image_position_x]}
+                        onValueChange={([v]) => setFormData({ ...formData, image_position_x: v })}
+                        min={0}
+                        max={100}
+                        step={1}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Position Y */}
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <Move className="w-4 h-4 text-muted-foreground rotate-90" />
+                        <label className="text-sm text-muted-foreground">الموضع العمودي: {formData.image_position_y}%</label>
+                      </div>
+                      <Slider
+                        value={[formData.image_position_y]}
+                        onValueChange={([v]) => setFormData({ ...formData, image_position_y: v })}
+                        min={0}
+                        max={100}
+                        step={1}
+                        className="w-full"
+                      />
+                    </div>
+
+                    {/* Reset Button */}
+                    <Button 
+                      variant="outline" 
+                      size="sm"
+                      onClick={() => setFormData({ ...formData, image_zoom: 1, image_position_x: 50, image_position_y: 50 })}
+                    >
+                      إعادة تعيين الموضع
+                    </Button>
+                  </div>
                 </div>
               ) : (
-                <label className="block w-full h-40 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-gold">
-                  <Upload className="w-8 h-8 text-muted-foreground" />
-                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" />
+                <label className="block w-full h-40 border-2 border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-gold transition-colors">
+                  {isUploading ? (
+                    <Loader2 className="w-8 h-8 text-gold animate-spin" />
+                  ) : (
+                    <>
+                      <Upload className="w-8 h-8 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground mt-2">اضغط لرفع صورة</span>
+                    </>
+                  )}
+                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={isUploading} />
                 </label>
               )}
             </div>

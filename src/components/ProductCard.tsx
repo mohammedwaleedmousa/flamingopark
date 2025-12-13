@@ -83,7 +83,6 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
               <img
                 src={product.images[0]}
                 alt={product.nameAr}
-                loading="lazy"
                 className="w-full h-full object-contain p-2 transition-all duration-700 ease-out group-hover:scale-105"
               />
             ) : (

@@ -12,7 +12,8 @@ import {
   ChevronRight,
   Grid3X3,
   LayoutGrid,
-  FileText
+  FileText,
+  Receipt
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -36,6 +37,7 @@ const menuItems = [
   { title: 'الرئيسية', url: '/admin', icon: LayoutDashboard },
   { title: 'المنتجات', url: '/admin/products', icon: Package },
   { title: 'الطلبات', url: '/admin/orders', icon: ShoppingCart },
+  { title: 'الفواتير', url: '/admin/invoices', icon: Receipt },
   { title: 'العملاء', url: '/admin/customers', icon: Users },
   { title: 'البانرات', url: '/admin/banners', icon: Image },
   { title: 'الفئات', url: '/admin/categories', icon: Grid3X3 },

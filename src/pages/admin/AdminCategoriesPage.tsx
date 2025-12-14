@@ -460,43 +460,43 @@ const AdminCategoriesPage = () => {
 
                 <div className="space-y-2">
                   <Label>الصورة</Label>
-                  <div className="flex gap-2">
-                    <Input
-                      value={formData.image_url}
-                      onChange={(e) =>
-                        setFormData({ ...formData, image_url: e.target.value })
-                      }
-                      placeholder="رابط الصورة"
-                      className="flex-1"
-                    />
-                    <label className="cursor-pointer">
-                      <input
-                        type="file"
-                        accept="image/*"
-                        className="hidden"
-                        onChange={handleUpload}
-                      />
-                      <Button type="button" variant="outline" size="icon" disabled={uploading}>
-                        {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                      </Button>
-                    </label>
+                  <div className="flex flex-col gap-3">
+                    {formData.image_url ? (
+                      <div className="relative w-fit">
+                        <img
+                          src={formData.image_url}
+                          alt="Preview"
+                          className="h-24 w-24 object-cover bg-muted rounded-lg border border-border"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setFormData({ ...formData, image_url: '' })}
+                          className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleUpload}
+                        />
+                        <div className="h-24 w-24 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center hover:border-gold transition-colors">
+                          {uploading ? (
+                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                          ) : (
+                            <>
+                              <Upload className="w-6 h-6 text-muted-foreground mb-1" />
+                              <span className="text-xs text-muted-foreground">رفع صورة</span>
+                            </>
+                          )}
+                        </div>
+                      </label>
+                    )}
                   </div>
-                  {formData.image_url && (
-                    <div className="relative w-fit">
-                      <img
-                        src={formData.image_url}
-                        alt="Preview"
-                        className="h-20 w-20 object-cover bg-muted rounded-lg"
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setFormData({ ...formData, image_url: '' })}
-                        className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  )}
                 </div>
 
                 <div className="space-y-2">

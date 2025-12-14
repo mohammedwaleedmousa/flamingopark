@@ -341,104 +341,94 @@ ${invoiceUrl}`;
             transition={{ delay: 0.4 }}
             className="space-y-4 print:hidden"
           >
-            {/* Step 1: Save Invoice */}
+            {/* Step 1: Save Invoice Instructions */}
             {!invoiceSaved && (
-              <div className="bg-gold/10 border border-gold/30 rounded-lg p-6 text-center">
-                <div className="w-12 h-12 bg-gold/20 rounded-full flex items-center justify-center mx-auto mb-3">
-                  <Download className="w-6 h-6 text-gold" />
+              <div className="bg-gold/10 border border-gold/30 rounded-lg p-6">
+                <div className="flex items-start gap-4">
+                  <div className="w-10 h-10 bg-gold/20 rounded-full flex items-center justify-center shrink-0">
+                    <span className="font-heading text-gold text-lg">١</span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="font-heading text-lg text-foreground mb-2">احفظ الفاتورة</h3>
+                    <p className="text-muted-foreground font-body text-sm mb-4">
+                      اضغط على الزر أدناه لتحميل الفاتورة كملف PDF على جهازك
+                    </p>
+                    <Button
+                      onClick={handleGenerateAndUploadPdf}
+                      disabled={isGeneratingPdf}
+                      className="btn-gold gap-2 w-full sm:w-auto"
+                      size="lg"
+                    >
+                      {isGeneratingPdf ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          جاري التحميل...
+                        </>
+                      ) : (
+                        <>
+                          <Download className="w-5 h-5" />
+                          تحميل الفاتورة PDF
+                        </>
+                      )}
+                    </Button>
+                  </div>
                 </div>
-                <h3 className="font-heading text-lg text-foreground mb-2">الخطوة ١</h3>
-                <p className="text-foreground font-body mb-4">
-                  اضغط الزر أدناه لحفظ الفاتورة ورفعها
-                </p>
-                <Button
-                  onClick={handleGenerateAndUploadPdf}
-                  disabled={isGeneratingPdf}
-                  className="btn-gold gap-2"
-                  size="lg"
-                >
-                  {isGeneratingPdf ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      جاري الحفظ...
-                    </>
-                  ) : (
-                    <>
-                      <FileText className="w-5 h-5" />
-                      حفظ الفاتورة PDF
-                    </>
-                  )}
-                </Button>
               </div>
             )}
 
             {/* Step 2: Send via WhatsApp (shown after saving) */}
-            {invoiceSaved && invoiceUrl && (
+            {invoiceSaved && (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="space-y-4"
               >
                 {/* Success message */}
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
-                  <CheckCircle className="w-10 h-10 text-green-500 mx-auto mb-2" />
-                  <p className="text-green-700 font-heading">تم حفظ الفاتورة بنجاح!</p>
-                </div>
-
-                {/* Invoice Link */}
-                <div className="bg-muted rounded-lg p-4">
-                  <p className="text-sm text-muted-foreground mb-2 text-center">رابط الفاتورة:</p>
-                  <div className="flex items-center gap-2 bg-background rounded-lg p-2">
-                    <input 
-                      type="text" 
-                      value={invoiceUrl} 
-                      readOnly 
-                      className="flex-1 bg-transparent text-sm text-foreground truncate outline-none"
-                      dir="ltr"
-                    />
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        navigator.clipboard.writeText(invoiceUrl);
-                        toast({ title: 'تم النسخ', description: 'تم نسخ رابط الفاتورة' });
-                      }}
-                    >
-                      <Copy className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => window.open(invoiceUrl, '_blank')}
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </Button>
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
+                  <CheckCircle className="w-8 h-8 text-green-500 shrink-0" />
+                  <div>
+                    <p className="text-green-700 font-heading">تم تحميل الفاتورة بنجاح!</p>
+                    <p className="text-green-600 text-sm">تحقق من ملف التنزيلات في جهازك</p>
                   </div>
                 </div>
 
-                {/* WhatsApp Button */}
-                <div className="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-                  <div className="w-12 h-12 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <MessageCircle className="w-6 h-6 text-green-600" />
+                {/* WhatsApp Instructions */}
+                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
+                  <div className="flex items-start gap-4">
+                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
+                      <span className="font-heading text-green-600 text-lg">٢</span>
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="font-heading text-lg text-foreground mb-2">أرسل الفاتورة عبر الواتساب</h3>
+                      <ol className="text-muted-foreground font-body text-sm mb-4 space-y-2 list-decimal list-inside">
+                        <li>اضغط على زر "فتح الواتساب" أدناه</li>
+                        <li>سيتم فتح محادثة جديدة</li>
+                        <li>اضغط على أيقونة المرفقات 📎</li>
+                        <li>اختر ملف الفاتورة PDF الذي قمت بتحميله</li>
+                        <li>أرسل الرسالة</li>
+                      </ol>
+                      <Button
+                        onClick={() => {
+                          const message = `مرحباً، أرغب في تأكيد الطلب رقم: ${orderData.orderNumber}
+
+سأقوم بإرفاق الفاتورة`;
+                          const whatsappUrl = `https://wa.me/${orderData.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
+                          window.open(whatsappUrl, '_blank');
+                        }}
+                        className="bg-green-600 hover:bg-green-700 text-white gap-2 w-full sm:w-auto"
+                        size="lg"
+                      >
+                        <MessageCircle className="w-5 h-5" />
+                        فتح الواتساب
+                      </Button>
+                    </div>
                   </div>
-                  <h3 className="font-heading text-lg text-foreground mb-2">الخطوة ٢</h3>
-                  <p className="text-foreground font-body mb-4">
-                    اضغط الزر لإرسال رابط الفاتورة عبر الواتساب
-                  </p>
-                  <Button
-                    onClick={handleWhatsApp}
-                    className="bg-green-600 hover:bg-green-700 text-white gap-2"
-                    size="lg"
-                  >
-                    <MessageCircle className="w-5 h-5" />
-                    إرسال للواتساب
-                  </Button>
                 </div>
               </motion.div>
             )}
 
             {/* Home button always visible */}
-            <div className="flex justify-center">
+            <div className="flex justify-center pt-4">
               <Link to="/home">
                 <Button
                   variant="outline"

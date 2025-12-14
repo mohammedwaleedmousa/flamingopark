@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { ArrowRight, Loader2, Upload, X, LayoutGrid, Plus, Trash2, Truck, Shield, RotateCcw } from 'lucide-react';
 
 interface HomepageSection {
@@ -15,6 +16,14 @@ interface HomepageSection {
   title_ar: string;
   filter_type: string;
   is_active: boolean;
+}
+
+interface Category {
+  id: string;
+  name: string;
+  name_ar: string;
+  slug: string;
+  is_active: boolean | null;
 }
 
 interface Accessory {
@@ -76,6 +85,20 @@ const AdminProductFormPage = () => {
         .order('sort_order', { ascending: true });
       if (error) throw error;
       return data as HomepageSection[];
+    },
+  });
+
+  // Fetch all categories
+  const { data: categories = [] } = useQuery({
+    queryKey: ['all-categories'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id, name, name_ar, slug, is_active')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data as Category[];
     },
   });
 
@@ -328,11 +351,21 @@ const AdminProductFormPage = () => {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-body text-muted-foreground mb-2">التصنيف *</label>
-              <Input
+              <Select
                 value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-                placeholder="necklaces"
-              />
+                onValueChange={(value) => setFormData({ ...formData, category: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر التصنيف" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.slug}>
+                      {cat.name_ar} ({cat.name})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
             <div>
               <label className="block text-sm font-body text-muted-foreground mb-2">الماركة</label>

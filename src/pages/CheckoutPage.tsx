@@ -37,6 +37,7 @@ const CheckoutPage = () => {
   const { country, customer, cart, getCartTotal, clearCart } = useStore();
   const [paymentMethod, setPaymentMethod] = useState<'cod' | 'bank'>('cod');
   const [selectedDelivery, setSelectedDelivery] = useState('');
+  const [selectedRegion, setSelectedRegion] = useState('');
   const [formData, setFormData] = useState({
     name: customer?.name || '',
     phone: customer?.phone || '',
@@ -164,6 +165,16 @@ const CheckoutPage = () => {
       return;
     }
 
+    // Validate COD region selection
+    if (paymentMethod === 'cod' && codRegions.length > 0 && !selectedRegion) {
+      toast({
+        title: 'خطأ',
+        description: 'يرجى اختيار منطقة الاستلام',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     const orderNumber = `ORD-${Date.now()}`;
     
     // Prepare cart items with product images, sizes, and accessories
@@ -204,6 +215,9 @@ const CheckoutPage = () => {
         payment_method: paymentMethod,
       });
 
+      // Get selected region name
+      const selectedRegionData = codRegions.find(r => r.id === selectedRegion);
+      
       // Prepare order data for confirmation page
       const orderData = {
         orderNumber,
@@ -217,6 +231,7 @@ const CheckoutPage = () => {
         total,
         paymentMethod,
         deliveryCompany: selectedCompany?.name || '',
+        selectedRegion: paymentMethod === 'cod' && selectedRegionData ? selectedRegionData.region_name_ar : null,
         country: country!,
         whatsappNumber: whatsappNumber || (country === 'SA' ? '966123456789' : '967123456789'),
         createdAt: new Date().toISOString(),
@@ -369,6 +384,7 @@ const CheckoutPage = () => {
                 <h2 className="font-heading text-xl text-foreground mb-6">طريقة الدفع</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <button
+                    type="button"
                     onClick={() => setPaymentMethod('cod')}
                     className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${
                       paymentMethod === 'cod'
@@ -380,36 +396,10 @@ const CheckoutPage = () => {
                     <div className="text-right">
                       <h3 className="font-heading text-foreground">الدفع عند الاستلام</h3>
                       <p className="text-xs text-muted-foreground font-body">Cash on Delivery</p>
-                </div>
-
-                {/* COD Regions */}
-                {paymentMethod === 'cod' && (
-                  <div className="bg-muted rounded-lg p-4 space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                      <MapPin className="w-4 h-4 text-gold" />
-                      <span>المناطق المتاحة للدفع عند الاستلام:</span>
                     </div>
-                    {codRegions.length > 0 ? (
-                      <div className="flex flex-wrap gap-2">
-                        {codRegions.map((region) => (
-                          <span
-                            key={region.id}
-                            className="px-3 py-1.5 bg-background border border-border rounded-full text-xs font-medium text-foreground"
-                          >
-                            {region.region_name_ar}
-                          </span>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-3 rounded-lg">
-                        <AlertCircle className="w-4 h-4" />
-                        <span className="text-sm">لا توجد مناطق محددة حالياً للدفع عند الاستلام</span>
-                      </div>
-                    )}
-                  </div>
-                )}
                   </button>
                   <button
+                    type="button"
                     onClick={() => setPaymentMethod('bank')}
                     className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${
                       paymentMethod === 'bank'
@@ -425,6 +415,39 @@ const CheckoutPage = () => {
                   </button>
                 </div>
 
+                {/* COD Regions Selection */}
+                {paymentMethod === 'cod' && (
+                  <div className="bg-muted rounded-lg p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
+                      <MapPin className="w-4 h-4 text-gold" />
+                      <span>اختر منطقة الاستلام *</span>
+                    </div>
+                    {codRegions.length > 0 ? (
+                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                        {codRegions.map((region) => (
+                          <button
+                            key={region.id}
+                            type="button"
+                            onClick={() => setSelectedRegion(region.id)}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
+                              selectedRegion === region.id
+                                ? 'bg-gold text-white border-gold'
+                                : 'bg-background border border-border text-foreground hover:border-gold/50'
+                            }`}
+                          >
+                            {region.region_name_ar}
+                          </button>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-3 rounded-lg">
+                        <AlertCircle className="w-4 h-4" />
+                        <span className="text-sm">لا توجد مناطق محددة حالياً للدفع عند الاستلام</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {paymentMethod === 'bank' && bankAccounts.length > 0 && (
                   <div className="bg-muted rounded-lg p-4 space-y-4">
                     <p className="text-sm text-muted-foreground font-body">
@@ -437,6 +460,7 @@ const CheckoutPage = () => {
                           <p className="text-xs text-muted-foreground font-mono" dir="ltr">{acc.account}</p>
                         </div>
                         <button
+                          type="button"
                           onClick={() => handleCopyAccount(acc.account)}
                           className="p-2 text-gold hover:bg-gold/10 rounded-md transition-colors"
                         >

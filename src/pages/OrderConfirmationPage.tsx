@@ -40,6 +40,7 @@ interface OrderData {
   total: number;
   paymentMethod: string;
   deliveryCompany: string;
+  selectedRegion?: string | null;
   country: string;
   whatsappNumber: string;
   createdAt: string;
@@ -331,6 +332,12 @@ ${invoiceUrl}`;
                   {orderData.paymentMethod === 'cod' ? 'الدفع عند الاستلام' : 'تحويل بنكي'}
                 </span>
               </div>
+              {orderData.selectedRegion && (
+                <div className="flex justify-between text-sm font-body">
+                  <span className="text-gray-500">منطقة الاستلام</span>
+                  <span className="text-gray-900 font-medium">{orderData.selectedRegion}</span>
+                </div>
+              )}
             </div>
           </motion.div>
 

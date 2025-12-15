@@ -56,8 +56,10 @@ const AdminCategoriesPage = () => {
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData & { id?: string }) => {
       const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, '-');
+      console.log('Saving category:', data);
+      
       if (data.id) {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from('categories')
           .update({
             name: data.name,
@@ -67,10 +69,13 @@ const AdminCategoriesPage = () => {
             is_active: data.is_active,
             sort_order: data.sort_order,
           })
-          .eq('id', data.id);
+          .eq('id', data.id)
+          .select();
+        
+        console.log('Update result:', result, 'Error:', error);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from('categories')
           .insert({
             name: data.name,
@@ -79,7 +84,10 @@ const AdminCategoriesPage = () => {
             image_url: data.image_url || null,
             is_active: data.is_active,
             sort_order: data.sort_order,
-          });
+          })
+          .select();
+        
+        console.log('Insert result:', result, 'Error:', error);
         if (error) throw error;
       }
     },
@@ -88,8 +96,9 @@ const AdminCategoriesPage = () => {
       toast({ title: editingCategory ? 'تم تحديث الفئة' : 'تم إضافة الفئة' });
       resetForm();
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ', variant: 'destructive' });
+    onError: (error: any) => {
+      console.error('Category save error:', error);
+      toast({ title: 'حدث خطأ', description: error?.message || 'فشل في حفظ الفئة', variant: 'destructive' });
     },
   });
 

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation } from '@tanstack/react-query';
+import { z } from 'zod';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
@@ -12,6 +13,25 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle } from 'lucide-react';
+
+// Zod schemas for order item validation
+const orderAccessorySchema = z.object({
+  name: z.string().min(1).max(200),
+  price: z.number().nonnegative().max(1000000),
+  quantity: z.number().int().min(1).max(100),
+});
+
+const orderItemSchema = z.object({
+  product_id: z.string().uuid(),
+  product_name: z.string().min(1).max(500),
+  product_image: z.string().max(2000).optional(),
+  quantity: z.number().int().min(1).max(100),
+  price: z.number().nonnegative().max(10000000),
+  selected_size: z.string().max(100).nullable(),
+  selected_accessories: z.array(orderAccessorySchema).max(50),
+});
+
+const orderItemsSchema = z.array(orderItemSchema).min(1).max(100);
 
 interface DeliveryCompany {
   id: string;
@@ -178,7 +198,7 @@ const CheckoutPage = () => {
     const orderNumber = `ORD-${Date.now()}`;
     
     // Prepare cart items with product images, sizes, and accessories
-    const orderItems = cart.map(item => {
+    const rawOrderItems = cart.map(item => {
       const basePrice = item.product.discount
         ? item.product.price * (1 - item.product.discount / 100)
         : item.product.price;
@@ -190,13 +210,30 @@ const CheckoutPage = () => {
       return {
         product_id: item.product.id,
         product_name: item.product.nameAr,
-        product_image: item.product.images[0],
+        product_image: item.product.images?.[0] || '',
         quantity: item.quantity,
         price: basePrice + accessoriesTotal,
         selected_size: item.selectedSize || null,
-        selected_accessories: item.selectedAccessories || [],
+        selected_accessories: (item.selectedAccessories || []).map(acc => ({
+          name: String(acc.name || ''),
+          price: Number(acc.price) || 0,
+          quantity: Number(acc.quantity) || 1,
+        })),
       };
     });
+
+    // Validate order items with Zod before sending to database
+    const validationResult = orderItemsSchema.safeParse(rawOrderItems);
+    if (!validationResult.success) {
+      console.error('Order items validation failed:', validationResult.error);
+      toast({
+        title: 'خطأ',
+        description: 'حدث خطأ في بيانات الطلب. يرجى المحاولة مرة أخرى.',
+        variant: 'destructive',
+      });
+      return;
+    }
+    const orderItems = validationResult.data;
 
     try {
       await createOrderMutation.mutateAsync({

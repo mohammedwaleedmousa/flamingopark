@@ -92,8 +92,23 @@ const CheckoutPage = () => {
         .eq('key', key)
         .maybeSingle();
       if (error) throw error;
-      if (data?.value && Array.isArray(data.value)) {
-        return (data.value as unknown) as BankAccount[];
+      
+      let value = data?.value;
+      // Handle both string JSON and direct JSON values
+      if (typeof value === 'string') {
+        try {
+          value = JSON.parse(value);
+        } catch (e) {
+          return [] as BankAccount[];
+        }
+      }
+      
+      if (Array.isArray(value)) {
+        return value.map(v => ({
+          bank: String((v as any)?.bank || ''),
+          account: String((v as any)?.account || ''),
+          name: String((v as any)?.name || ''),
+        })) as BankAccount[];
       }
       return [] as BankAccount[];
     },

@@ -40,26 +40,38 @@ const AdminSettingsPage = () => {
       
       if (data) {
         data.forEach((setting) => {
-          const value = typeof setting.value === 'string' ? JSON.parse(setting.value) : setting.value;
+          // Handle both string JSON and direct JSON values
+          let value = setting.value;
+          if (typeof value === 'string') {
+            try {
+              value = JSON.parse(value);
+            } catch (e) {
+              // Keep as string if not valid JSON
+            }
+          }
           
           switch (setting.key) {
             case 'store_info':
-              setStoreInfo(value);
+              if (value && typeof value === 'object') setStoreInfo(value as any);
               break;
             case 'whatsapp_sa':
-              setWhatsapp(prev => ({ ...prev, sa: value }));
+              setWhatsapp(prev => ({ ...prev, sa: typeof value === 'string' ? value : '' }));
               break;
             case 'whatsapp_ye':
-              setWhatsapp(prev => ({ ...prev, ye: value }));
+              setWhatsapp(prev => ({ ...prev, ye: typeof value === 'string' ? value : '' }));
               break;
             case 'bank_accounts_sa':
-              setBankAccounts(prev => ({ ...prev, sa: value || [{ bank: '', account: '', name: 'ERMGOLD' }] }));
+              if (Array.isArray(value) && value.length > 0) {
+                setBankAccounts(prev => ({ ...prev, sa: value as any }));
+              }
               break;
             case 'bank_accounts_ye':
-              setBankAccounts(prev => ({ ...prev, ye: value || [{ bank: '', account: '', name: 'ERMGOLD' }] }));
+              if (Array.isArray(value) && value.length > 0) {
+                setBankAccounts(prev => ({ ...prev, ye: value as any }));
+              }
               break;
             case 'certification_pdf_url':
-              setCertPdfUrl(value || '');
+              setCertPdfUrl(typeof value === 'string' ? value : '');
               break;
           }
         });
@@ -85,7 +97,7 @@ const AdminSettingsPage = () => {
   const updateSetting = async (key: string, value: any) => {
     const { error } = await supabase
       .from('site_settings')
-      .upsert({ key, value: JSON.stringify(value) }, { onConflict: 'key' });
+      .upsert({ key, value }, { onConflict: 'key' });
     
     if (error) throw error;
   };

@@ -43,30 +43,18 @@ const CustomerAuthPage = () => {
     setIsLoading(true);
 
     try {
-      const { data: existingCustomer } = await supabase
-        .from("customers")
-        .select("*")
-        .eq("phone", formData.phone)
-        .maybeSingle();
+      // Use edge function for customer auth since customers table is protected
+      const response = await supabase.functions.invoke('customer-auth', {
+        body: {
+          name: formData.name,
+          phone: formData.phone,
+          country: detectedCountry,
+        },
+      });
 
-      let customer;
-
-      if (existingCustomer) {
-        customer = existingCustomer;
-      } else {
-        const { data: newCustomer, error } = await supabase
-          .from("customers")
-          .insert({
-            name: formData.name,
-            phone: formData.phone,
-            country: detectedCountry,
-          })
-          .select()
-          .single();
-
-        if (error) throw error;
-        customer = newCustomer;
-      }
+      if (response.error) throw response.error;
+      
+      const customer = response.data.customer;
 
       setCustomer({
         id: customer.id,

@@ -54,8 +54,10 @@ const AdminBrandsPage = () => {
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData & { id?: string }) => {
+      console.log('Saving brand:', data);
+      
       if (data.id) {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from('brands')
           .update({
             name: data.name,
@@ -64,10 +66,13 @@ const AdminBrandsPage = () => {
             is_active: data.is_active,
             sort_order: data.sort_order,
           })
-          .eq('id', data.id);
+          .eq('id', data.id)
+          .select();
+        
+        console.log('Update result:', result, 'Error:', error);
         if (error) throw error;
       } else {
-        const { error } = await supabase
+        const { data: result, error } = await supabase
           .from('brands')
           .insert({
             name: data.name,
@@ -75,7 +80,10 @@ const AdminBrandsPage = () => {
             countries: data.countries,
             is_active: data.is_active,
             sort_order: data.sort_order,
-          });
+          })
+          .select();
+        
+        console.log('Insert result:', result, 'Error:', error);
         if (error) throw error;
       }
     },
@@ -84,8 +92,9 @@ const AdminBrandsPage = () => {
       toast({ title: editingBrand ? 'تم تحديث الماركة' : 'تم إضافة الماركة' });
       resetForm();
     },
-    onError: () => {
-      toast({ title: 'حدث خطأ', variant: 'destructive' });
+    onError: (error: any) => {
+      console.error('Brand save error:', error);
+      toast({ title: 'حدث خطأ', description: error?.message || 'فشل في حفظ الماركة', variant: 'destructive' });
     },
   });
 

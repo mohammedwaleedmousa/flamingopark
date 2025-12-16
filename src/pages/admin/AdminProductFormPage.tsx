@@ -102,6 +102,20 @@ const AdminProductFormPage = () => {
     },
   });
 
+  // Fetch all brands
+  const { data: brands = [] } = useQuery({
+    queryKey: ['all-brands'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('brands')
+        .select('id, name, is_active')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+  });
+
   useEffect(() => {
     if (isEditing) fetchProduct();
   }, [id]);
@@ -210,8 +224,8 @@ const AdminProductFormPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name_ar || !formData.price || !formData.category) {
-      toast({ title: 'خطأ', description: 'يرجى ملء الحقول المطلوبة', variant: 'destructive' });
+    if (!formData.name_ar || !formData.price || !formData.category || !formData.brand) {
+      toast({ title: 'خطأ', description: 'يرجى ملء الحقول المطلوبة (الاسم، السعر، الفئة، الماركة)', variant: 'destructive' });
       return;
     }
 
@@ -368,12 +382,22 @@ const AdminProductFormPage = () => {
               </Select>
             </div>
             <div>
-              <label className="block text-sm font-body text-muted-foreground mb-2">الماركة</label>
-              <Input
+              <label className="block text-sm font-body text-muted-foreground mb-2">الماركة *</label>
+              <Select
                 value={formData.brand}
-                onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
-                placeholder="ERMGOLD"
-              />
+                onValueChange={(value) => setFormData({ ...formData, brand: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر الماركة" />
+                </SelectTrigger>
+                <SelectContent>
+                  {brands.map((brand) => (
+                    <SelectItem key={brand.id} value={brand.name.trim()}>
+                      {brand.name.trim()}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
           </div>
 

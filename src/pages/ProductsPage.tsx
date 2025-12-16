@@ -83,8 +83,8 @@ const ProductsPage = () => {
     return products.filter((product) => {
       const matchesSearch = product.nameAr.includes(searchQuery) || 
                            product.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || product.category === selectedCategory;
-      const matchesBrand = selectedBrand === 'all' || product.brand === selectedBrand;
+      const matchesCategory = selectedCategory === 'all' || product.category?.trim() === selectedCategory?.trim();
+      const matchesBrand = selectedBrand === 'all' || product.brand?.trim() === selectedBrand?.trim();
       return matchesSearch && matchesCategory && matchesBrand;
     });
   }, [products, searchQuery, selectedCategory, selectedBrand]);
@@ -213,14 +213,14 @@ const ProductsPage = () => {
                     {brands.map((brand) => (
                       <button
                         key={brand.id}
-                        onClick={() => setSelectedBrand(brand.name)}
+                        onClick={() => setSelectedBrand(brand.name.trim())}
                         className={`w-full text-right px-3 py-2 rounded-md font-body text-sm transition-colors ${
-                          selectedBrand === brand.name
+                          selectedBrand === brand.name.trim()
                             ? 'bg-gold text-secondary'
                             : 'hover:bg-muted text-foreground'
                         }`}
                       >
-                        {brand.name}
+                        {brand.name.trim()}
                       </button>
                     ))}
                   </div>

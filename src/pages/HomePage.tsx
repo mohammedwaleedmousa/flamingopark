@@ -1,16 +1,16 @@
-import { motion } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
-import HeroSlider from '@/components/HeroSlider';
-import BrandsStrip from '@/components/BrandsStrip';
-import ReviewsSection from '@/components/ReviewsSection';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import CartDrawer from '@/components/CartDrawer';
-import DynamicSection from '@/components/DynamicSection';
-import { useStore } from '@/store/useStore';
-import { supabase } from '@/integrations/supabase/client';
-import { Gem, Shield, Truck, Star, ArrowLeft } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import HeroSlider from "@/components/HeroSlider";
+import BrandsStrip from "@/components/BrandsStrip";
+import ReviewsSection from "@/components/ReviewsSection";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import CartDrawer from "@/components/CartDrawer";
+import DynamicSection from "@/components/DynamicSection";
+import { useStore } from "@/store/useStore";
+import { supabase } from "@/integrations/supabase/client";
+import { Gem, Shield, Truck, Star, ArrowLeft } from "lucide-react";
+import { Link } from "react-router-dom";
 
 interface HomepageSection {
   id: string;
@@ -31,14 +31,14 @@ const HomePage = () => {
 
   // Fetch homepage sections
   const { data: sections = [] } = useQuery({
-    queryKey: ['homepage-sections', country],
+    queryKey: ["homepage-sections", country],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('homepage_sections')
-        .select('*')
-        .eq('is_active', true)
-        .contains('countries', [country])
-        .order('sort_order', { ascending: true });
+        .from("homepage_sections")
+        .select("*")
+        .eq("is_active", true)
+        .contains("countries", [country])
+        .order("sort_order", { ascending: true });
       if (error) throw error;
       return data as HomepageSection[];
     },
@@ -47,13 +47,13 @@ const HomePage = () => {
 
   // Fetch categories for the categories section
   const { data: categories = [] } = useQuery({
-    queryKey: ['categories', country],
+    queryKey: ["categories", country],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order', { ascending: true });
+        .from("categories")
+        .select("*")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true });
       if (error) throw error;
       return data;
     },
@@ -70,7 +70,7 @@ const HomePage = () => {
       <main className="pt-16 md:pt-18">
         {/* Hero Slider */}
         <HeroSlider />
-        
+
         {/* Brands Strip - Right after banner */}
         <BrandsStrip />
 
@@ -92,11 +92,11 @@ const HomePage = () => {
             </div>
 
             {/* Draggable Categories Strip */}
-            <div 
+            <div
               className="relative overflow-x-auto px-4 scrollbar-hide cursor-grab active:cursor-grabbing"
               style={{
-                scrollbarWidth: 'none',
-                msOverflowStyle: 'none',
+                scrollbarWidth: "none",
+                msOverflowStyle: "none",
               }}
             >
               <div className="flex items-center gap-4 md:gap-6 pb-2">
@@ -107,8 +107,8 @@ const HomePage = () => {
                     className="group flex-shrink-0 p-4 md:p-6 bg-card rounded-xl border-2 border-gold/30 hover:border-gold transition-all duration-300 hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.4)] text-center min-w-[100px] md:min-w-[130px]"
                   >
                     {category.image_url ? (
-                      <img 
-                        src={category.image_url} 
+                      <img
+                        src={category.image_url}
                         alt={category.name_ar}
                         className="w-12 h-12 md:w-16 md:h-16 object-contain mx-auto mb-3 group-hover:scale-110 transition-transform duration-300"
                       />
@@ -129,12 +129,7 @@ const HomePage = () => {
 
         {/* Dynamic Product Sections */}
         {sections.map((section, index) => (
-          <DynamicSection 
-            key={section.id} 
-            section={section} 
-            country={country} 
-            index={index}
-          />
+          <DynamicSection key={section.id} section={section} country={country} index={index} />
         ))}
 
         {/* CTA Banner */}
@@ -146,28 +141,31 @@ const HomePage = () => {
               <motion.div
                 key={i}
                 className="absolute w-1 h-1 bg-gold rounded-full"
-                initial={{ 
-                  x: `${Math.random() * 100}%`, 
+                initial={{
+                  x: `${Math.random() * 100}%`,
                   y: `${Math.random() * 100}%`,
-                  opacity: 0 
+                  opacity: 0,
                 }}
-                animate={{ 
-                  y: [null, '-50%'],
-                  opacity: [0, 0.5, 0]
+                animate={{
+                  y: [null, "-50%"],
+                  opacity: [0, 0.5, 0],
                 }}
-                transition={{ 
+                transition={{
                   duration: 4 + Math.random() * 2,
                   repeat: Infinity,
-                  delay: Math.random() * 2
+                  delay: Math.random() * 2,
                 }}
               />
             ))}
-            
+
             {/* Pattern */}
-            <div className="absolute inset-0 opacity-5" style={{
-              backgroundImage: `radial-gradient(circle at 50% 50%, hsl(var(--gold)) 1px, transparent 1px)`,
-              backgroundSize: '40px 40px'
-            }} />
+            <div
+              className="absolute inset-0 opacity-5"
+              style={{
+                backgroundImage: `radial-gradient(circle at 50% 50%, hsl(var(--gold)) 1px, transparent 1px)`,
+                backgroundSize: "40px 40px",
+              }}
+            />
 
             {/* Glowing Orbs */}
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-gold/10 rounded-full blur-3xl" />
@@ -175,16 +173,12 @@ const HomePage = () => {
           </div>
 
           <div className="container mx-auto px-4 text-center relative z-10">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-            >
+            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
               <motion.div
                 initial={{ scale: 0 }}
                 whileInView={{ scale: 1 }}
                 viewport={{ once: true }}
-                transition={{ delay: 0.2, type: 'spring' }}
+                transition={{ delay: 0.2, type: "spring" }}
                 className="w-20 h-20 mx-auto mb-8 rounded-full bg-gold/10 flex items-center justify-center"
               >
                 <Gem className="w-10 h-10 text-gold" />
@@ -219,9 +213,9 @@ const HomePage = () => {
               {/* Trust Badges */}
               <div className="flex items-center justify-center gap-6 md:gap-10 mt-12 pt-12 border-t border-gold/10">
                 {[
-                  { icon: Shield, text: 'دفع آمن' },
-                  { icon: Truck, text: 'شحن مجاني' },
-                  { icon: Star, text: '+5000 عميل' },
+                  { icon: Shield, text: "دفع آمن" },
+                  { icon: Truck, text: "شحن مضمون وسريع" },
+                  { icon: Star, text: "عملاء مميزون" },
                 ].map((item, index) => (
                   <div key={index} className="flex items-center gap-2 text-gold-light/60">
                     <item.icon className="w-4 h-4 text-gold" />

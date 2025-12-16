@@ -1,6 +1,7 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
@@ -11,10 +12,20 @@ import { Search, SlidersHorizontal, Loader2 } from 'lucide-react';
 
 const ProductsPage = () => {
   const { country } = useStore();
+  const [searchParams, setSearchParams] = useSearchParams();
+  
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedBrand, setSelectedBrand] = useState('all');
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'all');
+  const [selectedBrand, setSelectedBrand] = useState(searchParams.get('brand') || 'all');
   const [showFilters, setShowFilters] = useState(false);
+
+  // Sync URL params with state
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    const brandParam = searchParams.get('brand');
+    if (categoryParam) setSelectedCategory(categoryParam);
+    if (brandParam) setSelectedBrand(brandParam);
+  }, [searchParams]);
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
@@ -80,14 +91,21 @@ const ProductsPage = () => {
   });
 
   const filteredProducts = useMemo(() => {
+    // Find category name from slug for filtering
+    const selectedCategoryData = categories.find(cat => cat.slug === selectedCategory);
+    const categoryNameToMatch = selectedCategoryData?.name || selectedCategoryData?.slug || selectedCategory;
+    
     return products.filter((product) => {
       const matchesSearch = product.nameAr.includes(searchQuery) || 
                            product.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesCategory = selectedCategory === 'all' || product.category?.trim() === selectedCategory?.trim();
+      // Match by category slug, name, or name_ar
+      const matchesCategory = selectedCategory === 'all' || 
+                             product.category?.trim() === selectedCategory?.trim() ||
+                             product.category?.trim() === categoryNameToMatch?.trim();
       const matchesBrand = selectedBrand === 'all' || product.brand?.trim() === selectedBrand?.trim();
       return matchesSearch && matchesCategory && matchesBrand;
     });
-  }, [products, searchQuery, selectedCategory, selectedBrand]);
+  }, [products, searchQuery, selectedCategory, selectedBrand, categories]);
 
   return (
     <div className="min-h-screen bg-background">
@@ -159,6 +177,7 @@ const ProductsPage = () => {
                     onClick={() => {
                       setSelectedCategory('all');
                       setSelectedBrand('all');
+                      setSearchParams({});
                     }}
                     className="text-xs text-gold hover:underline font-body"
                   >

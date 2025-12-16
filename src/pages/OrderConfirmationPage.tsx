@@ -5,7 +5,7 @@ import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import { Button } from '@/components/ui/button';
-import { CheckCircle, MessageCircle, FileText, Home, Copy, Download, Loader2, ExternalLink } from 'lucide-react';
+import { CheckCircle, MessageCircle, Home, Copy, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import Logo from '@/components/Logo';
 import { supabase } from '@/integrations/supabase/client';
@@ -50,9 +50,8 @@ const OrderConfirmationPage = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const [orderData, setOrderData] = useState<OrderData | null>(null);
-  const [invoiceSaved, setInvoiceSaved] = useState(false);
-  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
-  const [invoiceUrl, setInvoiceUrl] = useState<string | null>(null);
+  const [isConfirming, setIsConfirming] = useState(false);
+  const [isConfirmed, setIsConfirmed] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
   
   const currency = orderData?.country === 'SA' ? 'ريال' : 'ريال';
@@ -75,22 +74,10 @@ const OrderConfirmationPage = () => {
     }
   };
 
-  const handleWhatsApp = () => {
-    if (!orderData || !invoiceUrl) return;
-
-    const message = `مرحباً، أرغب في تأكيد الطلب رقم: ${orderData.orderNumber}
-
-رابط الفاتورة:
-${invoiceUrl}`;
-    
-    const whatsappUrl = `https://wa.me/${orderData.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
-    window.open(whatsappUrl, '_blank');
-  };
-
-  const handleGenerateAndUploadPdf = async () => {
+  const handleConfirmOrder = async () => {
     if (!orderData || !invoiceRef.current) return;
     
-    setIsGeneratingPdf(true);
+    setIsConfirming(true);
     
     try {
       // Dynamic imports
@@ -119,10 +106,7 @@ ${invoiceUrl}`;
       
       pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, 297));
       
-      // Save PDF locally first
-      pdf.save(`فاتورة-${orderData.orderNumber}.pdf`);
-      
-      // Then upload to storage
+      // Upload to storage
       const pdfBlob = pdf.output('blob');
       const fileName = `invoice-${orderData.orderNumber}-${Date.now()}.pdf`;
       
@@ -135,28 +119,39 @@ ${invoiceUrl}`;
       
       if (error) {
         console.error('Upload error:', error);
+        throw error;
       }
       
-      const { data: urlData } = supabase.storage
-        .from('invoices')
-        .getPublicUrl(fileName);
-      
-      setInvoiceUrl(urlData.publicUrl);
-      setInvoiceSaved(true);
+      setIsConfirmed(true);
       
       toast({
-        title: 'تم حفظ الفاتورة',
-        description: 'يمكنك إرسال الرابط عبر الواتساب',
+        title: 'تم تأكيد الطلب',
+        description: 'جاري فتح الواتساب...',
       });
+
+      // Open WhatsApp with simple message
+      setTimeout(() => {
+        const message = `طلب جديد ✨
+
+الاسم: ${orderData.customerName}
+الهاتف: ${orderData.customerPhone}
+رقم الفاتورة: ${orderData.orderNumber}
+
+يرجى مراجعة الطلب من لوحة التحكم`;
+        
+        const whatsappUrl = `https://wa.me/${orderData.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
+        window.open(whatsappUrl, '_blank');
+      }, 500);
+      
     } catch (error) {
-      console.error('PDF Error:', error);
+      console.error('Error:', error);
       toast({
         title: 'خطأ',
-        description: 'فشل في إنشاء الفاتورة',
+        description: 'فشل في تأكيد الطلب، حاول مرة أخرى',
         variant: 'destructive',
       });
     } finally {
-      setIsGeneratingPdf(false);
+      setIsConfirming(false);
     }
   };
 
@@ -181,19 +176,34 @@ ${invoiceUrl}`;
       <main className="pt-24 pb-16 print:pt-8">
         <div className="container mx-auto px-4 max-w-3xl">
           {/* Success Message */}
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center mb-8 print:hidden"
-          >
-            <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-4" />
-            <h1 className="font-heading text-3xl text-foreground mb-2">
-              تم إرسال طلبك بنجاح!
-            </h1>
-            <p className="text-muted-foreground font-body">
-              شكراً لك على طلبك. سيتم التواصل معك قريباً
-            </p>
-          </motion.div>
+          {isConfirmed ? (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center mb-8 print:hidden"
+            >
+              <CheckCircle className="w-20 h-20 text-green-500 mx-auto mb-4" />
+              <h1 className="font-heading text-3xl text-foreground mb-2">
+                تم تأكيد طلبك بنجاح!
+              </h1>
+              <p className="text-muted-foreground font-body">
+                شكراً لك. سيتم التواصل معك قريباً
+              </p>
+            </motion.div>
+          ) : (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="text-center mb-8 print:hidden"
+            >
+              <h1 className="font-heading text-3xl text-foreground mb-2">
+                تفاصيل الطلب
+              </h1>
+              <p className="text-muted-foreground font-body">
+                راجع الفاتورة ثم اضغط على زر تأكيد الطلب
+              </p>
+            </motion.div>
+          )}
 
           {/* Invoice */}
           <motion.div
@@ -201,7 +211,7 @@ ${invoiceUrl}`;
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white border-2 border-gold rounded-lg p-6 md:p-8 mb-8"
+            className="bg-white border-2 border-gold rounded-lg p-6 md:p-8 mb-6"
             id="invoice"
           >
             {/* Invoice Header */}
@@ -263,7 +273,6 @@ ${invoiceUrl}`;
                       <div className="flex-1">
                         <h4 className="font-heading text-gray-900">{item.product_name}</h4>
                         
-                        {/* Size */}
                         {item.selected_size && (
                           <p className="text-sm text-gray-600 mt-1">
                             <span className="font-medium">الحجم:</span> {item.selected_size}
@@ -279,7 +288,6 @@ ${invoiceUrl}`;
                       </span>
                     </div>
                     
-                    {/* Accessories with images */}
                     {item.selected_accessories && item.selected_accessories.length > 0 && (
                       <div className="mt-3 pt-3 border-t border-gray-200">
                         <p className="text-xs text-gray-500 mb-2">الملحقات:</p>
@@ -341,111 +349,49 @@ ${invoiceUrl}`;
             </div>
           </motion.div>
 
-          {/* Action Buttons */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="space-y-4 print:hidden"
-          >
-            {/* Step 1: Save Invoice Instructions */}
-            {!invoiceSaved && (
-              <div className="bg-gold/10 border border-gold/30 rounded-lg p-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-10 h-10 bg-gold/20 rounded-full flex items-center justify-center shrink-0">
-                    <span className="font-heading text-gold text-lg">١</span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="font-heading text-lg text-foreground mb-2">احفظ الفاتورة</h3>
-                    <p className="text-muted-foreground font-body text-sm mb-4">
-                      اضغط على الزر أدناه لتحميل الفاتورة كملف PDF على جهازك
-                    </p>
-                    <Button
-                      onClick={handleGenerateAndUploadPdf}
-                      disabled={isGeneratingPdf}
-                      className="btn-gold gap-2 w-full sm:w-auto"
-                      size="lg"
-                    >
-                      {isGeneratingPdf ? (
-                        <>
-                          <Loader2 className="w-5 h-5 animate-spin" />
-                          جاري التحميل...
-                        </>
-                      ) : (
-                        <>
-                          <Download className="w-5 h-5" />
-                          تحميل الفاتورة PDF
-                        </>
-                      )}
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* Step 2: Send via WhatsApp (shown after saving) */}
-            {invoiceSaved && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="space-y-4"
+          {/* Confirm Button */}
+          {!isConfirmed && (
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.4 }}
+              className="print:hidden"
+            >
+              <Button
+                onClick={handleConfirmOrder}
+                disabled={isConfirming}
+                className="w-full btn-gold gap-2 text-lg py-6"
+                size="lg"
               >
-                {/* Success message */}
-                <div className="bg-green-50 border border-green-200 rounded-lg p-4 flex items-center gap-3">
-                  <CheckCircle className="w-8 h-8 text-green-500 shrink-0" />
-                  <div>
-                    <p className="text-green-700 font-heading">تم تحميل الفاتورة بنجاح!</p>
-                    <p className="text-green-600 text-sm">تحقق من ملف التنزيلات في جهازك</p>
-                  </div>
-                </div>
+                {isConfirming ? (
+                  <>
+                    <Loader2 className="w-6 h-6 animate-spin" />
+                    جاري التأكيد...
+                  </>
+                ) : (
+                  <>
+                    <MessageCircle className="w-6 h-6" />
+                    تأكيد الطلب وإرسال عبر الواتساب
+                  </>
+                )}
+              </Button>
+            </motion.div>
+          )}
 
-                {/* WhatsApp Instructions */}
-                <div className="bg-green-50 border border-green-200 rounded-lg p-6">
-                  <div className="flex items-start gap-4">
-                    <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center shrink-0">
-                      <span className="font-heading text-green-600 text-lg">٢</span>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-heading text-lg text-foreground mb-2">أرسل الفاتورة عبر الواتساب</h3>
-                      <ol className="text-muted-foreground font-body text-sm mb-4 space-y-2 list-decimal list-inside">
-                        <li>اضغط على زر "فتح الواتساب" أدناه</li>
-                        <li>سيتم فتح محادثة جديدة</li>
-                        <li>اضغط على أيقونة المرفقات 📎</li>
-                        <li>اختر ملف الفاتورة PDF الذي قمت بتحميله</li>
-                        <li>أرسل الرسالة</li>
-                      </ol>
-                      <Button
-                        onClick={() => {
-                          const message = `مرحباً، أرغب في تأكيد الطلب رقم: ${orderData.orderNumber}
-
-سأقوم بإرفاق الفاتورة`;
-                          const whatsappUrl = `https://wa.me/${orderData.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
-                          window.open(whatsappUrl, '_blank');
-                        }}
-                        className="bg-green-600 hover:bg-green-700 text-white gap-2 w-full sm:w-auto"
-                        size="lg"
-                      >
-                        <MessageCircle className="w-5 h-5" />
-                        فتح الواتساب
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              </motion.div>
-            )}
-
-            {/* Home button always visible */}
-            <div className="flex justify-center pt-4">
-              <Link to="/home">
-                <Button
-                  variant="outline"
-                  className="border-border text-foreground hover:bg-muted gap-2"
-                >
-                  <Home className="w-5 h-5" />
-                  العودة للرئيسية
-                </Button>
-              </Link>
-            </div>
+          {/* Back to Home */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="text-center mt-6 print:hidden"
+          >
+            <Link 
+              to="/home" 
+              className="inline-flex items-center gap-2 text-muted-foreground hover:text-gold transition-colors font-body"
+            >
+              <Home className="w-4 h-4" />
+              العودة للرئيسية
+            </Link>
           </motion.div>
         </div>
       </main>

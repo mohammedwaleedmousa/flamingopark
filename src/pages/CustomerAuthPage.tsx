@@ -34,7 +34,7 @@ const CustomerAuthPage = () => {
     if (!detectedCountry) {
       toast({
         title: "خطأ",
-        description: "يرجى إدخال رقم هاتف صحيح (يبدأ بـ 055 للسعودية أو 7 لليمن)",
+        description: "يرجى إدخال رقم هاتف صحيح  )",
         variant: "destructive",
       });
       return;
@@ -44,7 +44,7 @@ const CustomerAuthPage = () => {
 
     try {
       // Use edge function for customer auth since customers table is protected
-      const response = await supabase.functions.invoke('customer-auth', {
+      const response = await supabase.functions.invoke("customer-auth", {
         body: {
           name: formData.name,
           phone: formData.phone,
@@ -53,7 +53,7 @@ const CustomerAuthPage = () => {
       });
 
       if (response.error) throw response.error;
-      
+
       const customer = response.data.customer;
 
       setCustomer({

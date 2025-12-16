@@ -7,8 +7,8 @@ const Footer = () => {
   const { country } = useStore();
 
   // Location based on country
-  const location = country === "YE" ? "عدن، اليمن" : "الرياض، المملكة العربية السعودية";
-  const phoneNumber = country === "YE" ? "+967 782676054" : "+966 557302919";
+  const location = country === "YE" ? "عدن، اليمن" : "جدة، المملكة العربية السعودية";
+  const phoneNumber = country === "YE" ? "+967 782676054" : "+966 12 345 6789";
 
   return (
     <footer className="bg-secondary text-gold-light/80">
@@ -99,7 +99,7 @@ const Footer = () => {
               </li>
               <li className="flex items-center gap-3">
                 <Mail className="w-4 h-4 text-gold" />
-                <span>info@ermgold.com</span>
+                <span>ermgold0.com</span>
               </li>
               <li className="flex items-start gap-3">
                 <MapPin className="w-4 h-4 text-gold mt-1" />

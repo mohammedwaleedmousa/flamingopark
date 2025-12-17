@@ -51,7 +51,7 @@ const BrandsStrip = () => {
     if (!isDragging || !containerRef.current) return;
     e.preventDefault();
     const x = e.pageX - containerRef.current.offsetLeft;
-    const walk = (x - startX) * 2;
+    const walk = (x - startX) * 1.5;
     containerRef.current.scrollLeft = scrollLeft - walk;
   };
 
@@ -69,7 +69,7 @@ const BrandsStrip = () => {
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging || !containerRef.current) return;
     const x = e.touches[0].pageX - containerRef.current.offsetLeft;
-    const walk = (x - startX) * 2;
+    const walk = (x - startX) * 1.5;
     containerRef.current.scrollLeft = scrollLeft - walk;
   };
 
@@ -77,7 +77,7 @@ const BrandsStrip = () => {
     <section className="bg-secondary py-4 md:py-5 overflow-hidden border-y border-gold/10">
       <div
         ref={containerRef}
-        className="flex items-center overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing select-none"
+        className="flex items-center overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing select-none scroll-smooth"
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
@@ -85,7 +85,7 @@ const BrandsStrip = () => {
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleMouseUp}
-        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none', scrollBehavior: 'smooth' }}
       >
         {brands.map((brand, index) => (
           <button

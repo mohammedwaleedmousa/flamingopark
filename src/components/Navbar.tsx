@@ -1,10 +1,10 @@
-import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
-import { ShoppingBag, Search, Menu, X, MapPin, Heart } from 'lucide-react';
-import { useState } from 'react';
-import { useStore } from '@/store/useStore';
-import { useFavorites } from '@/hooks/useFavorites';
-import Logo from '@/components/Logo';
+import { Link, useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
+import { ShoppingBag, Search, Menu, X, MapPin, Heart } from "lucide-react";
+import { useState } from "react";
+import { useStore } from "@/store/useStore";
+import { useFavorites } from "@/hooks/useFavorites";
+import Logo from "@/components/Logo";
 
 const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -15,18 +15,18 @@ const Navbar = () => {
   const navigate = useNavigate();
 
   const navLinks = [
-    { href: '/home', label: 'الرئيسية', labelEn: 'Home' },
-    { href: '/products', label: 'المنتجات', labelEn: 'Products' },
-    { href: '/offers', label: 'العروض', labelEn: 'Offers' },
-    { href: '/favorites', label: 'المفضلة', labelEn: 'Favorites' },
-    { href: '/reviews', label: 'التقييمات', labelEn: 'Reviews' },
-    { href: '/about', label: 'من نحن', labelEn: 'About' },
+    { href: "/home", label: "الرئيسية", labelEn: "Home" },
+    { href: "/products", label: "المنتجات", labelEn: "Products" },
+    { href: "/offers", label: "العروض", labelEn: "Offers" },
+    { href: "/favorites", label: "المفضلة", labelEn: "Favorites" },
+    { href: "/reviews", label: "التقييمات", labelEn: "Reviews" },
+    { href: "/about", label: "من نحن", labelEn: "About" },
   ];
 
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
       {/* Main Navbar - Black background */}
-      <div className="bg-secondary border-b border-gold/10">
+      <div className="bg-black border-b border-gold/10">
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16 md:h-18">
             {/* Left: Menu Button & Favorites */}
@@ -98,7 +98,7 @@ const Navbar = () => {
         {isSearchOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
+            animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.2 }}
             className="overflow-hidden bg-secondary border-b border-gold/10"
@@ -124,7 +124,7 @@ const Navbar = () => {
         {isMenuOpen && (
           <motion.div
             initial={{ height: 0, opacity: 0 }}
-            animate={{ height: 'auto', opacity: 1 }}
+            animate={{ height: "auto", opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
             transition={{ duration: 0.3 }}
             className="overflow-hidden bg-secondary border-b border-gold/10 shadow-lg"
@@ -149,19 +149,19 @@ const Navbar = () => {
                   </motion.div>
                 ))}
               </div>
-              
+
               {/* Country Selector */}
               <div className="mt-6 pt-4 border-t border-gold/20">
                 <button
                   onClick={() => {
-                    navigate('/select-country');
+                    navigate("/select-country");
                     setIsMenuOpen(false);
                   }}
                   className="flex items-center justify-center gap-2 w-full py-3 text-gold/70 hover:text-gold transition-colors"
                 >
                   <MapPin className="w-4 h-4" />
                   <span className="font-body text-sm">
-                    {country === 'SA' ? '🇸🇦 السعودية' : country === 'YE' ? '🇾🇪 اليمن' : 'اختر الموقع'}
+                    {country === "SA" ? "🇸🇦 السعودية" : country === "YE" ? "🇾🇪 اليمن" : "اختر الموقع"}
                   </span>
                 </button>
               </div>

@@ -105,10 +105,10 @@ const HomePage = () => {
                   <Link
                     key={`${category.name}-${index}`}
                     to={`/products?category=${category.slug}`}
-                    className="group flex-shrink-0 bg-card rounded-xl border-2 border-gold/30 hover:border-gold transition-all duration-300 hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.4)] min-w-[100px] sm:min-w-[120px] md:min-w-[150px] flex flex-col"
+                    className="group flex-shrink-0 p-4 md:p-6 bg-card rounded-xl border-2 border-gold/30 hover:border-gold transition-all duration-300 hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.4)] text-center min-w-[100px] md:min-w-[130px] flex flex-col"
                   >
-                    {/* الصورة مربعة */}
-                    <div className="w-full aspect-square overflow-hidden rounded-t-xl">
+                    {/* الصورة تغطي كامل الإطار */}
+                    <div className="w-full h-32 md:h-36 overflow-hidden rounded-t-xl">
                       {category.image_url ? (
                         <img
                           src={category.image_url}
@@ -123,7 +123,7 @@ const HomePage = () => {
                     </div>
 
                     {/* الاسم تحت الصورة */}
-                    <h3 className="font-heading text-sm sm:text-base md:text-lg text-foreground group-hover:text-gold transition-colors text-center py-2">
+                    <h3 className="font-heading text-base md:text-lg text-foreground group-hover:text-gold transition-colors mt-2">
                       {category.name_ar}
                     </h3>
                   </Link>

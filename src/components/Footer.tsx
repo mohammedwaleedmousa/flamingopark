@@ -22,21 +22,15 @@ const Footer = () => {
               <a
                 href="#"
                 className="p-2 border border-gold/30 rounded-full hover:bg-gold hover:text-secondary transition-all duration-300"
-              >
-                <Instagram className="w-4 h-4" />
-              </a>
+              ></a>
               <a
                 href="#"
                 className="p-2 border border-gold/30 rounded-full hover:bg-gold hover:text-secondary transition-all duration-300"
-              >
-                <Facebook className="w-4 h-4" />
-              </a>
+              ></a>
               <a
                 href="#"
                 className="p-2 border border-gold/30 rounded-full hover:bg-gold hover:text-secondary transition-all duration-300"
-              >
-                <Twitter className="w-4 h-4" />
-              </a>
+              ></a>
             </div>
           </div>
 

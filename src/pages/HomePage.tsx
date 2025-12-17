@@ -92,6 +92,7 @@ const HomePage = () => {
             </div>
 
             {/* Draggable Categories Strip */}
+            {/* Draggable Categories Strip */}
             <div
               className="relative overflow-x-auto px-4 scrollbar-hide cursor-grab active:cursor-grabbing"
               style={{
@@ -99,25 +100,30 @@ const HomePage = () => {
                 msOverflowStyle: "none",
               }}
             >
-              <div className="flex items-center gap-4 md:gap-6 pb-2">
+              <div className="flex items-start gap-4 md:gap-6 pb-2">
                 {categories.map((category, index) => (
                   <Link
                     key={`${category.name}-${index}`}
                     to={`/products?category=${category.slug}`}
-                    className="group flex-shrink-0 p-4 md:p-6 bg-card rounded-xl border-2 border-gold/30 hover:border-gold transition-all duration-300 hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.4)] text-center min-w-[100px] md:min-w-[130px]"
+                    className="group flex-shrink-0 bg-card rounded-xl border-2 border-gold/30 hover:border-gold transition-all duration-300 hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.4)] min-w-[100px] md:min-w-[130px]"
                   >
-                    {category.image_url ? (
-                      <img
-                        src={category.image_url}
-                        alt={category.name_ar}
-                        className="w-12 h-12 md:w-16 md:h-16 object-contain mx-auto mb-3 group-hover:scale-110 transition-transform duration-300"
-                      />
-                    ) : (
-                      <span className="text-3xl md:text-4xl block mb-3 group-hover:scale-110 transition-transform duration-300">
-                        ✨
-                      </span>
-                    )}
-                    <h3 className="font-heading text-base md:text-lg text-foreground group-hover:text-gold transition-colors">
+                    {/* الصورة تغطي كامل الإطار */}
+                    <div className="w-full h-32 md:h-36 overflow-hidden rounded-t-xl">
+                      {category.image_url ? (
+                        <img
+                          src={category.image_url}
+                          alt={category.name_ar}
+                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                        />
+                      ) : (
+                        <div className="w-full h-full bg-muted flex items-center justify-center text-3xl md:text-4xl">
+                          ✨
+                        </div>
+                      )}
+                    </div>
+
+                    {/* الاسم تحت الصورة */}
+                    <h3 className="font-heading text-base md:text-lg text-foreground group-hover:text-gold transition-colors text-center py-2">
                       {category.name_ar}
                     </h3>
                   </Link>

@@ -102,13 +102,11 @@ const HomePage = () => {
             >
               <div className="flex items-start gap-4 md:gap-6 pb-2">
                 {categories.map((category, index) => (
-                  <Link
-                    key={`${category.name}-${index}`}
-                    to={`/products?category=${category.slug}`}
-                    className="group flex-shrink-0 p-4 md:p-6 bg-card rounded-xl border-2 border-gold/30 hover:border-gold transition-all duration-300 hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.4)] text-center min-w-[100px] md:min-w-[130px] flex flex-col"
-                  >
-                    {/* الصورة تغطي كامل الإطار */}
-                    <div className="w-full h-32 md:h-36 overflow-hidden rounded-t-xl">
+                  <div key={`${category.name}-${index}`} className="flex flex-col items-center">
+                    <Link
+                      to={`/products?category=${category.slug}`}
+                      className="group flex-shrink-0 bg-card rounded-xl border-2 border-gold/30 hover:border-gold transition-all duration-300 hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.4)] w-24 h-24 md:w-28 md:h-28 overflow-hidden"
+                    >
                       {category.image_url ? (
                         <img
                           src={category.image_url}
@@ -116,17 +114,17 @@ const HomePage = () => {
                           className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
                         />
                       ) : (
-                        <div className="w-full h-full bg-muted flex items-center justify-center text-3xl md:text-4xl">
+                        <div className="w-full h-full bg-muted flex items-center justify-center text-2xl md:text-3xl">
                           ✨
                         </div>
                       )}
-                    </div>
+                    </Link>
 
                     {/* الاسم تحت الصورة */}
-                    <h3 className="font-heading text-base md:text-lg text-foreground group-hover:text-gold transition-colors mt-2">
+                    <h3 className="font-heading text-xs md:text-sm text-foreground group-hover:text-gold mt-2 text-center">
                       {category.name_ar}
                     </h3>
-                  </Link>
+                  </div>
                 ))}
               </div>
             </div>

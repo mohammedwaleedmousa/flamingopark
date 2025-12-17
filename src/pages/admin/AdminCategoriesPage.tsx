@@ -5,6 +5,8 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Slider } from '@/components/ui/slider';
 import {
   Dialog,
   DialogContent,
@@ -12,7 +14,7 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { toast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Upload, Grid3X3, Search, Loader2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, Upload, Grid3X3, Search, Loader2, X, ZoomIn, Move } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -24,6 +26,7 @@ interface Category {
   image_url: string | null;
   is_active: boolean | null;
   sort_order: number | null;
+  countries: string[] | null;
 }
 
 const AdminCategoriesPage = () => {
@@ -38,6 +41,10 @@ const AdminCategoriesPage = () => {
     image_url: '',
     is_active: true,
     sort_order: 0,
+    countries: ['SA', 'YE'] as string[],
+    image_zoom: 1,
+    image_position_x: 50,
+    image_position_y: 50,
   });
   const [uploading, setUploading] = useState(false);
 
@@ -68,6 +75,7 @@ const AdminCategoriesPage = () => {
             image_url: data.image_url || null,
             is_active: data.is_active,
             sort_order: data.sort_order,
+            countries: data.countries,
           })
           .eq('id', data.id)
           .select();
@@ -84,6 +92,7 @@ const AdminCategoriesPage = () => {
             image_url: data.image_url || null,
             is_active: data.is_active,
             sort_order: data.sort_order,
+            countries: data.countries,
           })
           .select();
         
@@ -160,6 +169,10 @@ const AdminCategoriesPage = () => {
       image_url: '',
       is_active: true,
       sort_order: 0,
+      countries: ['SA', 'YE'],
+      image_zoom: 1,
+      image_position_x: 50,
+      image_position_y: 50,
     });
     setEditingCategory(null);
     setIsDialogOpen(false);
@@ -174,8 +187,21 @@ const AdminCategoriesPage = () => {
       image_url: category.image_url || '',
       is_active: category.is_active ?? true,
       sort_order: category.sort_order ?? 0,
+      countries: category.countries || ['SA', 'YE'],
+      image_zoom: 1,
+      image_position_x: 50,
+      image_position_y: 50,
     });
     setIsDialogOpen(true);
+  };
+
+  const toggleCountry = (country: string) => {
+    setFormData(prev => ({
+      ...prev,
+      countries: prev.countries.includes(country)
+        ? prev.countries.filter(c => c !== country)
+        : [...prev.countries, country],
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -471,19 +497,88 @@ const AdminCategoriesPage = () => {
                   <Label>الصورة</Label>
                   <div className="flex flex-col gap-3">
                     {formData.image_url ? (
-                      <div className="relative w-fit">
-                        <img
-                          src={formData.image_url}
-                          alt="Preview"
-                          className="h-24 w-24 object-cover bg-muted rounded-lg border border-border"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setFormData({ ...formData, image_url: '' })}
-                          className="absolute -top-2 -right-2 w-6 h-6 bg-destructive text-destructive-foreground rounded-full flex items-center justify-center"
-                        >
-                          <X className="w-3 h-3" />
-                        </button>
+                      <div className="space-y-4">
+                        {/* Image Preview with positioning */}
+                        <div className="relative border border-border rounded overflow-hidden" style={{ height: '150px' }}>
+                          <img 
+                            src={formData.image_url} 
+                            alt="Preview"
+                            className="w-full h-full"
+                            style={{
+                              objectFit: 'cover',
+                              transform: `scale(${formData.image_zoom})`,
+                              objectPosition: `${formData.image_position_x}% ${formData.image_position_y}%`,
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, image_url: '' })}
+                            className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {/* Image Controls */}
+                        <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                          {/* Zoom */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <ZoomIn className="w-4 h-4 text-muted-foreground" />
+                              <label className="text-xs text-muted-foreground">التكبير: {formData.image_zoom.toFixed(1)}x</label>
+                            </div>
+                            <Slider
+                              value={[formData.image_zoom]}
+                              onValueChange={([v]) => setFormData({ ...formData, image_zoom: v })}
+                              min={1}
+                              max={2}
+                              step={0.1}
+                              className="w-full"
+                            />
+                          </div>
+
+                          {/* Position X */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Move className="w-4 h-4 text-muted-foreground" />
+                              <label className="text-xs text-muted-foreground">الموضع الأفقي: {formData.image_position_x}%</label>
+                            </div>
+                            <Slider
+                              value={[formData.image_position_x]}
+                              onValueChange={([v]) => setFormData({ ...formData, image_position_x: v })}
+                              min={0}
+                              max={100}
+                              step={1}
+                              className="w-full"
+                            />
+                          </div>
+
+                          {/* Position Y */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Move className="w-4 h-4 text-muted-foreground rotate-90" />
+                              <label className="text-xs text-muted-foreground">الموضع العمودي: {formData.image_position_y}%</label>
+                            </div>
+                            <Slider
+                              value={[formData.image_position_y]}
+                              onValueChange={([v]) => setFormData({ ...formData, image_position_y: v })}
+                              min={0}
+                              max={100}
+                              step={1}
+                              className="w-full"
+                            />
+                          </div>
+
+                          {/* Reset Button */}
+                          <Button 
+                            type="button"
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => setFormData({ ...formData, image_zoom: 1, image_position_x: 50, image_position_y: 50 })}
+                          >
+                            إعادة تعيين الموضع
+                          </Button>
+                        </div>
                       </div>
                     ) : (
                       <label className="cursor-pointer">
@@ -505,6 +600,27 @@ const AdminCategoriesPage = () => {
                         </div>
                       </label>
                     )}
+                  </div>
+                </div>
+
+                {/* Countries Selection */}
+                <div className="space-y-2">
+                  <Label>الدول</Label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={formData.countries.includes('SA')}
+                        onCheckedChange={() => toggleCountry('SA')}
+                      />
+                      <span className="text-sm">🇸🇦 السعودية</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={formData.countries.includes('YE')}
+                        onCheckedChange={() => toggleCountry('YE')}
+                      />
+                      <span className="text-sm">🇾🇪 اليمن</span>
+                    </label>
                   </div>
                 </div>
 

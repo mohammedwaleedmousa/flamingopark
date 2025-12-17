@@ -103,6 +103,7 @@ export type Database = {
       }
       categories: {
         Row: {
+          countries: string[] | null
           created_at: string
           id: string
           image_url: string | null
@@ -113,6 +114,7 @@ export type Database = {
           sort_order: number | null
         }
         Insert: {
+          countries?: string[] | null
           created_at?: string
           id?: string
           image_url?: string | null
@@ -123,6 +125,7 @@ export type Database = {
           sort_order?: number | null
         }
         Update: {
+          countries?: string[] | null
           created_at?: string
           id?: string
           image_url?: string | null

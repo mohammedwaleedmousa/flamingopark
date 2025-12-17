@@ -7,7 +7,7 @@ const Footer = () => {
   const { country } = useStore();
 
   // Location based on country
-  const location = country === "YE" ? "عدن، اليمن" : "الرياض، المملكة العربية السعودية";
+  const location = country === "YE" ? "عدن، اليمن" : "جدة، المملكة العربية السعودية";
   const phoneNumber = country === "YE" ? "+967 782676054" : "+966 557302919";
 
   return (

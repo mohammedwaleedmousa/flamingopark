@@ -477,9 +477,6 @@ const OffersPage = () => {
             >
               <Sparkles className="w-10 h-10 text-gold mx-auto mb-4" />
               <h2 className="font-heading text-2xl md:text-3xl text-foreground mb-4">لا تفوت أي عرض!</h2>
-              <p className="text-muted-foreground font-body mb-6">
-                تابعنا على وسائل التواصل الاجتماعي لتكون أول من يعلم بالعروض الجديدة
-              </p>
             </motion.div>
           </div>
         </section>

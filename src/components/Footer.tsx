@@ -18,20 +18,7 @@ const Footer = () => {
           <div className="md:col-span-1">
             <Logo size="sm" className="mb-4" />
             <p className="font-body text-sm leading-relaxed opacity-70">مجوهرات فاخرة بأعلى معايير الجودة والأناقة</p>
-            <div className="flex items-center gap-4 mt-6">
-              <a
-                href="#"
-                className="p-2 border border-gold/30 rounded-full hover:bg-gold hover:text-secondary transition-all duration-300"
-              ></a>
-              <a
-                href="#"
-                className="p-2 border border-gold/30 rounded-full hover:bg-gold hover:text-secondary transition-all duration-300"
-              ></a>
-              <a
-                href="#"
-                className="p-2 border border-gold/30 rounded-full hover:bg-gold hover:text-secondary transition-all duration-300"
-              ></a>
-            </div>
+            <div className="flex items-center gap-4 mt-6"></div>
           </div>
 
           {/* Quick Links */}

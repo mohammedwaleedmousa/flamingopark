@@ -166,7 +166,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: "#ffffff",
+        backgroundColor: "#FAF8F5",
         logging: false,
       });
 

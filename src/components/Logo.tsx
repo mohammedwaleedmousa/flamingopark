@@ -1,4 +1,4 @@
-import ermgoldLogo from '@/assets/ermgold-logo-final.jpeg';
+import ermgoldLogo from '@/assets/ermgold-logo-new.jpeg';
 
 interface LogoProps {
   size?: 'sm' | 'md' | 'lg' | 'xl';

@@ -7,8 +7,8 @@ import CartDrawer from '@/components/CartDrawer';
 import { Button } from '@/components/ui/button';
 import { CheckCircle, MessageCircle, Home, Copy, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
-import Logo from '@/components/Logo';
 import { supabase } from '@/integrations/supabase/client';
+import ermgoldLogo from '@/assets/ermgold-logo-new.jpeg';
 
 interface SelectedAccessory {
   name: string;
@@ -86,15 +86,17 @@ const OrderConfirmationPage = () => {
       const html2canvasFn = html2canvasModule.default;
       const jsPDFClass = jsPDFModule.default;
 
+      // Use lower scale for faster generation
       const canvas = await html2canvasFn(invoiceRef.current, {
-        scale: 2,
+        scale: 1,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
+        imageTimeout: 5000,
       });
       
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL('image/jpeg', 0.8);
       const pdf = new jsPDFClass({
         orientation: 'portrait',
         unit: 'mm',
@@ -104,7 +106,7 @@ const OrderConfirmationPage = () => {
       const imgWidth = 210;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
       
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, 297));
+      pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, 297));
       
       // Upload to storage
       const pdfBlob = pdf.output('blob');
@@ -129,19 +131,17 @@ const OrderConfirmationPage = () => {
         description: 'جاري فتح الواتساب...',
       });
 
-      // Open WhatsApp with simple message
-      setTimeout(() => {
-        const message = `طلب جديد ✨
+      // Open WhatsApp immediately
+      const message = `طلب جديد ✨
 
 الاسم: ${orderData.customerName}
 الهاتف: ${orderData.customerPhone}
 رقم الفاتورة: ${orderData.orderNumber}
 
 يرجى مراجعة الطلب من لوحة التحكم`;
-        
-        const whatsappUrl = `https://wa.me/${orderData.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
-        window.open(whatsappUrl, '_blank');
-      }, 500);
+      
+      const whatsappUrl = `https://wa.me/${orderData.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
+      window.location.href = whatsappUrl;
       
     } catch (error) {
       console.error('Error:', error);
@@ -217,7 +217,7 @@ const OrderConfirmationPage = () => {
             {/* Invoice Header */}
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
               <div>
-                <Logo size="md" />
+                <img src={ermgoldLogo} alt="ERMGOLD" className="h-16 w-auto object-contain" />
                 <p className="text-sm text-gray-500 mt-1">فاتورة طلب</p>
               </div>
               <div className="text-left">

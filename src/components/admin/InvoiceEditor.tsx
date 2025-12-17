@@ -1,16 +1,11 @@
-import { useState, useRef, useEffect, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { toast } from '@/hooks/use-toast';
-import { Loader2, Save, Printer, X, Pencil, Download } from 'lucide-react';
+import { useState, useRef, useEffect, useMemo } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { toast } from "@/hooks/use-toast";
+import { Loader2, Save, Printer, X, Pencil, Download } from "lucide-react";
 
 interface SelectedAccessory {
   name: string;
@@ -76,10 +71,10 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
     if (!currentOrder) return { subtotal: 0, total: 0, deliveryFee: 0 };
 
     let subtotal = 0;
-    currentOrder.items.forEach(item => {
+    currentOrder.items.forEach((item) => {
       subtotal += item.price * item.quantity;
       if (item.selected_accessories) {
-        item.selected_accessories.forEach(acc => {
+        item.selected_accessories.forEach((acc) => {
           subtotal += acc.price * acc.quantity;
         });
       }
@@ -93,9 +88,9 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
 
   const handleStartEdit = () => {
     if (order) {
-      setEditedOrder({ 
-        ...order, 
-        items: order.items.map(item => ({ ...item }))
+      setEditedOrder({
+        ...order,
+        items: order.items.map((item) => ({ ...item })),
       });
       setIsEditing(true);
     }
@@ -114,7 +109,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
       const { subtotal, total } = calculatedTotals;
 
       const { error } = await supabase
-        .from('orders')
+        .from("orders")
         .update({
           customer_name: editedOrder.customer_name,
           customer_phone: editedOrder.customer_phone,
@@ -125,24 +120,24 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
           total,
           delivery_fee: editedOrder.delivery_fee,
         })
-        .eq('id', editedOrder.id);
+        .eq("id", editedOrder.id);
 
       if (error) throw error;
 
       toast({
-        title: 'تم الحفظ',
-        description: 'تم تحديث بيانات الطلب بنجاح',
+        title: "تم الحفظ",
+        description: "تم تحديث بيانات الطلب بنجاح",
       });
 
       setIsEditing(false);
       setEditedOrder(null);
       onUpdate();
     } catch (error) {
-      console.error('Error updating order:', error);
+      console.error("Error updating order:", error);
       toast({
-        title: 'خطأ',
-        description: 'فشل في تحديث الطلب',
-        variant: 'destructive',
+        title: "خطأ",
+        description: "فشل في تحديث الطلب",
+        variant: "destructive",
       });
     } finally {
       setIsSaving(false);
@@ -155,62 +150,60 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
 
   const handleDownloadPdf = async () => {
     if (!order) return;
-    
+
     setIsGeneratingPdf(true);
-    
+
     try {
       // Dynamic import to avoid SSR issues
-      const html2canvas = (await import('html2canvas')).default;
-      const jsPDF = (await import('jspdf')).default;
-      
+      const html2canvas = (await import("html2canvas")).default;
+      const jsPDF = (await import("jspdf")).default;
+
       if (!invoiceRef.current) {
-        throw new Error('Invoice element not found');
+        throw new Error("Invoice element not found");
       }
 
       const canvas = await html2canvas(invoiceRef.current, {
         scale: 2,
         useCORS: true,
         allowTaint: true,
-        backgroundColor: '#ffffff',
+        backgroundColor: "#ffffff",
         logging: false,
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({
-        orientation: 'portrait',
-        unit: 'mm',
-        format: 'a4',
+        orientation: "portrait",
+        unit: "mm",
+        format: "a4",
       });
 
       const imgWidth = 210;
       const imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      pdf.addImage(imgData, 'PNG', 0, 0, imgWidth, Math.min(imgHeight, 297));
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, Math.min(imgHeight, 297));
 
       // Save locally
       pdf.save(`فاتورة-${order.order_number}.pdf`);
 
       // Upload to storage
-      const pdfBlob = pdf.output('blob');
+      const pdfBlob = pdf.output("blob");
       const fileName = `invoice-${order.order_number}-${Date.now()}.pdf`;
-      
-      await supabase.storage
-        .from('invoices')
-        .upload(fileName, pdfBlob, {
-          contentType: 'application/pdf',
-          cacheControl: '3600',
-        });
+
+      await supabase.storage.from("invoices").upload(fileName, pdfBlob, {
+        contentType: "application/pdf",
+        cacheControl: "3600",
+      });
 
       toast({
-        title: 'تم',
-        description: 'تم حفظ الفاتورة بنجاح',
+        title: "تم",
+        description: "تم حفظ الفاتورة بنجاح",
       });
     } catch (error) {
-      console.error('PDF Error:', error);
+      console.error("PDF Error:", error);
       toast({
-        title: 'خطأ',
-        description: 'فشل في إنشاء الفاتورة',
-        variant: 'destructive',
+        title: "خطأ",
+        description: "فشل في إنشاء الفاتورة",
+        variant: "destructive",
       });
     } finally {
       setIsGeneratingPdf(false);
@@ -225,7 +218,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
   };
 
   const displayOrder = isEditing ? editedOrder : order;
-  const currency = displayOrder?.country === 'SA' ? 'ر.س' : 'ر.ي';
+  const currency = displayOrder?.country === "SA" ? "ر.س" : "ر.ي";
 
   if (!displayOrder) return null;
 
@@ -245,17 +238,8 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                   <Button variant="ghost" size="sm" onClick={handlePrint} className="h-8 px-2">
                     <Printer className="w-4 h-4" />
                   </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={handleDownloadPdf}
-                    disabled={isGeneratingPdf}
-                    className="h-8 px-2"
-                  >
-                    {isGeneratingPdf ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : (
-                      <Download className="w-4 h-4" />
-                    )}
+                  <Button size="sm" onClick={handleDownloadPdf} disabled={isGeneratingPdf} className="h-8 px-2">
+                    {isGeneratingPdf ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
                   </Button>
                 </>
               ) : (
@@ -263,12 +247,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                   <Button variant="ghost" size="sm" onClick={handleCancelEdit} className="h-8 px-2">
                     <X className="w-4 h-4" />
                   </Button>
-                  <Button 
-                    size="sm" 
-                    onClick={handleSaveChanges}
-                    disabled={isSaving}
-                    className="h-8 px-2"
-                  >
+                  <Button size="sm" onClick={handleSaveChanges} disabled={isSaving} className="h-8 px-2">
                     {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                   </Button>
                 </>
@@ -279,8 +258,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
 
         {/* Invoice Content */}
         <div className="flex-1 overflow-y-auto p-4">
-          <div ref={invoiceRef} className="bg-white rounded-lg p-4 space-y-4 text-sm print:p-0">
-            
+          <div ref={invoiceRef} className="bg-[#F5F5F5] rounded-lg p-4 space-y-4 text-sm print:p-0">
             {/* Header */}
             <div className="flex justify-between items-start border-b pb-3">
               <div>
@@ -289,9 +267,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
               </div>
               <div className="text-left text-xs">
                 <p className="font-mono font-bold">{displayOrder.order_number}</p>
-                <p className="text-muted-foreground">
-                  {new Date(displayOrder.created_at).toLocaleDateString('ar-SA')}
-                </p>
+                <p className="text-muted-foreground">{new Date(displayOrder.created_at).toLocaleDateString("ar-SA")}</p>
               </div>
             </div>
 
@@ -302,14 +278,18 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                 {isEditing ? (
                   <div className="space-y-1">
                     <Input
-                      value={editedOrder?.customer_name || ''}
-                      onChange={(e) => setEditedOrder(prev => prev ? { ...prev, customer_name: e.target.value } : null)}
+                      value={editedOrder?.customer_name || ""}
+                      onChange={(e) =>
+                        setEditedOrder((prev) => (prev ? { ...prev, customer_name: e.target.value } : null))
+                      }
                       className="h-7 text-xs"
                       placeholder="الاسم"
                     />
                     <Input
-                      value={editedOrder?.customer_phone || ''}
-                      onChange={(e) => setEditedOrder(prev => prev ? { ...prev, customer_phone: e.target.value } : null)}
+                      value={editedOrder?.customer_phone || ""}
+                      onChange={(e) =>
+                        setEditedOrder((prev) => (prev ? { ...prev, customer_phone: e.target.value } : null))
+                      }
                       className="h-7 text-xs"
                       dir="ltr"
                       placeholder="الهاتف"
@@ -318,7 +298,9 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                 ) : (
                   <>
                     <p className="font-medium">{displayOrder.customer_name}</p>
-                    <p dir="ltr" className="text-left">{displayOrder.customer_phone}</p>
+                    <p dir="ltr" className="text-left">
+                      {displayOrder.customer_phone}
+                    </p>
                   </>
                 )}
               </div>
@@ -326,8 +308,10 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                 <p className="text-muted-foreground mb-1">العنوان</p>
                 {isEditing ? (
                   <Input
-                    value={editedOrder?.customer_address || ''}
-                    onChange={(e) => setEditedOrder(prev => prev ? { ...prev, customer_address: e.target.value } : null)}
+                    value={editedOrder?.customer_address || ""}
+                    onChange={(e) =>
+                      setEditedOrder((prev) => (prev ? { ...prev, customer_address: e.target.value } : null))
+                    }
                     className="h-7 text-xs"
                   />
                 ) : (
@@ -343,34 +327,30 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                 {displayOrder.items.map((item, index) => {
                   const itemTotal = item.price * item.quantity;
                   const accTotal = item.selected_accessories?.reduce((s, a) => s + a.price * a.quantity, 0) || 0;
-                  
+
                   return (
                     <div key={index} className="flex gap-2 p-2 bg-muted/30 rounded">
-                      <img
-                        src={item.product_image}
-                        alt=""
-                        className="w-10 h-10 object-cover rounded flex-shrink-0"
-                      />
+                      <img src={item.product_image} alt="" className="w-10 h-10 object-cover rounded flex-shrink-0" />
                       <div className="flex-1 min-w-0">
                         {isEditing ? (
                           <div className="space-y-1">
                             <Input
                               value={item.product_name}
-                              onChange={(e) => updateItemField(index, 'product_name', e.target.value)}
+                              onChange={(e) => updateItemField(index, "product_name", e.target.value)}
                               className="h-6 text-xs"
                             />
                             <div className="flex gap-1">
                               <Input
                                 type="number"
                                 value={item.quantity}
-                                onChange={(e) => updateItemField(index, 'quantity', parseInt(e.target.value) || 1)}
+                                onChange={(e) => updateItemField(index, "quantity", parseInt(e.target.value) || 1)}
                                 className="h-6 text-xs w-14"
                                 placeholder="كمية"
                               />
                               <Input
                                 type="number"
                                 value={item.price}
-                                onChange={(e) => updateItemField(index, 'price', parseFloat(e.target.value) || 0)}
+                                onChange={(e) => updateItemField(index, "price", parseFloat(e.target.value) || 0)}
                                 className="h-6 text-xs w-20"
                                 placeholder="سعر"
                               />
@@ -400,7 +380,9 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
             <div className="border-t pt-3 space-y-1 text-xs">
               <div className="flex justify-between">
                 <span className="text-muted-foreground">المجموع</span>
-                <span>{calculatedTotals.subtotal.toFixed(0)} {currency}</span>
+                <span>
+                  {calculatedTotals.subtotal.toFixed(0)} {currency}
+                </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">التوصيل</span>
@@ -408,20 +390,28 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                   <Input
                     type="number"
                     value={editedOrder?.delivery_fee || 0}
-                    onChange={(e) => setEditedOrder(prev => prev ? { ...prev, delivery_fee: parseFloat(e.target.value) || 0 } : null)}
+                    onChange={(e) =>
+                      setEditedOrder((prev) =>
+                        prev ? { ...prev, delivery_fee: parseFloat(e.target.value) || 0 } : null,
+                      )
+                    }
                     className="h-6 text-xs w-20"
                   />
                 ) : (
-                  <span>{calculatedTotals.deliveryFee.toFixed(0)} {currency}</span>
+                  <span>
+                    {calculatedTotals.deliveryFee.toFixed(0)} {currency}
+                  </span>
                 )}
               </div>
               <div className="flex justify-between font-bold text-base pt-1 border-t">
                 <span>الإجمالي</span>
-                <span className="text-primary">{calculatedTotals.total.toFixed(0)} {currency}</span>
+                <span className="text-primary">
+                  {calculatedTotals.total.toFixed(0)} {currency}
+                </span>
               </div>
               <div className="flex justify-between text-muted-foreground pt-1">
                 <span>الدفع</span>
-                <span>{displayOrder.payment_method === 'cod' ? 'عند الاستلام' : 'تحويل'}</span>
+                <span>{displayOrder.payment_method === "cod" ? "عند الاستلام" : "تحويل"}</span>
               </div>
             </div>
           </div>

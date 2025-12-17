@@ -16,7 +16,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}
           <div className="md:col-span-1">
-            <Logo size="lg" className="mb-4" />
+            <Logo size="sm" className="mb-4" />
             <p className="font-body text-sm leading-relaxed opacity-70">مجوهرات فاخرة بأعلى معايير الجودة والأناقة</p>
             <div className="flex items-center gap-4 mt-6">
               <a

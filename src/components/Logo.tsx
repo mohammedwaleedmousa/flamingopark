@@ -1,7 +1,11 @@
-import ermgoldLogo from "@/assets/ermgold-logo-final.jpeg";
+import logoRegister from "@/assets/ermgold-logo-new.jpeg";
+import logoNav from "@/assets/ermgold-logo-final.jpeg";
+import logoFooter from "@/assets/ermgold-logo-footer.jpeg";
+import logoInvoice from "@/assets/ermgold-logo-new.jpeg";
 
 interface LogoProps {
   size?: "sm" | "md" | "lg" | "xl";
+  variant?: "register" | "nav" | "footer" | "invoice";
   className?: string;
 }
 
@@ -12,8 +16,21 @@ const sizeClasses = {
   xl: "h-44 w-auto",
 };
 
-const Logo = ({ size = "md", className = "" }: LogoProps) => {
-  return <img src={ermgoldLogo} alt="ERMGOLD Logo" className={`object-contain ${sizeClasses[size]} ${className}`} />;
+const logos = {
+  register: logoRegister,
+  nav: logoNav,
+  footer: logoFooter,
+  invoice: logoInvoice,
+};
+
+const Logo = ({ size = "md", variant = "nav", className = "" }: LogoProps) => {
+  return (
+    <img
+      src={logos[variant]}
+      alt={`ERMGOLD Logo - ${variant}`}
+      className={`object-contain ${sizeClasses[size]} ${className}`}
+    />
+  );
 };
 
 export default Logo;

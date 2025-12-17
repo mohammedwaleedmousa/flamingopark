@@ -257,7 +257,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
         </DialogHeader>
 
         {/* Invoice Content */}
-        <div className="flex-1 overflow-y-auto p-4 bg-[#FAF8F5]">
+        <div className="flex-1 overflow-y-auto p-4">
           <div ref={invoiceRef} className="bg-[#FAF8F5] rounded-lg p-4 space-y-4 text-sm print:p-0">
             {/* Header */}
             <div className="flex justify-between items-start border-b pb-3">

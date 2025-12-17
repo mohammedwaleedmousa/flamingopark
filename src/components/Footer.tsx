@@ -11,7 +11,7 @@ const Footer = () => {
   const phoneNumber = country === "YE" ? "+967 782676054" : "+966 557302919";
 
   return (
-    <footer className="bg-[0D0D0D] text-gold-light/80">
+    <footer className="bg-black text-gold-light/80">
       <div className="container mx-auto px-4 py-16">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
           {/* Brand */}

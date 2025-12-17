@@ -224,7 +224,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
 
   return (
     <Dialog open={open} onOpenChange={() => onClose()}>
-      <DialogContent className=" max-w-lg w-[95vw] max-h-[90vh] flex flex-col p-0 gap-0">
+      <DialogContent className="bg-[#FAF8F5] max-w-lg w-[95vw] max-h-[90vh] flex flex-col p-0 gap-0">
         {/* Header */}
         <DialogHeader className="px-4 py-3 border-b bg-muted/50 flex-shrink-0">
           <DialogTitle className="flex flex-wrap items-center justify-between gap-2">
@@ -257,8 +257,8 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
         </DialogHeader>
 
         {/* Invoice Content */}
-        <div className="flex-1 overflow-y-auto p-4">
-          <div ref={invoiceRef} className=" rounded-lg p-4 space-y-4 text-sm print:p-0">
+        <div className="flex-1 overflow-y-auto p-4 bg-[#FAF8F5]">
+          <div ref={invoiceRef} className="bg-[#FAF8F5] rounded-lg p-4 space-y-4 text-sm print:p-0">
             {/* Header */}
             <div className="flex justify-between items-start border-b pb-3">
               <div>

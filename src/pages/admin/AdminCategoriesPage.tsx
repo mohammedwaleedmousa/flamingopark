@@ -54,11 +54,9 @@ const AdminCategoriesPage = () => {
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData & { id?: string }) => {
-      const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, "-");
-      console.log("Saving category:", data);
-
+      const slug = data.slug || generateSlug(data.name);
       if (data.id) {
-        const { data: result, error } = await supabase
+        const { error } = await supabase
           .from("categories")
           .update({
             name: data.name,
@@ -69,26 +67,18 @@ const AdminCategoriesPage = () => {
             sort_order: data.sort_order,
             countries: data.countries,
           })
-          .eq("id", data.id)
-          .select();
-
-        console.log("Update result:", result, "Error:", error);
+          .eq("id", data.id);
         if (error) throw error;
       } else {
-        const { data: result, error } = await supabase
-          .from("categories")
-          .insert({
-            name: data.name,
-            name_ar: data.name_ar,
-            slug,
-            image_url: data.image_url || null,
-            is_active: data.is_active,
-            sort_order: data.sort_order,
-            countries: data.countries,
-          })
-          .select();
-
-        console.log("Insert result:", result, "Error:", error);
+        const { error } = await supabase.from("categories").insert({
+          name: data.name,
+          name_ar: data.name_ar,
+          slug,
+          image_url: data.image_url || null,
+          is_active: data.is_active,
+          sort_order: data.sort_order,
+          countries: data.countries,
+        });
         if (error) throw error;
       }
     },
@@ -140,7 +130,7 @@ const AdminCategoriesPage = () => {
       return;
     }
 
-    const { data: urlData } = supabase.storage.from("uploads").getPublicUrl(fileName);
+    const { data: urlData } = await supabase.storage.from("uploads").getPublicUrl(fileName);
 
     setFormData({ ...formData, image_url: urlData.publicUrl });
     setUploading(false);
@@ -429,6 +419,7 @@ const AdminCategoriesPage = () => {
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
+                {/* الاسم بالعربي */}
                 <div className="space-y-2">
                   <Label>الاسم بالعربي</Label>
                   <Input
@@ -439,194 +430,107 @@ const AdminCategoriesPage = () => {
                     required
                   />
                 </div>
-
+                {/* الاسم بالإنجليزي */}
                 <div className="space-y-2">
                   <Label>الاسم بالإنجليزي</Label>
                   <Input
                     value={formData.name}
                     onChange={(e) => {
                       const name = e.target.value;
-                      setFormData({
-                        ...formData,
-                        name,
-                        slug: generateSlug(name),
-                      });
+                      setFormData({ ...formData, name, slug: generateSlug(name) });
                     }}
                     placeholder="Example: Watches"
                     required
                   />
                 </div>
-
+                {/* Slug */}
                 <div className="space-y-2">
-                  <Label>الرابط (Slug)</Label>
+                  <Label>Slug</Label>
                   <Input
                     value={formData.slug}
                     onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    placeholder="watches"
-                    dir="ltr"
+                    placeholder="مثال: watches"
                   />
                 </div>
-
+                {/* الصورة */}
                 <div className="space-y-2">
-                  <Label>الصورة</Label>
-                  <div className="flex flex-col gap-3">
-                    {formData.image_url ? (
-                      <div className="space-y-4">
-                        {/* Image Preview with positioning */}
-                        <div
-                          className="relative border border-border rounded overflow-hidden"
-                          style={{ height: "150px" }}
-                        >
-                          <img
-                            src={formData.image_url}
-                            alt="Preview"
-                            className="w-full h-full"
-                            style={{
-                              objectFit: "cover",
-                              transform: `scale(${formData.image_zoom})`,
-                              objectPosition: `${formData.image_position_x}% ${formData.image_position_y}%`,
-                            }}
+                  <Label>صورة الفئة</Label>
+                  <div className="flex items-center gap-2">
+                    <Input type="file" accept="image/*" onChange={handleUpload} />
+                    {uploading && <Loader2 className="w-5 h-5 animate-spin" />}
+                  </div>
+                  {formData.image_url && (
+                    <div className="relative w-full h-40 overflow-hidden border rounded-lg mt-2 bg-muted">
+                      <img
+                        src={formData.image_url}
+                        alt="معاينة"
+                        style={{
+                          transform: `scale(${formData.image_zoom}) translate(${formData.image_position_x - 50}%, ${formData.image_position_y - 50}%)`,
+                        }}
+                        className="w-full h-full object-cover transition-transform"
+                      />
+                      {/* Sliders */}
+                      <div className="space-y-2 p-2 bg-black/10 absolute bottom-0 w-full">
+                        <div className="flex items-center gap-2">
+                          <ZoomIn className="w-4 h-4" />
+                          <Slider
+                            value={formData.image_zoom}
+                            min={1}
+                            max={3}
+                            step={0.01}
+                            onValueChange={(v) => setFormData({ ...formData, image_zoom: v })}
                           />
-                          <button
-                            type="button"
-                            onClick={() => setFormData({ ...formData, image_url: "" })}
-                            className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
                         </div>
-
-                        {/* Image Controls */}
-                        <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
-                          {/* Zoom */}
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <ZoomIn className="w-4 h-4 text-muted-foreground" />
-                              <label className="text-xs text-muted-foreground">
-                                التكبير: {formData.image_zoom.toFixed(1)}x
-                              </label>
-                            </div>
-                            <Slider
-                              value={[formData.image_zoom]}
-                              onValueChange={([v]) => setFormData({ ...formData, image_zoom: v })}
-                              min={1}
-                              max={2}
-                              step={0.1}
-                              className="w-full"
-                            />
-                          </div>
-
-                          {/* Position X */}
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Move className="w-4 h-4 text-muted-foreground" />
-                              <label className="text-xs text-muted-foreground">
-                                الموضع الأفقي: {formData.image_position_x}%
-                              </label>
-                            </div>
-                            <Slider
-                              value={[formData.image_position_x]}
-                              onValueChange={([v]) => setFormData({ ...formData, image_position_x: v })}
-                              min={0}
-                              max={100}
-                              step={1}
-                              className="w-full"
-                            />
-                          </div>
-
-                          {/* Position Y */}
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Move className="w-4 h-4 text-muted-foreground rotate-90" />
-                              <label className="text-xs text-muted-foreground">
-                                الموضع العمودي: {formData.image_position_y}%
-                              </label>
-                            </div>
-                            <Slider
-                              value={[formData.image_position_y]}
-                              onValueChange={([v]) => setFormData({ ...formData, image_position_y: v })}
-                              min={0}
-                              max={100}
-                              step={1}
-                              className="w-full"
-                            />
-                          </div>
-
-                          {/* Reset Button */}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              setFormData({ ...formData, image_zoom: 1, image_position_x: 50, image_position_y: 50 })
-                            }
-                          >
-                            إعادة تعيين الموضع
-                          </Button>
+                        <div className="flex items-center gap-2">
+                          <Move className="w-4 h-4" />
+                          <Slider
+                            value={formData.image_position_x}
+                            min={0}
+                            max={100}
+                            step={1}
+                            onValueChange={(v) => setFormData({ ...formData, image_position_x: v })}
+                          />
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Move className="w-4 h-4 rotate-90" />
+                          <Slider
+                            value={formData.image_position_y}
+                            min={0}
+                            max={100}
+                            step={1}
+                            onValueChange={(v) => setFormData({ ...formData, image_position_y: v })}
+                          />
                         </div>
                       </div>
-                    ) : (
-                      <label className="cursor-pointer">
-                        <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-                        <div className="h-24 w-24 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center hover:border-gold transition-colors">
-                          {uploading ? (
-                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                          ) : (
-                            <>
-                              <Upload className="w-6 h-6 text-muted-foreground mb-1" />
-                              <span className="text-xs text-muted-foreground">رفع صورة</span>
-                            </>
-                          )}
-                        </div>
-                      </label>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
-
-                {/* Countries Selection */}
-                <div className="space-y-2">
-                  <Label>الدول</Label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        checked={formData.countries.includes("SA")}
-                        onCheckedChange={() => toggleCountry("SA")}
-                      />
-                      <span className="text-sm">🇸🇦 السعودية</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        checked={formData.countries.includes("YE")}
-                        onCheckedChange={() => toggleCountry("YE")}
-                      />
-                      <span className="text-sm">🇾🇪 اليمن</span>
-                    </label>
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>الترتيب</Label>
-                  <Input
-                    type="number"
-                    value={formData.sort_order}
-                    onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between">
+                {/* الحالة */}
+                <div className="flex items-center gap-2">
                   <Label>نشط</Label>
                   <Switch
                     checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                    onCheckedChange={(v) => setFormData({ ...formData, is_active: v })}
                   />
                 </div>
-
-                <div className="flex gap-2 pt-4">
-                  <Button type="submit" className="flex-1 btn-gold" disabled={saveMutation.isPending}>
-                    {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ"}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={resetForm} className="flex-1">
+                {/* الدول */}
+                <div className="flex gap-4">
+                  {["SA", "YE"].map((country) => (
+                    <Checkbox
+                      key={country}
+                      checked={formData.countries.includes(country)}
+                      onCheckedChange={() => toggleCountry(country)}
+                    >
+                      {country}
+                    </Checkbox>
+                  ))}
+                </div>
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={resetForm}>
                     إلغاء
+                  </Button>
+                  <Button type="submit" disabled={uploading}>
+                    {editingCategory ? "تحديث" : "إضافة"}
                   </Button>
                 </div>
               </form>

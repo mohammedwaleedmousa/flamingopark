@@ -89,10 +89,31 @@ const AboutPage = () => {
         .maybeSingle();
 
       if (pdfSetting?.value) {
-        const url = typeof pdfSetting.value === 'string' 
-          ? JSON.parse(pdfSetting.value) 
-          : pdfSetting.value;
-        if (url) setCertPdfUrl(url);
+        let url: unknown = pdfSetting.value;
+
+        // Normalize possible JSON-string-wrapped values from older saves
+        if (typeof url === 'string') {
+          const trimmed = url.trim();
+          if (
+            (trimmed.startsWith('"') && trimmed.endsWith('"')) ||
+            trimmed.startsWith('{') ||
+            trimmed.startsWith('[')
+          ) {
+            try {
+              const parsed = JSON.parse(trimmed);
+              url = parsed;
+            } catch {
+              // ignore
+            }
+          }
+        }
+
+        if (typeof url === 'string' && url.trim()) {
+          setCertPdfUrl(url);
+        } else if (url && typeof url === 'object' && 'url' in (url as any)) {
+          const objUrl = (url as any).url;
+          if (typeof objUrl === 'string' && objUrl.trim()) setCertPdfUrl(objUrl);
+        }
       }
 
       const { data: images, error: imgError } = await supabase
@@ -561,6 +582,13 @@ const AboutPage = () => {
             >
               <X className="w-5 h-5" />
             </button>
+
+            <Button asChild variant="outline" size="sm" className="absolute top-4 left-4 z-10">
+              <a href={certPdfUrl} target="_blank" rel="noreferrer">
+                فتح PDF
+              </a>
+            </Button>
+
             <iframe
               src={certPdfUrl}
               className="w-full h-full"

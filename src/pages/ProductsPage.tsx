@@ -87,7 +87,7 @@ const { data: products = [], isLoading } = useQuery({
     }));
   },
   enabled: !!country,
-});
+}); // <-- هنا فقط قوس واحد وليس اثنين
 
   });
 

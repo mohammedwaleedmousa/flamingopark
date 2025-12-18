@@ -14,6 +14,7 @@ const ProductsPage = () => {
   const { country } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const categoryFromUrl = searchParams.get("category") || "all";
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
   const [selectedBrand, setSelectedBrand] = useState(searchParams.get("brand") || "all");
@@ -54,50 +55,46 @@ const ProductsPage = () => {
   });
 
   // Fetch products
-  // Fetch products
-const { data: products = [], isLoading } = useQuery({
-  queryKey: ["products", country],
-  queryFn: async () => {
-    const { data, error } = await supabase
-      .from("products")
-      .select("*")
-      .eq("is_active", true)
-      .contains("countries", [country])
-      .order("created_at", { ascending: false });
-
-    if (error) throw error;
-
-    return data.map((p) => ({
-      id: p.id,
-      name: p.name,
-      nameAr: p.name_ar,
-      slug: p.slug,
-      price: Number(p.price),
-      originalPrice: p.original_price ? Number(p.original_price) : undefined,
-      discount: p.discount || undefined,
-      description: p.description || "",
-      descriptionAr: p.description_ar || "",
-      images: p.images || [],
-      category: p.category,
-      brand: p.brand,
-      inStock: p.in_stock ?? true,
-      countries: (p.countries || ["SA", "YE"]) as ("SA" | "YE")[],
-      isFeatured: p.is_featured,
-      isBestSeller: p.is_best_seller,
-    }));
-  },
-  enabled: !!country,
-}); // <-- هنا فقط قوس واحد وليس اثنين
-
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ["products", country],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .contains("countries", [country])
+        .order("created_at", { ascending: false });
+      if (error) throw error;
+      return data.map((p) => ({
+        id: p.id,
+        name: p.name,
+        nameAr: p.name_ar,
+        slug: p.slug,
+        price: Number(p.price),
+        originalPrice: p.original_price ? Number(p.original_price) : undefined,
+        discount: p.discount || undefined,
+        description: p.description || "",
+        descriptionAr: p.description_ar || "",
+        images: p.images || [],
+        category: p.category,
+        brand: p.brand,
+        inStock: p.in_stock ?? true,
+        countries: (p.countries || ["SA", "YE"]) as ("SA" | "YE")[],
+        isFeatured: p.is_featured,
+        isBestSeller: p.is_best_seller,
+      })) as Product[];
+    },
+    enabled: !!country,
   });
 
+  // Filter products based on search, category, brand
   const searchResults = useMemo(() => {
     if (!searchQuery.trim()) return products;
 
     const selectedCategoryData = categories.find((cat) => cat.slug === selectedCategory);
     const categoryNameToMatch = selectedCategoryData?.name || selectedCategoryData?.slug || selectedCategory;
 
-    const results = products.filter((product) => {
+    return products.filter((product) => {
       const matchesSearch =
         product.nameAr.includes(searchQuery) || product.name.toLowerCase().includes(searchQuery.toLowerCase());
 
@@ -110,8 +107,6 @@ const { data: products = [], isLoading } = useQuery({
 
       return matchesSearch && matchesCategory && matchesBrand;
     });
-
-    return results;
   }, [products, searchQuery, selectedCategory, selectedBrand, categories]);
 
   return (

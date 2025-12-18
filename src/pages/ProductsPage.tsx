@@ -13,7 +13,7 @@ import { Search, SlidersHorizontal, Loader2 } from "lucide-react";
 const ProductsPage = () => {
   const { country } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
-
+  const categoryFromUrl = searchParams.get("category") || "all";
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
   const [selectedBrand, setSelectedBrand] = useState(searchParams.get("brand") || "all");

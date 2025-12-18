@@ -52,7 +52,7 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
     >
       <Link to={`/product/${product.slug}`} className="block h-full">
         <div className="relative flex flex-col h-full overflow-hidden rounded-lg bg-beige border-2 border-gold transition-all duration-300 hover:border-gold-light hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.3)]">
-          {/* Image Container */}
+          {/* Image */}
           <div className="w-full flex-1 overflow-hidden relative">
             {product.images[0] ? (
               <img
@@ -111,13 +111,13 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
           </div>
 
           {/* Content */}
-          <div className="p-4 bg-background border-t border-border/20 flex flex-col">
+          <div className="p-4 bg-background border-t border-border/20 flex flex-col flex-1">
             <span className="text-[11px] font-medium text-gold uppercase tracking-wider">{product.brand}</span>
             <h3 className="font-heading text-sm text-foreground mt-1 mb-2 line-clamp-2 group-hover:text-gold transition-colors">
               {product.nameAr}
             </h3>
 
-            {/* Push price to bottom */}
+            {/* Price at bottom */}
             <div className="flex items-center gap-2 mt-auto">
               <span className="font-heading font-semibold text-base text-foreground">
                 {discountedPrice.toFixed(0)} <span className="text-xs font-normal">{currency}</span>

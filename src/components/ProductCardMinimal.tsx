@@ -112,7 +112,7 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
             <span className="text-[11px] font-medium text-gold uppercase tracking-wider">{product.brand}</span>
 
             {/* Product Name */}
-            <h3 className="font-heading text-sm text-foreground mt-1 mb-2 min-h-[2.5rem] group-hover:text-gold transition-colors">
+            <h3 className="font-heading text-sm text-foreground mt-1 mb-2 line-clamp-2 min-h-[2.5rem] group-hover:text-gold transition-colors">
               {product.nameAr}
             </h3>
 

@@ -86,17 +86,15 @@ const ProductsPage = () => {
     enabled: !!country,
   });
 
-  const filteredProducts = useMemo(() => {
+  const searchResults = useMemo(() => {
+    if (!searchQuery.trim()) return products;
+
     const selectedCategoryData = categories.find((cat) => cat.slug === selectedCategory);
     const categoryNameToMatch = selectedCategoryData?.name || selectedCategoryData?.slug || selectedCategory;
 
-    const normalizedSearch = searchQuery.trim().toLowerCase();
-
-    return products.filter((product) => {
+    const results = products.filter((product) => {
       const matchesSearch =
-        normalizedSearch === "" ||
-        product.nameAr?.toLowerCase().includes(normalizedSearch) ||
-        product.name?.toLowerCase().includes(normalizedSearch);
+        product.nameAr.includes(searchQuery) || product.name.toLowerCase().includes(searchQuery.toLowerCase());
 
       const matchesCategory =
         selectedCategory === "all" ||
@@ -107,6 +105,8 @@ const ProductsPage = () => {
 
       return matchesSearch && matchesCategory && matchesBrand;
     });
+
+    return results;
   }, [products, searchQuery, selectedCategory, selectedBrand, categories]);
 
   return (

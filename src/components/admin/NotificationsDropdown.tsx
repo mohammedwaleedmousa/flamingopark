@@ -24,23 +24,37 @@ const NotificationsDropdown = () => {
   });
   const [isOpen, setIsOpen] = useState(false);
 
+  const fetchCounts = async () => {
+    try {
+      const [ordersRes, reviewsRes, productReviewsRes] = await Promise.all([
+        supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+        supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('is_approved', false),
+        supabase.from('product_reviews').select('id', { count: 'exact', head: true }).eq('is_approved', false),
+      ]);
+
+      setCounts({
+        pendingOrders: ordersRes.count || 0,
+        pendingReviews: reviewsRes.count || 0,
+        pendingProductReviews: productReviewsRes.count || 0,
+      });
+    } catch (error) {
+      console.error('Error fetching notification counts:', error);
+    }
+  };
+
   useEffect(() => {
     fetchCounts();
+    // Refresh counts every 30 seconds
+    const interval = setInterval(fetchCounts, 30000);
+    return () => clearInterval(interval);
   }, []);
 
-  const fetchCounts = async () => {
-    const [ordersRes, reviewsRes, productReviewsRes] = await Promise.all([
-      supabase.from('orders').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
-      supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('is_approved', false),
-      supabase.from('product_reviews').select('id', { count: 'exact', head: true }).eq('is_approved', false),
-    ]);
-
-    setCounts({
-      pendingOrders: ordersRes.count || 0,
-      pendingReviews: reviewsRes.count || 0,
-      pendingProductReviews: productReviewsRes.count || 0,
-    });
-  };
+  // Refresh when popover opens
+  useEffect(() => {
+    if (isOpen) {
+      fetchCounts();
+    }
+  }, [isOpen]);
 
   const totalCount = counts.pendingOrders + counts.pendingReviews + counts.pendingProductReviews;
 

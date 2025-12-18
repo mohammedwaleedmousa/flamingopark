@@ -95,14 +95,16 @@ const AboutPage = () => {
         if (url) setCertPdfUrl(url);
       }
 
-      const { data: images } = await supabase
+      const { data: images, error: imgError } = await supabase
         .from('certification_images')
         .select('*')
         .eq('is_active', true)
         .order('sort_order', { ascending: true })
-        .limit(3);
+        .limit(1);
 
-      if (images) {
+      if (imgError) {
+        console.error('Error fetching certification images:', imgError);
+      } else if (images && images.length > 0) {
         setCertImages(images.map(img => img.image_url));
       }
     } catch (error) {
@@ -469,46 +471,38 @@ const AboutPage = () => {
               </motion.div>
             )}
 
-            {/* Certification Images */}
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto">
+            {/* Certification Image - Single */}
+            <div className="flex justify-center max-w-md mx-auto">
               {certImages.length > 0 ? (
-                certImages.map((img, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.1 }}
-                    className="group relative aspect-square rounded-2xl overflow-hidden border-2 border-gold/20 hover:border-gold/50 transition-colors"
-                  >
-                    <img
-                      src={img}
-                      alt={`توثيق ${index + 1}`}
-                      className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-secondary/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-6">
-                      <span className="text-gold font-heading">شهادة التوثيق {index + 1}</span>
-                    </div>
-                  </motion.div>
-                ))
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="group relative aspect-square w-full rounded-2xl overflow-hidden border-2 border-gold/20 hover:border-gold/50 transition-colors"
+                >
+                  <img
+                    src={certImages[0]}
+                    alt="شهادة التوثيق"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
+                  <div className="absolute inset-0 bg-gradient-to-t from-secondary/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-6">
+                    <span className="text-gold font-heading">شهادة التوثيق</span>
+                  </div>
+                </motion.div>
               ) : (
-                [1, 2, 3].map((_, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, y: 30 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.1 }}
-                    className="aspect-square bg-charcoal rounded-2xl border border-gold/20 flex items-center justify-center"
-                  >
-                    <div className="text-center">
-                      <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gold/10 flex items-center justify-center">
-                        <Award className="w-8 h-8 text-gold/50" />
-                      </div>
-                      <p className="text-sm font-body text-gold-light/50">صورة التوثيق {index + 1}</p>
+                <motion.div
+                  initial={{ opacity: 0, y: 30 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  className="aspect-square w-full bg-charcoal rounded-2xl border border-gold/20 flex items-center justify-center"
+                >
+                  <div className="text-center">
+                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gold/10 flex items-center justify-center">
+                      <Award className="w-8 h-8 text-gold/50" />
                     </div>
-                  </motion.div>
-                ))
+                    <p className="text-sm font-body text-gold-light/50">لم يتم إضافة شهادة توثيق</p>
+                  </div>
+                </motion.div>
               )}
             </div>
           </div>

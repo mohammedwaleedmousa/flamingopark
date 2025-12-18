@@ -38,6 +38,14 @@ const ProductDetailPage = () => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [accessoryQuantities, setAccessoryQuantities] = useState<Record<string, number>>({});
+  
+  // Touch swipe state
+  const [touchStart, setTouchStart] = useState<number | null>(null);
+  const [touchEnd, setTouchEnd] = useState<number | null>(null);
+  
+  // Pinch zoom state
+  const [scale, setScale] = useState(1);
+  const [initialDistance, setInitialDistance] = useState<number | null>(null);
 
   // Fetch product by slug
   const { data: product, isLoading } = useQuery({
@@ -324,14 +332,65 @@ const ProductDetailPage = () => {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.3 }}
-                    className="w-full h-full"
+                    className="w-full h-full touch-none"
+                    onTouchStart={(e) => {
+                      if (e.touches.length === 2) {
+                        // Pinch zoom start
+                        const dist = Math.hypot(
+                          e.touches[0].clientX - e.touches[1].clientX,
+                          e.touches[0].clientY - e.touches[1].clientY
+                        );
+                        setInitialDistance(dist);
+                      } else if (e.touches.length === 1) {
+                        setTouchEnd(null);
+                        setTouchStart(e.touches[0].clientX);
+                      }
+                    }}
+                    onTouchMove={(e) => {
+                      if (e.touches.length === 2 && initialDistance) {
+                        // Pinch zoom
+                        const dist = Math.hypot(
+                          e.touches[0].clientX - e.touches[1].clientX,
+                          e.touches[0].clientY - e.touches[1].clientY
+                        );
+                        const newScale = Math.min(3, Math.max(1, scale * (dist / initialDistance)));
+                        setScale(newScale);
+                        setInitialDistance(dist);
+                      } else if (e.touches.length === 1) {
+                        setTouchEnd(e.touches[0].clientX);
+                      }
+                    }}
+                    onTouchEnd={() => {
+                      setInitialDistance(null);
+                      if (!touchStart || !touchEnd) return;
+                      const distance = touchStart - touchEnd;
+                      const minSwipeDistance = 50;
+                      if (Math.abs(distance) > minSwipeDistance && product.images.length > 1) {
+                        if (distance > 0) {
+                          // Swipe left - next image
+                          setSelectedImage(prev => prev === product.images.length - 1 ? 0 : prev + 1);
+                          setImageLoaded(false);
+                        } else {
+                          // Swipe right - previous image
+                          setSelectedImage(prev => prev === 0 ? product.images.length - 1 : prev - 1);
+                          setImageLoaded(false);
+                        }
+                      }
+                      // Reset scale on single touch end
+                      if (scale > 1) {
+                        setScale(1);
+                      }
+                      setTouchStart(null);
+                      setTouchEnd(null);
+                    }}
                   >
                     {product.images[selectedImage] ? (
                       <img
                         src={product.images[selectedImage]}
                         alt={product.nameAr}
                         onLoad={() => setImageLoaded(true)}
-                        className={`w-full h-full object-cover transition-opacity duration-300 ${
+                        style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }}
+                        className={`w-full h-full object-cover transition-all duration-200 ${
                           imageLoaded ? 'opacity-100' : 'opacity-0'
                         }`}
                       />
@@ -344,22 +403,19 @@ const ProductDetailPage = () => {
                   </motion.div>
                 </AnimatePresence>
 
-                {/* Navigation Arrows */}
+                {/* Image dots indicator */}
                 {product.images.length > 1 && (
-                  <>
-                    <button
-                      onClick={() => setSelectedImage(prev => prev === 0 ? product.images.length - 1 : prev - 1)}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 backdrop-blur-sm text-foreground hover:bg-background transition-all shadow-lg"
-                    >
-                      <ChevronLeft className="w-5 h-5" />
-                    </button>
-                    <button
-                      onClick={() => setSelectedImage(prev => prev === product.images.length - 1 ? 0 : prev + 1)}
-                      className="absolute right-4 top-1/2 -translate-y-1/2 p-2 rounded-full bg-background/80 backdrop-blur-sm text-foreground hover:bg-background transition-all shadow-lg"
-                    >
-                      <ChevronRight className="w-5 h-5" />
-                    </button>
-                  </>
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                    {product.images.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => { setSelectedImage(index); setImageLoaded(false); }}
+                        className={`w-2 h-2 rounded-full transition-all ${
+                          selectedImage === index ? 'bg-gold w-4' : 'bg-background/60'
+                        }`}
+                      />
+                    ))}
+                  </div>
                 )}
               </div>
 

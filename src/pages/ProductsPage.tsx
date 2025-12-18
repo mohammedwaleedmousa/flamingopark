@@ -87,24 +87,24 @@ const ProductsPage = () => {
   });
 
   const filteredProducts = useMemo(() => {
-    // Find category name from slug for filtering
     const selectedCategoryData = categories.find((cat) => cat.slug === selectedCategory);
     const categoryNameToMatch = selectedCategoryData?.name || selectedCategoryData?.slug || selectedCategory;
 
-    return products.filter((product) => {
-      const normalizedSearch = searchQuery.trim().toLowerCase();
+    const normalizedSearch = searchQuery.trim().toLowerCase();
 
+    return products.filter((product) => {
       const matchesSearch =
         normalizedSearch === "" ||
         product.nameAr?.toLowerCase().includes(normalizedSearch) ||
         product.name?.toLowerCase().includes(normalizedSearch);
 
-      // Match by category slug, name, or name_ar
       const matchesCategory =
         selectedCategory === "all" ||
         product.category?.trim() === selectedCategory?.trim() ||
         product.category?.trim() === categoryNameToMatch?.trim();
+
       const matchesBrand = selectedBrand === "all" || product.brand?.trim() === selectedBrand?.trim();
+
       return matchesSearch && matchesCategory && matchesBrand;
     });
   }, [products, searchQuery, selectedCategory, selectedBrand, categories]);

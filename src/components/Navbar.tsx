@@ -111,6 +111,15 @@ const Navbar = () => {
                   type="text"
                   placeholder="ابحث عن المنتجات..."
                   autoFocus
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter" && searchTerm.trim()) {
+                      navigate(`/products?search=${encodeURIComponent(searchTerm)}`);
+                      setIsSearchOpen(false);
+                      setSearchTerm("");
+                    }
+                  }}
                   className="w-full pl-10 pr-4 py-2.5 bg-secondary/50 border border-gold/20 rounded-lg font-body text-sm text-gold-light placeholder:text-gold/40 focus:outline-none focus:border-gold transition-colors"
                   dir="rtl"
                 />

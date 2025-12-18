@@ -66,7 +66,7 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
               </div>
             )}
 
-            {/* OUT OF STOCK */}
+            {/* Out of stock */}
             {!product.inStock && (
               <div className="absolute inset-0 bg-secondary/40 flex items-center justify-center">
                 <span className="bg-destructive text-white text-xl font-bold px-6 py-3 rounded-xl shadow-lg transform -rotate-12">
@@ -75,7 +75,7 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
               </div>
             )}
 
-            {/* Discount Badge */}
+            {/* Discount */}
             {product.discount && (
               <div className="absolute top-3 left-3">
                 <span className="inline-flex items-center justify-center bg-gold text-secondary text-xs font-bold px-2 py-1 rounded-md">
@@ -96,7 +96,7 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
               <Heart className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`} />
             </button>
 
-            {/* Quick Add Button */}
+            {/* Quick Add */}
             {product.inStock && (
               <div className="absolute bottom-3 left-3 right-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
                 <button
@@ -117,7 +117,6 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
               {product.nameAr}
             </h3>
 
-            {/* Price at bottom */}
             <div className="flex items-center gap-2 mt-auto">
               <span className="font-heading font-semibold text-base text-foreground">
                 {discountedPrice.toFixed(0)} <span className="text-xs font-normal">{currency}</span>

@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useQuery } from '@tanstack/react-query';
 import {
   Dialog,
   DialogContent,
@@ -10,12 +11,19 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { toast } from '@/hooks/use-toast';
-import { Loader2, Plus, Trash2, Download } from 'lucide-react';
+import { Loader2, Plus, Trash2, Search } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 
 interface InvoiceItem {
   product_name: string;
+  product_id?: string;
   quantity: number;
+  price: number;
+}
+
+interface Product {
+  id: string;
+  name_ar: string;
   price: number;
 }
 
@@ -36,6 +44,41 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
   const [items, setItems] = useState<InvoiceItem[]>([
     { product_name: '', quantity: 1, price: 0 }
   ]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeItemIndex, setActiveItemIndex] = useState<number | null>(null);
+
+  // Fetch products
+  const { data: products = [] } = useQuery({
+    queryKey: ['products-for-invoice', country],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('products')
+        .select('id, name_ar, price')
+        .eq('is_active', true)
+        .contains('countries', [country])
+        .order('name_ar');
+      if (error) throw error;
+      return data as Product[];
+    },
+    enabled: open,
+  });
+
+  const filteredProducts = products.filter(p => 
+    p.name_ar.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  const selectProduct = (product: Product, index: number) => {
+    const newItems = [...items];
+    newItems[index] = {
+      product_name: product.name_ar,
+      product_id: product.id,
+      quantity: 1,
+      price: product.price,
+    };
+    setItems(newItems);
+    setActiveItemIndex(null);
+    setSearchQuery('');
+  };
 
   const currency = country === 'SA' ? 'ر.س' : 'ر.ي';
 
@@ -223,39 +266,74 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
             </div>
             <div className="space-y-2">
               {items.map((item, index) => (
-                <div key={index} className="flex gap-2 items-center p-2 bg-muted/30 rounded">
-                  <Input
-                    value={item.product_name}
-                    onChange={(e) => updateItem(index, 'product_name', e.target.value)}
-                    className="h-7 text-xs flex-1"
-                    placeholder="اسم المنتج"
-                  />
-                  <Input
-                    type="number"
-                    value={item.quantity}
-                    onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
-                    className="h-7 text-xs w-14"
-                    min={1}
-                    placeholder="كمية"
-                  />
-                  <Input
-                    type="number"
-                    value={item.price}
-                    onChange={(e) => updateItem(index, 'price', parseFloat(e.target.value) || 0)}
-                    className="h-7 text-xs w-20"
-                    min={0}
-                    placeholder="سعر"
-                  />
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => removeItem(index)}
-                    disabled={items.length === 1}
-                    className="h-7 w-7 p-0 text-destructive"
-                  >
-                    <Trash2 className="w-3 h-3" />
-                  </Button>
+                <div key={index} className="p-2 bg-muted/30 rounded space-y-2">
+                  <div className="relative">
+                    <div className="flex gap-2 items-center">
+                      <div className="flex-1 relative">
+                        <Input
+                          value={item.product_name}
+                          onChange={(e) => {
+                            updateItem(index, 'product_name', e.target.value);
+                            setSearchQuery(e.target.value);
+                            setActiveItemIndex(index);
+                          }}
+                          onFocus={() => setActiveItemIndex(index)}
+                          className="h-7 text-xs"
+                          placeholder="ابحث عن منتج أو اكتب الاسم..."
+                        />
+                        {/* Product dropdown */}
+                        {activeItemIndex === index && searchQuery && (
+                          <div className="absolute top-full left-0 right-0 z-50 bg-background border rounded-md shadow-lg mt-1 max-h-40 overflow-y-auto">
+                            {filteredProducts.length > 0 ? (
+                              filteredProducts.slice(0, 10).map((product) => (
+                                <button
+                                  key={product.id}
+                                  type="button"
+                                  onClick={() => selectProduct(product, index)}
+                                  className="w-full text-right px-3 py-2 text-xs hover:bg-muted flex justify-between items-center"
+                                >
+                                  <span>{product.name_ar}</span>
+                                  <span className="text-muted-foreground">{product.price} {currency}</span>
+                                </button>
+                              ))
+                            ) : (
+                              <div className="px-3 py-2 text-xs text-muted-foreground">
+                                لا توجد منتجات - يمكنك كتابة اسم مخصص
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => removeItem(index)}
+                        disabled={items.length === 1}
+                        className="h-7 w-7 p-0 text-destructive"
+                      >
+                        <Trash2 className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </div>
+                  <div className="flex gap-2">
+                    <Input
+                      type="number"
+                      value={item.quantity}
+                      onChange={(e) => updateItem(index, 'quantity', parseInt(e.target.value) || 1)}
+                      className="h-7 text-xs w-20"
+                      min={1}
+                      placeholder="كمية"
+                    />
+                    <Input
+                      type="number"
+                      value={item.price}
+                      onChange={(e) => updateItem(index, 'price', parseFloat(e.target.value) || 0)}
+                      className="h-7 text-xs flex-1"
+                      min={0}
+                      placeholder="السعر"
+                    />
+                  </div>
                 </div>
               ))}
             </div>

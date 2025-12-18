@@ -36,7 +36,7 @@ const AdminCategoriesPage = () => {
     image_url: "",
     is_active: true,
     sort_order: 0,
-    countries: [] as string[], // خليها فارغة افتراضي
+    countries: ["SA", "YE"] as string[],
     image_zoom: 1,
     image_position_x: 50,
     image_position_y: 50,
@@ -55,6 +55,8 @@ const AdminCategoriesPage = () => {
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData & { id?: string }) => {
       const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, "-");
+      console.log("Saving category:", data);
+
       if (data.id) {
         const { data: result, error } = await supabase
           .from("categories")
@@ -69,6 +71,8 @@ const AdminCategoriesPage = () => {
           })
           .eq("id", data.id)
           .select();
+
+        console.log("Update result:", result, "Error:", error);
         if (error) throw error;
       } else {
         const { data: result, error } = await supabase
@@ -83,6 +87,8 @@ const AdminCategoriesPage = () => {
             countries: data.countries,
           })
           .select();
+
+        console.log("Insert result:", result, "Error:", error);
         if (error) throw error;
       }
     },
@@ -92,6 +98,7 @@ const AdminCategoriesPage = () => {
       resetForm();
     },
     onError: (error: any) => {
+      console.error("Category save error:", error);
       toast({ title: "حدث خطأ", description: error?.message || "فشل في حفظ الفئة", variant: "destructive" });
     },
   });
@@ -147,7 +154,7 @@ const AdminCategoriesPage = () => {
       image_url: "",
       is_active: true,
       sort_order: 0,
-      countries: [], // خليها فارغة افتراضي
+      countries: ["SA", "YE"],
       image_zoom: 1,
       image_position_x: 50,
       image_position_y: 50,
@@ -165,7 +172,7 @@ const AdminCategoriesPage = () => {
       image_url: category.image_url || "",
       is_active: category.is_active ?? true,
       sort_order: category.sort_order ?? 0,
-      countries: category.countries || [], // خليها فارغة لو ما في دول محددة
+      countries: category.countries || ["SA", "YE"],
       image_zoom: 1,
       image_position_x: 50,
       image_position_y: 50,
@@ -462,30 +469,139 @@ const AdminCategoriesPage = () => {
 
                 <div className="space-y-2">
                   <Label>الصورة</Label>
-                  <div className="flex items-center gap-2">
-                    <Button
-                      type="button"
-                      size="sm"
-                      variant="outline"
-                      className="gap-2"
-                      onClick={() => document.getElementById("fileInput")?.click()}
-                    >
-                      <Upload className="w-4 h-4" />
-                      {uploading ? "جارٍ التحميل..." : "رفع صورة"}
-                    </Button>
-                    <input id="fileInput" type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-                    {formData.image_url && (
-                      <img src={formData.image_url} alt="preview" className="h-12 w-12 object-cover rounded-lg" />
+                  <div className="flex flex-col gap-3">
+                    {formData.image_url ? (
+                      <div className="space-y-4">
+                        {/* Image Preview with positioning */}
+                        <div
+                          className="relative border border-border rounded overflow-hidden"
+                          style={{ height: "150px" }}
+                        >
+                          <img
+                            src={formData.image_url}
+                            alt="Preview"
+                            className="w-full h-full"
+                            style={{
+                              objectFit: "cover",
+                              transform: `scale(${formData.image_zoom})`,
+                              objectPosition: `${formData.image_position_x}% ${formData.image_position_y}%`,
+                            }}
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setFormData({ ...formData, image_url: "" })}
+                            className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+
+                        {/* Image Controls */}
+                        <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
+                          {/* Zoom */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <ZoomIn className="w-4 h-4 text-muted-foreground" />
+                              <label className="text-xs text-muted-foreground">
+                                التكبير: {formData.image_zoom.toFixed(1)}x
+                              </label>
+                            </div>
+                            <Slider
+                              value={[formData.image_zoom]}
+                              onValueChange={([v]) => setFormData({ ...formData, image_zoom: v })}
+                              min={1}
+                              max={2}
+                              step={0.1}
+                              className="w-full"
+                            />
+                          </div>
+
+                          {/* Position X */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Move className="w-4 h-4 text-muted-foreground" />
+                              <label className="text-xs text-muted-foreground">
+                                الموضع الأفقي: {formData.image_position_x}%
+                              </label>
+                            </div>
+                            <Slider
+                              value={[formData.image_position_x]}
+                              onValueChange={([v]) => setFormData({ ...formData, image_position_x: v })}
+                              min={0}
+                              max={100}
+                              step={1}
+                              className="w-full"
+                            />
+                          </div>
+
+                          {/* Position Y */}
+                          <div>
+                            <div className="flex items-center gap-2 mb-2">
+                              <Move className="w-4 h-4 text-muted-foreground rotate-90" />
+                              <label className="text-xs text-muted-foreground">
+                                الموضع العمودي: {formData.image_position_y}%
+                              </label>
+                            </div>
+                            <Slider
+                              value={[formData.image_position_y]}
+                              onValueChange={([v]) => setFormData({ ...formData, image_position_y: v })}
+                              min={0}
+                              max={100}
+                              step={1}
+                              className="w-full"
+                            />
+                          </div>
+
+                          {/* Reset Button */}
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="sm"
+                            onClick={() =>
+                              setFormData({ ...formData, image_zoom: 1, image_position_x: 50, image_position_y: 50 })
+                            }
+                          >
+                            إعادة تعيين الموضع
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <label className="cursor-pointer">
+                        <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                        <div className="h-24 w-24 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center hover:border-gold transition-colors">
+                          {uploading ? (
+                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
+                          ) : (
+                            <>
+                              <Upload className="w-6 h-6 text-muted-foreground mb-1" />
+                              <span className="text-xs text-muted-foreground">رفع صورة</span>
+                            </>
+                          )}
+                        </div>
+                      </label>
                     )}
                   </div>
                 </div>
 
-                <div className="flex items-center gap-4">
-                  <Label>نشطة</Label>
-                  <Switch
-                    checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                  />
+                {/* Countries Selection */}
+                <div className="space-y-2">
+                  <Label>الدول</Label>
+                  <div className="flex gap-4">
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={formData.countries.includes("SA")}
+                        onCheckedChange={() => toggleCountry("SA")}
+                      />
+                      <span className="text-sm">🇸🇦 السعودية</span>
+                    </label>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <Checkbox
+                        checked={formData.countries.includes("YE")}
+                        onCheckedChange={() => toggleCountry("YE")}
+                      />
+                      <span className="text-sm">🇾🇪 اليمن</span>
+                    </label>
+                  </div>
                 </div>
 
                 <div className="space-y-2">
@@ -493,28 +609,26 @@ const AdminCategoriesPage = () => {
                   <Input
                     type="number"
                     value={formData.sort_order}
-                    onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <Label>الدول</Label>
-                  <div className="flex gap-2">
-                    {["SA", "YE"].map((country) => (
-                      <div key={country} className="flex items-center gap-1">
-                        <Checkbox
-                          checked={formData.countries.includes(country)}
-                          onCheckedChange={() => toggleCountry(country)}
-                        />
-                        <span className="text-sm">{country}</span>
-                      </div>
-                    ))}
-                  </div>
+                <div className="flex items-center justify-between">
+                  <Label>نشط</Label>
+                  <Switch
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                  />
                 </div>
 
-                <Button type="submit" className="w-full">
-                  حفظ
-                </Button>
+                <div className="flex gap-2 pt-4">
+                  <Button type="submit" className="flex-1 btn-gold" disabled={saveMutation.isPending}>
+                    {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ"}
+                  </Button>
+                  <Button type="button" variant="outline" onClick={resetForm} className="flex-1">
+                    إلغاء
+                  </Button>
+                </div>
               </form>
             </DialogContent>
           </Dialog>

@@ -54,36 +54,41 @@ const ProductsPage = () => {
   });
 
   // Fetch products
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ["products", country],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("is_active", true)
-        .contains("countries", [country])
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data.map((p) => ({
-        id: p.id,
-        name: p.name,
-        nameAr: p.name_ar,
-        slug: p.slug,
-        price: Number(p.price),
-        originalPrice: p.original_price ? Number(p.original_price) : undefined,
-        discount: p.discount || undefined,
-        description: p.description || "",
-        descriptionAr: p.description_ar || "",
-        images: p.images || [],
-        category: p.category,
-        brand: p.brand,
-        inStock: p.in_stock ?? true,
-        countries: (p.countries || ["SA", "YE"]) as ("SA" | "YE")[],
-        isFeatured: p.is_featured,
-        isBestSeller: p.is_best_seller,
-      })) as Product[];
-    },
-    enabled: !!country,
+  // Fetch products
+const { data: products = [], isLoading } = useQuery({
+  queryKey: ["products", country],
+  queryFn: async () => {
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .eq("is_active", true)
+      .contains("countries", [country])
+      .order("created_at", { ascending: false });
+
+    if (error) throw error;
+
+    return data.map((p) => ({
+      id: p.id,
+      name: p.name,
+      nameAr: p.name_ar,
+      slug: p.slug,
+      price: Number(p.price),
+      originalPrice: p.original_price ? Number(p.original_price) : undefined,
+      discount: p.discount || undefined,
+      description: p.description || "",
+      descriptionAr: p.description_ar || "",
+      images: p.images || [],
+      category: p.category,
+      brand: p.brand,
+      inStock: p.in_stock ?? true,
+      countries: (p.countries || ["SA", "YE"]) as ("SA" | "YE")[],
+      isFeatured: p.is_featured,
+      isBestSeller: p.is_best_seller,
+    }));
+  },
+  enabled: !!country,
+});
+
   });
 
   const searchResults = useMemo(() => {

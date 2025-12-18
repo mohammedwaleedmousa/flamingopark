@@ -258,7 +258,7 @@ const ProductsPage = () => {
                 </div>
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3 md:gap-4">
-                  {filteredProducts.map((product, index) => (
+                  {searchResults.map((product, index) => (
                     <ProductCardMinimal key={product.id} product={product} index={index} />
                   ))}
                 </div>

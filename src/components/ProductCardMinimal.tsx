@@ -1,11 +1,10 @@
-import { motion } from 'framer-motion';
-import { Link } from 'react-router-dom';
-import { ShoppingBag, Heart, Eye } from 'lucide-react';
-import { Product } from '@/store/useStore';
-import { useStore } from '@/store/useStore';
-import { useFavorites } from '@/hooks/useFavorites';
-import { toast } from '@/hooks/use-toast';
-
+import { motion } from "framer-motion";
+import { Link } from "react-router-dom";
+import { ShoppingBag, Heart, Eye } from "lucide-react";
+import { Product } from "@/store/useStore";
+import { useStore } from "@/store/useStore";
+import { useFavorites } from "@/hooks/useFavorites";
+import { toast } from "@/hooks/use-toast";
 
 interface ProductCardMinimalProps {
   product: Product;
@@ -15,7 +14,7 @@ interface ProductCardMinimalProps {
 const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => {
   const { addToCart, country } = useStore();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const currency = country === 'SA' ? 'ر.س' : 'ر.ي';
+  const currency = country === "SA" ? "ر.س" : "ر.ي";
   const isLiked = isFavorite(product.id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -23,7 +22,7 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
     e.stopPropagation();
     addToCart(product);
     toast({
-      title: 'تمت الإضافة',
+      title: "تمت الإضافة",
       description: `${product.nameAr} أُضيف إلى السلة`,
     });
   };
@@ -33,29 +32,27 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
     e.stopPropagation();
     const nowLiked = toggleFavorite(product);
     toast({
-      title: nowLiked ? 'تمت الإضافة' : 'تمت الإزالة',
-      description: nowLiked ? 'تمت إضافة المنتج للمفضلة' : 'تمت إزالة المنتج من المفضلة',
+      title: nowLiked ? "تمت الإضافة" : "تمت الإزالة",
+      description: nowLiked ? "تمت إضافة المنتج للمفضلة" : "تمت إزالة المنتج من المفضلة",
     });
   };
 
-  const discountedPrice = product.discount
-    ? product.price * (1 - product.discount / 100)
-    : product.price;
+  const discountedPrice = product.discount ? product.price * (1 - product.discount / 100) : product.price;
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ 
-        duration: 0.4, 
+      transition={{
+        duration: 0.4,
         delay: index * 0.05,
-        ease: [0.25, 0.46, 0.45, 0.94]
+        ease: [0.25, 0.46, 0.45, 0.94],
       }}
-      className="group"
+      className="group h-full"
     >
-      <Link to={`/product/${product.slug}`} className="block">
+      <Link to={`/product/${product.slug}`} className="block h-full">
         <div className="relative overflow-hidden rounded-lg bg-beige border-2 border-gold transition-all duration-300 hover:border-gold-light hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.3)] h-full flex flex-col">
-          {/* Image Container - Fixed square aspect ratio */}
+          {/* Image Container */}
           <div className="relative aspect-square overflow-hidden">
             {product.images[0] ? (
               <img
@@ -69,7 +66,6 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
               </div>
             )}
 
-            {/* OUT OF STOCK - Big Red Badge */}
             {!product.inStock && (
               <div className="absolute inset-0 bg-secondary/40 flex items-center justify-center">
                 <span className="bg-destructive text-white text-xl font-bold px-6 py-3 rounded-xl shadow-lg transform -rotate-12">
@@ -78,7 +74,6 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
               </div>
             )}
 
-            {/* Discount Badge */}
             {product.discount && (
               <div className="absolute top-3 left-3">
                 <span className="inline-flex items-center justify-center bg-gold text-secondary text-xs font-bold px-2 py-1 rounded-md">
@@ -87,19 +82,17 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
               </div>
             )}
 
-            {/* Like Button */}
             <button
               onClick={handleLike}
               className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-300 ${
-                isLiked 
-                  ? 'bg-gold text-secondary' 
-                  : 'bg-background/80 text-foreground hover:bg-gold hover:text-secondary'
+                isLiked
+                  ? "bg-gold text-secondary"
+                  : "bg-background/80 text-foreground hover:bg-gold hover:text-secondary"
               }`}
             >
-              <Heart className={`w-4 h-4 ${isLiked ? 'fill-current' : ''}`} />
+              <Heart className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`} />
             </button>
 
-            {/* Quick Add Button - Appears on hover */}
             {product.inStock && (
               <div className="absolute bottom-3 left-3 right-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
                 <button
@@ -113,27 +106,23 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
             )}
           </div>
 
-          {/* Content - Fixed height */}
-          <div className="p-4 bg-background border-t border-border/20 flex-1 flex flex-col">
+          {/* Content Container */}
+          <div className="p-4 bg-background border-t border-border/20 flex flex-col flex-1">
             {/* Brand */}
-            <span className="text-[11px] font-medium text-gold uppercase tracking-wider">
-              {product.brand}
-            </span>
-            
-            {/* Product Name - Fixed height */}
-            <h3 className="font-heading text-sm text-foreground mt-1 mb-2 line-clamp-1 group-hover:text-gold transition-colors min-h-[1.25rem]">
+            <span className="text-[11px] font-medium text-gold uppercase tracking-wider">{product.brand}</span>
+
+            {/* Product Name */}
+            <h3 className="font-heading text-sm text-foreground mt-1 mb-2 line-clamp-2 min-h-[2.5rem] group-hover:text-gold transition-colors">
               {product.nameAr}
             </h3>
-            
-            {/* Price Section - Push to bottom */}
+
+            {/* Price Section */}
             <div className="flex items-center gap-2 mt-auto">
               <span className="font-heading font-semibold text-base text-foreground">
                 {discountedPrice.toFixed(0)} <span className="text-xs font-normal">{currency}</span>
               </span>
               {product.originalPrice && (
-                <span className="text-muted-foreground line-through text-xs">
-                  {product.originalPrice.toFixed(0)}
-                </span>
+                <span className="text-muted-foreground line-through text-xs">{product.originalPrice.toFixed(0)}</span>
               )}
             </div>
           </div>

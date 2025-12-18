@@ -36,12 +36,11 @@ const AdminCategoriesPage = () => {
     image_url: "",
     is_active: true,
     sort_order: 0,
+    countries: [] as string[], // خليها فارغة افتراضي
     image_zoom: 1,
     image_position_x: 50,
     image_position_y: 50,
   });
-  const [isSA, setIsSA] = useState(true);
-  const [isYE, setIsYE] = useState(true);
   const [uploading, setUploading] = useState(false);
 
   const { data: categories, isLoading } = useQuery({
@@ -56,9 +55,6 @@ const AdminCategoriesPage = () => {
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData & { id?: string }) => {
       const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, "-");
-      const countries = [...(isSA ? ["SA"] : []), ...(isYE ? ["YE"] : [])];
-      console.log("Saving category:", data, countries);
-
       if (data.id) {
         const { data: result, error } = await supabase
           .from("categories")
@@ -69,12 +65,10 @@ const AdminCategoriesPage = () => {
             image_url: data.image_url || null,
             is_active: data.is_active,
             sort_order: data.sort_order,
-            countries,
+            countries: data.countries,
           })
           .eq("id", data.id)
           .select();
-
-        console.log("Update result:", result, "Error:", error);
         if (error) throw error;
       } else {
         const { data: result, error } = await supabase
@@ -86,11 +80,9 @@ const AdminCategoriesPage = () => {
             image_url: data.image_url || null,
             is_active: data.is_active,
             sort_order: data.sort_order,
-            countries,
+            countries: data.countries,
           })
           .select();
-
-        console.log("Insert result:", result, "Error:", error);
         if (error) throw error;
       }
     },
@@ -100,7 +92,6 @@ const AdminCategoriesPage = () => {
       resetForm();
     },
     onError: (error: any) => {
-      console.error("Category save error:", error);
       toast({ title: "حدث خطأ", description: error?.message || "فشل في حفظ الفئة", variant: "destructive" });
     },
   });
@@ -156,13 +147,12 @@ const AdminCategoriesPage = () => {
       image_url: "",
       is_active: true,
       sort_order: 0,
+      countries: [], // خليها فارغة افتراضي
       image_zoom: 1,
       image_position_x: 50,
       image_position_y: 50,
     });
     setEditingCategory(null);
-    setIsSA(true);
-    setIsYE(true);
     setIsDialogOpen(false);
   };
 
@@ -175,13 +165,21 @@ const AdminCategoriesPage = () => {
       image_url: category.image_url || "",
       is_active: category.is_active ?? true,
       sort_order: category.sort_order ?? 0,
+      countries: category.countries || [], // خليها فارغة لو ما في دول محددة
       image_zoom: 1,
       image_position_x: 50,
       image_position_y: 50,
     });
-    setIsSA(category.countries?.includes("SA") ?? true);
-    setIsYE(category.countries?.includes("YE") ?? true);
     setIsDialogOpen(true);
+  };
+
+  const toggleCountry = (country: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      countries: prev.countries.includes(country)
+        ? prev.countries.filter((c) => c !== country)
+        : [...prev.countries, country],
+    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -453,26 +451,41 @@ const AdminCategoriesPage = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Slug</Label>
+                  <Label>الرابط (Slug)</Label>
                   <Input
                     value={formData.slug}
                     onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    placeholder="example-watches"
+                    placeholder="watches"
+                    dir="ltr"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>الدول</Label>
-                  <div className="flex flex-col gap-2">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox checked={isSA} onCheckedChange={setIsSA} />
-                      <span className="text-sm">🇸🇦 السعودية</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox checked={isYE} onCheckedChange={setIsYE} />
-                      <span className="text-sm">🇾🇪 اليمن</span>
-                    </label>
+                  <Label>الصورة</Label>
+                  <div className="flex items-center gap-2">
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="gap-2"
+                      onClick={() => document.getElementById("fileInput")?.click()}
+                    >
+                      <Upload className="w-4 h-4" />
+                      {uploading ? "جارٍ التحميل..." : "رفع صورة"}
+                    </Button>
+                    <input id="fileInput" type="file" accept="image/*" className="hidden" onChange={handleUpload} />
+                    {formData.image_url && (
+                      <img src={formData.image_url} alt="preview" className="h-12 w-12 object-cover rounded-lg" />
+                    )}
                   </div>
+                </div>
+
+                <div className="flex items-center gap-4">
+                  <Label>نشطة</Label>
+                  <Switch
+                    checked={formData.is_active}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
+                  />
                 </div>
 
                 <div className="space-y-2">
@@ -480,34 +493,28 @@ const AdminCategoriesPage = () => {
                   <Input
                     type="number"
                     value={formData.sort_order}
-                    onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) })}
+                    onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) })}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>حالة الفئة</Label>
-                  <Switch
-                    checked={formData.is_active ?? true}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                  />
+                  <Label>الدول</Label>
+                  <div className="flex gap-2">
+                    {["SA", "YE"].map((country) => (
+                      <div key={country} className="flex items-center gap-1">
+                        <Checkbox
+                          checked={formData.countries.includes(country)}
+                          onCheckedChange={() => toggleCountry(country)}
+                        />
+                        <span className="text-sm">{country}</span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>رفع صورة</Label>
-                  <input type="file" accept="image/*" onChange={handleUpload} />
-                  {formData.image_url && (
-                    <img src={formData.image_url} alt="Category" className="w-full h-40 object-cover rounded-lg mt-2" />
-                  )}
-                </div>
-
-                <div className="flex justify-end gap-2">
-                  <Button type="button" variant="outline" onClick={resetForm}>
-                    إلغاء
-                  </Button>
-                  <Button type="submit" disabled={uploading}>
-                    {editingCategory ? "تحديث" : "إضافة"}
-                  </Button>
-                </div>
+                <Button type="submit" className="w-full">
+                  حفظ
+                </Button>
               </form>
             </DialogContent>
           </Dialog>

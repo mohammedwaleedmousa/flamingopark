@@ -40,6 +40,7 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
   const discountedPrice = product.discount ? product.price * (1 - product.discount / 100) : product.price;
 
   return (
+    // داخل return
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
@@ -51,7 +52,7 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
       className="group h-full"
     >
       <Link to={`/product/${product.slug}`} className="block h-full">
-        <div className="relative overflow-hidden rounded-lg bg-beige border-2 border-gold transition-all duration-300 hover:border-gold-light hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.3)] h-full flex flex-col">
+        <div className="relative overflow-hidden rounded-lg bg-beige border-2 border-gold transition-all duration-300 hover:border-gold-light hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.3)] h-[420px] flex flex-col">
           {/* Image Container */}
           <div className="relative aspect-square overflow-hidden">
             {product.images[0] ? (
@@ -65,54 +66,15 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
                 <Eye className="w-8 h-8 opacity-40" />
               </div>
             )}
-
-            {!product.inStock && (
-              <div className="absolute inset-0 bg-secondary/40 flex items-center justify-center">
-                <span className="bg-destructive text-white text-xl font-bold px-6 py-3 rounded-xl shadow-lg transform -rotate-12">
-                  OUT
-                </span>
-              </div>
-            )}
-
-            {product.discount && (
-              <div className="absolute top-3 left-3">
-                <span className="inline-flex items-center justify-center bg-gold text-secondary text-xs font-bold px-2 py-1 rounded-md">
-                  -{product.discount}%
-                </span>
-              </div>
-            )}
-
-            <button
-              onClick={handleLike}
-              className={`absolute top-3 right-3 p-2 rounded-full transition-all duration-300 ${
-                isLiked
-                  ? "bg-gold text-secondary"
-                  : "bg-background/80 text-foreground hover:bg-gold hover:text-secondary"
-              }`}
-            >
-              <Heart className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`} />
-            </button>
-
-            {product.inStock && (
-              <div className="absolute bottom-3 left-3 right-3 opacity-0 translate-y-2 group-hover:opacity-100 group-hover:translate-y-0 transition-all duration-300">
-                <button
-                  onClick={handleAddToCart}
-                  className="w-full flex items-center justify-center gap-2 py-2.5 bg-secondary text-secondary-foreground font-medium text-sm rounded-lg transition-all duration-300 hover:bg-secondary/90"
-                >
-                  <ShoppingBag className="w-4 h-4" />
-                  <span>أضف للسلة</span>
-                </button>
-              </div>
-            )}
           </div>
 
           {/* Content Container */}
-          <div className="p-4 bg-background border-t border-border/20 flex flex-col flex-1">
+          <div className="p-4 bg-background border-t border-border/20 flex-1 flex flex-col">
             {/* Brand */}
             <span className="text-[11px] font-medium text-gold uppercase tracking-wider">{product.brand}</span>
 
             {/* Product Name */}
-            <h3 className="font-heading text-sm text-foreground mt-1 mb-2 line-clamp-2 min-h-[2.5rem] group-hover:text-gold transition-colors">
+            <h3 className="font-heading text-sm text-foreground mt-1 mb-2 line-clamp-2 group-hover:text-gold transition-colors">
               {product.nameAr}
             </h3>
 

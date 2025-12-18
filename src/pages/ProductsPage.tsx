@@ -255,9 +255,9 @@ const ProductsPage = () => {
                   <p className="text-muted-foreground font-body">لا توجد منتجات مطابقة</p>
                 </div>
               ) : (
-                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-fr">
-                  {searchResults.map((product, index) => (
-                    <ProductCardMinimal key={product.id} product={product} index={index} />
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 auto-rows-[1fr]">
+                  {products.map((product) => (
+                    <ProductCardMinimal key={product.id} product={product} />
                   ))}
                 </div>
               )}

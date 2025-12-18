@@ -13,7 +13,6 @@ import { Search, SlidersHorizontal, Loader2 } from "lucide-react";
 const ProductsPage = () => {
   const { country } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  const categoryFromUrl = searchParams.get("category") || "all";
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
@@ -87,21 +86,20 @@ const ProductsPage = () => {
     enabled: !!country,
   });
 
-  // Filter products based on search, category, brand
   const searchResults = useMemo(() => {
-    if (!searchQuery.trim()) return products;
-
-    const selectedCategoryData = categories.find((cat) => cat.slug === selectedCategory);
-    const categoryNameToMatch = selectedCategoryData?.name || selectedCategoryData?.slug || selectedCategory;
+    const query = searchQuery.trim().toLowerCase();
 
     return products.filter((product) => {
       const matchesSearch =
-        product.nameAr.includes(searchQuery) || product.name.toLowerCase().includes(searchQuery.toLowerCase());
+        !query || product.nameAr.toLowerCase().includes(query) || product.name.toLowerCase().includes(query);
+
+      const selectedCatSlug = selectedCategory;
+      const selectedCatData = categories.find((cat) => cat.slug === selectedCatSlug);
 
       const matchesCategory =
         selectedCategory === "all" ||
-        product.category?.trim() === selectedCategory?.trim() ||
-        product.category?.trim() === categoryNameToMatch?.trim();
+        product.category?.trim() === selectedCatSlug || // فلترة حسب slug
+        product.category?.trim() === selectedCatData?.name_ar?.trim(); // فلترة حسب الاسم العربي
 
       const matchesBrand = selectedBrand === "all" || product.brand?.trim() === selectedBrand?.trim();
 

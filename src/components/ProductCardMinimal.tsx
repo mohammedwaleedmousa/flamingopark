@@ -52,24 +52,24 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
       className="group h-full"
     >
       <Link to={`/product/${product.slug}`} className="block h-full">
-        <div className="relative overflow-hidden rounded-lg bg-beige border-2 border-gold transition-all duration-300 hover:border-gold-light hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.3)] h-[420px] flex flex-col">
-          {/* Image Container */}
-          <div className="relative aspect-square overflow-hidden">
+        <div className="relative overflow-hidden rounded-lg bg-beige border-2 border-gold transition-all duration-300 hover:border-gold-light hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.3)] h-full grid grid-rows-[1fr_auto]">
+          {/* الصورة - تملأ كامل القسم */}
+          <div className="w-full h-full overflow-hidden">
             {product.images[0] ? (
               <img
                 src={product.images[0]}
                 alt={product.nameAr}
-                className="w-full h-full object-contain p-3 transition-transform duration-500 group-hover:scale-105"
+                className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2 bg-beige">
+              <div className="w-full h-full flex items-center justify-center text-muted-foreground bg-beige">
                 <Eye className="w-8 h-8 opacity-40" />
               </div>
             )}
           </div>
 
-          {/* Content Container */}
-          <div className="p-4 bg-background border-t border-border/20 flex-1 flex flex-col">
+          {/* المحتوى */}
+          <div className="p-4 bg-background border-t border-border/20 flex flex-col flex-1">
             {/* Brand */}
             <span className="text-[11px] font-medium text-gold uppercase tracking-wider">{product.brand}</span>
 
@@ -78,7 +78,7 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
               {product.nameAr}
             </h3>
 
-            {/* Price Section */}
+            {/* Price Section - ثابت في الأسفل */}
             <div className="flex items-center gap-2 mt-auto">
               <span className="font-heading font-semibold text-base text-foreground">
                 {discountedPrice.toFixed(0)} <span className="text-xs font-normal">{currency}</span>

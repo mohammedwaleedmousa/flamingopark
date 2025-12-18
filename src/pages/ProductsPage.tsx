@@ -1,41 +1,37 @@
-import { useState, useMemo, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
-import { useSearchParams } from 'react-router-dom';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import CartDrawer from '@/components/CartDrawer';
-import ProductCardMinimal from '@/components/ProductCardMinimal';
-import { useStore, Product } from '@/store/useStore';
-import { supabase } from '@/integrations/supabase/client';
-import { Search, SlidersHorizontal, Loader2 } from 'lucide-react';
+import { useState, useMemo, useEffect } from "react";
+import { motion } from "framer-motion";
+import { useQuery } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import CartDrawer from "@/components/CartDrawer";
+import ProductCardMinimal from "@/components/ProductCardMinimal";
+import { useStore, Product } from "@/store/useStore";
+import { supabase } from "@/integrations/supabase/client";
+import { Search, SlidersHorizontal, Loader2 } from "lucide-react";
 
 const ProductsPage = () => {
   const { country } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
-  
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState(searchParams.get('category') || 'all');
-  const [selectedBrand, setSelectedBrand] = useState(searchParams.get('brand') || 'all');
+
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
+  const [selectedBrand, setSelectedBrand] = useState(searchParams.get("brand") || "all");
   const [showFilters, setShowFilters] = useState(false);
 
   // Sync URL params with state
   useEffect(() => {
-    const categoryParam = searchParams.get('category');
-    const brandParam = searchParams.get('brand');
+    const categoryParam = searchParams.get("category");
+    const brandParam = searchParams.get("brand");
     if (categoryParam) setSelectedCategory(categoryParam);
     if (brandParam) setSelectedBrand(brandParam);
   }, [searchParams]);
 
   // Fetch categories
   const { data: categories = [] } = useQuery({
-    queryKey: ['categories'],
+    queryKey: ["categories"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .eq('is_active', true)
-        .order('sort_order');
+      const { data, error } = await supabase.from("categories").select("*").eq("is_active", true).order("sort_order");
       if (error) throw error;
       return data;
     },
@@ -43,14 +39,14 @@ const ProductsPage = () => {
 
   // Fetch brands
   const { data: brands = [] } = useQuery({
-    queryKey: ['brands', country],
+    queryKey: ["brands", country],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('brands')
-        .select('*')
-        .eq('is_active', true)
-        .contains('countries', [country])
-        .order('sort_order');
+        .from("brands")
+        .select("*")
+        .eq("is_active", true)
+        .contains("countries", [country])
+        .order("sort_order");
       if (error) throw error;
       return data;
     },
@@ -59,16 +55,16 @@ const ProductsPage = () => {
 
   // Fetch products
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ['products', country],
+    queryKey: ["products", country],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .contains('countries', [country])
-        .order('created_at', { ascending: false });
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .contains("countries", [country])
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data.map(p => ({
+      return data.map((p) => ({
         id: p.id,
         name: p.name,
         nameAr: p.name_ar,
@@ -76,13 +72,13 @@ const ProductsPage = () => {
         price: Number(p.price),
         originalPrice: p.original_price ? Number(p.original_price) : undefined,
         discount: p.discount || undefined,
-        description: p.description || '',
-        descriptionAr: p.description_ar || '',
+        description: p.description || "",
+        descriptionAr: p.description_ar || "",
         images: p.images || [],
         category: p.category,
         brand: p.brand,
         inStock: p.in_stock ?? true,
-        countries: (p.countries || ['SA', 'YE']) as ('SA' | 'YE')[],
+        countries: (p.countries || ["SA", "YE"]) as ("SA" | "YE")[],
         isFeatured: p.is_featured,
         isBestSeller: p.is_best_seller,
       })) as Product[];
@@ -92,17 +88,23 @@ const ProductsPage = () => {
 
   const filteredProducts = useMemo(() => {
     // Find category name from slug for filtering
-    const selectedCategoryData = categories.find(cat => cat.slug === selectedCategory);
+    const selectedCategoryData = categories.find((cat) => cat.slug === selectedCategory);
     const categoryNameToMatch = selectedCategoryData?.name || selectedCategoryData?.slug || selectedCategory;
-    
+
     return products.filter((product) => {
-      const matchesSearch = product.nameAr.includes(searchQuery) || 
-                           product.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const normalizedSearch = searchQuery.trim().toLowerCase();
+
+      const matchesSearch =
+        normalizedSearch === "" ||
+        product.nameAr?.toLowerCase().includes(normalizedSearch) ||
+        product.name?.toLowerCase().includes(normalizedSearch);
+
       // Match by category slug, name, or name_ar
-      const matchesCategory = selectedCategory === 'all' || 
-                             product.category?.trim() === selectedCategory?.trim() ||
-                             product.category?.trim() === categoryNameToMatch?.trim();
-      const matchesBrand = selectedBrand === 'all' || product.brand?.trim() === selectedBrand?.trim();
+      const matchesCategory =
+        selectedCategory === "all" ||
+        product.category?.trim() === selectedCategory?.trim() ||
+        product.category?.trim() === categoryNameToMatch?.trim();
+      const matchesBrand = selectedBrand === "all" || product.brand?.trim() === selectedBrand?.trim();
       return matchesSearch && matchesCategory && matchesBrand;
     });
   }, [products, searchQuery, selectedCategory, selectedBrand, categories]);
@@ -164,9 +166,9 @@ const ProductsPage = () => {
             {/* Sidebar Filters */}
             <motion.aside
               initial={false}
-              animate={{ 
-                height: showFilters ? 'auto' : 0,
-                opacity: showFilters ? 1 : 0 
+              animate={{
+                height: showFilters ? "auto" : 0,
+                opacity: showFilters ? 1 : 0,
               }}
               className={`md:w-64 shrink-0 overflow-hidden md:overflow-visible md:h-auto md:opacity-100`}
             >
@@ -175,8 +177,8 @@ const ProductsPage = () => {
                   <h3 className="font-heading text-lg text-foreground">الفلاتر</h3>
                   <button
                     onClick={() => {
-                      setSelectedCategory('all');
-                      setSelectedBrand('all');
+                      setSelectedCategory("all");
+                      setSelectedBrand("all");
                       setSearchParams({});
                     }}
                     className="text-xs text-gold hover:underline font-body"
@@ -190,11 +192,9 @@ const ProductsPage = () => {
                   <h4 className="font-heading text-sm text-foreground mb-3">التصنيفات</h4>
                   <div className="space-y-2">
                     <button
-                      onClick={() => setSelectedCategory('all')}
+                      onClick={() => setSelectedCategory("all")}
                       className={`w-full text-right px-3 py-2 rounded-md font-body text-sm transition-colors ${
-                        selectedCategory === 'all'
-                          ? 'bg-gold text-secondary'
-                          : 'hover:bg-muted text-foreground'
+                        selectedCategory === "all" ? "bg-gold text-secondary" : "hover:bg-muted text-foreground"
                       }`}
                     >
                       الكل
@@ -204,9 +204,7 @@ const ProductsPage = () => {
                         key={cat.id}
                         onClick={() => setSelectedCategory(cat.slug)}
                         className={`w-full text-right px-3 py-2 rounded-md font-body text-sm transition-colors ${
-                          selectedCategory === cat.slug
-                            ? 'bg-gold text-secondary'
-                            : 'hover:bg-muted text-foreground'
+                          selectedCategory === cat.slug ? "bg-gold text-secondary" : "hover:bg-muted text-foreground"
                         }`}
                       >
                         {cat.name_ar}
@@ -220,11 +218,9 @@ const ProductsPage = () => {
                   <h4 className="font-heading text-sm text-foreground mb-3">الماركات</h4>
                   <div className="space-y-2">
                     <button
-                      onClick={() => setSelectedBrand('all')}
+                      onClick={() => setSelectedBrand("all")}
                       className={`w-full text-right px-3 py-2 rounded-md font-body text-sm transition-colors ${
-                        selectedBrand === 'all'
-                          ? 'bg-gold text-secondary'
-                          : 'hover:bg-muted text-foreground'
+                        selectedBrand === "all" ? "bg-gold text-secondary" : "hover:bg-muted text-foreground"
                       }`}
                     >
                       الكل
@@ -235,8 +231,8 @@ const ProductsPage = () => {
                         onClick={() => setSelectedBrand(brand.name.trim())}
                         className={`w-full text-right px-3 py-2 rounded-md font-body text-sm transition-colors ${
                           selectedBrand === brand.name.trim()
-                            ? 'bg-gold text-secondary'
-                            : 'hover:bg-muted text-foreground'
+                            ? "bg-gold text-secondary"
+                            : "hover:bg-muted text-foreground"
                         }`}
                       >
                         {brand.name.trim()}
@@ -250,9 +246,7 @@ const ProductsPage = () => {
             {/* Products Grid */}
             <div className="flex-1">
               {/* Results Count */}
-              <p className="text-sm text-muted-foreground font-body mb-6">
-                عرض {filteredProducts.length} منتج
-              </p>
+              <p className="text-sm text-muted-foreground font-body mb-6">عرض {filteredProducts.length} منتج</p>
 
               {isLoading ? (
                 <div className="flex items-center justify-center py-16">

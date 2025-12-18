@@ -246,13 +246,13 @@ const ProductsPage = () => {
             {/* Products Grid */}
             <div className="flex-1">
               {/* Results Count */}
-              <p className="text-sm text-muted-foreground font-body mb-6">عرض {filteredProducts.length} منتج</p>
+              <p className="text-sm text-muted-foreground font-body mb-6">عرض {searchResults.length} منتج</p>
 
               {isLoading ? (
                 <div className="flex items-center justify-center py-16">
                   <Loader2 className="w-8 h-8 animate-spin text-gold" />
                 </div>
-              ) : filteredProducts.length === 0 ? (
+              ) : searchResults.length === 0 ? (
                 <div className="text-center py-16">
                   <p className="text-muted-foreground font-body">لا توجد منتجات مطابقة</p>
                 </div>

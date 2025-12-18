@@ -1,22 +1,17 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Slider } from '@/components/ui/slider';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import { toast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Upload, Grid3X3, Search, Loader2, X, ZoomIn, Move } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Slider } from "@/components/ui/slider";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { Plus, Pencil, Trash2, Upload, Grid3X3, Search, Loader2, X, ZoomIn, Move } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { cn } from "@/lib/utils";
 
 interface Category {
   id: string;
@@ -33,28 +28,26 @@ const AdminCategoriesPage = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
-  const [search, setSearch] = useState('');
+  const [search, setSearch] = useState("");
   const [formData, setFormData] = useState({
-    name: '',
-    name_ar: '',
-    slug: '',
-    image_url: '',
+    name: "",
+    name_ar: "",
+    slug: "",
+    image_url: "",
     is_active: true,
     sort_order: 0,
-    countries: ['SA', 'YE'] as string[],
     image_zoom: 1,
     image_position_x: 50,
     image_position_y: 50,
   });
+  const [isSA, setIsSA] = useState(true);
+  const [isYE, setIsYE] = useState(true);
   const [uploading, setUploading] = useState(false);
 
   const { data: categories, isLoading } = useQuery({
-    queryKey: ['admin-categories'],
+    queryKey: ["admin-categories"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('categories')
-        .select('*')
-        .order('sort_order', { ascending: true });
+      const { data, error } = await supabase.from("categories").select("*").order("sort_order", { ascending: true });
       if (error) throw error;
       return data as Category[];
     },
@@ -62,12 +55,13 @@ const AdminCategoriesPage = () => {
 
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData & { id?: string }) => {
-      const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, '-');
-      console.log('Saving category:', data);
-      
+      const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, "-");
+      const countries = [...(isSA ? ["SA"] : []), ...(isYE ? ["YE"] : [])];
+      console.log("Saving category:", data, countries);
+
       if (data.id) {
         const { data: result, error } = await supabase
-          .from('categories')
+          .from("categories")
           .update({
             name: data.name,
             name_ar: data.name_ar,
@@ -75,16 +69,16 @@ const AdminCategoriesPage = () => {
             image_url: data.image_url || null,
             is_active: data.is_active,
             sort_order: data.sort_order,
-            countries: data.countries,
+            countries,
           })
-          .eq('id', data.id)
+          .eq("id", data.id)
           .select();
-        
-        console.log('Update result:', result, 'Error:', error);
+
+        console.log("Update result:", result, "Error:", error);
         if (error) throw error;
       } else {
         const { data: result, error } = await supabase
-          .from('categories')
+          .from("categories")
           .insert({
             name: data.name,
             name_ar: data.name_ar,
@@ -92,46 +86,43 @@ const AdminCategoriesPage = () => {
             image_url: data.image_url || null,
             is_active: data.is_active,
             sort_order: data.sort_order,
-            countries: data.countries,
+            countries,
           })
           .select();
-        
-        console.log('Insert result:', result, 'Error:', error);
+
+        console.log("Insert result:", result, "Error:", error);
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
-      toast({ title: editingCategory ? 'تم تحديث الفئة' : 'تم إضافة الفئة' });
+      queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+      toast({ title: editingCategory ? "تم تحديث الفئة" : "تم إضافة الفئة" });
       resetForm();
     },
     onError: (error: any) => {
-      console.error('Category save error:', error);
-      toast({ title: 'حدث خطأ', description: error?.message || 'فشل في حفظ الفئة', variant: 'destructive' });
+      console.error("Category save error:", error);
+      toast({ title: "حدث خطأ", description: error?.message || "فشل في حفظ الفئة", variant: "destructive" });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('categories').delete().eq('id', id);
+      const { error } = await supabase.from("categories").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
-      toast({ title: 'تم حذف الفئة' });
+      queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+      toast({ title: "تم حذف الفئة" });
     },
   });
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
-      const { error } = await supabase
-        .from('categories')
-        .update({ is_active })
-        .eq('id', id);
+      const { error } = await supabase.from("categories").update({ is_active }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-categories'] });
+      queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
     },
   });
 
@@ -140,22 +131,18 @@ const AdminCategoriesPage = () => {
     if (!file) return;
 
     setUploading(true);
-    const fileExt = file.name.split('.').pop();
+    const fileExt = file.name.split(".").pop();
     const fileName = `categories/${Date.now()}.${fileExt}`;
 
-    const { error: uploadError } = await supabase.storage
-      .from('uploads')
-      .upload(fileName, file);
+    const { error: uploadError } = await supabase.storage.from("uploads").upload(fileName, file);
 
     if (uploadError) {
-      toast({ title: 'خطأ في رفع الصورة', variant: 'destructive' });
+      toast({ title: "خطأ في رفع الصورة", variant: "destructive" });
       setUploading(false);
       return;
     }
 
-    const { data: urlData } = supabase.storage
-      .from('uploads')
-      .getPublicUrl(fileName);
+    const { data: urlData } = supabase.storage.from("uploads").getPublicUrl(fileName);
 
     setFormData({ ...formData, image_url: urlData.publicUrl });
     setUploading(false);
@@ -163,18 +150,19 @@ const AdminCategoriesPage = () => {
 
   const resetForm = () => {
     setFormData({
-      name: '',
-      name_ar: '',
-      slug: '',
-      image_url: '',
+      name: "",
+      name_ar: "",
+      slug: "",
+      image_url: "",
       is_active: true,
       sort_order: 0,
-      countries: ['SA', 'YE'],
       image_zoom: 1,
       image_position_x: 50,
       image_position_y: 50,
     });
     setEditingCategory(null);
+    setIsSA(true);
+    setIsYE(true);
     setIsDialogOpen(false);
   };
 
@@ -184,24 +172,16 @@ const AdminCategoriesPage = () => {
       name: category.name,
       name_ar: category.name_ar,
       slug: category.slug,
-      image_url: category.image_url || '',
+      image_url: category.image_url || "",
       is_active: category.is_active ?? true,
       sort_order: category.sort_order ?? 0,
-      countries: category.countries || ['SA', 'YE'],
       image_zoom: 1,
       image_position_x: 50,
       image_position_y: 50,
     });
+    setIsSA(category.countries?.includes("SA") ?? true);
+    setIsYE(category.countries?.includes("YE") ?? true);
     setIsDialogOpen(true);
-  };
-
-  const toggleCountry = (country: string) => {
-    setFormData(prev => ({
-      ...prev,
-      countries: prev.countries.includes(country)
-        ? prev.countries.filter(c => c !== country)
-        : [...prev.countries, country],
-    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -213,18 +193,19 @@ const AdminCategoriesPage = () => {
   };
 
   const generateSlug = (name: string) => {
-    return name.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, '');
+    return name
+      .toLowerCase()
+      .replace(/\s+/g, "-")
+      .replace(/[^a-z0-9-]/g, "");
   };
 
-  const filteredCategories = categories?.filter(c => 
-    c.name.toLowerCase().includes(search.toLowerCase()) ||
-    c.name_ar.includes(search)
-  ) || [];
+  const filteredCategories =
+    categories?.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.name_ar.includes(search)) || [];
 
   const stats = {
     total: categories?.length || 0,
-    active: categories?.filter(c => c.is_active).length || 0,
-    inactive: categories?.filter(c => !c.is_active).length || 0,
+    active: categories?.filter((c) => c.is_active).length || 0,
+    inactive: categories?.filter((c) => !c.is_active).length || 0,
   };
 
   if (isLoading) {
@@ -241,9 +222,17 @@ const AdminCategoriesPage = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl md:text-3xl text-foreground">الفئات</h1>
-          <p className="text-muted-foreground text-sm mt-1">{stats.total} فئة • {stats.active} نشطة</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            {stats.total} فئة • {stats.active} نشطة
+          </p>
         </div>
-        <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} className="btn-gold gap-2 w-full sm:w-auto">
+        <Button
+          onClick={() => {
+            resetForm();
+            setIsDialogOpen(true);
+          }}
+          className="btn-gold gap-2 w-full sm:w-auto"
+        >
           <Plus className="w-4 h-4" />
           إضافة فئة
         </Button>
@@ -252,17 +241,11 @@ const AdminCategoriesPage = () => {
       {/* Stats */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'الكل', value: stats.total, color: 'from-primary/20 to-primary/10 border-primary/20' },
-          { label: 'نشطة', value: stats.active, color: 'from-green-500/20 to-green-500/10 border-green-500/20' },
-          { label: 'معطلة', value: stats.inactive, color: 'from-red-500/20 to-red-500/10 border-red-500/20' },
+          { label: "الكل", value: stats.total, color: "from-primary/20 to-primary/10 border-primary/20" },
+          { label: "نشطة", value: stats.active, color: "from-green-500/20 to-green-500/10 border-green-500/20" },
+          { label: "معطلة", value: stats.inactive, color: "from-red-500/20 to-red-500/10 border-red-500/20" },
         ].map((stat) => (
-          <div
-            key={stat.label}
-            className={cn(
-              "p-4 rounded-xl text-center border bg-gradient-to-br",
-              stat.color
-            )}
-          >
+          <div key={stat.label} className={cn("p-4 rounded-xl text-center border bg-gradient-to-br", stat.color)}>
             <p className="text-2xl font-heading">{stat.value}</p>
             <p className="text-xs text-muted-foreground">{stat.label}</p>
           </div>
@@ -306,13 +289,15 @@ const AdminCategoriesPage = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
                   <h3 className="font-heading text-foreground truncate">{category.name_ar}</h3>
-                  <span className={cn(
-                    "px-2 py-1 rounded-full text-xs font-medium shrink-0 border",
-                    category.is_active 
-                      ? 'bg-green-500/15 text-green-600 border-green-500/30' 
-                      : 'bg-red-500/15 text-red-600 border-red-500/30'
-                  )}>
-                    {category.is_active ? 'نشط' : 'معطل'}
+                  <span
+                    className={cn(
+                      "px-2 py-1 rounded-full text-xs font-medium shrink-0 border",
+                      category.is_active
+                        ? "bg-green-500/15 text-green-600 border-green-500/30"
+                        : "bg-red-500/15 text-red-600 border-red-500/30",
+                    )}
+                  >
+                    {category.is_active ? "نشط" : "معطل"}
                   </span>
                 </div>
                 <p className="text-sm text-muted-foreground">{category.name}</p>
@@ -328,14 +313,9 @@ const AdminCategoriesPage = () => {
                 className="flex-1 gap-2"
                 onClick={() => toggleActiveMutation.mutate({ id: category.id, is_active: !category.is_active })}
               >
-                {category.is_active ? 'تعطيل' : 'تفعيل'}
+                {category.is_active ? "تعطيل" : "تفعيل"}
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex-1 gap-2"
-                onClick={() => handleEdit(category)}
-              >
+              <Button size="sm" variant="outline" className="flex-1 gap-2" onClick={() => handleEdit(category)}>
                 <Pencil className="w-4 h-4" />
                 تعديل
               </Button>
@@ -344,7 +324,7 @@ const AdminCategoriesPage = () => {
                 variant="outline"
                 className="text-destructive border-destructive/30 hover:bg-destructive/10"
                 onClick={() => {
-                  if (confirm('هل أنت متأكد من حذف هذه الفئة؟')) {
+                  if (confirm("هل أنت متأكد من حذف هذه الفئة؟")) {
                     deleteMutation.mutate(category.id);
                   }
                 }}
@@ -397,19 +377,12 @@ const AdminCategoriesPage = () => {
                 <td className="p-4">
                   <Switch
                     checked={category.is_active ?? true}
-                    onCheckedChange={(checked) =>
-                      toggleActiveMutation.mutate({ id: category.id, is_active: checked })
-                    }
+                    onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: category.id, is_active: checked })}
                   />
                 </td>
                 <td className="p-4">
                   <div className="flex gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="hover:bg-muted"
-                      onClick={() => handleEdit(category)}
-                    >
+                    <Button size="icon" variant="ghost" className="hover:bg-muted" onClick={() => handleEdit(category)}>
                       <Pencil className="w-4 h-4" />
                     </Button>
                     <Button
@@ -417,7 +390,7 @@ const AdminCategoriesPage = () => {
                       variant="ghost"
                       className="text-destructive hover:bg-destructive/10"
                       onClick={() => {
-                        if (confirm('هل أنت متأكد من حذف هذه الفئة؟')) {
+                        if (confirm("هل أنت متأكد من حذف هذه الفئة؟")) {
                           deleteMutation.mutate(category.id);
                         }
                       }}
@@ -447,7 +420,7 @@ const AdminCategoriesPage = () => {
             <DialogContent className="max-w-md max-h-[90vh] overflow-auto">
               <DialogHeader>
                 <DialogTitle className="font-heading">
-                  {editingCategory ? 'تعديل الفئة' : 'إضافة فئة جديدة'}
+                  {editingCategory ? "تعديل الفئة" : "إضافة فئة جديدة"}
                 </DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
@@ -455,9 +428,7 @@ const AdminCategoriesPage = () => {
                   <Label>الاسم بالعربي</Label>
                   <Input
                     value={formData.name_ar}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name_ar: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
                     placeholder="مثال: ساعات"
                     dir="rtl"
                     required
@@ -470,10 +441,10 @@ const AdminCategoriesPage = () => {
                     value={formData.name}
                     onChange={(e) => {
                       const name = e.target.value;
-                      setFormData({ 
-                        ...formData, 
+                      setFormData({
+                        ...formData,
                         name,
-                        slug: generateSlug(name)
+                        slug: generateSlug(name),
                       });
                     }}
                     placeholder="Example: Watches"
@@ -482,143 +453,23 @@ const AdminCategoriesPage = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>الرابط (Slug)</Label>
+                  <Label>Slug</Label>
                   <Input
                     value={formData.slug}
-                    onChange={(e) =>
-                      setFormData({ ...formData, slug: e.target.value })
-                    }
-                    placeholder="watches"
-                    dir="ltr"
+                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
+                    placeholder="example-watches"
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label>الصورة</Label>
-                  <div className="flex flex-col gap-3">
-                    {formData.image_url ? (
-                      <div className="space-y-4">
-                        {/* Image Preview with positioning */}
-                        <div className="relative border border-border rounded overflow-hidden" style={{ height: '150px' }}>
-                          <img 
-                            src={formData.image_url} 
-                            alt="Preview"
-                            className="w-full h-full"
-                            style={{
-                              objectFit: 'cover',
-                              transform: `scale(${formData.image_zoom})`,
-                              objectPosition: `${formData.image_position_x}% ${formData.image_position_y}%`,
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setFormData({ ...formData, image_url: '' })}
-                            className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
-                          >
-                            <X className="w-4 h-4" />
-                          </button>
-                        </div>
-
-                        {/* Image Controls */}
-                        <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
-                          {/* Zoom */}
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <ZoomIn className="w-4 h-4 text-muted-foreground" />
-                              <label className="text-xs text-muted-foreground">التكبير: {formData.image_zoom.toFixed(1)}x</label>
-                            </div>
-                            <Slider
-                              value={[formData.image_zoom]}
-                              onValueChange={([v]) => setFormData({ ...formData, image_zoom: v })}
-                              min={1}
-                              max={2}
-                              step={0.1}
-                              className="w-full"
-                            />
-                          </div>
-
-                          {/* Position X */}
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Move className="w-4 h-4 text-muted-foreground" />
-                              <label className="text-xs text-muted-foreground">الموضع الأفقي: {formData.image_position_x}%</label>
-                            </div>
-                            <Slider
-                              value={[formData.image_position_x]}
-                              onValueChange={([v]) => setFormData({ ...formData, image_position_x: v })}
-                              min={0}
-                              max={100}
-                              step={1}
-                              className="w-full"
-                            />
-                          </div>
-
-                          {/* Position Y */}
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Move className="w-4 h-4 text-muted-foreground rotate-90" />
-                              <label className="text-xs text-muted-foreground">الموضع العمودي: {formData.image_position_y}%</label>
-                            </div>
-                            <Slider
-                              value={[formData.image_position_y]}
-                              onValueChange={([v]) => setFormData({ ...formData, image_position_y: v })}
-                              min={0}
-                              max={100}
-                              step={1}
-                              className="w-full"
-                            />
-                          </div>
-
-                          {/* Reset Button */}
-                          <Button 
-                            type="button"
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => setFormData({ ...formData, image_zoom: 1, image_position_x: 50, image_position_y: 50 })}
-                          >
-                            إعادة تعيين الموضع
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <label className="cursor-pointer">
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="hidden"
-                          onChange={handleUpload}
-                        />
-                        <div className="h-24 w-24 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center hover:border-gold transition-colors">
-                          {uploading ? (
-                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                          ) : (
-                            <>
-                              <Upload className="w-6 h-6 text-muted-foreground mb-1" />
-                              <span className="text-xs text-muted-foreground">رفع صورة</span>
-                            </>
-                          )}
-                        </div>
-                      </label>
-                    )}
-                  </div>
-                </div>
-
-                {/* Countries Selection */}
-                <div className="space-y-2">
                   <Label>الدول</Label>
-                  <div className="flex gap-4">
+                  <div className="flex flex-col gap-2">
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        checked={formData.countries.includes('SA')}
-                        onCheckedChange={() => toggleCountry('SA')}
-                      />
+                      <Checkbox checked={isSA} onCheckedChange={setIsSA} />
                       <span className="text-sm">🇸🇦 السعودية</span>
                     </label>
                     <label className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        checked={formData.countries.includes('YE')}
-                        onCheckedChange={() => toggleCountry('YE')}
-                      />
+                      <Checkbox checked={isYE} onCheckedChange={setIsYE} />
                       <span className="text-sm">🇾🇪 اليمن</span>
                     </label>
                   </div>
@@ -629,28 +480,32 @@ const AdminCategoriesPage = () => {
                   <Input
                     type="number"
                     value={formData.sort_order}
-                    onChange={(e) =>
-                      setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })
-                    }
+                    onChange={(e) => setFormData({ ...formData, sort_order: Number(e.target.value) })}
                   />
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <Label>نشط</Label>
+                <div className="space-y-2">
+                  <Label>حالة الفئة</Label>
                   <Switch
-                    checked={formData.is_active}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, is_active: checked })
-                    }
+                    checked={formData.is_active ?? true}
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
                   />
                 </div>
 
-                <div className="flex gap-2 pt-4">
-                  <Button type="submit" className="flex-1 btn-gold" disabled={saveMutation.isPending}>
-                    {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : 'حفظ'}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={resetForm} className="flex-1">
+                <div className="space-y-2">
+                  <Label>رفع صورة</Label>
+                  <input type="file" accept="image/*" onChange={handleUpload} />
+                  {formData.image_url && (
+                    <img src={formData.image_url} alt="Category" className="w-full h-40 object-cover rounded-lg mt-2" />
+                  )}
+                </div>
+
+                <div className="flex justify-end gap-2">
+                  <Button type="button" variant="outline" onClick={resetForm}>
                     إلغاء
+                  </Button>
+                  <Button type="submit" disabled={uploading}>
+                    {editingCategory ? "تحديث" : "إضافة"}
                   </Button>
                 </div>
               </form>

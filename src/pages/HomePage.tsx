@@ -9,7 +9,7 @@ import CartDrawer from "@/components/CartDrawer";
 import DynamicSection from "@/components/DynamicSection";
 import { useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
-import { Gem, Shield, Truck, Star, ArrowLeft } from "lucide-react";
+import { Gem, Shield, Truck, Star, ArrowLeft, Loader2 } from "lucide-react";
 import { Link } from "react-router-dom";
 
 interface HomepageSection {
@@ -45,14 +45,15 @@ const HomePage = () => {
     enabled: !!country,
   });
 
-  // Fetch categories for the categories section
-  const { data: categories = [] } = useQuery({
+  // Fetch categories for the current country
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ["categories", country],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("categories")
         .select("*")
         .eq("is_active", true)
+        .contains("countries", [country])
         .order("sort_order", { ascending: true });
       if (error) throw error;
       return data;
@@ -71,11 +72,16 @@ const HomePage = () => {
         {/* Hero Slider */}
         <HeroSlider />
 
-        {/* Brands Strip - Right after banner */}
+        {/* Brands Strip */}
         <BrandsStrip />
 
-        {/* Categories Section - Horizontal scrolling */}
-        {categories.length > 0 && (
+        {/* Categories Section */}
+        {categoriesLoading ? (
+          <div className="text-center py-12 text-muted-foreground">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
+            <p>جاري تحميل الفئات...</p>
+          </div>
+        ) : categories.length > 0 ? (
           <section className="py-10 md:py-14 bg-gradient-to-b from-muted/30 to-background overflow-hidden">
             <div className="container mx-auto px-4 mb-8">
               <motion.div
@@ -91,14 +97,9 @@ const HomePage = () => {
               </motion.div>
             </div>
 
-            {/* Draggable Categories Strip */}
-            {/* Draggable Categories Strip */}
             <div
               className="relative overflow-x-auto px-4 scrollbar-hide cursor-grab active:cursor-grabbing"
-              style={{
-                scrollbarWidth: "none",
-                msOverflowStyle: "none",
-              }}
+              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
             >
               <div className="flex items-start gap-4 md:gap-6 pb-2">
                 {categories.map((category, index) => (
@@ -120,7 +121,6 @@ const HomePage = () => {
                       )}
                     </Link>
 
-                    {/* الاسم تحت الصورة */}
                     <h3 className="font-heading text-xs md:text-sm text-foreground group-hover:text-gold mt-2 text-center">
                       {category.name_ar}
                     </h3>
@@ -129,7 +129,7 @@ const HomePage = () => {
               </div>
             </div>
           </section>
-        )}
+        ) : null}
 
         {/* Dynamic Product Sections */}
         {sections.map((section, index) => (
@@ -138,31 +138,17 @@ const HomePage = () => {
 
         {/* CTA Banner */}
         <section className="py-20 md:py-28 bg-secondary text-gold-light relative overflow-hidden">
-          {/* Animated Background */}
           <div className="absolute inset-0">
-            {/* Floating Particles */}
             {[...Array(15)].map((_, i) => (
               <motion.div
                 key={i}
                 className="absolute w-1 h-1 bg-gold rounded-full"
-                initial={{
-                  x: `${Math.random() * 100}%`,
-                  y: `${Math.random() * 100}%`,
-                  opacity: 0,
-                }}
-                animate={{
-                  y: [null, "-50%"],
-                  opacity: [0, 0.5, 0],
-                }}
-                transition={{
-                  duration: 4 + Math.random() * 2,
-                  repeat: Infinity,
-                  delay: Math.random() * 2,
-                }}
+                initial={{ x: `${Math.random() * 100}%`, y: `${Math.random() * 100}%`, opacity: 0 }}
+                animate={{ y: [null, "-50%"], opacity: [0, 0.5, 0] }}
+                transition={{ duration: 4 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 2 }}
               />
             ))}
 
-            {/* Pattern */}
             <div
               className="absolute inset-0 opacity-5"
               style={{
@@ -170,8 +156,6 @@ const HomePage = () => {
                 backgroundSize: "40px 40px",
               }}
             />
-
-            {/* Glowing Orbs */}
             <div className="absolute top-0 left-1/4 w-96 h-96 bg-gold/10 rounded-full blur-3xl" />
             <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-gold/5 rounded-full blur-3xl" />
           </div>
@@ -214,7 +198,6 @@ const HomePage = () => {
                 </Link>
               </div>
 
-              {/* Trust Badges */}
               <div className="flex items-center justify-center gap-6 md:gap-10 mt-12 pt-12 border-t border-gold/10">
                 {[
                   { icon: Shield, text: "دفع آمن" },

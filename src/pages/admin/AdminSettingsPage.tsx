@@ -120,40 +120,100 @@ const AdminSettingsPage = () => {
     }
   };
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "pdf" | "image") => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const sanitizeStorageFileName = (name: string) => name.replace(/[^\w.\-]+/g, "_");
 
-    const folder = type === "pdf" ? "certifications" : "certifications/images";
-    const fileName = `${folder}/${Date.now()}-${file.name}`;
-
-    const { error } = await supabase.storage.from("uploads").upload(fileName, file);
-
-    if (error) {
-      toast({ title: "خطأ", description: "فشل في رفع الملف", variant: "destructive" });
-      return;
-    }
-
-    const { data: urlData } = supabase.storage.from("uploads").getPublicUrl(fileName);
-
-    if (type === "pdf") {
-      setCertPdfUrl(urlData.publicUrl);
-    } else {
-      // Add to certification_images table
-      await supabase.from("certification_images").insert({
-        image_url: urlData.publicUrl,
-        sort_order: certImages.length,
-        is_active: true,
-      });
-
-      setCertImages([...certImages, urlData.publicUrl]);
+  const clearCertPdf = async () => {
+    try {
+      setCertPdfUrl("");
+      await updateSetting("certification_pdf_url", "");
+      toast({ title: "تم", description: "تم حذف ملف PDF" });
+    } catch (error: any) {
+      toast({ title: "خطأ", description: error?.message || "فشل حذف ملف PDF", variant: "destructive" });
     }
   };
 
-  const removeCertImage = async (index: number) => {
-    const imageUrl = certImages[index];
-    await supabase.from("certification_images").delete().eq("image_url", imageUrl);
-    setCertImages(certImages.filter((_, i) => i !== index));
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: "pdf" | "image") => {
+    const file = e.target.files?.[0];
+
+    // Allow re-uploading the same file
+    e.target.value = "";
+
+    if (!file) return;
+
+    const isPdf = type === "pdf";
+
+    if (isPdf && !file.name.toLowerCase().endsWith(".pdf")) {
+      toast({ title: "خطأ", description: "الرجاء اختيار ملف PDF فقط", variant: "destructive" });
+      return;
+    }
+
+    if (!isPdf && !file.type.startsWith("image/")) {
+      toast({ title: "خطأ", description: "الرجاء اختيار صورة فقط", variant: "destructive" });
+      return;
+    }
+
+    const folder = isPdf ? "certifications" : "certifications/images";
+    const fileName = `${folder}/${Date.now()}-${sanitizeStorageFileName(file.name)}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage.from("uploads").upload(fileName, file, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: file.type || (isPdf ? "application/pdf" : undefined),
+      });
+
+      if (uploadError) throw uploadError;
+
+      const { data: urlData } = supabase.storage.from("uploads").getPublicUrl(fileName);
+      const publicUrl = urlData.publicUrl;
+
+      if (isPdf) {
+        setCertPdfUrl(publicUrl);
+        await updateSetting("certification_pdf_url", publicUrl);
+        toast({ title: "تم", description: "تم رفع ملف PDF بنجاح" });
+        return;
+      }
+
+      // نحتاج شهادة واحدة فقط: استبدال أي صور موجودة
+      const { error: deleteError } = await supabase
+        .from("certification_images")
+        .delete()
+        .neq("id", "00000000-0000-0000-0000-000000000000");
+
+      if (deleteError) throw deleteError;
+
+      const { error: insertError } = await supabase.from("certification_images").insert({
+        image_url: publicUrl,
+        sort_order: 0,
+        is_active: true,
+      });
+
+      if (insertError) throw insertError;
+
+      setCertImages([publicUrl]);
+      toast({ title: "تم", description: "تم تحديث صورة التوثيق" });
+    } catch (error: any) {
+      toast({
+        title: "خطأ",
+        description: error?.message || "فشل في رفع الملف",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const removeCertImage = async () => {
+    const imageUrl = certImages[0];
+    if (!imageUrl) return;
+
+    const { error } = await supabase.from("certification_images").delete().eq("image_url", imageUrl);
+
+    if (error) {
+      toast({ title: "خطأ", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    setCertImages([]);
+    toast({ title: "تم", description: "تم حذف صورة التوثيق" });
   };
 
   const addBankAccount = (country: "sa" | "ye") => {
@@ -330,20 +390,20 @@ const AdminSettingsPage = () => {
         </div>
 
         <div>
-          <label className="block text-sm text-muted-foreground mb-2">صور التوثيق (3 صور)</label>
+          <label className="block text-sm text-muted-foreground mb-2">صورة التوثيق</label>
           <div className="flex flex-wrap gap-4">
-            {certImages.map((img, index) => (
-              <div key={index} className="relative w-32 h-32">
-                <img src={img} alt="" className="w-full h-full object-cover rounded" />
+            {certImages[0] ? (
+              <div className="relative w-32 h-32">
+                <img src={certImages[0]} alt="صورة التوثيق" className="w-full h-full object-cover rounded" />
                 <button
-                  onClick={() => removeCertImage(index)}
+                  onClick={removeCertImage}
                   className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
+                  type="button"
                 >
                   <X className="w-3 h-3" />
                 </button>
               </div>
-            ))}
-            {certImages.length < 3 && (
+            ) : (
               <label className="w-32 h-32 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-gold">
                 <Upload className="w-6 h-6 text-muted-foreground" />
                 <input type="file" accept="image/*" onChange={(e) => handleFileUpload(e, "image")} className="hidden" />

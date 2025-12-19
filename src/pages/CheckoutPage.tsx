@@ -546,13 +546,13 @@ const CheckoutPage = () => {
                           )}
 
                           {/* Accessories */}
-                          {item.selectedAccessories?.length > 0 && (
+                          {/* Accessories */}
+                          {item.selectedAccessories && item.selectedAccessories.length > 0 && (
                             <div className="text-xs text-muted-foreground">
                               <span>الملحقات: </span>
                               {item.selectedAccessories.map((acc, i) => (
                                 <span key={acc.name || i}>
-                                  {acc.name || "بدون اسم"} (×{acc.quantity || 1})
-                                  {i < (item.selectedAccessories?.length || 0) - 1 ? "، " : ""}
+                                  {acc.name} (×{acc.quantity || 1}){i < item.selectedAccessories.length - 1 ? "، " : ""}
                                 </span>
                               ))}
                             </div>

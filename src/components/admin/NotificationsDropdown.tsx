@@ -47,9 +47,17 @@ const NotificationsDropdown = () => {
 
   // Refresh when popover opens
   useEffect(() => {
-    if (isOpen) {
+    if (!isOpen) {
       fetchCounts();
     }
+
+    const interval = setInterval(() => {
+      if (!isOpen) {
+        fetchCounts();
+      }
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, [isOpen]);
 
   const totalCount = counts.pendingOrders + counts.pendingReviews + counts.pendingProductReviews;

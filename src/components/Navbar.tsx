@@ -175,6 +175,15 @@ const Navbar = () => {
                   </span>
                 </button>
               </div>
+              {/* Logout */}
+              <div className="mt-4 pt-4 border-t border-gold/20">
+                <button
+                  onClick={handleLogout}
+                  className="w-full py-3 text-center text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all font-body text-sm"
+                >
+                  تسجيل خروج
+                </button>
+              </div>
             </nav>
           </motion.div>
         )}

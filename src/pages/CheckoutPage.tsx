@@ -1,18 +1,18 @@
-import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import { useNavigate } from 'react-router-dom';
-import { useQuery, useMutation } from '@tanstack/react-query';
-import { z } from 'zod';
-import Navbar from '@/components/Navbar';
-import Footer from '@/components/Footer';
-import CartDrawer from '@/components/CartDrawer';
-import { useStore } from '@/store/useStore';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle } from 'lucide-react';
+import { useState, useEffect } from "react";
+import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { z } from "zod";
+import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
+import CartDrawer from "@/components/CartDrawer";
+import { useStore } from "@/store/useStore";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle } from "lucide-react";
 
 // Zod schemas for order item validation
 const orderAccessorySchema = z.object({
@@ -55,26 +55,26 @@ interface CODRegion {
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { country, customer, cart, getCartTotal, clearCart } = useStore();
-  const [paymentMethod, setPaymentMethod] = useState<'cod' | 'bank'>('cod');
-  const [selectedDelivery, setSelectedDelivery] = useState('');
-  const [selectedRegion, setSelectedRegion] = useState('');
+  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bank">("cod");
+  const [selectedDelivery, setSelectedDelivery] = useState("");
+  const [selectedRegion, setSelectedRegion] = useState("");
   const [formData, setFormData] = useState({
-    name: customer?.name || '',
-    phone: customer?.phone || '',
-    address: '',
-    notes: '',
+    name: customer?.name || "",
+    phone: customer?.phone || "",
+    address: "",
+    notes: "",
   });
 
   // Fetch delivery companies
   const { data: deliveryCompanies = [] } = useQuery({
-    queryKey: ['delivery-companies', country],
+    queryKey: ["delivery-companies", country],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('delivery_companies')
-        .select('*')
-        .eq('country', country)
-        .eq('is_active', true)
-        .order('name');
+        .from("delivery_companies")
+        .select("*")
+        .eq("country", country)
+        .eq("is_active", true)
+        .order("name");
       if (error) throw error;
       return data as DeliveryCompany[];
     },
@@ -83,31 +83,27 @@ const CheckoutPage = () => {
 
   // Fetch bank accounts from site settings
   const { data: bankAccounts = [] } = useQuery({
-    queryKey: ['bank-accounts', country],
+    queryKey: ["bank-accounts", country],
     queryFn: async () => {
-      const key = country === 'SA' ? 'bank_accounts_sa' : 'bank_accounts_ye';
-      const { data, error } = await supabase
-        .from('site_settings')
-        .select('value')
-        .eq('key', key)
-        .maybeSingle();
+      const key = country === "SA" ? "bank_accounts_sa" : "bank_accounts_ye";
+      const { data, error } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
       if (error) throw error;
-      
+
       let value = data?.value;
       // Handle both string JSON and direct JSON values
-      if (typeof value === 'string') {
+      if (typeof value === "string") {
         try {
           value = JSON.parse(value);
         } catch (e) {
           return [] as BankAccount[];
         }
       }
-      
+
       if (Array.isArray(value)) {
-        return value.map(v => ({
-          bank: String((v as any)?.bank || ''),
-          account: String((v as any)?.account || ''),
-          name: String((v as any)?.name || ''),
+        return value.map((v) => ({
+          bank: String((v as any)?.bank || ""),
+          account: String((v as any)?.account || ""),
+          name: String((v as any)?.name || ""),
         })) as BankAccount[];
       }
       return [] as BankAccount[];
@@ -117,30 +113,26 @@ const CheckoutPage = () => {
 
   // Fetch WhatsApp number from site settings
   const { data: whatsappNumber } = useQuery({
-    queryKey: ['whatsapp-number', country],
+    queryKey: ["whatsapp-number", country],
     queryFn: async () => {
-      const key = country === 'SA' ? 'whatsapp_sa' : 'whatsapp_ye';
-      const { data, error } = await supabase
-        .from('site_settings')
-        .select('value')
-        .eq('key', key)
-        .maybeSingle();
+      const key = country === "SA" ? "whatsapp_sa" : "whatsapp_ye";
+      const { data, error } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
       if (error) throw error;
-      return (data?.value as string) || (country === 'SA' ? '966123456789' : '967123456789');
+      return (data?.value as string) || (country === "SA" ? "966123456789" : "967123456789");
     },
     enabled: !!country,
   });
 
   // Fetch COD regions
   const { data: codRegions = [] } = useQuery({
-    queryKey: ['cod-regions', country],
+    queryKey: ["cod-regions", country],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('cod_regions')
-        .select('id, region_name, region_name_ar')
-        .eq('country', country)
-        .eq('is_active', true)
-        .order('region_name_ar');
+        .from("cod_regions")
+        .select("id, region_name, region_name_ar")
+        .eq("country", country)
+        .eq("is_active", true)
+        .order("region_name_ar");
       if (error) throw error;
       return data as CODRegion[];
     },
@@ -164,73 +156,69 @@ const CheckoutPage = () => {
       delivery_company_id: string;
       payment_method: string;
     }) => {
-      const { data, error } = await supabase
-        .from('orders')
-        .insert(orderData)
-        .select()
-        .single();
+      const { data, error } = await supabase.from("orders").insert(orderData).select().single();
       if (error) throw error;
       return data;
     },
   });
 
-  const selectedCompany = deliveryCompanies.find(c => c.id === selectedDelivery);
+  const selectedCompany = deliveryCompanies.find((c) => c.id === selectedDelivery);
   const subtotal = getCartTotal();
   const deliveryFee = selectedCompany?.base_fee || 0;
   const total = subtotal + deliveryFee;
-  const currency = country === 'SA' ? 'ريال' : 'ريال';
+  const currency = country === "SA" ? "ريال" : "ريال";
 
   const handleCopyAccount = (account: string) => {
     navigator.clipboard.writeText(account);
     toast({
-      title: 'تم النسخ',
-      description: 'تم نسخ رقم الحساب',
+      title: "تم النسخ",
+      description: "تم نسخ رقم الحساب",
     });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.address || !selectedDelivery) {
       toast({
-        title: 'خطأ',
-        description: 'يرجى ملء جميع الحقول المطلوبة',
-        variant: 'destructive',
+        title: "خطأ",
+        description: "يرجى ملء جميع الحقول المطلوبة",
+        variant: "destructive",
       });
       return;
     }
 
     // Validate COD region selection
-    if (paymentMethod === 'cod' && codRegions.length > 0 && !selectedRegion) {
+    if (paymentMethod === "cod" && codRegions.length > 0 && !selectedRegion) {
       toast({
-        title: 'خطأ',
-        description: 'يرجى اختيار منطقة الاستلام',
-        variant: 'destructive',
+        title: "خطأ",
+        description: "يرجى اختيار منطقة الاستلام",
+        variant: "destructive",
       });
       return;
     }
 
     const orderNumber = `ORD-${Date.now()}`;
-    
+
     // Prepare cart items with product images, sizes, and accessories
-    const rawOrderItems = cart.map(item => {
+    const rawOrderItems = cart.map((item) => {
       const basePrice = item.product.discount
         ? item.product.price * (1 - item.product.discount / 100)
         : item.product.price;
-      
+
       const accessoriesTotal = item.selectedAccessories
-        ? item.selectedAccessories.reduce((sum, acc) => sum + (acc.price * acc.quantity), 0)
+        ? item.selectedAccessories.reduce((sum, acc) => sum + acc.price * acc.quantity, 0)
         : 0;
 
       return {
         product_id: item.product.id,
         product_name: item.product.nameAr,
-        product_image: item.product.images?.[0] || '',
+        product_image: item.product.images?.[0] || "",
         quantity: item.quantity,
         price: basePrice + accessoriesTotal,
         selected_size: item.selectedSize || null,
-        selected_accessories: (item.selectedAccessories || []).map(acc => ({
-          name: String(acc.name || ''),
+        selected_accessories: (item.selectedAccessories || []).map((acc) => ({
+          name: String(acc.name || ""),
           price: Number(acc.price) || 0,
           quantity: Number(acc.quantity) || 1,
         })),
@@ -240,11 +228,11 @@ const CheckoutPage = () => {
     // Validate order items with Zod before sending to database
     const validationResult = orderItemsSchema.safeParse(rawOrderItems);
     if (!validationResult.success) {
-      console.error('Order items validation failed:', validationResult.error);
+      console.error("Order items validation failed:", validationResult.error);
       toast({
-        title: 'خطأ',
-        description: 'حدث خطأ في بيانات الطلب. يرجى المحاولة مرة أخرى.',
-        variant: 'destructive',
+        title: "خطأ",
+        description: "حدث خطأ في بيانات الطلب. يرجى المحاولة مرة أخرى.",
+        variant: "destructive",
       });
       return;
     }
@@ -268,8 +256,8 @@ const CheckoutPage = () => {
       });
 
       // Get selected region name
-      const selectedRegionData = codRegions.find(r => r.id === selectedRegion);
-      
+      const selectedRegionData = codRegions.find((r) => r.id === selectedRegion);
+
       // Prepare order data for confirmation page
       const orderData = {
         orderNumber,
@@ -282,24 +270,23 @@ const CheckoutPage = () => {
         deliveryFee,
         total,
         paymentMethod,
-        deliveryCompany: selectedCompany?.name || '',
-        selectedRegion: paymentMethod === 'cod' && selectedRegionData ? selectedRegionData.region_name_ar : null,
+        deliveryCompany: selectedCompany?.name || "",
+        selectedRegion: paymentMethod === "cod" && selectedRegionData ? selectedRegionData.region_name_ar : null,
         country: country!,
-        whatsappNumber: whatsappNumber || (country === 'SA' ? '966123456789' : '967123456789'),
+        whatsappNumber: whatsappNumber || (country === "SA" ? "966123456789" : "967123456789"),
         createdAt: new Date().toISOString(),
       };
 
       clearCart();
-      
+
       // Navigate to confirmation page with order data
-      navigate('/order-confirmation', { state: { orderData } });
-      
+      navigate("/order-confirmation", { state: { orderData } });
     } catch (error) {
-      console.error('Order error:', error);
+      console.error("Order error:", error);
       toast({
-        title: 'خطأ',
-        description: 'حدث خطأ أثناء إرسال الطلب',
-        variant: 'destructive',
+        title: "خطأ",
+        description: "حدث خطأ أثناء إرسال الطلب",
+        variant: "destructive",
       });
     }
   };
@@ -312,7 +299,7 @@ const CheckoutPage = () => {
         <main className="pt-32 pb-16">
           <div className="container mx-auto px-4 text-center">
             <h1 className="font-heading text-2xl text-foreground mb-4">السلة فارغة</h1>
-            <Button onClick={() => navigate('/products')} className="btn-gold">
+            <Button onClick={() => navigate("/products")} className="btn-gold">
               تسوق الآن
             </Button>
           </div>
@@ -351,7 +338,7 @@ const CheckoutPage = () => {
                   <div>
                     <label className="block text-sm font-body text-muted-foreground mb-2">الاسم الكامل</label>
                     <Input
-                      value={customer?.name || ''}
+                      value={customer?.name || ""}
                       disabled
                       className="bg-muted/50 border-border text-foreground"
                       dir="rtl"
@@ -360,7 +347,7 @@ const CheckoutPage = () => {
                   <div>
                     <label className="block text-sm font-body text-muted-foreground mb-2">رقم الهاتف</label>
                     <Input
-                      value={customer?.phone || ''}
+                      value={customer?.phone || ""}
                       disabled
                       className="bg-muted/50 border-border text-foreground"
                       dir="ltr"
@@ -410,8 +397,8 @@ const CheckoutPage = () => {
                         onClick={() => setSelectedDelivery(company.id)}
                         className={`p-4 border rounded-lg text-right transition-all ${
                           selectedDelivery === company.id
-                            ? 'border-gold bg-gold/5'
-                            : 'border-border hover:border-gold/50'
+                            ? "border-gold bg-gold/5"
+                            : "border-border hover:border-gold/50"
                         }`}
                       >
                         <h3 className="font-heading text-foreground">{company.name}</h3>
@@ -437,11 +424,9 @@ const CheckoutPage = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('cod')}
+                    onClick={() => setPaymentMethod("cod")}
                     className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${
-                      paymentMethod === 'cod'
-                        ? 'border-gold bg-gold/5'
-                        : 'border-border hover:border-gold/50'
+                      paymentMethod === "cod" ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"
                     }`}
                   >
                     <Banknote className="w-6 h-6 text-gold" />
@@ -452,11 +437,9 @@ const CheckoutPage = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => setPaymentMethod('bank')}
+                    onClick={() => setPaymentMethod("bank")}
                     className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${
-                      paymentMethod === 'bank'
-                        ? 'border-gold bg-gold/5'
-                        : 'border-border hover:border-gold/50'
+                      paymentMethod === "bank" ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"
                     }`}
                   >
                     <CreditCard className="w-6 h-6 text-gold" />
@@ -468,7 +451,7 @@ const CheckoutPage = () => {
                 </div>
 
                 {/* COD Regions Selection */}
-                {paymentMethod === 'cod' && (
+                {paymentMethod === "cod" && (
                   <div className="bg-muted rounded-lg p-4 space-y-3">
                     <div className="flex items-center gap-2 text-sm font-medium text-foreground">
                       <MapPin className="w-4 h-4 text-gold" />
@@ -483,8 +466,8 @@ const CheckoutPage = () => {
                             onClick={() => setSelectedRegion(region.id)}
                             className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
                               selectedRegion === region.id
-                                ? 'bg-gold text-white border-gold'
-                                : 'bg-background border border-border text-foreground hover:border-gold/50'
+                                ? "bg-gold text-white border-gold"
+                                : "bg-background border border-border text-foreground hover:border-gold/50"
                             }`}
                           >
                             {region.region_name_ar}
@@ -500,16 +483,16 @@ const CheckoutPage = () => {
                   </div>
                 )}
 
-                {paymentMethod === 'bank' && bankAccounts.length > 0 && (
+                {paymentMethod === "bank" && bankAccounts.length > 0 && (
                   <div className="bg-muted rounded-lg p-4 space-y-4">
-                    <p className="text-sm text-muted-foreground font-body">
-                      يرجى التحويل إلى أحد الحسابات التالية:
-                    </p>
+                    <p className="text-sm text-muted-foreground font-body">يرجى التحويل إلى أحد الحسابات التالية:</p>
                     {bankAccounts.map((acc, index) => (
                       <div key={index} className="flex items-center justify-between p-3 bg-background rounded-md">
                         <div>
                           <p className="font-heading text-sm text-foreground">{acc.bank}</p>
-                          <p className="text-xs text-muted-foreground font-mono" dir="ltr">{acc.account}</p>
+                          <p className="text-xs text-muted-foreground font-mono" dir="ltr">
+                            {acc.account}
+                          </p>
                         </div>
                         <button
                           type="button"
@@ -534,17 +517,17 @@ const CheckoutPage = () => {
             >
               <div className="bg-card border border-border rounded-lg p-6 sticky top-24">
                 <h2 className="font-heading text-xl text-foreground mb-6">ملخص الطلب</h2>
-                
+
                 <div className="space-y-4 mb-6">
                   {cart.map((item, index) => {
                     const basePrice = item.product.discount
                       ? item.product.price * (1 - item.product.discount / 100)
                       : item.product.price;
-                    
+
                     const accessoriesTotal = item.selectedAccessories
-                      ? item.selectedAccessories.reduce((sum, acc) => sum + (acc.price * acc.quantity), 0)
+                      ? item.selectedAccessories.reduce((sum, acc) => sum + acc.price * acc.quantity, 0)
                       : 0;
-                    
+
                     const itemTotalPrice = basePrice + accessoriesTotal;
 
                     return (
@@ -556,25 +539,24 @@ const CheckoutPage = () => {
                         />
                         <div className="flex-1">
                           <h3 className="font-heading text-sm text-foreground">{item.product.nameAr}</h3>
-                          
+
                           {/* Size */}
                           {item.selectedSize && (
                             <p className="text-xs text-muted-foreground">الحجم: {item.selectedSize}</p>
                           )}
-                          
+
                           {/* Accessories */}
                           {item.selectedAccessories && item.selectedAccessories.length > 0 && (
                             <div className="text-xs text-muted-foreground">
                               <span>الملحقات: </span>
                               {item.selectedAccessories.map((acc, i) => (
-                                <span key={acc.name_ar}>
-                                  {acc.name_ar} (×{acc.quantity})
-                                  {i < item.selectedAccessories!.length - 1 ? '، ' : ''}
+                                <span key={acc.name}>
+                                  {acc.name} (×{acc.quantity}){i < item.selectedAccessories.length - 1 ? "، " : ""}
                                 </span>
                               ))}
                             </div>
                           )}
-                          
+
                           <p className="text-xs text-muted-foreground font-body">
                             {item.quantity} × {itemTotalPrice.toFixed(2)} {currency}
                           </p>
@@ -592,16 +574,22 @@ const CheckoutPage = () => {
                 <div className="space-y-2 text-sm font-body mb-6">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">المجموع الفرعي</span>
-                    <span className="text-foreground">{subtotal.toFixed(2)} {currency}</span>
+                    <span className="text-foreground">
+                      {subtotal.toFixed(2)} {currency}
+                    </span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">التوصيل</span>
-                    <span className="text-foreground">{deliveryFee.toFixed(2)} {currency}</span>
+                    <span className="text-foreground">
+                      {deliveryFee.toFixed(2)} {currency}
+                    </span>
                   </div>
                   <div className="h-px bg-border my-2" />
                   <div className="flex justify-between text-lg">
                     <span className="font-heading text-foreground">المجموع</span>
-                    <span className="font-heading text-gold">{total.toFixed(2)} {currency}</span>
+                    <span className="font-heading text-gold">
+                      {total.toFixed(2)} {currency}
+                    </span>
                   </div>
                 </div>
 

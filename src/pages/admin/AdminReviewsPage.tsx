@@ -147,8 +147,9 @@ const AdminReviewsPage = () => {
     const countryMatch = filterCountry === "all" || r.country === filterCountry;
     const statusMatch =
       filterStatus === "all" ||
-      (filterStatus === "approved" && r.is_approved) ||
-      (filterStatus === "pending" && !r.is_approved);
+      (filterStatus === "approved" && r.is_approved === true) ||
+      (filterStatus === "pending" && (r.is_approved === false || r.is_approved === null));
+
     return countryMatch && statusMatch;
   });
 

@@ -10,7 +10,7 @@ const Navbar = () => {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const { country, openCart, getCartCount } = useStore();
+  const { country, openCart, getCartCount, setCustomer } = useStore();
   const { favorites } = useFavorites();
   const cartCount = getCartCount();
   const navigate = useNavigate();

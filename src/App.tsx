@@ -47,6 +47,15 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+// Redirect logged in customers to home
+const AuthRedirect = () => {
+  const { customer } = useStore();
+  if (customer) {
+    return <Navigate to="/home" replace />;
+  }
+  return <CustomerAuthPage />;
+};
+
 const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
@@ -54,8 +63,8 @@ const App = () => (
       <Sonner />
       <BrowserRouter>
         <Routes>
-          <Route path="/" element={<Navigate to="/auth" replace />} />
-          <Route path="/auth" element={<CustomerAuthPage />} />
+          <Route path="/" element={<AuthRedirect />} />
+          <Route path="/auth" element={<AuthRedirect />} />
           <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
           <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
           <Route path="/product/:slug" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />

@@ -61,29 +61,17 @@ const NotificationsDropdown = () => {
   useEffect(() => {
     fetchNotifications();
 
-    // Realtime Subscriptions
-    const ordersSub = supabase
-      .from("orders")
-      .on("INSERT", () => fetchNotifications())
-      .on("UPDATE", () => fetchNotifications())
-      .subscribe();
+    // إنشاء قناة Realtime v2
+    const channel = supabase.channel("notifications-channel");
 
-    const reviewsSub = supabase
-      .from("reviews")
-      .on("INSERT", () => fetchNotifications())
-      .on("UPDATE", () => fetchNotifications())
-      .subscribe();
-
-    const productReviewsSub = supabase
-      .from("product_reviews")
-      .on("INSERT", () => fetchNotifications())
-      .on("UPDATE", () => fetchNotifications())
+    channel
+      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, fetchNotifications)
+      .on("postgres_changes", { event: "*", schema: "public", table: "reviews" }, fetchNotifications)
+      .on("postgres_changes", { event: "*", schema: "public", table: "product_reviews" }, fetchNotifications)
       .subscribe();
 
     return () => {
-      supabase.removeSubscription(ordersSub);
-      supabase.removeSubscription(reviewsSub);
-      supabase.removeSubscription(productReviewsSub);
+      channel.unsubscribe();
     };
   }, []);
 

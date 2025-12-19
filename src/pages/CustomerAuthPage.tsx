@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useStore, detectCountryFromPhone } from "@/store/useStore";
@@ -11,12 +11,19 @@ import Logo from "@/components/Logo";
 
 const CustomerAuthPage = () => {
   const navigate = useNavigate();
-  const { setCustomer, setCountry } = useStore();
+  const { customer, setCustomer, setCountry } = useStore();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
   });
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (customer) {
+      navigate("/home", { replace: true });
+    }
+  }, [customer, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

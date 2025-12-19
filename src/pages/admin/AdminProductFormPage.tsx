@@ -8,7 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, Loader2, Upload, X, LayoutGrid, Plus, Trash2, Truck, Shield, RotateCcw } from 'lucide-react';
+import { ArrowRight, Loader2, Upload, X, LayoutGrid, Plus, Trash2, Truck, Shield, RotateCcw, GripVertical } from 'lucide-react';
 
 interface HomepageSection {
   id: string;
@@ -201,6 +201,16 @@ const AdminProductFormPage = () => {
       ...prev,
       images: prev.images.filter((_, i) => i !== index),
     }));
+  };
+
+  const moveImage = (fromIndex: number, toIndex: number) => {
+    if (toIndex < 0 || toIndex >= formData.images.length) return;
+    setFormData(prev => {
+      const newImages = [...prev.images];
+      const [movedImage] = newImages.splice(fromIndex, 1);
+      newImages.splice(toIndex, 0, movedImage);
+      return { ...prev, images: newImages };
+    });
   };
 
   const toggleCountry = (country: string) => {
@@ -414,16 +424,51 @@ const AdminProductFormPage = () => {
 
         {/* Images */}
         <div className="bg-card border border-border rounded p-6 space-y-4">
-          <h2 className="font-heading text-lg text-foreground">الصور</h2>
+          <div className="flex items-center justify-between">
+            <h2 className="font-heading text-lg text-foreground">الصور</h2>
+            <span className="text-xs text-muted-foreground">اسحب الصورة لتغيير ترتيبها • الصورة الأولى هي الرئيسية</span>
+          </div>
           
           <div className="flex flex-wrap gap-4">
             {formData.images.map((img, index) => (
-              <div key={index} className="relative w-24 h-24">
+              <div 
+                key={img} 
+                className={`relative w-24 h-24 group ${index === 0 ? 'ring-2 ring-gold ring-offset-2 ring-offset-background' : ''}`}
+              >
                 <img src={img} alt="" className="w-full h-full object-cover rounded" />
+                
+                {/* Main image badge */}
+                {index === 0 && (
+                  <span className="absolute -top-1 -left-1 bg-gold text-secondary text-[10px] px-1.5 py-0.5 rounded font-bold">
+                    رئيسية
+                  </span>
+                )}
+                
+                {/* Move buttons */}
+                <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-1 p-1 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <button
+                    type="button"
+                    onClick={() => moveImage(index, index - 1)}
+                    disabled={index === 0}
+                    className="p-1 text-xs bg-muted rounded hover:bg-muted-foreground/20 disabled:opacity-30"
+                  >
+                    ◀
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => moveImage(index, index + 1)}
+                    disabled={index === formData.images.length - 1}
+                    className="p-1 text-xs bg-muted rounded hover:bg-muted-foreground/20 disabled:opacity-30"
+                  >
+                    ▶
+                  </button>
+                </div>
+
+                {/* Delete button */}
                 <button
                   type="button"
                   onClick={() => removeImage(index)}
-                  className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
+                  className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <X className="w-3 h-3" />
                 </button>

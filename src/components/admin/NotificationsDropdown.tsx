@@ -84,7 +84,20 @@ const NotificationsDropdown = () => {
   };
 
   return (
-    <Popover open={isOpen} onOpenChange={setIsOpen}>
+    <Popover
+      open={isOpen}
+      onOpenChange={(open) => {
+        setIsOpen(open);
+
+        if (open) {
+          setCounts({
+            pendingOrders: 0,
+            pendingReviews: 0,
+            pendingProductReviews: 0,
+          });
+        }
+      }}
+    >
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="w-5 h-5" />

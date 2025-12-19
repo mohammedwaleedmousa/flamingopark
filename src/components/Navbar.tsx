@@ -14,6 +14,11 @@ const Navbar = () => {
   const { favorites } = useFavorites();
   const cartCount = getCartCount();
   const navigate = useNavigate();
+  const handleLogout = () => {
+    setCustomer(null);
+    setIsMenuOpen(false);
+    navigate("/", { replace: true });
+  };
 
   const navLinks = [
     { href: "/home", label: "الرئيسية", labelEn: "Home" },

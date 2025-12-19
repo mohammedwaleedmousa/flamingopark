@@ -72,21 +72,18 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
       }}
       className="group"
     >
-      <Link to={`/product/${product.slug}`} className="block">
+      <Link to={`/product/${product.slug}`} className="block h-full">
         <div className="relative bg-cream rounded-lg overflow-hidden border-2 border-gold transition-all duration-500 hover:border-gold-light hover:shadow-[0_15px_40px_-10px_hsl(var(--gold)/0.4)] h-full flex flex-col">
-          {/* Image Container - Fixed square aspect ratio */}
-          <div className="relative overflow-hidden aspect-square bg-cream">
-            {/* Background layer behind image */}
-            <div className="absolute inset-0 bg-cream -z-10" />
-            
+          {/* Image Container - Fixed height for uniform cards */}
+          <div className="relative overflow-hidden h-48 md:h-56 lg:h-64 bg-cream flex-shrink-0">
             {product.images[0] ? (
               <img
                 src={product.images[0]}
                 alt={product.nameAr}
-                className="w-full h-full object-contain p-2 transition-all duration-700 ease-out group-hover:scale-105"
+                className="w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-105"
               />
             ) : (
-              <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2">
+              <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-2 bg-cream">
                 <Eye className="w-8 h-8 opacity-40" />
                 <span className="text-xs">لا توجد صورة</span>
               </div>
@@ -153,40 +150,38 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
             </div>
           </div>
 
-          {/* Content - Fixed height */}
-          <div className={`relative flex-1 flex flex-col ${compact ? 'p-3' : 'p-4'}`}>
+          {/* Content - Fixed height for uniform cards */}
+          <div className={`relative flex flex-col h-28 ${compact ? 'p-3' : 'p-4'}`}>
             {/* Brand */}
-            <div className="flex items-center gap-2 mb-2">
-              <span className="text-[10px] font-medium text-gold uppercase tracking-wider">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-medium text-gold uppercase tracking-wider truncate">
                 {product.brand}
               </span>
               <div className="flex-1 h-px bg-gradient-to-r from-gold/30 to-transparent" />
             </div>
             
-            {/* Product Name - Fixed height with line clamp */}
-            <h3 className={`font-heading text-foreground group-hover:text-gold transition-colors duration-300 mb-3 line-clamp-2 leading-relaxed min-h-[2.5rem] ${compact ? 'text-sm' : 'text-base'}`}>
+            {/* Product Name - Fixed 2 lines */}
+            <h3 className={`font-heading text-foreground group-hover:text-gold transition-colors duration-300 mb-2 line-clamp-2 leading-tight h-10 ${compact ? 'text-xs' : 'text-sm'}`}>
               {product.nameAr}
             </h3>
             
             {/* Price Section - Push to bottom */}
-            <div className="flex items-end justify-between gap-2 mt-auto">
-              <div className="flex flex-col">
-                <span className={`font-heading font-semibold text-foreground ${compact ? 'text-lg' : 'text-xl'}`}>
-                  {discountedPrice.toFixed(0)} <span className="text-xs font-normal">{currency}</span>
+            <div className="flex items-center justify-between gap-2 mt-auto">
+              <div className="flex items-baseline gap-1">
+                <span className={`font-heading font-semibold text-foreground ${compact ? 'text-base' : 'text-lg'}`}>
+                  {discountedPrice.toFixed(0)}
                 </span>
+                <span className="text-[10px] text-muted-foreground">{currency}</span>
                 {product.originalPrice && (
-                  <span className="text-muted-foreground line-through text-xs">
-                    {product.originalPrice.toFixed(0)} {currency}
+                  <span className="text-muted-foreground line-through text-[10px] mr-1">
+                    {product.originalPrice.toFixed(0)}
                   </span>
                 )}
               </div>
               
               {/* Stock Indicator */}
               {product.inStock && (
-                <div className="flex items-center gap-1.5">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  <span className="text-[10px] text-muted-foreground">متوفر</span>
-                </div>
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse flex-shrink-0" />
               )}
             </div>
           </div>

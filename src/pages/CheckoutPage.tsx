@@ -551,7 +551,7 @@ const CheckoutPage = () => {
                               <span>الملحقات: </span>
                               {item.selectedAccessories.map((acc, i) => (
                                 <span key={acc.name}>
-                                  {acc.name} (×{acc.quantity})
+                                  {acc.name} (×{acc.quantity}){i < item.selectedAccessories!.length - 1 ? "، " : ""}
                                 </span>
                               ))}
                             </div>

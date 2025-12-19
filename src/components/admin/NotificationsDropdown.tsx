@@ -5,22 +5,21 @@ import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useNavigate } from "react-router-dom";
 
-interface NotificationCounts {
-  pendingOrders: number;
-  pendingReviews: number;
-  pendingProductReviews: number;
+interface NotificationItem {
+  label: string;
+  count: number;
+  icon: any;
+  path: string;
+  color: string;
+  seen?: boolean;
 }
 
 const NotificationsDropdown = () => {
   const navigate = useNavigate();
-  const [counts, setCounts] = useState<NotificationCounts>({
-    pendingOrders: 0,
-    pendingReviews: 0,
-    pendingProductReviews: 0,
-  });
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [isOpen, setIsOpen] = useState(false);
 
-  const fetchCounts = async () => {
+  const fetchNotifications = async () => {
     try {
       const [ordersRes, reviewsRes, productReviewsRes] = await Promise.all([
         supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
@@ -28,88 +27,86 @@ const NotificationsDropdown = () => {
         supabase.from("product_reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
       ]);
 
-      setCounts({
-        pendingOrders: ordersRes.count || 0,
-        pendingReviews: reviewsRes.count || 0,
-        pendingProductReviews: productReviewsRes.count || 0,
-      });
+      setNotifications([
+        {
+          label: "طلبات قيد الانتظار",
+          count: ordersRes.count || 0,
+          icon: ShoppingBag,
+          path: "/admin/orders",
+          color: "text-orange-500",
+          seen: false,
+        },
+        {
+          label: "تقييمات تحتاج موافقة",
+          count: reviewsRes.count || 0,
+          icon: MessageSquare,
+          path: "/admin/reviews",
+          color: "text-blue-500",
+          seen: false,
+        },
+        {
+          label: "تقييمات منتجات تحتاج موافقة",
+          count: productReviewsRes.count || 0,
+          icon: Star,
+          path: "/admin/reviews",
+          color: "text-yellow-500",
+          seen: false,
+        },
+      ]);
     } catch (error) {
-      console.error("Error fetching notification counts:", error);
+      console.error("Error fetching notifications:", error);
     }
   };
 
   useEffect(() => {
-    fetchCounts();
-    // Refresh counts every 30 seconds
-    const interval = setInterval(fetchCounts, 30000);
-    return () => clearInterval(interval);
+    fetchNotifications();
+
+    // Realtime Subscriptions
+    const ordersSub = supabase
+      .from("orders")
+      .on("INSERT", () => fetchNotifications())
+      .on("UPDATE", () => fetchNotifications())
+      .subscribe();
+
+    const reviewsSub = supabase
+      .from("reviews")
+      .on("INSERT", () => fetchNotifications())
+      .on("UPDATE", () => fetchNotifications())
+      .subscribe();
+
+    const productReviewsSub = supabase
+      .from("product_reviews")
+      .on("INSERT", () => fetchNotifications())
+      .on("UPDATE", () => fetchNotifications())
+      .subscribe();
+
+    return () => {
+      supabase.removeSubscription(ordersSub);
+      supabase.removeSubscription(reviewsSub);
+      supabase.removeSubscription(productReviewsSub);
+    };
   }, []);
 
-  // Refresh when popover opens
-  useEffect(() => {
-    if (!isOpen) {
-      fetchCounts();
-    }
+  const totalCount = notifications.reduce((acc, n) => (!n.seen ? acc + n.count : acc), 0);
 
-    const interval = setInterval(() => {
-      if (!isOpen) {
-        fetchCounts();
-      }
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [isOpen]);
-
-  const totalCount = counts.pendingOrders + counts.pendingReviews + counts.pendingProductReviews;
-
-  const notifications = [
-    {
-      label: "طلبات قيد الانتظار",
-      count: counts.pendingOrders,
-      icon: ShoppingBag,
-      path: "/admin/orders",
-      color: "text-orange-500",
-    },
-    {
-      label: "تقييمات تحتاج موافقة",
-      count: counts.pendingReviews,
-      icon: MessageSquare,
-      path: "/admin/reviews",
-      color: "text-blue-500",
-    },
-    {
-      label: "تقييمات منتجات تحتاج موافقة",
-      count: counts.pendingProductReviews,
-      icon: Star,
-      path: "/admin/reviews",
-      color: "text-yellow-500",
-    },
-  ];
-
-  const handleNavigate = (path: string) => {
+  const handleNavigate = (path: string, index: number) => {
     setIsOpen(false);
+
+    // علم الإشعار كمقروء
+    setNotifications((prev) => {
+      const copy = [...prev];
+      copy[index].seen = true;
+      return copy;
+    });
+
     navigate(path);
   };
 
   return (
-    <Popover
-      open={isOpen}
-      onOpenChange={(open) => {
-        setIsOpen(open);
-
-        if (open) {
-          setCounts({
-            pendingOrders: 0,
-            pendingReviews: 0,
-            pendingProductReviews: 0,
-          });
-        }
-      }}
-    >
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="w-5 h-5" />
-
           {totalCount > 0 && !isOpen && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-[10px] rounded-full flex items-center justify-center font-bold">
               {totalCount > 99 ? "99+" : totalCount}
@@ -124,11 +121,13 @@ const NotificationsDropdown = () => {
         <div className="divide-y divide-border">
           {notifications
             .filter((item) => item.count > 0)
-            .map((item) => (
+            .map((item, index) => (
               <button
                 key={item.label}
-                onClick={() => handleNavigate(item.path)}
-                className="w-full flex items-center gap-3 p-3 hover:bg-muted transition-colors text-right"
+                onClick={() => handleNavigate(item.path, index)}
+                className={`w-full flex items-center gap-3 p-3 text-right transition-colors ${
+                  !item.seen ? "bg-muted/10 hover:bg-muted/20" : "hover:bg-muted"
+                }`}
               >
                 <div className={`p-2 rounded-full bg-muted ${item.color}`}>
                   <item.icon className="w-4 h-4" />
@@ -139,7 +138,7 @@ const NotificationsDropdown = () => {
                     {item.count} {item.count === 1 ? "عنصر" : "عناصر"}
                   </p>
                 </div>
-                {item.count > 0 && (
+                {!item.seen && (
                   <span className="w-6 h-6 bg-destructive/10 text-destructive text-xs rounded-full flex items-center justify-center font-bold">
                     {item.count}
                   </span>
@@ -147,7 +146,9 @@ const NotificationsDropdown = () => {
               </button>
             ))}
         </div>
-        {totalCount === 0 && <div className="p-6 text-center text-muted-foreground text-sm">لا توجد إشعارات جديدة</div>}
+        {notifications.every((item) => item.count === 0 || item.seen) && (
+          <div className="p-6 text-center text-muted-foreground text-sm">لا توجد إشعارات جديدة</div>
+        )}
       </PopoverContent>
     </Popover>
   );

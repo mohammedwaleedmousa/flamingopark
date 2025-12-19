@@ -355,6 +355,7 @@ const AdminCategoriesPage = () => {
               <th className="text-right p-4 font-heading text-sm">الصورة</th>
               <th className="text-right p-4 font-heading text-sm">الاسم (عربي)</th>
               <th className="text-right p-4 font-heading text-sm">الاسم (إنجليزي)</th>
+              <th className="text-right p-4 font-heading text-sm">البلدان</th>
               <th className="text-right p-4 font-heading text-sm">الترتيب</th>
               <th className="text-right p-4 font-heading text-sm">الحالة</th>
               <th className="text-right p-4 font-heading text-sm">إجراءات</th>
@@ -378,6 +379,16 @@ const AdminCategoriesPage = () => {
                 </td>
                 <td className="p-4 font-heading">{category.name_ar}</td>
                 <td className="p-4 text-muted-foreground">{category.name}</td>
+                <td className="p-4">
+                  <div className="flex gap-1">
+                    {category.countries?.includes('SA') && (
+                      <span className="px-2 py-0.5 text-xs rounded bg-green-500/15 text-green-600 border border-green-500/30">SA</span>
+                    )}
+                    {category.countries?.includes('YE') && (
+                      <span className="px-2 py-0.5 text-xs rounded bg-blue-500/15 text-blue-600 border border-blue-500/30">YE</span>
+                    )}
+                  </div>
+                </td>
                 <td className="p-4 text-muted-foreground">{category.sort_order}</td>
                 <td className="p-4">
                   <Switch
@@ -408,7 +419,7 @@ const AdminCategoriesPage = () => {
             ))}
             {filteredCategories.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-12 text-center text-muted-foreground">
+                <td colSpan={7} className="p-12 text-center text-muted-foreground">
                   <Grid3X3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>لا توجد فئات</p>
                 </td>

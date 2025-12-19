@@ -1,38 +1,19 @@
-import { useState } from 'react';
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Switch } from '@/components/ui/switch';
-import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
-import { toast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, Star, Check, X } from 'lucide-react';
-import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
+import { useState } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { toast } from "@/hooks/use-toast";
+import { Plus, Pencil, Trash2, Star, Check, X } from "lucide-react";
+import { format } from "date-fns";
+import { ar } from "date-fns/locale";
 
 interface Review {
   id: string;
@@ -49,24 +30,21 @@ const AdminReviewsPage = () => {
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingReview, setEditingReview] = useState<Review | null>(null);
-  const [filterCountry, setFilterCountry] = useState<string>('all');
-  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [filterCountry, setFilterCountry] = useState<string>("all");
+  const [filterStatus, setFilterStatus] = useState<string>("pending");
   const [formData, setFormData] = useState({
-    customer_name: '',
-    message: '',
-    message_ar: '',
+    customer_name: "",
+    message: "",
+    message_ar: "",
     rating: 5,
-    country: 'SA',
+    country: "SA",
     is_approved: false,
   });
 
   const { data: reviews, isLoading } = useQuery({
-    queryKey: ['admin-reviews'],
+    queryKey: ["admin-reviews"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('reviews')
-        .select('*')
-        .order('created_at', { ascending: false });
+      const { data, error } = await supabase.from("reviews").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return data as Review[];
     },
@@ -76,7 +54,7 @@ const AdminReviewsPage = () => {
     mutationFn: async (data: typeof formData & { id?: string }) => {
       if (data.id) {
         const { error } = await supabase
-          .from('reviews')
+          .from("reviews")
           .update({
             customer_name: data.customer_name,
             message: data.message,
@@ -85,64 +63,59 @@ const AdminReviewsPage = () => {
             country: data.country,
             is_approved: data.is_approved,
           })
-          .eq('id', data.id);
+          .eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase
-          .from('reviews')
-          .insert({
-            customer_name: data.customer_name,
-            message: data.message,
-            message_ar: data.message_ar || null,
-            rating: data.rating,
-            country: data.country,
-            is_approved: data.is_approved,
-          });
+        const { error } = await supabase.from("reviews").insert({
+          customer_name: data.customer_name,
+          message: data.message,
+          message_ar: data.message_ar || null,
+          rating: data.rating,
+          country: data.country,
+          is_approved: data.is_approved,
+        });
         if (error) throw error;
       }
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
-      toast({ title: editingReview ? 'تم تحديث التقييم' : 'تم إضافة التقييم' });
+      queryClient.invalidateQueries({ queryKey: ["admin-reviews"] });
+      toast({ title: editingReview ? "تم تحديث التقييم" : "تم إضافة التقييم" });
       resetForm();
     },
     onError: () => {
-      toast({ title: 'حدث خطأ', variant: 'destructive' });
+      toast({ title: "حدث خطأ", variant: "destructive" });
     },
   });
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from('reviews').delete().eq('id', id);
+      const { error } = await supabase.from("reviews").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
-      toast({ title: 'تم حذف التقييم' });
+      queryClient.invalidateQueries({ queryKey: ["admin-reviews"] });
+      toast({ title: "تم حذف التقييم" });
     },
   });
 
   const toggleApprovalMutation = useMutation({
     mutationFn: async ({ id, is_approved }: { id: string; is_approved: boolean }) => {
-      const { error } = await supabase
-        .from('reviews')
-        .update({ is_approved })
-        .eq('id', id);
+      const { error } = await supabase.from("reviews").update({ is_approved }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['admin-reviews'] });
-      toast({ title: 'تم تحديث حالة التقييم' });
+      queryClient.invalidateQueries({ queryKey: ["admin-reviews"] });
+      toast({ title: "تم تحديث حالة التقييم" });
     },
   });
 
   const resetForm = () => {
     setFormData({
-      customer_name: '',
-      message: '',
-      message_ar: '',
+      customer_name: "",
+      message: "",
+      message_ar: "",
       rating: 5,
-      country: 'SA',
+      country: "SA",
       is_approved: false,
     });
     setEditingReview(null);
@@ -154,7 +127,7 @@ const AdminReviewsPage = () => {
     setFormData({
       customer_name: review.customer_name,
       message: review.message,
-      message_ar: review.message_ar || '',
+      message_ar: review.message_ar || "",
       rating: review.rating,
       country: review.country,
       is_approved: review.is_approved ?? false,
@@ -171,11 +144,11 @@ const AdminReviewsPage = () => {
   };
 
   const filteredReviews = reviews?.filter((r) => {
-    const countryMatch = filterCountry === 'all' || r.country === filterCountry;
+    const countryMatch = filterCountry === "all" || r.country === filterCountry;
     const statusMatch =
-      filterStatus === 'all' ||
-      (filterStatus === 'approved' && r.is_approved) ||
-      (filterStatus === 'pending' && !r.is_approved);
+      filterStatus === "all" ||
+      (filterStatus === "approved" && r.is_approved) ||
+      (filterStatus === "pending" && !r.is_approved);
     return countryMatch && statusMatch;
   });
 
@@ -183,12 +156,7 @@ const AdminReviewsPage = () => {
     return (
       <div className="flex gap-0.5">
         {[1, 2, 3, 4, 5].map((star) => (
-          <Star
-            key={star}
-            className={`w-4 h-4 ${
-              star <= rating ? 'fill-primary text-primary' : 'text-muted'
-            }`}
-          />
+          <Star key={star} className={`w-4 h-4 ${star <= rating ? "fill-primary text-primary" : "text-muted"}`} />
         ))}
       </div>
     );
@@ -232,18 +200,14 @@ const AdminReviewsPage = () => {
             </DialogTrigger>
             <DialogContent className="max-w-md">
               <DialogHeader>
-                <DialogTitle>
-                  {editingReview ? 'تعديل التقييم' : 'إضافة تقييم جديد'}
-                </DialogTitle>
+                <DialogTitle>{editingReview ? "تعديل التقييم" : "إضافة تقييم جديد"}</DialogTitle>
               </DialogHeader>
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div>
                   <Label>اسم العميل</Label>
                   <Input
                     value={formData.customer_name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, customer_name: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, customer_name: e.target.value })}
                     required
                   />
                 </div>
@@ -252,9 +216,7 @@ const AdminReviewsPage = () => {
                   <Label>التقييم (الإنجليزي)</Label>
                   <Textarea
                     value={formData.message}
-                    onChange={(e) =>
-                      setFormData({ ...formData, message: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
                     required
                   />
                 </div>
@@ -263,9 +225,7 @@ const AdminReviewsPage = () => {
                   <Label>التقييم (العربي)</Label>
                   <Textarea
                     value={formData.message_ar}
-                    onChange={(e) =>
-                      setFormData({ ...formData, message_ar: e.target.value })
-                    }
+                    onChange={(e) => setFormData({ ...formData, message_ar: e.target.value })}
                     dir="rtl"
                   />
                 </div>
@@ -274,9 +234,7 @@ const AdminReviewsPage = () => {
                   <Label>عدد النجوم</Label>
                   <Select
                     value={formData.rating.toString()}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, rating: parseInt(value) })
-                    }
+                    onValueChange={(value) => setFormData({ ...formData, rating: parseInt(value) })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -295,9 +253,7 @@ const AdminReviewsPage = () => {
                   <Label>الدولة</Label>
                   <Select
                     value={formData.country}
-                    onValueChange={(value) =>
-                      setFormData({ ...formData, country: value })
-                    }
+                    onValueChange={(value) => setFormData({ ...formData, country: value })}
                   >
                     <SelectTrigger>
                       <SelectValue />
@@ -312,16 +268,14 @@ const AdminReviewsPage = () => {
                 <div className="flex items-center gap-2">
                   <Switch
                     checked={formData.is_approved}
-                    onCheckedChange={(checked) =>
-                      setFormData({ ...formData, is_approved: checked })
-                    }
+                    onCheckedChange={(checked) => setFormData({ ...formData, is_approved: checked })}
                   />
                   <Label>معتمد</Label>
                 </div>
 
                 <div className="flex gap-2">
                   <Button type="submit" disabled={saveMutation.isPending}>
-                    {saveMutation.isPending ? 'جاري الحفظ...' : 'حفظ'}
+                    {saveMutation.isPending ? "جاري الحفظ..." : "حفظ"}
                   </Button>
                   <Button type="button" variant="outline" onClick={resetForm}>
                     إلغاء
@@ -349,19 +303,15 @@ const AdminReviewsPage = () => {
           {filteredReviews?.map((review) => (
             <TableRow key={review.id}>
               <TableCell className="font-medium">{review.customer_name}</TableCell>
-              <TableCell className="max-w-xs truncate">
-                {review.message_ar || review.message}
-              </TableCell>
+              <TableCell className="max-w-xs truncate">{review.message_ar || review.message}</TableCell>
               <TableCell>{renderStars(review.rating)}</TableCell>
-              <TableCell>
-                {review.country === 'SA' ? '🇸🇦' : '🇾🇪'}
-              </TableCell>
-              <TableCell>
-                {format(new Date(review.created_at), 'dd MMM yyyy', { locale: ar })}
-              </TableCell>
+              <TableCell>{review.country === "SA" ? "🇸🇦" : "🇾🇪"}</TableCell>
+              <TableCell>{format(new Date(review.created_at), "dd MMM yyyy", { locale: ar })}</TableCell>
               <TableCell>
                 {review.is_approved ? (
-                  <Badge variant="default" className="bg-green-600">معتمد</Badge>
+                  <Badge variant="default" className="bg-green-600">
+                    معتمد
+                  </Badge>
                 ) : (
                   <Badge variant="secondary">معلق</Badge>
                 )}
@@ -398,18 +348,10 @@ const AdminReviewsPage = () => {
                       <X className="w-4 h-4" />
                     </Button>
                   )}
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => handleEdit(review)}
-                  >
+                  <Button size="sm" variant="outline" onClick={() => handleEdit(review)}>
                     <Pencil className="w-4 h-4" />
                   </Button>
-                  <Button
-                    size="sm"
-                    variant="destructive"
-                    onClick={() => deleteMutation.mutate(review.id)}
-                  >
+                  <Button size="sm" variant="destructive" onClick={() => deleteMutation.mutate(review.id)}>
                     <Trash2 className="w-4 h-4" />
                   </Button>
                 </div>

@@ -656,6 +656,15 @@ const CheckoutPage = () => {
                       {deliveryFee.toFixed(2)} {currency}
                     </span>
                   </div>
+                  {discountAmount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span>خصم الكوبون</span>
+                      <span>
+                        -{discountAmount.toFixed(2)} {currency}
+                      </span>
+                    </div>
+                  )}
+
                   <div className="h-px bg-border my-2" />
                   <div className="flex justify-between text-lg">
                     <span className="font-heading text-foreground">المجموع</span>

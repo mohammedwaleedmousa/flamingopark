@@ -112,8 +112,6 @@ const CheckoutPage = () => {
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "bank">("cod");
   const [selectedDelivery, setSelectedDelivery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("");
-  const [couponCode, setCouponCode] = useState("");
-  const [discountAmount, setDiscountAmount] = useState(0);
 
   const [formData, setFormData] = useState({
     name: customer?.name || "",
@@ -121,7 +119,8 @@ const CheckoutPage = () => {
     address: "",
     notes: "",
   });
-
+  const [couponCode, setCouponCode] = useState("");
+  const [discountAmount, setDiscountAmount] = useState(0);
   // Fetch delivery companies
   const { data: deliveryCompanies = [] } = useQuery({
     queryKey: ["delivery-companies", country],

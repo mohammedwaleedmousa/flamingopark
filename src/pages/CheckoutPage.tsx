@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle } from "lucide-react";
+const [couponCode, setCouponCode] = useState("");
+const [discountAmount, setDiscountAmount] = useState(0);
 
 // Zod schemas for order item validation
 const orderAccessorySchema = z.object({

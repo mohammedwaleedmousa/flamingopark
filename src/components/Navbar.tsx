@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Search, Menu, X, MapPin, Heart, Settings } from "lucide-react";
+import { ShoppingBag, Search, Menu, X, MapPin, Heart } from "lucide-react";
 import { useState } from "react";
 import { useStore } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -179,17 +179,6 @@ const Navbar = () => {
                     {country === "SA" ? "🇸🇦 السعودية" : country === "YE" ? "🇾🇪 اليمن" : "اختر الموقع"}
                   </span>
                 </button>
-              </div>
-              {/* Admin Link */}
-              <div className="mt-4 pt-4 border-t border-gold/20">
-                <Link
-                  to="/admin"
-                  onClick={() => setIsMenuOpen(false)}
-                  className="flex items-center justify-center gap-2 w-full py-3 text-gold/70 hover:text-gold hover:bg-gold/5 rounded-lg transition-all font-body text-sm"
-                >
-                  <Settings className="w-4 h-4" />
-                  <span>لوحة التحكم</span>
-                </Link>
               </div>
               {/* Logout */}
               <div className="mt-4 pt-4 border-t border-gold/20">

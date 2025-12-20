@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, ShoppingBag, MessageSquare, Star } from "lucide-react";
+import { Bell, ShoppingBag, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useNavigate } from "react-router-dom";
@@ -8,7 +8,6 @@ import { useNavigate } from "react-router-dom";
 interface NotificationCounts {
   pendingOrders: number;
   pendingReviews: number;
-  pendingProductReviews: number;
 }
 
 const NotificationsDropdown = () => {
@@ -16,22 +15,22 @@ const NotificationsDropdown = () => {
   const [counts, setCounts] = useState<NotificationCounts>({
     pendingOrders: 0,
     pendingReviews: 0,
-    pendingProductReviews: 0,
   });
   const [isOpen, setIsOpen] = useState(false);
 
   const fetchCounts = async () => {
     try {
-      const [ordersRes, reviewsRes, productReviewsRes] = await Promise.all([
+      const [ordersRes, reviewsRes] = await Promise.all([
         supabase.from("orders").select("id", { count: "exact", head: true }).eq("status", "pending"),
-        supabase.from("reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
-        supabase.from("product_reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
+        supabase
+          .from("reviews")
+          .select("id", { count: "exact", head: true })
+          .or("is_approved.eq.false,is_approved.is.null"),
       ]);
 
       setCounts({
         pendingOrders: ordersRes.count || 0,
         pendingReviews: reviewsRes.count || 0,
-        pendingProductReviews: productReviewsRes.count || 0,
       });
     } catch (error) {
       console.error("Error fetching notification counts:", error);
@@ -50,7 +49,7 @@ const NotificationsDropdown = () => {
     if (isOpen) fetchCounts();
   }, [isOpen]);
 
-  const totalCount = counts.pendingOrders + counts.pendingReviews + counts.pendingProductReviews;
+  const totalCount = counts.pendingOrders + counts.pendingReviews;
 
   const notifications = [
     {
@@ -66,13 +65,6 @@ const NotificationsDropdown = () => {
       icon: MessageSquare,
       path: "/admin/reviews",
       color: "text-blue-500",
-    },
-    {
-      label: "تقييمات منتجات تحتاج موافقة",
-      count: counts.pendingProductReviews,
-      icon: Star,
-      path: "/admin/reviews",
-      color: "text-yellow-500",
     },
   ];
 

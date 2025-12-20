@@ -76,29 +76,57 @@ const CheckoutPage = () => {
 
   // Apply coupon
   const applyCoupon = async () => {
-    if (!couponCode) return toast({ title: "خطأ", description: "الرجاء إدخال كود الخصم", variant: "destructive" });
+    if (!couponCode) {
+      return toast({
+        title: "خطأ",
+        description: "الرجاء إدخال كود الخصم",
+        variant: "destructive",
+      });
+    }
+
     try {
       const { data, error } = await supabase
-        .from("coupons" as any)
-        .select("code,type,value,is_active")
-        .eq("code", couponCode.trim())
+        .from("coupons")
+        .select("type, value")
+        .eq("code", couponCode)
         .eq("is_active", true)
-        .single();
+        .maybeSingle();
 
-      if (error) throw error;
-      if (!data) {
+      if (error || !data) {
         setDiscountAmount(0);
-        return toast({ title: "غير صالح", description: "كود الخصم غير موجود أو غير صالح", variant: "destructive" });
+        return toast({
+          title: "غير صالح",
+          description: "كود الخصم غير موجود أو غير صالح",
+          variant: "destructive",
+        });
       }
-      const discount = data.type === "percentage" ? (subtotal * data.value) / 100 : data.value;
+
+      // 🔥 هذا السطر هو الحل السحري
+      const coupon = data as {
+        type: "percentage" | "fixed";
+        value: number;
+      };
+
+      let discount = 0;
+
+      if (coupon.type === "percentage") {
+        discount = (subtotal * coupon.value) / 100;
+      } else {
+        discount = coupon.value;
+      }
+
       setDiscountAmount(discount);
+
       toast({
         title: "تم التطبيق",
         description: `تم تطبيق خصم ${discount.toFixed(2)} ${currency}`,
-        variant: "default",
       });
     } catch {
-      toast({ title: "خطأ", description: "حدث خطأ أثناء التحقق من الكوبون", variant: "destructive" });
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء التحقق من الكوبون",
+        variant: "destructive",
+      });
     }
   };
 

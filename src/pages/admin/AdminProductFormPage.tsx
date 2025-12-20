@@ -8,7 +8,8 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { ArrowRight, Loader2, Upload, X, LayoutGrid, Plus, Trash2, Truck, Shield, RotateCcw, GripVertical } from 'lucide-react';
+import { Slider } from '@/components/ui/slider';
+import { ArrowRight, Loader2, Upload, X, LayoutGrid, Plus, Trash2, Truck, Shield, RotateCcw, GripVertical, ZoomIn, Move } from 'lucide-react';
 
 interface HomepageSection {
   id: string;
@@ -68,6 +69,9 @@ const AdminProductFormPage = () => {
     sizes: [] as string[],
     accessories: [] as Accessory[],
     features: [] as ProductFeature[],
+    image_zoom: 1,
+    image_position_x: 50,
+    image_position_y: 50,
   });
 
   const [newSize, setNewSize] = useState('');
@@ -154,6 +158,9 @@ const AdminProductFormPage = () => {
         sizes: (data as any).sizes || [],
         accessories: ((data as any).accessories || []) as Accessory[],
         features: ((data as any).features || []) as ProductFeature[],
+        image_zoom: 1,
+        image_position_x: 50,
+        image_position_y: 50,
       });
     }
     setIsLoading(false);
@@ -433,19 +440,28 @@ const AdminProductFormPage = () => {
             {formData.images.map((img, index) => (
               <div 
                 key={img} 
-                className={`relative w-24 h-24 group ${index === 0 ? 'ring-2 ring-gold ring-offset-2 ring-offset-background' : ''}`}
+                className={`relative w-24 h-24 group overflow-hidden ${index === 0 ? 'ring-2 ring-gold ring-offset-2 ring-offset-background' : ''}`}
               >
-                <img src={img} alt="" className="w-full h-full object-cover rounded" />
+                <img 
+                  src={img} 
+                  alt="" 
+                  className="w-full h-full rounded" 
+                  style={{
+                    objectFit: 'cover',
+                    transform: `scale(${formData.image_zoom})`,
+                    objectPosition: `${formData.image_position_x}% ${formData.image_position_y}%`,
+                  }}
+                />
                 
                 {/* Main image badge */}
                 {index === 0 && (
-                  <span className="absolute -top-1 -left-1 bg-gold text-secondary text-[10px] px-1.5 py-0.5 rounded font-bold">
+                  <span className="absolute -top-1 -left-1 bg-gold text-secondary text-[10px] px-1.5 py-0.5 rounded font-bold z-10">
                     رئيسية
                   </span>
                 )}
                 
                 {/* Move buttons */}
-                <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-1 p-1 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity">
+                <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-1 p-1 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity z-10">
                   <button
                     type="button"
                     onClick={() => moveImage(index, index - 1)}
@@ -468,7 +484,7 @@ const AdminProductFormPage = () => {
                 <button
                   type="button"
                   onClick={() => removeImage(index)}
-                  className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
                 >
                   <X className="w-3 h-3" />
                 </button>
@@ -485,6 +501,71 @@ const AdminProductFormPage = () => {
               />
             </label>
           </div>
+
+          {/* Image Zoom & Position Controls */}
+          {formData.images.length > 0 && (
+            <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
+              <p className="text-sm font-medium text-foreground">تحكم في عرض الصور</p>
+              
+              {/* Zoom */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <ZoomIn className="w-4 h-4 text-muted-foreground" />
+                  <label className="text-xs text-muted-foreground">التكبير: {formData.image_zoom.toFixed(1)}x</label>
+                </div>
+                <Slider
+                  value={[formData.image_zoom]}
+                  onValueChange={([v]) => setFormData({ ...formData, image_zoom: v })}
+                  min={1}
+                  max={2}
+                  step={0.1}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Position X */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Move className="w-4 h-4 text-muted-foreground" />
+                  <label className="text-xs text-muted-foreground">الموضع الأفقي: {formData.image_position_x}%</label>
+                </div>
+                <Slider
+                  value={[formData.image_position_x]}
+                  onValueChange={([v]) => setFormData({ ...formData, image_position_x: v })}
+                  min={0}
+                  max={100}
+                  step={1}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Position Y */}
+              <div>
+                <div className="flex items-center gap-2 mb-2">
+                  <Move className="w-4 h-4 text-muted-foreground rotate-90" />
+                  <label className="text-xs text-muted-foreground">الموضع العمودي: {formData.image_position_y}%</label>
+                </div>
+                <Slider
+                  value={[formData.image_position_y]}
+                  onValueChange={([v]) => setFormData({ ...formData, image_position_y: v })}
+                  min={0}
+                  max={100}
+                  step={1}
+                  className="w-full"
+                />
+              </div>
+
+              {/* Reset Button */}
+              <Button 
+                type="button"
+                variant="outline" 
+                size="sm"
+                onClick={() => setFormData({ ...formData, image_zoom: 1, image_position_x: 50, image_position_y: 50 })}
+              >
+                إعادة تعيين الموضع
+              </Button>
+            </div>
+          )}
         </div>
 
         {/* Settings */}

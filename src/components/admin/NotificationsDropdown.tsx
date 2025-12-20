@@ -81,12 +81,17 @@ const NotificationsDropdown = () => {
     navigate(path);
   };
 
+  // Don't render the bell icon if there are no notifications
+  if (totalCount === 0) {
+    return null;
+  }
+
   return (
     <Popover open={isOpen} onOpenChange={setIsOpen}>
       <PopoverTrigger asChild>
         <Button variant="ghost" size="icon" className="relative">
           <Bell className="w-5 h-5" />
-          {totalCount > 0 && !isOpen && (
+          {!isOpen && (
             <span className="absolute -top-1 -right-1 w-5 h-5 bg-destructive text-destructive-foreground text-[10px] rounded-full flex items-center justify-center font-bold">
               {totalCount > 99 ? "99+" : totalCount}
             </span>

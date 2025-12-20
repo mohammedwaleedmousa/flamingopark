@@ -563,6 +563,21 @@ const CheckoutPage = () => {
                 )}
               </motion.div>
             </div>
+            {/* Coupon Code */}
+            <div className="mb-4">
+              <label className="block text-sm font-body text-muted-foreground mb-2">كود الخصم</label>
+              <div className="flex gap-2">
+                <Input
+                  value={couponCode}
+                  onChange={(e) => setCouponCode(e.target.value)}
+                  placeholder="أدخل كود الخصم"
+                  className="flex-1"
+                />
+                <Button onClick={applyCoupon} className="btn-gold">
+                  تطبيق
+                </Button>
+              </div>
+            </div>
 
             {/* Order Summary */}
             <motion.div

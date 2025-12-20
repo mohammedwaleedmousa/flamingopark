@@ -221,7 +221,8 @@ const CheckoutPage = () => {
   const selectedCompany = deliveryCompanies.find((c) => c.id === selectedDelivery);
   const subtotal = getCartTotal();
   const deliveryFee = selectedCompany?.base_fee || 0;
-  const total = subtotal + deliveryFee;
+  const total = subtotal + deliveryFee - discountAmount;
+
   const currency = country === "SA" ? "ريال" : "ريال";
 
   const handleCopyAccount = (account: string) => {

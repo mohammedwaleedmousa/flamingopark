@@ -329,46 +329,81 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                   const accTotal = item.selected_accessories?.reduce((s, a) => s + a.price * a.quantity, 0) || 0;
 
                   return (
-                    <div key={index} className="flex gap-2 p-2 bg-muted/30 rounded">
-                      <img src={item.product_image} alt="" className="w-10 h-10 object-cover rounded flex-shrink-0" />
-                      <div className="flex-1 min-w-0">
-                        {isEditing ? (
-                          <div className="space-y-1">
-                            <Input
-                              value={item.product_name}
-                              onChange={(e) => updateItemField(index, "product_name", e.target.value)}
-                              className="h-6 text-xs"
-                            />
-                            <div className="flex gap-1">
+                    <div key={index} className="p-2 bg-muted/30 rounded space-y-2">
+                      <div className="flex gap-2">
+                        <img src={item.product_image} alt="" className="w-10 h-10 object-cover rounded flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          {isEditing ? (
+                            <div className="space-y-1">
                               <Input
-                                type="number"
-                                value={item.quantity}
-                                onChange={(e) => updateItemField(index, "quantity", parseInt(e.target.value) || 1)}
-                                className="h-6 text-xs w-14"
-                                placeholder="كمية"
+                                value={item.product_name}
+                                onChange={(e) => updateItemField(index, "product_name", e.target.value)}
+                                className="h-6 text-xs"
                               />
-                              <Input
-                                type="number"
-                                value={item.price}
-                                onChange={(e) => updateItemField(index, "price", parseFloat(e.target.value) || 0)}
-                                className="h-6 text-xs w-20"
-                                placeholder="سعر"
-                              />
+                              <div className="flex gap-1">
+                                <Input
+                                  type="number"
+                                  value={item.quantity}
+                                  onChange={(e) => updateItemField(index, "quantity", parseInt(e.target.value) || 1)}
+                                  className="h-6 text-xs w-14"
+                                  placeholder="كمية"
+                                />
+                                <Input
+                                  type="number"
+                                  value={item.price}
+                                  onChange={(e) => updateItemField(index, "price", parseFloat(e.target.value) || 0)}
+                                  className="h-6 text-xs w-20"
+                                  placeholder="سعر"
+                                />
+                              </div>
                             </div>
-                          </div>
-                        ) : (
-                          <>
-                            <p className="font-medium text-xs truncate">{item.product_name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {item.quantity} × {item.price} {currency}
-                            </p>
-                          </>
+                          ) : (
+                            <>
+                              <p className="font-medium text-xs truncate">{item.product_name}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {item.quantity} × {item.price} {currency}
+                              </p>
+                            </>
+                          )}
+                        </div>
+                        {!isEditing && (
+                          <p className="font-medium text-primary text-xs flex-shrink-0">
+                            {(itemTotal + accTotal).toFixed(0)} {currency}
+                          </p>
                         )}
                       </div>
-                      {!isEditing && (
-                        <p className="font-medium text-primary text-xs flex-shrink-0">
-                          {(itemTotal + accTotal).toFixed(0)} {currency}
-                        </p>
+                      
+                      {/* Size */}
+                      {item.selected_size && (
+                        <div className="text-xs bg-blue-500/10 text-blue-700 px-2 py-1 rounded inline-block">
+                          الحجم: {item.selected_size}
+                        </div>
+                      )}
+                      
+                      {/* Accessories */}
+                      {item.selected_accessories && item.selected_accessories.length > 0 && (
+                        <div className="pt-2 border-t border-border/50">
+                          <p className="text-[10px] text-muted-foreground mb-1">الملحقات:</p>
+                          <div className="flex flex-wrap gap-1">
+                            {item.selected_accessories.map((acc, i) => (
+                              <div 
+                                key={i} 
+                                className="flex items-center gap-1 bg-amber-500/10 px-1.5 py-0.5 rounded text-[10px]"
+                              >
+                                {acc.image_url && (
+                                  <img 
+                                    src={acc.image_url} 
+                                    alt={acc.name_ar} 
+                                    className="w-4 h-4 object-cover rounded"
+                                  />
+                                )}
+                                <span className="text-amber-700">{acc.name_ar}</span>
+                                <span className="text-muted-foreground">×{acc.quantity}</span>
+                                <span className="text-primary font-medium">+{(acc.price * acc.quantity).toFixed(0)}</span>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
                       )}
                     </div>
                   );

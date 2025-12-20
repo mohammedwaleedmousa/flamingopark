@@ -76,28 +76,66 @@ const CheckoutPage = () => {
 
   // Apply coupon
   const applyCoupon = async () => {
-    if (!couponCode) return toast({ title: "خطأ", description: "الرجاء إدخال كود الخصم", variant: "destructive" });
+    if (!couponCode.trim()) {
+      toast({
+        title: "خطأ",
+        description: "الرجاء إدخال كود الخصم",
+        variant: "destructive",
+      });
+      return;
+    }
+
     try {
       const { data, error } = await supabase
-        .from<Coupon>("coupons")
-        .select("*")
-        .eq("code", couponCode)
+        .from("coupons")
+        .select("code,type,value,is_active")
+        .eq("code", couponCode.trim())
         .eq("is_active", true)
-        .maybeSingle();
-      if (error) throw error;
-      if (!data) {
+        .single();
+
+      if (error || !data) {
         setDiscountAmount(0);
-        return toast({ title: "غير صالح", description: "كود الخصم غير موجود أو غير صالح", variant: "destructive" });
+        toast({
+          title: "غير صالح",
+          description: "كود الخصم غير صحيح أو غير مفعل",
+          variant: "destructive",
+        });
+        return;
       }
-      const discount = data.type === "percentage" ? (subtotal * data.value) / 100 : data.value;
+
+      const couponValue = Number(data.value) || 0;
+      let discount = 0;
+
+      if (data.type === "percentage" || data.type === "percent") {
+        discount = (subtotal * couponValue) / 100;
+      } else {
+        discount = couponValue;
+      }
+
+      if (discount <= 0) {
+        setDiscountAmount(0);
+        toast({
+          title: "غير صالح",
+          description: "قيمة الخصم غير صحيحة",
+          variant: "destructive",
+        });
+        return;
+      }
+
       setDiscountAmount(discount);
+
       toast({
         title: "تم التطبيق",
         description: `تم تطبيق خصم ${discount.toFixed(2)} ${currency}`,
-        variant: "default",
       });
-    } catch {
-      toast({ title: "خطأ", description: "حدث خطأ أثناء التحقق من الكوبون", variant: "destructive" });
+    } catch (err) {
+      console.error("Coupon error:", err);
+      setDiscountAmount(0);
+      toast({
+        title: "خطأ",
+        description: "حدث خطأ أثناء التحقق من الكوبون",
+        variant: "destructive",
+      });
     }
   };
 

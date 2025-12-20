@@ -76,41 +76,49 @@ const CheckoutPage = () => {
 
   // Apply coupon
   const applyCoupon = async () => {
-    if (!couponCode) {
-      return toast({
+    if (!couponCode.trim()) {
+      toast({
         title: "خطأ",
         description: "الرجاء إدخال كود الخصم",
         variant: "destructive",
       });
+      return;
     }
 
     try {
-      const { data, error } = await (supabase as any)
-        .from("coupons")
+      const { data, error } = await supabase
+        .from("coupons" as any)
         .select("type, value")
-        .eq("code", couponCode)
+        .eq("code", couponCode.trim())
         .eq("is_active", true)
-        .maybeSingle();
+        .limit(1)
+        .single();
 
       if (error || !data) {
         setDiscountAmount(0);
-        return toast({
+        toast({
           title: "غير صالح",
           description: "كود الخصم غير موجود أو غير صالح",
           variant: "destructive",
         });
+        return;
       }
 
-      const type = data.type as "percentage" | "fixed";
-      const value = Number(data.value);
+      const coupon = data as {
+        type: "percentage" | "fixed";
+        value: number;
+      };
 
       let discount = 0;
 
-      if (type === "percentage") {
-        discount = (subtotal * value) / 100;
+      if (coupon.type === "percentage") {
+        discount = (subtotal * coupon.value) / 100;
       } else {
-        discount = value;
+        discount = coupon.value;
       }
+
+      // لا يتجاوز الخصم المجموع
+      discount = Math.min(discount, subtotal);
 
       setDiscountAmount(discount);
 
@@ -118,7 +126,8 @@ const CheckoutPage = () => {
         title: "تم التطبيق",
         description: `تم تطبيق خصم ${discount.toFixed(2)} ${currency}`,
       });
-    } catch (e) {
+    } catch {
+      setDiscountAmount(0);
       toast({
         title: "خطأ",
         description: "حدث خطأ أثناء التحقق من الكوبون",

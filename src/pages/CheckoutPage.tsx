@@ -22,6 +22,60 @@ const orderAccessorySchema = z.object({
   price: z.number().nonnegative().max(1000000),
   quantity: z.number().int().min(1).max(100),
 });
+const applyCoupon = async () => {
+  if (!couponCode) {
+    toast({
+      title: "خطأ",
+      description: "الرجاء إدخال كود الخصم",
+      variant: "destructive",
+    });
+    return;
+  }
+
+  try {
+    const { data, error } = await supabase
+      .from("coupons")
+      .select("*")
+      .eq("code", couponCode)
+      .eq("is_active", true)
+      .maybeSingle();
+
+    if (error) throw error;
+
+    if (!data) {
+      toast({
+        title: "غير صالح",
+        description: "كود الخصم غير موجود أو غير صالح",
+        variant: "destructive",
+      });
+      setDiscountAmount(0);
+      return;
+    }
+
+    // احسب الخصم بناءً على نوعه (نسبة أو مبلغ ثابت)
+    let discount = 0;
+    if (data.type === "percentage") {
+      discount = (subtotal * data.value) / 100;
+    } else if (data.type === "fixed") {
+      discount = data.value;
+    }
+
+    setDiscountAmount(discount);
+
+    toast({
+      title: "تم التطبيق",
+      description: `تم تطبيق خصم ${discount.toFixed(2)} ${currency}`,
+      variant: "default",
+    });
+  } catch (err) {
+    console.error(err);
+    toast({
+      title: "خطأ",
+      description: "حدث خطأ أثناء التحقق من الكوبون",
+      variant: "destructive",
+    });
+  }
+};
 
 const orderItemSchema = z.object({
   product_id: z.string().uuid(),

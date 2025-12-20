@@ -13,6 +13,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle } from "lucide-react";
+const [couponCode, setCouponCode] = useState("");
+const [discountAmount, setDiscountAmount] = useState(0);
 
 // Zod schemas for order item validation
 const orderAccessorySchema = z.object({
@@ -112,15 +114,13 @@ const CheckoutPage = () => {
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "bank">("cod");
   const [selectedDelivery, setSelectedDelivery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("");
-
   const [formData, setFormData] = useState({
     name: customer?.name || "",
     phone: customer?.phone || "",
     address: "",
     notes: "",
   });
-  const [couponCode, setCouponCode] = useState("");
-  const [discountAmount, setDiscountAmount] = useState(0);
+
   // Fetch delivery companies
   const { data: deliveryCompanies = [] } = useQuery({
     queryKey: ["delivery-companies", country],
@@ -656,15 +656,6 @@ const CheckoutPage = () => {
                       {deliveryFee.toFixed(2)} {currency}
                     </span>
                   </div>
-                  {discountAmount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span>خصم الكوبون</span>
-                      <span>
-                        -{discountAmount.toFixed(2)} {currency}
-                      </span>
-                    </div>
-                  )}
-
                   <div className="h-px bg-border my-2" />
                   <div className="flex justify-between text-lg">
                     <span className="font-heading text-foreground">المجموع</span>

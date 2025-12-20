@@ -104,7 +104,7 @@ const CheckoutPage = () => {
         return;
       }
 
-      const coupon = data as {
+      const coupon = data as unknown as {
         type: "percentage" | "fixed";
         value: number;
       };

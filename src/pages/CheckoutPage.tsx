@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -13,69 +13,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle } from "lucide-react";
-const [couponCode, setCouponCode] = useState("");
-const [discountAmount, setDiscountAmount] = useState(0);
 
-// Zod schemas for order item validation
+// Zod schemas
 const orderAccessorySchema = z.object({
   name: z.string().min(1).max(200),
   price: z.number().nonnegative().max(1000000),
   quantity: z.number().int().min(1).max(100),
 });
-const applyCoupon = async () => {
-  if (!couponCode) {
-    toast({
-      title: "خطأ",
-      description: "الرجاء إدخال كود الخصم",
-      variant: "destructive",
-    });
-    return;
-  }
-
-  try {
-    const { data, error } = await supabase
-      .from("coupons")
-      .select("*")
-      .eq("code", couponCode)
-      .eq("is_active", true)
-      .maybeSingle();
-
-    if (error) throw error;
-
-    if (!data) {
-      toast({
-        title: "غير صالح",
-        description: "كود الخصم غير موجود أو غير صالح",
-        variant: "destructive",
-      });
-      setDiscountAmount(0);
-      return;
-    }
-
-    // احسب الخصم بناءً على نوعه (نسبة أو مبلغ ثابت)
-    let discount = 0;
-    if (data.type === "percentage") {
-      discount = (subtotal * data.value) / 100;
-    } else if (data.type === "fixed") {
-      discount = data.value;
-    }
-
-    setDiscountAmount(discount);
-
-    toast({
-      title: "تم التطبيق",
-      description: `تم تطبيق خصم ${discount.toFixed(2)} ${currency}`,
-      variant: "default",
-    });
-  } catch (err) {
-    console.error(err);
-    toast({
-      title: "خطأ",
-      description: "حدث خطأ أثناء التحقق من الكوبون",
-      variant: "destructive",
-    });
-  }
-};
 
 const orderItemSchema = z.object({
   product_id: z.string().uuid(),
@@ -89,19 +33,23 @@ const orderItemSchema = z.object({
 
 const orderItemsSchema = z.array(orderItemSchema).min(1).max(100);
 
+interface Coupon {
+  code: string;
+  type: "percentage" | "fixed";
+  value: number;
+  is_active: boolean;
+}
 interface DeliveryCompany {
   id: string;
   name: string;
   base_fee: number;
   delivery_days: string | null;
 }
-
 interface BankAccount {
   bank: string;
   account: string;
   name: string;
 }
-
 interface CODRegion {
   id: string;
   region_name: string;
@@ -120,6 +68,38 @@ const CheckoutPage = () => {
     address: "",
     notes: "",
   });
+  const [couponCode, setCouponCode] = useState("");
+  const [discountAmount, setDiscountAmount] = useState(0);
+
+  const subtotal = getCartTotal();
+  const currency = country === "SA" ? "ريال" : "ريال";
+
+  // Apply coupon
+  const applyCoupon = async () => {
+    if (!couponCode) return toast({ title: "خطأ", description: "الرجاء إدخال كود الخصم", variant: "destructive" });
+    try {
+      const { data, error } = await supabase
+        .from<Coupon>("coupons")
+        .select("*")
+        .eq("code", couponCode)
+        .eq("is_active", true)
+        .maybeSingle();
+      if (error) throw error;
+      if (!data) {
+        setDiscountAmount(0);
+        return toast({ title: "غير صالح", description: "كود الخصم غير موجود أو غير صالح", variant: "destructive" });
+      }
+      const discount = data.type === "percentage" ? (subtotal * data.value) / 100 : data.value;
+      setDiscountAmount(discount);
+      toast({
+        title: "تم التطبيق",
+        description: `تم تطبيق خصم ${discount.toFixed(2)} ${currency}`,
+        variant: "default",
+      });
+    } catch {
+      toast({ title: "خطأ", description: "حدث خطأ أثناء التحقق من الكوبون", variant: "destructive" });
+    }
+  };
 
   // Fetch delivery companies
   const { data: deliveryCompanies = [] } = useQuery({
@@ -137,37 +117,32 @@ const CheckoutPage = () => {
     enabled: !!country,
   });
 
-  // Fetch bank accounts from site settings
+  // Fetch bank accounts
   const { data: bankAccounts = [] } = useQuery({
     queryKey: ["bank-accounts", country],
     queryFn: async () => {
       const key = country === "SA" ? "bank_accounts_sa" : "bank_accounts_ye";
       const { data, error } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
       if (error) throw error;
-
       let value = data?.value;
-      // Handle both string JSON and direct JSON values
-      if (typeof value === "string") {
+      if (typeof value === "string")
         try {
           value = JSON.parse(value);
-        } catch (e) {
+        } catch {
           return [] as BankAccount[];
         }
-      }
-
-      if (Array.isArray(value)) {
+      if (Array.isArray(value))
         return value.map((v) => ({
           bank: String((v as any)?.bank || ""),
           account: String((v as any)?.account || ""),
           name: String((v as any)?.name || ""),
         })) as BankAccount[];
-      }
       return [] as BankAccount[];
     },
     enabled: !!country,
   });
 
-  // Fetch WhatsApp number from site settings
+  // Fetch WhatsApp number
   const { data: whatsappNumber } = useQuery({
     queryKey: ["whatsapp-number", country],
     queryFn: async () => {
@@ -195,23 +170,8 @@ const CheckoutPage = () => {
     enabled: !!country,
   });
 
-  // Create order mutation
   const createOrderMutation = useMutation({
-    mutationFn: async (orderData: {
-      order_number: string;
-      customer_id: string;
-      customer_name: string;
-      customer_phone: string;
-      customer_address: string;
-      customer_notes: string;
-      country: string;
-      items: any;
-      subtotal: number;
-      delivery_fee: number;
-      total: number;
-      delivery_company_id: string;
-      payment_method: string;
-    }) => {
+    mutationFn: async (orderData: any) => {
       const { data, error } = await supabase.from("orders").insert(orderData).select().single();
       if (error) throw error;
       return data;
@@ -219,54 +179,29 @@ const CheckoutPage = () => {
   });
 
   const selectedCompany = deliveryCompanies.find((c) => c.id === selectedDelivery);
-  const subtotal = getCartTotal();
   const deliveryFee = selectedCompany?.base_fee || 0;
   const total = subtotal + deliveryFee - discountAmount;
 
-  const currency = country === "SA" ? "ريال" : "ريال";
-
   const handleCopyAccount = (account: string) => {
     navigator.clipboard.writeText(account);
-    toast({
-      title: "تم النسخ",
-      description: "تم نسخ رقم الحساب",
-    });
+    toast({ title: "تم النسخ", description: "تم نسخ رقم الحساب" });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!formData.address || !selectedDelivery) {
-      toast({
-        title: "خطأ",
-        description: "يرجى ملء جميع الحقول المطلوبة",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    // Validate COD region selection
-    if (paymentMethod === "cod" && codRegions.length > 0 && !selectedRegion) {
-      toast({
-        title: "خطأ",
-        description: "يرجى اختيار منطقة الاستلام",
-        variant: "destructive",
-      });
-      return;
-    }
+    if (!formData.address || !selectedDelivery)
+      return toast({ title: "خطأ", description: "يرجى ملء جميع الحقول المطلوبة", variant: "destructive" });
+    if (paymentMethod === "cod" && codRegions.length > 0 && !selectedRegion)
+      return toast({ title: "خطأ", description: "يرجى اختيار منطقة الاستلام", variant: "destructive" });
 
     const orderNumber = `ORD-${Date.now()}`;
-
-    // Prepare cart items with product images, sizes, and accessories
     const rawOrderItems = cart.map((item) => {
       const basePrice = item.product.discount
         ? item.product.price * (1 - item.product.discount / 100)
         : item.product.price;
-
       const accessoriesTotal = item.selectedAccessories
         ? item.selectedAccessories.reduce((sum, acc) => sum + acc.price * acc.quantity, 0)
         : 0;
-
       return {
         product_id: item.product.id,
         product_name: item.product.nameAr,
@@ -275,24 +210,19 @@ const CheckoutPage = () => {
         price: basePrice + accessoriesTotal,
         selected_size: item.selectedSize || null,
         selected_accessories: (item.selectedAccessories || []).map((acc) => ({
-          name: String(acc.name || ""),
-          price: Number(acc.price) || 0,
-          quantity: Number(acc.quantity) || 1,
+          name: String((acc as any).name || ""),
+          price: Number((acc as any).price) || 0,
+          quantity: Number((acc as any).quantity) || 1,
         })),
       };
     });
-
-    // Validate order items with Zod before sending to database
     const validationResult = orderItemsSchema.safeParse(rawOrderItems);
-    if (!validationResult.success) {
-      console.error("Order items validation failed:", validationResult.error);
-      toast({
+    if (!validationResult.success)
+      return toast({
         title: "خطأ",
         description: "حدث خطأ في بيانات الطلب. يرجى المحاولة مرة أخرى.",
         variant: "destructive",
       });
-      return;
-    }
     const orderItems = validationResult.data;
 
     try {
@@ -311,11 +241,7 @@ const CheckoutPage = () => {
         delivery_company_id: selectedDelivery,
         payment_method: paymentMethod,
       });
-
-      // Get selected region name
       const selectedRegionData = codRegions.find((r) => r.id === selectedRegion);
-
-      // Prepare order data for confirmation page
       const orderData = {
         orderNumber,
         customerName: customer!.name,
@@ -333,22 +259,14 @@ const CheckoutPage = () => {
         whatsappNumber: whatsappNumber || (country === "SA" ? "966123456789" : "967123456789"),
         createdAt: new Date().toISOString(),
       };
-
       clearCart();
-
-      // Navigate to confirmation page with order data
       navigate("/order-confirmation", { state: { orderData } });
-    } catch (error) {
-      console.error("Order error:", error);
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء إرسال الطلب",
-        variant: "destructive",
-      });
+    } catch {
+      toast({ title: "خطأ", description: "حدث خطأ أثناء إرسال الطلب", variant: "destructive" });
     }
   };
 
-  if (cart.length === 0) {
+  if (cart.length === 0)
     return (
       <div className="min-h-screen bg-background">
         <Navbar />
@@ -364,13 +282,11 @@ const CheckoutPage = () => {
         <Footer />
       </div>
     );
-  }
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <CartDrawer />
-
       <main className="pt-24 pb-16">
         <div className="container mx-auto px-4">
           <motion.h1
@@ -380,9 +296,7 @@ const CheckoutPage = () => {
           >
             إتمام <span className="text-gold">الطلب</span>
           </motion.h1>
-
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            {/* Form */}
             <div className="lg:col-span-2 space-y-8">
               {/* Customer Info */}
               <motion.div
@@ -452,11 +366,7 @@ const CheckoutPage = () => {
                       <button
                         key={company.id}
                         onClick={() => setSelectedDelivery(company.id)}
-                        className={`p-4 border rounded-lg text-right transition-all ${
-                          selectedDelivery === company.id
-                            ? "border-gold bg-gold/5"
-                            : "border-border hover:border-gold/50"
-                        }`}
+                        className={`p-4 border rounded-lg text-right transition-all ${selectedDelivery === company.id ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}
                       >
                         <h3 className="font-heading text-foreground">{company.name}</h3>
                         <p className="text-sm text-muted-foreground font-body mt-1">
@@ -482,9 +392,7 @@ const CheckoutPage = () => {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("cod")}
-                    className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${
-                      paymentMethod === "cod" ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"
-                    }`}
+                    className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${paymentMethod === "cod" ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}
                   >
                     <Banknote className="w-6 h-6 text-gold" />
                     <div className="text-right">
@@ -495,9 +403,7 @@ const CheckoutPage = () => {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("bank")}
-                    className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${
-                      paymentMethod === "bank" ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"
-                    }`}
+                    className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${paymentMethod === "bank" ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}
                   >
                     <CreditCard className="w-6 h-6 text-gold" />
                     <div className="text-right">
@@ -507,7 +413,7 @@ const CheckoutPage = () => {
                   </button>
                 </div>
 
-                {/* COD Regions Selection */}
+                {/* COD regions */}
                 {paymentMethod === "cod" && (
                   <div className="bg-muted rounded-lg p-4 space-y-3">
                     <div className="flex items-center gap-2 text-sm font-medium text-foreground">
@@ -521,11 +427,7 @@ const CheckoutPage = () => {
                             key={region.id}
                             type="button"
                             onClick={() => setSelectedRegion(region.id)}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${
-                              selectedRegion === region.id
-                                ? "bg-gold text-white border-gold"
-                                : "bg-background border border-border text-foreground hover:border-gold/50"
-                            }`}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedRegion === region.id ? "bg-gold text-white border-gold" : "bg-background border border-border text-foreground hover:border-gold/50"}`}
                           >
                             {region.region_name_ar}
                           </button>
@@ -540,6 +442,7 @@ const CheckoutPage = () => {
                   </div>
                 )}
 
+                {/* Bank accounts */}
                 {paymentMethod === "bank" && bankAccounts.length > 0 && (
                   <div className="bg-muted rounded-lg p-4 space-y-4">
                     <p className="text-sm text-muted-foreground font-body">يرجى التحويل إلى أحد الحسابات التالية:</p>
@@ -564,127 +467,71 @@ const CheckoutPage = () => {
                 )}
               </motion.div>
             </div>
-            {/* Coupon Code */}
-            <div className="mb-4">
-              <label className="block text-sm font-body text-muted-foreground mb-2">كود الخصم</label>
-              <div className="flex gap-2">
-                <Input
-                  value={couponCode}
-                  onChange={(e) => setCouponCode(e.target.value)}
-                  placeholder="أدخل كود الخصم"
-                  className="flex-1"
-                />
-                <Button onClick={applyCoupon} className="btn-gold">
-                  تطبيق
-                </Button>
-              </div>
-            </div>
 
-            {/* Order Summary */}
+            {/* Coupon + Summary */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
-              className="lg:col-span-1"
+              className="space-y-6"
             >
-              <div className="bg-card border border-border rounded-lg p-6 sticky top-24">
-                <h2 className="font-heading text-xl text-foreground mb-6">ملخص الطلب</h2>
-
-                <div className="space-y-4 mb-6">
-                  {cart.map((item, index) => {
-                    const basePrice = item.product.discount
-                      ? item.product.price * (1 - item.product.discount / 100)
-                      : item.product.price;
-
-                    const accessoriesTotal = item.selectedAccessories
-                      ? item.selectedAccessories.reduce((sum, acc) => sum + acc.price * acc.quantity, 0)
-                      : 0;
-
-                    const itemTotalPrice = basePrice + accessoriesTotal;
-
-                    return (
-                      <div key={`${item.product.id}-${index}`} className="flex items-start gap-3">
-                        <img
-                          src={item.product.images[0]}
-                          alt={item.product.nameAr}
-                          className="w-16 h-16 object-cover rounded-md"
-                        />
-                        <div className="flex-1">
-                          <h3 className="font-heading text-sm text-foreground">{item.product.nameAr}</h3>
-
-                          {/* Size */}
-                          {item.selectedSize && (
-                            <p className="text-xs text-muted-foreground">الحجم: {item.selectedSize}</p>
-                          )}
-
-                          {/* Accessories */}
-                          {item.selectedAccessories && item.selectedAccessories.length > 0 && (
-                            <div className="text-xs text-muted-foreground">
-                              <span>الملحقات: </span>
-                              {item.selectedAccessories.map((acc, i) => (
-                                <span key={acc.name}>
-                                  {acc.name} (×{acc.quantity}){i < item.selectedAccessories!.length - 1 ? "، " : ""}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-
-                          <p className="text-xs text-muted-foreground font-body">
-                            {item.quantity} × {itemTotalPrice.toFixed(2)} {currency}
-                          </p>
-                        </div>
-                        <span className="font-heading text-sm text-gold">
-                          {(itemTotalPrice * item.quantity).toFixed(2)} {currency}
-                        </span>
-                      </div>
-                    );
-                  })}
+              {/* Coupon */}
+              <div className="bg-card border border-border rounded-lg p-6">
+                <h2 className="font-heading text-lg text-foreground mb-4">كود الخصم</h2>
+                <div className="flex gap-2">
+                  <Input
+                    value={couponCode}
+                    onChange={(e) => setCouponCode(e.target.value)}
+                    placeholder="أدخل كود الخصم"
+                  />
+                  <Button onClick={applyCoupon} className="flex-shrink-0">
+                    تطبيق
+                  </Button>
                 </div>
+                {discountAmount > 0 && (
+                  <p className="mt-3 text-green-600 font-medium">
+                    تم تطبيق خصم: {discountAmount.toFixed(2)} {currency}
+                  </p>
+                )}
+              </div>
 
-                <div className="h-px bg-border mb-4" />
-
-                <div className="space-y-2 text-sm font-body mb-6">
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">المجموع الفرعي</span>
-                    <span className="text-foreground">
-                      {subtotal.toFixed(2)} {currency}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">التوصيل</span>
-                    <span className="text-foreground">
-                      {deliveryFee.toFixed(2)} {currency}
-                    </span>
-                  </div>
-                  <div className="h-px bg-border my-2" />
-                  <div className="flex justify-between text-lg">
-                    <span className="font-heading text-foreground">المجموع</span>
-                    <span className="font-heading text-gold">
-                      {total.toFixed(2)} {currency}
-                    </span>
-                  </div>
+              {/* Summary */}
+              <div className="bg-card border border-border rounded-lg p-6 space-y-3">
+                <h2 className="font-heading text-lg text-foreground mb-4">ملخص الطلب</h2>
+                <div className="flex justify-between">
+                  <span>المجموع الفرعي</span>
+                  <span>
+                    {subtotal.toFixed(2)} {currency}
+                  </span>
                 </div>
-
-                <Button
-                  onClick={handleSubmit}
-                  disabled={createOrderMutation.isPending || !selectedDelivery}
-                  className="w-full btn-gold py-6 font-heading tracking-wider"
-                >
-                  {createOrderMutation.isPending ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <MessageCircle className="w-5 h-5 ml-2" />
-                      تأكيد الطلب
-                    </>
-                  )}
+                <div className="flex justify-between">
+                  <span>رسوم التوصيل</span>
+                  <span>
+                    {deliveryFee.toFixed(2)} {currency}
+                  </span>
+                </div>
+                {discountAmount > 0 && (
+                  <div className="flex justify-between text-green-600 font-medium">
+                    <span>الخصم</span>
+                    <span>
+                      -{discountAmount.toFixed(2)} {currency}
+                    </span>
+                  </div>
+                )}
+                <div className="flex justify-between font-bold text-foreground text-lg mt-2">
+                  <span>الإجمالي</span>
+                  <span>
+                    {total.toFixed(2)} {currency}
+                  </span>
+                </div>
+                <Button onClick={handleSubmit} className="w-full mt-4 bg-gold hover:bg-gold/90">
+                  إتمام الطلب
                 </Button>
               </div>
             </motion.div>
           </div>
         </div>
       </main>
-
       <Footer />
     </div>
   );

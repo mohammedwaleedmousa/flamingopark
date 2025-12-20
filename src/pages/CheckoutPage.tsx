@@ -85,7 +85,7 @@ const CheckoutPage = () => {
     }
 
     try {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("coupons")
         .select("type, value")
         .eq("code", couponCode)
@@ -101,18 +101,15 @@ const CheckoutPage = () => {
         });
       }
 
-      // 🔥 هذا السطر هو الحل السحري
-      const coupon = data as {
-        type: "percentage" | "fixed";
-        value: number;
-      };
+      const type = data.type as "percentage" | "fixed";
+      const value = Number(data.value);
 
       let discount = 0;
 
-      if (coupon.type === "percentage") {
-        discount = (subtotal * coupon.value) / 100;
+      if (type === "percentage") {
+        discount = (subtotal * value) / 100;
       } else {
-        discount = coupon.value;
+        discount = value;
       }
 
       setDiscountAmount(discount);
@@ -121,7 +118,7 @@ const CheckoutPage = () => {
         title: "تم التطبيق",
         description: `تم تطبيق خصم ${discount.toFixed(2)} ${currency}`,
       });
-    } catch {
+    } catch (e) {
       toast({
         title: "خطأ",
         description: "حدث خطأ أثناء التحقق من الكوبون",

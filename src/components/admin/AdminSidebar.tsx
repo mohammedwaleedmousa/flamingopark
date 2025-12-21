@@ -16,7 +16,8 @@ import {
   Receipt,
   MapPin,
   TrendingUp,
-  Percent
+  Percent,
+  Ticket
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -44,6 +45,7 @@ const menuItems = [
   { title: 'الإيرادات', url: '/admin/revenue', icon: TrendingUp },
   { title: 'العملاء', url: '/admin/customers', icon: Users },
   { title: 'العروض', url: '/admin/offers', icon: Percent },
+  { title: 'الكوبونات', url: '/admin/coupons', icon: Ticket },
   { title: 'البانرات', url: '/admin/banners', icon: Image },
   { title: 'الفئات', url: '/admin/categories', icon: Grid3X3 },
   { title: 'الماركات', url: '/admin/brands', icon: Tag },

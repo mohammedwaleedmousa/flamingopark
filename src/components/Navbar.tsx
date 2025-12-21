@@ -167,18 +167,37 @@ const Navbar = () => {
 
               {/* Country Selector */}
               <div className="mt-6 pt-4 border-t border-gold/20">
-                <button
-                  onClick={() => {
-                    navigate("/select-country");
-                    setIsMenuOpen(false);
-                  }}
-                  className="flex items-center justify-center gap-2 w-full py-3 text-gold/70 hover:text-gold transition-colors"
-                >
-                  <MapPin className="w-4 h-4" />
-                  <span className="font-body text-sm">
-                    {country === "SA" ? "🇸🇦 السعودية" : country === "YE" ? "🇾🇪 اليمن" : "اختر الموقع"}
-                  </span>
-                </button>
+                <p className="text-xs text-gold/50 mb-3 text-center">تغيير الموقع</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => {
+                      navigate("/select-country");
+                      setIsMenuOpen(false);
+                    }}
+                    className={`flex items-center justify-center gap-2 py-3 rounded-lg transition-all ${
+                      country === "SA" 
+                        ? "bg-gold/20 border border-gold text-gold" 
+                        : "bg-muted/50 border border-border text-muted-foreground hover:border-gold/50"
+                    }`}
+                  >
+                    <span className="text-lg">🇸🇦</span>
+                    <span className="font-body text-sm">السعودية</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      navigate("/select-country");
+                      setIsMenuOpen(false);
+                    }}
+                    className={`flex items-center justify-center gap-2 py-3 rounded-lg transition-all ${
+                      country === "YE" 
+                        ? "bg-gold/20 border border-gold text-gold" 
+                        : "bg-muted/50 border border-border text-muted-foreground hover:border-gold/50"
+                    }`}
+                  >
+                    <span className="text-lg">🇾🇪</span>
+                    <span className="font-body text-sm">اليمن</span>
+                  </button>
+                </div>
               </div>
               {/* Logout */}
               <div className="mt-4 pt-4 border-t border-gold/20">

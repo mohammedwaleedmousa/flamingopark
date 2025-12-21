@@ -36,6 +36,7 @@ import AdminInvoicesPage from "./pages/admin/AdminInvoicesPage";
 import AdminCODRegionsPage from "./pages/admin/AdminCODRegionsPage";
 import AdminRevenuePage from "./pages/admin/AdminRevenuePage";
 import AdminOffersPage from "./pages/admin/AdminOffersPage";
+import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
 
 const queryClient = new QueryClient();
 
@@ -95,6 +96,7 @@ const App = () => (
             <Route path="invoices" element={<AdminInvoicesPage />} />
             <Route path="revenue" element={<AdminRevenuePage />} />
             <Route path="offers" element={<AdminOffersPage />} />
+            <Route path="coupons" element={<AdminCouponsPage />} />
             <Route path="settings" element={<AdminSettingsPage />} />
           </Route>
           

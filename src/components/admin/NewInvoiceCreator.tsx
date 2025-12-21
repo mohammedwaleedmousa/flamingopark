@@ -17,6 +17,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 interface InvoiceItem {
   product_name: string;
   product_id?: string;
+  product_image?: string;
   quantity: number;
   price: number;
 }
@@ -25,6 +26,7 @@ interface Product {
   id: string;
   name_ar: string;
   price: number;
+  images: string[] | null;
 }
 
 interface NewInvoiceCreatorProps {
@@ -53,7 +55,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
-        .select('id, name_ar, price')
+        .select('id, name_ar, price, images')
         .eq('is_active', true)
         .contains('countries', [country])
         .order('name_ar');
@@ -72,6 +74,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
     newItems[index] = {
       product_name: product.name_ar,
       product_id: product.id,
+      product_image: product.images?.[0] || '',
       quantity: 1,
       price: product.price,
     };
@@ -141,9 +144,9 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
       const orderNumber = generateOrderNumber();
       
       const orderItems = items.map((item, index) => ({
-        product_id: `manual-${index}`,
+        product_id: item.product_id || `manual-${index}`,
         product_name: item.product_name,
-        product_image: '',
+        product_image: item.product_image || '',
         quantity: item.quantity,
         price: item.price,
       }));
@@ -267,54 +270,58 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
             <div className="space-y-2">
               {items.map((item, index) => (
                 <div key={index} className="p-2 bg-muted/30 rounded space-y-2">
-                  <div className="relative">
-                    <div className="flex gap-2 items-center">
-                      <div className="flex-1 relative">
-                        <Input
-                          value={item.product_name}
-                          onChange={(e) => {
-                            updateItem(index, 'product_name', e.target.value);
-                            setSearchQuery(e.target.value);
-                            setActiveItemIndex(index);
-                          }}
-                          onFocus={() => setActiveItemIndex(index)}
-                          className="h-7 text-xs"
-                          placeholder="ابحث عن منتج أو اكتب الاسم..."
-                        />
-                        {/* Product dropdown */}
-                        {activeItemIndex === index && searchQuery && (
-                          <div className="absolute top-full left-0 right-0 z-50 bg-background border rounded-md shadow-lg mt-1 max-h-40 overflow-y-auto">
-                            {filteredProducts.length > 0 ? (
-                              filteredProducts.slice(0, 10).map((product) => (
-                                <button
-                                  key={product.id}
-                                  type="button"
-                                  onClick={() => selectProduct(product, index)}
-                                  className="w-full text-right px-3 py-2 text-xs hover:bg-muted flex justify-between items-center"
-                                >
-                                  <span>{product.name_ar}</span>
-                                  <span className="text-muted-foreground">{product.price} {currency}</span>
-                                </button>
-                              ))
-                            ) : (
-                              <div className="px-3 py-2 text-xs text-muted-foreground">
-                                لا توجد منتجات - يمكنك كتابة اسم مخصص
-                              </div>
-                            )}
-                          </div>
-                        )}
-                      </div>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeItem(index)}
-                        disabled={items.length === 1}
-                        className="h-7 w-7 p-0 text-destructive"
-                      >
-                        <Trash2 className="w-3 h-3" />
-                      </Button>
+                  <div className="flex gap-2 items-center">
+                    {item.product_image && (
+                      <img src={item.product_image} alt="" className="w-10 h-10 object-cover rounded flex-shrink-0" />
+                    )}
+                    <div className="flex-1 relative">
+                      <Input
+                        value={item.product_name}
+                        onChange={(e) => {
+                          updateItem(index, 'product_name', e.target.value);
+                          setSearchQuery(e.target.value);
+                          setActiveItemIndex(index);
+                        }}
+                        onFocus={() => setActiveItemIndex(index)}
+                        className="h-7 text-xs"
+                        placeholder="ابحث عن منتج أو اكتب الاسم..."
+                      />
+                      {/* Product dropdown */}
+                      {activeItemIndex === index && searchQuery && (
+                        <div className="absolute top-full left-0 right-0 z-50 bg-background border rounded-md shadow-lg mt-1 max-h-40 overflow-y-auto">
+                          {filteredProducts.length > 0 ? (
+                            filteredProducts.slice(0, 10).map((product) => (
+                              <button
+                                key={product.id}
+                                type="button"
+                                onClick={() => selectProduct(product, index)}
+                                className="w-full text-right px-3 py-2 text-xs hover:bg-muted flex items-center gap-2"
+                              >
+                                {product.images?.[0] && (
+                                  <img src={product.images[0]} alt="" className="w-6 h-6 object-cover rounded" />
+                                )}
+                                <span className="flex-1">{product.name_ar}</span>
+                                <span className="text-muted-foreground">{product.price} {currency}</span>
+                              </button>
+                            ))
+                          ) : (
+                            <div className="px-3 py-2 text-xs text-muted-foreground">
+                              لا توجد منتجات - يمكنك كتابة اسم مخصص
+                            </div>
+                          )}
+                        </div>
+                      )}
                     </div>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => removeItem(index)}
+                      disabled={items.length === 1}
+                      className="h-7 w-7 p-0 text-destructive"
+                    >
+                      <Trash2 className="w-3 h-3" />
+                    </Button>
                   </div>
                   <div className="flex gap-2">
                     <Input

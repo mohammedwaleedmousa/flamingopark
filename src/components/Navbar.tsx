@@ -175,8 +175,8 @@ const Navbar = () => {
                       setIsMenuOpen(false);
                     }}
                     className={`flex items-center justify-center gap-2 py-3 rounded-lg transition-all ${
-                      country === "SA" 
-                        ? "bg-gold/20 border border-gold text-gold" 
+                      country === "SA"
+                        ? "bg-gold/20 border border-gold text-gold"
                         : "bg-muted/50 border border-border text-muted-foreground hover:border-gold/50"
                     }`}
                   >
@@ -189,8 +189,8 @@ const Navbar = () => {
                       setIsMenuOpen(false);
                     }}
                     className={`flex items-center justify-center gap-2 py-3 rounded-lg transition-all ${
-                      country === "YE" 
-                        ? "bg-gold/20 border border-gold text-gold" 
+                      country === "YE"
+                        ? "bg-gold/20 border border-gold text-gold"
                         : "bg-muted/50 border border-border text-muted-foreground hover:border-gold/50"
                     }`}
                   >

@@ -188,39 +188,6 @@ export type Database = {
         }
         Relationships: []
       }
-      coupons: {
-        Row: {
-          code: string
-          countries: string[] | null
-          created_at: string
-          id: string
-          is_active: boolean | null
-          type: string
-          updated_at: string
-          value: number
-        }
-        Insert: {
-          code: string
-          countries?: string[] | null
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          type?: string
-          updated_at?: string
-          value?: number
-        }
-        Update: {
-          code?: string
-          countries?: string[] | null
-          created_at?: string
-          id?: string
-          is_active?: boolean | null
-          type?: string
-          updated_at?: string
-          value?: number
-        }
-        Relationships: []
-      }
       customers: {
         Row: {
           country: string

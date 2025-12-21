@@ -366,14 +366,13 @@ const ProductDetailPage = () => {
                       const distance = touchStart - touchEnd;
                       const minSwipeDistance = 50;
                       if (Math.abs(distance) > minSwipeDistance && product.images.length > 1) {
-                        // Fix: Swipe direction was inverted - now correct
                         if (distance > 0) {
-                          // Swipe left - previous image (RTL layout)
-                          setSelectedImage(prev => prev === 0 ? product.images.length - 1 : prev - 1);
+                          // Swipe left - next image
+                          setSelectedImage(prev => prev === product.images.length - 1 ? 0 : prev + 1);
                           setImageLoaded(false);
                         } else {
-                          // Swipe right - next image (RTL layout)
-                          setSelectedImage(prev => prev === product.images.length - 1 ? 0 : prev + 1);
+                          // Swipe right - previous image
+                          setSelectedImage(prev => prev === 0 ? product.images.length - 1 : prev - 1);
                           setImageLoaded(false);
                         }
                       }

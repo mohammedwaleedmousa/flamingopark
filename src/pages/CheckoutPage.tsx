@@ -74,7 +74,7 @@ const CheckoutPage = () => {
   const subtotal = getCartTotal();
   const currency = country === "SA" ? "ريال" : "ريال";
 
-  // Apply coupon
+  // Apply coupon - checks both coupons table and offers table
   const applyCoupon = async () => {
     if (!couponCode.trim()) {
       toast({
@@ -86,45 +86,59 @@ const CheckoutPage = () => {
     }
 
     try {
-      const { data, error } = await supabase
-        .from("coupons" as any)
+      // First check coupons table
+      const { data: couponData } = await supabase
+        .from("coupons")
         .select("type, value")
-        .eq("code", couponCode.trim())
+        .eq("code", couponCode.trim().toUpperCase())
         .eq("is_active", true)
+        .contains("countries", [country])
         .limit(1)
-        .single();
+        .maybeSingle();
 
-      if (error || !data) {
-        setDiscountAmount(0);
+      if (couponData) {
+        const coupon = couponData as { type: "percentage" | "fixed"; value: number };
+        let discount = 0;
+        if (coupon.type === "percentage") {
+          discount = (subtotal * coupon.value) / 100;
+        } else {
+          discount = coupon.value;
+        }
+        discount = Math.min(discount, subtotal);
+        setDiscountAmount(discount);
         toast({
-          title: "غير صالح",
-          description: "كود الخصم غير موجود أو غير صالح",
-          variant: "destructive",
+          title: "تم التطبيق",
+          description: `تم تطبيق خصم ${discount.toFixed(2)} ${currency}`,
         });
         return;
       }
 
-      const coupon = data as unknown as {
-        type: "percentage" | "fixed";
-        value: number;
-      };
+      // Then check offers table for discount_code
+      const { data: offerData } = await supabase
+        .from("offers")
+        .select("discount_percentage")
+        .eq("discount_code", couponCode.trim().toUpperCase())
+        .eq("is_active", true)
+        .contains("countries", [country])
+        .limit(1)
+        .maybeSingle();
 
-      let discount = 0;
-
-      if (coupon.type === "percentage") {
-        discount = (subtotal * coupon.value) / 100;
-      } else {
-        discount = coupon.value;
+      if (offerData && offerData.discount_percentage > 0) {
+        const discount = Math.min((subtotal * offerData.discount_percentage) / 100, subtotal);
+        setDiscountAmount(discount);
+        toast({
+          title: "تم التطبيق",
+          description: `تم تطبيق خصم ${discount.toFixed(2)} ${currency}`,
+        });
+        return;
       }
 
-      // لا يتجاوز الخصم المجموع
-      discount = Math.min(discount, subtotal);
-
-      setDiscountAmount(discount);
-
+      // No valid coupon found
+      setDiscountAmount(0);
       toast({
-        title: "تم التطبيق",
-        description: `تم تطبيق خصم ${discount.toFixed(2)} ${currency}`,
+        title: "غير صالح",
+        description: "كود الخصم غير موجود أو غير صالح",
+        variant: "destructive",
       });
     } catch {
       setDiscountAmount(0);
@@ -531,29 +545,72 @@ const CheckoutPage = () => {
               </div>
 
               {/* Summary */}
-              <div className="bg-card border border-border rounded-lg p-6 space-y-3">
+              <div className="bg-card border border-border rounded-lg p-6 space-y-4">
                 <h2 className="font-heading text-lg text-foreground mb-4">ملخص الطلب</h2>
-                <div className="flex justify-between">
+                
+                {/* Cart Items with Images */}
+                <div className="space-y-3 pb-4 border-b border-border">
+                  {cart.map((item, index) => {
+                    const itemPrice = item.product.discount
+                      ? item.product.price * (1 - item.product.discount / 100)
+                      : item.product.price;
+                    const accessoriesTotal = item.selectedAccessories
+                      ? item.selectedAccessories.reduce((sum, acc) => sum + acc.price * acc.quantity, 0)
+                      : 0;
+                    return (
+                      <div key={index} className="flex gap-3 items-start">
+                        <img 
+                          src={item.product.images?.[0] || '/placeholder.svg'} 
+                          alt={item.product.nameAr}
+                          className="w-14 h-14 object-cover rounded-lg border border-border flex-shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-sm truncate">{item.product.nameAr}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.quantity} × {itemPrice.toFixed(0)} {currency}
+                          </p>
+                          {item.selectedSize && (
+                            <span className="text-xs text-blue-600">الحجم: {item.selectedSize}</span>
+                          )}
+                          {item.selectedAccessories && item.selectedAccessories.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {item.selectedAccessories.map((acc, i) => (
+                                <span key={i} className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+                                  {acc.name_ar} +{acc.price * acc.quantity}
+                                </span>
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                        <span className="text-sm font-medium text-gold">
+                          {((itemPrice + accessoriesTotal) * item.quantity).toFixed(0)} {currency}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+                
+                <div className="flex justify-between text-sm">
                   <span>المجموع الفرعي</span>
                   <span>
                     {subtotal.toFixed(2)} {currency}
                   </span>
                 </div>
-                <div className="flex justify-between">
+                <div className="flex justify-between text-sm">
                   <span>رسوم التوصيل</span>
                   <span>
                     {deliveryFee.toFixed(2)} {currency}
                   </span>
                 </div>
                 {discountAmount > 0 && (
-                  <div className="flex justify-between text-green-600 font-medium">
+                  <div className="flex justify-between text-green-600 font-medium text-sm">
                     <span>الخصم</span>
                     <span>
                       -{discountAmount.toFixed(2)} {currency}
                     </span>
                   </div>
                 )}
-                <div className="flex justify-between font-bold text-foreground text-lg mt-2">
+                <div className="flex justify-between font-bold text-foreground text-lg pt-2 border-t border-border">
                   <span>الإجمالي</span>
                   <span>
                     {total.toFixed(2)} {currency}

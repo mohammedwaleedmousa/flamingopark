@@ -8,13 +8,20 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Edit, Trash2, Upload, X, Loader2, Settings, Tag, Package, Search } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, X, Loader2, Settings, Tag, Package, Search, Timer, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 interface Offer {
   id: string;
@@ -44,6 +51,7 @@ interface OffersSettings {
   promo_banner_text: string;
   show_countdown: boolean;
   show_promo_banner: boolean;
+  countries: string[];
 }
 
 interface Product {
@@ -64,6 +72,7 @@ const AdminOffersPage = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [productSearch, setProductSearch] = useState('');
+  const [applyToAll, setApplyToAll] = useState(false);
 
   const [formData, setFormData] = useState({
     title: '',
@@ -121,6 +130,21 @@ const AdminOffersPage = () => {
 
     if (!settingsError && settingsData) {
       setSettings(settingsData);
+    } else {
+      // Create default settings if none exist
+      const { data: newSettings } = await supabase
+        .from('offers_settings')
+        .insert({
+          page_title: 'عروض استثنائية',
+          page_subtitle: 'اغتنم الفرصة واحصل على أفخم القطع الذهبية بأسعار لا تُقاوم',
+          promo_banner_text: 'استخدم كود GOLD50 للحصول على خصم إضافي',
+          show_countdown: true,
+          show_promo_banner: true,
+          countries: ['SA', 'YE'],
+        })
+        .select()
+        .single();
+      if (newSettings) setSettings(newSettings);
     }
 
     setIsLoading(false);
@@ -147,11 +171,13 @@ const AdminOffersPage = () => {
     });
     setEditingOffer(null);
     setProductSearch('');
+    setApplyToAll(false);
   };
 
   const openDialog = (offer?: Offer) => {
     if (offer) {
       setEditingOffer(offer);
+      setApplyToAll(offer.product_ids.length === 0);
       setFormData({
         title: offer.title || '',
         title_ar: offer.title_ar || '',
@@ -226,8 +252,9 @@ const AdminOffersPage = () => {
     try {
       const submitData = {
         ...formData,
-        start_date: formData.start_date || null,
-        end_date: formData.end_date || null,
+        start_date: formData.start_date ? new Date(formData.start_date).toISOString() : null,
+        end_date: formData.end_date ? new Date(formData.end_date + 'T23:59:59').toISOString() : null,
+        product_ids: applyToAll ? [] : formData.product_ids,
       };
 
       if (editingOffer) {
@@ -282,6 +309,32 @@ const AdminOffersPage = () => {
     }));
   };
 
+  const moveOffer = async (offerId: string, direction: 'up' | 'down') => {
+    const currentIndex = offers.findIndex(o => o.id === offerId);
+    if (currentIndex === -1) return;
+    
+    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
+    if (targetIndex < 0 || targetIndex >= offers.length) return;
+
+    const newOffers = [...offers];
+    const temp = newOffers[currentIndex];
+    newOffers[currentIndex] = newOffers[targetIndex];
+    newOffers[targetIndex] = temp;
+
+    // Update sort_order for both offers
+    const updates = [
+      { id: newOffers[currentIndex].id, sort_order: currentIndex },
+      { id: newOffers[targetIndex].id, sort_order: targetIndex },
+    ];
+
+    for (const update of updates) {
+      await supabase.from('offers').update({ sort_order: update.sort_order }).eq('id', update.id);
+    }
+
+    setOffers(newOffers.map((o, i) => ({ ...o, sort_order: i })));
+    toast({ title: 'تم', description: 'تم تغيير الترتيب' });
+  };
+
   const saveSettings = async () => {
     if (!settings) return;
     
@@ -296,6 +349,7 @@ const AdminOffersPage = () => {
           promo_banner_text: settings.promo_banner_text,
           show_countdown: settings.show_countdown,
           show_promo_banner: settings.show_promo_banner,
+          countries: settings.countries,
         })
         .eq('id', settings.id);
 
@@ -306,6 +360,16 @@ const AdminOffersPage = () => {
     } finally {
       setIsSaving(false);
     }
+  };
+
+  const formatDate = (dateStr: string | null) => {
+    if (!dateStr) return '-';
+    return new Date(dateStr).toLocaleDateString('ar-SA');
+  };
+
+  const isOfferExpired = (endDate: string | null) => {
+    if (!endDate) return false;
+    return new Date(endDate) < new Date();
   };
 
   const filteredProducts = products.filter(p => 
@@ -336,7 +400,7 @@ const AdminOffersPage = () => {
         <TabsList className="grid w-full grid-cols-2 max-w-md">
           <TabsTrigger value="offers" className="gap-2">
             <Tag className="w-4 h-4" />
-            العروض
+            العروض ({offers.length})
           </TabsTrigger>
           <TabsTrigger value="settings" className="gap-2">
             <Settings className="w-4 h-4" />
@@ -345,70 +409,109 @@ const AdminOffersPage = () => {
         </TabsList>
 
         <TabsContent value="offers" className="mt-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {offers.map((offer) => (
-              <div key={offer.id} className="bg-card border border-border rounded overflow-hidden">
-                {offer.image_url && (
-                  <div className="aspect-video relative">
-                    <img
-                      src={offer.image_url}
-                      alt={offer.title_ar}
-                      className="w-full h-full object-cover"
-                    />
-                    {offer.discount_percentage > 0 && (
-                      <div className="absolute top-2 left-2 bg-destructive text-destructive-foreground px-2 py-1 rounded text-sm font-bold">
-                        {offer.discount_percentage}% خصم
-                      </div>
-                    )}
-                    {!offer.is_active && (
-                      <div className="absolute inset-0 bg-secondary/80 flex items-center justify-center">
-                        <span className="text-gold font-heading">معطل</span>
-                      </div>
-                    )}
+          <div className="space-y-4">
+            {offers.map((offer, index) => (
+              <div 
+                key={offer.id} 
+                className={`bg-card border rounded-lg overflow-hidden ${
+                  isOfferExpired(offer.end_date) ? 'opacity-50 border-destructive/50' : 'border-border'
+                } ${!offer.is_active ? 'opacity-60' : ''}`}
+              >
+                <div className="flex items-stretch">
+                  {/* Sort Controls */}
+                  <div className="flex flex-col items-center justify-center gap-1 px-2 bg-muted/50 border-r border-border">
+                    <button
+                      onClick={() => moveOffer(offer.id, 'up')}
+                      disabled={index === 0}
+                      className="p-1 hover:bg-muted rounded disabled:opacity-30"
+                    >
+                      <ChevronUp className="w-4 h-4" />
+                    </button>
+                    <span className="text-xs text-muted-foreground">{index + 1}</span>
+                    <button
+                      onClick={() => moveOffer(offer.id, 'down')}
+                      disabled={index === offers.length - 1}
+                      className="p-1 hover:bg-muted rounded disabled:opacity-30"
+                    >
+                      <ChevronDown className="w-4 h-4" />
+                    </button>
                   </div>
-                )}
-                <div className="p-4">
-                  <div className="flex items-start justify-between mb-2">
-                    <h3 className="font-heading text-foreground">{offer.title_ar}</h3>
-                    {offer.is_featured && (
-                      <span className="bg-gold/20 text-gold text-xs px-2 py-0.5 rounded">مميز</span>
-                    )}
-                  </div>
-                  {offer.subtitle_ar && (
-                    <p className="text-sm text-muted-foreground mb-2">{offer.subtitle_ar}</p>
-                  )}
-                  {offer.discount_code && (
-                    <div className="bg-muted px-2 py-1 rounded text-sm mb-2">
-                      كود: <span className="font-mono font-bold">{offer.discount_code}</span>
+
+                  {/* Image */}
+                  {offer.image_url && (
+                    <div className="w-32 h-24 flex-shrink-0">
+                      <img
+                        src={offer.image_url}
+                        alt={offer.title_ar}
+                        className="w-full h-full object-cover"
+                      />
                     </div>
                   )}
-                  {offer.product_ids && offer.product_ids.length > 0 && (
-                    <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
-                      <Package className="w-4 h-4" />
-                      <span>{offer.product_ids.length} منتج مرتبط</span>
-                    </div>
-                  )}
-                  <div className="flex items-center justify-between">
-                    <div className="flex gap-1">
-                      {offer.countries?.map(c => (
-                        <span key={c} className="text-xs">{c === 'SA' ? '🇸🇦' : '🇾🇪'}</span>
-                      ))}
-                    </div>
-                    <div className="flex gap-2">
-                      <Button size="icon" variant="ghost" onClick={() => openDialog(offer)}>
-                        <Edit className="w-4 h-4" />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteOffer(offer.id)}>
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+
+                  {/* Content */}
+                  <div className="flex-1 p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div>
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-heading text-foreground">{offer.title_ar}</h3>
+                          {offer.is_featured && (
+                            <span className="bg-gold/20 text-gold text-xs px-2 py-0.5 rounded">مميز</span>
+                          )}
+                          {!offer.is_active && (
+                            <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded">معطل</span>
+                          )}
+                          {isOfferExpired(offer.end_date) && (
+                            <span className="bg-destructive/20 text-destructive text-xs px-2 py-0.5 rounded">منتهي</span>
+                          )}
+                        </div>
+                        
+                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                          {offer.discount_percentage > 0 && (
+                            <span className="text-destructive font-bold">{offer.discount_percentage}% خصم</span>
+                          )}
+                          {offer.discount_code && (
+                            <span className="bg-muted px-2 py-0.5 rounded font-mono">{offer.discount_code}</span>
+                          )}
+                          {offer.product_ids && offer.product_ids.length > 0 ? (
+                            <span className="flex items-center gap-1">
+                              <Package className="w-3 h-3" />
+                              {offer.product_ids.length} منتج
+                            </span>
+                          ) : (
+                            <span className="text-gold">جميع المنتجات</span>
+                          )}
+                          {offer.end_date && (
+                            <span className="flex items-center gap-1">
+                              <Timer className="w-3 h-3" />
+                              ينتهي: {formatDate(offer.end_date)}
+                            </span>
+                          )}
+                          <span className="flex gap-1">
+                            {offer.countries?.map(c => (
+                              <span key={c}>{c === 'SA' ? '🇸🇦' : '🇾🇪'}</span>
+                            ))}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex gap-2">
+                        <Button size="icon" variant="ghost" onClick={() => openDialog(offer)}>
+                          <Edit className="w-4 h-4" />
+                        </Button>
+                        <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteOffer(offer.id)}>
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
             ))}
+            
             {offers.length === 0 && (
-              <div className="col-span-full text-center py-12 text-muted-foreground">
-                لا توجد عروض. أضف عرضاً جديداً للبدء.
+              <div className="text-center py-12 text-muted-foreground bg-card rounded-lg border border-border">
+                <Tag className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                <p>لا توجد عروض. أضف عرضاً جديداً للبدء.</p>
               </div>
             )}
           </div>
@@ -446,7 +549,8 @@ const AdminOffersPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm text-muted-foreground mb-2">تاريخ انتهاء العد التنازلي</label>
+                <label className="block text-sm text-muted-foreground mb-2">تاريخ انتهاء العد التنازلي الرئيسي</label>
+                <p className="text-xs text-muted-foreground mb-2">عند انتهاء هذا الوقت، ستختفي جميع العروض تلقائياً</p>
                 <Input
                   type="datetime-local"
                   value={settings.countdown_end_date ? settings.countdown_end_date.slice(0, 16) : ''}
@@ -455,13 +559,43 @@ const AdminOffersPage = () => {
                 />
               </div>
 
+              <div>
+                <label className="block text-sm text-muted-foreground mb-2">الدول المستهدفة</label>
+                <div className="flex gap-4">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={settings.countries?.includes('SA')}
+                      onCheckedChange={(checked) => {
+                        const newCountries = checked 
+                          ? [...(settings.countries || []), 'SA']
+                          : (settings.countries || []).filter(c => c !== 'SA');
+                        setSettings({ ...settings, countries: newCountries });
+                      }}
+                    />
+                    <span>🇸🇦 السعودية</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <Checkbox
+                      checked={settings.countries?.includes('YE')}
+                      onCheckedChange={(checked) => {
+                        const newCountries = checked 
+                          ? [...(settings.countries || []), 'YE']
+                          : (settings.countries || []).filter(c => c !== 'YE');
+                        setSettings({ ...settings, countries: newCountries });
+                      }}
+                    />
+                    <span>🇾🇪 اليمن</span>
+                  </label>
+                </div>
+              </div>
+
               <div className="flex items-center gap-6">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <Switch
                     checked={settings.show_countdown}
                     onCheckedChange={(checked) => setSettings({ ...settings, show_countdown: checked })}
                   />
-                  <span className="text-sm">إظهار العد التنازلي</span>
+                  <span className="text-sm">إظهار العد التنازلي الرئيسي</span>
                 </label>
 
                 <label className="flex items-center gap-2 cursor-pointer">
@@ -597,90 +731,110 @@ const AdminOffersPage = () => {
                 />
               </div>
               <div>
-                <label className="block text-sm text-muted-foreground mb-2">تاريخ النهاية</label>
+                <label className="block text-sm text-muted-foreground mb-2">تاريخ النهاية (timer العرض)</label>
                 <Input
                   type="date"
                   value={formData.end_date}
                   onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
                   dir="ltr"
                 />
+                <p className="text-xs text-muted-foreground mt-1">سيختفي العرض تلقائياً عند هذا التاريخ</p>
               </div>
             </div>
 
-            {/* Products Selection */}
+            {/* Product Selection Mode */}
             <div className="border border-border rounded-lg p-4">
-              <label className="block text-sm font-medium text-foreground mb-3">
-                <Package className="w-4 h-4 inline ml-2" />
-                المنتجات المرتبطة بالعرض ({formData.product_ids.length})
-              </label>
-              
-              {/* Selected Products */}
-              {selectedProducts.length > 0 && (
-                <div className="flex flex-wrap gap-2 mb-3">
-                  {selectedProducts.map(product => (
-                    <div 
-                      key={product.id}
-                      className="flex items-center gap-2 bg-gold/10 text-gold px-3 py-1.5 rounded-full text-sm"
-                    >
-                      {product.images?.[0] && (
-                        <img src={product.images[0]} alt="" className="w-5 h-5 rounded object-cover" />
-                      )}
-                      <span>{product.name_ar}</span>
-                      <button onClick={() => toggleProduct(product.id)} className="hover:text-destructive">
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Search */}
-              <div className="relative mb-3">
-                <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                <Input
-                  value={productSearch}
-                  onChange={(e) => setProductSearch(e.target.value)}
-                  placeholder="ابحث عن منتج..."
-                  className="pr-10"
-                  dir="rtl"
-                />
+              <div className="flex items-center justify-between mb-4">
+                <label className="block text-sm font-medium text-foreground">
+                  <Package className="w-4 h-4 inline ml-2" />
+                  المنتجات المشمولة بالعرض
+                </label>
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <Switch
+                    checked={applyToAll}
+                    onCheckedChange={setApplyToAll}
+                  />
+                  <span className="text-sm">تطبيق على جميع المنتجات</span>
+                </label>
               </div>
 
-              {/* Products List */}
-              <ScrollArea className="h-48 border border-border rounded">
-                <div className="p-2 space-y-1">
-                  {filteredProducts.map(product => (
-                    <label
-                      key={product.id}
-                      className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${
-                        formData.product_ids.includes(product.id) 
-                          ? 'bg-gold/10 border border-gold/30' 
-                          : 'hover:bg-muted'
-                      }`}
-                    >
-                      <Checkbox
-                        checked={formData.product_ids.includes(product.id)}
-                        onCheckedChange={() => toggleProduct(product.id)}
-                      />
-                      {product.images?.[0] && (
-                        <img src={product.images[0]} alt="" className="w-10 h-10 rounded object-cover" />
-                      )}
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{product.name_ar}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {product.price} ر.س
-                          {product.discount && product.discount > 0 && (
-                            <span className="text-destructive mr-2">(-{product.discount}%)</span>
+              {!applyToAll && (
+                <>
+                  {/* Selected Products */}
+                  {selectedProducts.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {selectedProducts.map(product => (
+                        <div 
+                          key={product.id}
+                          className="flex items-center gap-2 bg-gold/10 text-gold px-3 py-1.5 rounded-full text-sm"
+                        >
+                          {product.images?.[0] && (
+                            <img src={product.images[0]} alt="" className="w-5 h-5 rounded object-cover" />
                           )}
-                        </p>
-                      </div>
-                    </label>
-                  ))}
-                  {filteredProducts.length === 0 && (
-                    <p className="text-center text-muted-foreground py-4 text-sm">لا توجد منتجات</p>
+                          <span>{product.name_ar}</span>
+                          <button onClick={() => toggleProduct(product.id)} className="hover:text-destructive">
+                            <X className="w-3 h-3" />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
                   )}
-                </div>
-              </ScrollArea>
+
+                  {/* Search */}
+                  <div className="relative mb-3">
+                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                    <Input
+                      value={productSearch}
+                      onChange={(e) => setProductSearch(e.target.value)}
+                      placeholder="ابحث عن منتج..."
+                      className="pr-10"
+                      dir="rtl"
+                    />
+                  </div>
+
+                  {/* Products List */}
+                  <ScrollArea className="h-48 border border-border rounded">
+                    <div className="p-2 space-y-1">
+                      {filteredProducts.map(product => (
+                        <label
+                          key={product.id}
+                          className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${
+                            formData.product_ids.includes(product.id) 
+                              ? 'bg-gold/10 border border-gold/30' 
+                              : 'hover:bg-muted'
+                          }`}
+                        >
+                          <Checkbox
+                            checked={formData.product_ids.includes(product.id)}
+                            onCheckedChange={() => toggleProduct(product.id)}
+                          />
+                          {product.images?.[0] && (
+                            <img src={product.images[0]} alt="" className="w-10 h-10 rounded object-cover" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium truncate">{product.name_ar}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {product.price} ر.س
+                              {product.discount && product.discount > 0 && (
+                                <span className="text-destructive mr-2">(-{product.discount}%)</span>
+                              )}
+                            </p>
+                          </div>
+                        </label>
+                      ))}
+                      {filteredProducts.length === 0 && (
+                        <p className="text-center text-muted-foreground py-4 text-sm">لا توجد منتجات</p>
+                      )}
+                    </div>
+                  </ScrollArea>
+                </>
+              )}
+
+              {applyToAll && (
+                <p className="text-sm text-gold bg-gold/10 p-3 rounded">
+                  سيتم تطبيق هذا العرض على جميع المنتجات في المتجر
+                </p>
+              )}
             </div>
 
             <div className="flex flex-wrap gap-4">

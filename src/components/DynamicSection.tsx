@@ -1,10 +1,12 @@
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Crown, Percent, Star } from 'lucide-react';
+import { ArrowLeft, Sparkles, Crown, Percent, Star, ChevronDown } from 'lucide-react';
+import { useState } from 'react';
 import ProductCard from '@/components/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/store/useStore';
+import { Button } from '@/components/ui/button';
 
 interface HomepageSection {
   id: string;
@@ -30,9 +32,13 @@ const filterIcons: Record<string, typeof Sparkles> = {
   all: Star,
 };
 
+const INITIAL_DISPLAY = 8;
+const LOAD_MORE_COUNT = 8;
+
 const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
   const Icon = filterIcons[section.filter_type] || Sparkles;
   const isDiscounted = section.filter_type === 'discounted';
+  const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY);
 
   const { data: products = [] } = useQuery({
     queryKey: ['section-products', section.id, country],
@@ -120,6 +126,12 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
   if (products.length === 0) return null;
 
   const isEven = index % 2 === 0;
+  const displayedProducts = products.slice(0, displayCount);
+  const hasMore = displayCount < products.length;
+
+  const handleLoadMore = () => {
+    setDisplayCount(prev => Math.min(prev + LOAD_MORE_COUNT, products.length));
+  };
 
   return (
     <section
@@ -203,10 +215,28 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
         </motion.div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {products.map((product, idx) => (
+          {displayedProducts.map((product, idx) => (
             <ProductCard key={product.id} product={product} index={idx} />
           ))}
         </div>
+
+        {/* Load More Button */}
+        {hasMore && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="text-center mt-8"
+          >
+            <Button
+              onClick={handleLoadMore}
+              variant="outline"
+              className="gap-2 border-gold/30 text-gold hover:bg-gold hover:text-secondary"
+            >
+              <ChevronDown className="w-4 h-4" />
+              عرض المزيد ({products.length - displayCount} منتج)
+            </Button>
+          </motion.div>
+        )}
 
         {section.show_view_all && section.view_all_link && (
           <div className={`text-center mt-8 ${isEven ? 'md:hidden' : ''}`}>

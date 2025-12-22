@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -7,8 +7,8 @@ import CartDrawer from "@/components/CartDrawer";
 import ProductCard from "@/components/ProductCard";
 import { useStore, Product } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
-import { Percent, Clock, Loader2, Sparkles, Tag, Flame, Gift, Zap } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Percent, Clock, Loader2, Sparkles, Tag, Flame, Gift, Zap, Timer, Copy, Check } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface Offer {
   id: string;
@@ -20,6 +20,9 @@ interface Offer {
   discount_percentage: number;
   is_featured: boolean;
   product_ids: string[] | null;
+  end_date: string | null;
+  start_date: string | null;
+  countries: string[];
 }
 
 interface OffersSettings {
@@ -31,39 +34,133 @@ interface OffersSettings {
   show_promo_banner: boolean;
 }
 
+interface TimeLeft {
+  days: number;
+  hours: number;
+  minutes: number;
+  seconds: number;
+  expired: boolean;
+}
+
+const calculateTimeLeft = (endDate: string | null): TimeLeft => {
+  if (!endDate) return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: false };
+  
+  const end = new Date(endDate).getTime();
+  const now = new Date().getTime();
+  const diff = end - now;
+
+  if (diff <= 0) {
+    return { days: 0, hours: 0, minutes: 0, seconds: 0, expired: true };
+  }
+
+  return {
+    days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+    hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+    minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+    seconds: Math.floor((diff % (1000 * 60)) / 1000),
+    expired: false,
+  };
+};
+
+// Timer component for individual offers
+const OfferTimer = ({ endDate, label }: { endDate: string | null; label?: string }) => {
+  const [timeLeft, setTimeLeft] = useState(() => calculateTimeLeft(endDate));
+
+  useEffect(() => {
+    if (!endDate) return;
+    
+    const timer = setInterval(() => {
+      setTimeLeft(calculateTimeLeft(endDate));
+    }, 1000);
+
+    return () => clearInterval(timer);
+  }, [endDate]);
+
+  if (!endDate || timeLeft.expired) return null;
+
+  return (
+    <div className="flex items-center gap-2 text-sm">
+      <Timer className="w-4 h-4 text-gold" />
+      {label && <span className="text-muted-foreground">{label}</span>}
+      <div className="flex items-center gap-1 font-mono">
+        <span className="bg-secondary/80 px-2 py-1 rounded text-gold">{timeLeft.days}d</span>
+        <span className="text-gold">:</span>
+        <span className="bg-secondary/80 px-2 py-1 rounded text-gold">{String(timeLeft.hours).padStart(2, '0')}h</span>
+        <span className="text-gold">:</span>
+        <span className="bg-secondary/80 px-2 py-1 rounded text-gold">{String(timeLeft.minutes).padStart(2, '0')}m</span>
+        <span className="text-gold">:</span>
+        <span className="bg-secondary/80 px-2 py-1 rounded text-gold">{String(timeLeft.seconds).padStart(2, '0')}s</span>
+      </div>
+    </div>
+  );
+};
+
+// Copy coupon button
+const CopyCodeButton = ({ code }: { code: string }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = async () => {
+    await navigator.clipboard.writeText(code);
+    setCopied(true);
+    toast({ title: "تم النسخ!", description: `تم نسخ كود الخصم: ${code}` });
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  return (
+    <button
+      onClick={handleCopy}
+      className="flex items-center gap-2 bg-gold/20 hover:bg-gold/30 border border-gold/40 px-4 py-2 rounded-lg transition-colors"
+    >
+      {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4 text-gold" />}
+      <span className="font-mono font-bold text-gold">{code}</span>
+    </button>
+  );
+};
+
 const OffersPage = () => {
   const { country } = useStore();
-  const [timeLeft, setTimeLeft] = useState({
-    days: 0,
-    hours: 0,
-    minutes: 0,
-    seconds: 0,
-  });
+  const queryClient = useQueryClient();
+  const [mainTimeLeft, setMainTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: false });
 
   // Fetch offers settings
   const { data: settings } = useQuery({
-    queryKey: ["offers-settings"],
+    queryKey: ["offers-settings", country],
     queryFn: async () => {
-      const { data, error } = await supabase.from("offers_settings").select("*").limit(1).maybeSingle();
+      const { data, error } = await supabase
+        .from("offers_settings")
+        .select("*")
+        .contains("countries", [country])
+        .limit(1)
+        .maybeSingle();
       if (error) throw error;
       return data as OffersSettings | null;
     },
+    enabled: !!country,
   });
 
-  // Fetch active offers
-  const { data: offers = [] } = useQuery({
+  // Fetch active offers that haven't expired
+  const { data: offers = [], isLoading: offersLoading } = useQuery({
     queryKey: ["offers", country],
     queryFn: async () => {
+      const now = new Date().toISOString();
       const { data, error } = await supabase
         .from("offers")
         .select("*")
         .eq("is_active", true)
         .contains("countries", [country])
+        .or(`end_date.is.null,end_date.gt.${now}`)
         .order("sort_order", { ascending: true });
       if (error) throw error;
-      return data as Offer[];
+      return (data || []).filter(offer => {
+        // Double check end_date
+        if (offer.end_date) {
+          return new Date(offer.end_date) > new Date();
+        }
+        return true;
+      }) as Offer[];
     },
     enabled: !!country,
+    refetchInterval: 60000, // Refetch every minute to check for expired offers
   });
 
   // Collect all product IDs from offers
@@ -78,6 +175,7 @@ const OffersPage = () => {
         .from("products")
         .select("*")
         .eq("is_active", true)
+        .contains("countries", [country])
         .in("id", offerProductIds);
       if (error) throw error;
       return data.map((p) => ({
@@ -99,69 +197,30 @@ const OffersPage = () => {
         isBestSeller: p.is_best_seller,
       })) as Product[];
     },
-    enabled: offerProductIds.length > 0,
+    enabled: offerProductIds.length > 0 && !!country,
   });
 
-  // Fetch discounted products
-  const { data: discountedProducts = [], isLoading } = useQuery({
-    queryKey: ["discounted-products", country],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("is_active", true)
-        .gt("discount", 0)
-        .contains("countries", [country])
-        .order("discount", { ascending: false });
-      if (error) throw error;
-      return data.map((p) => ({
-        id: p.id,
-        name: p.name,
-        nameAr: p.name_ar,
-        slug: p.slug,
-        price: Number(p.price),
-        originalPrice: p.original_price ? Number(p.original_price) : undefined,
-        discount: p.discount || undefined,
-        description: p.description || "",
-        descriptionAr: p.description_ar || "",
-        images: p.images || [],
-        category: p.category,
-        brand: p.brand,
-        inStock: p.in_stock ?? true,
-        countries: (p.countries || ["SA", "YE"]) as ("SA" | "YE")[],
-        isFeatured: p.is_featured,
-        isBestSeller: p.is_best_seller,
-      })) as Product[];
-    },
-    enabled: !!country,
-  });
-
-  // Countdown timer
+  // Main countdown timer
   useEffect(() => {
     if (!settings?.countdown_end_date || !settings.show_countdown) return;
 
-    const calculateTimeLeft = () => {
-      const endDate = new Date(settings.countdown_end_date!).getTime();
-      const now = new Date().getTime();
-      const diff = endDate - now;
-
-      if (diff <= 0) {
-        setTimeLeft({ days: 0, hours: 0, minutes: 0, seconds: 0 });
-        return;
+    const updateTimer = () => {
+      const timeLeft = calculateTimeLeft(settings.countdown_end_date);
+      setMainTimeLeft(timeLeft);
+      
+      // If main timer expired, hide all offers
+      if (timeLeft.expired) {
+        queryClient.invalidateQueries({ queryKey: ["offers"] });
       }
-
-      setTimeLeft({
-        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
-        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
-        seconds: Math.floor((diff % (1000 * 60)) / 1000),
-      });
     };
 
-    calculateTimeLeft();
-    const timer = setInterval(calculateTimeLeft, 1000);
+    updateTimer();
+    const timer = setInterval(updateTimer, 1000);
     return () => clearInterval(timer);
-  }, [settings?.countdown_end_date, settings?.show_countdown]);
+  }, [settings?.countdown_end_date, settings?.show_countdown, queryClient]);
+
+  // Check if main timer has expired
+  const mainTimerExpired = settings?.show_countdown && settings?.countdown_end_date && mainTimeLeft.expired;
 
   const TimeBox = ({ value, label }: { value: number; label: string }) => (
     <div className="flex flex-col items-center">
@@ -181,8 +240,6 @@ const OffersPage = () => {
     { icon: Zap, text: "شحن سريع", color: "text-blue-400" },
   ];
 
-  const featuredOffers = offers.filter((o) => o.is_featured);
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -193,7 +250,6 @@ const OffersPage = () => {
         <section className="relative py-16 md:py-24 bg-gradient-to-b from-secondary via-secondary to-charcoal overflow-hidden">
           {/* Animated Background */}
           <div className="absolute inset-0">
-            {/* Gold Particles */}
             <div className="absolute inset-0 opacity-20">
               {[...Array(20)].map((_, i) => (
                 <motion.div
@@ -216,8 +272,6 @@ const OffersPage = () => {
                 />
               ))}
             </div>
-
-            {/* Grid Pattern */}
             <div
               className="absolute inset-0 opacity-5"
               style={{
@@ -225,8 +279,6 @@ const OffersPage = () => {
                 backgroundSize: "50px 50px",
               }}
             />
-
-            {/* Glowing Orbs */}
             <div className="absolute top-20 left-10 w-64 h-64 bg-gold/10 rounded-full blur-3xl" />
             <div className="absolute bottom-10 right-10 w-96 h-96 bg-gold/5 rounded-full blur-3xl" />
           </div>
@@ -268,8 +320,8 @@ const OffersPage = () => {
                 {settings?.page_subtitle || "اغتنم الفرصة واحصل على أفخم القطع الذهبية بأسعار لا تُقاوم"}
               </motion.p>
 
-              {/* Countdown Timer */}
-              {settings?.show_countdown && (
+              {/* Main Countdown Timer */}
+              {settings?.show_countdown && settings?.countdown_end_date && !mainTimeLeft.expired && (
                 <motion.div
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
@@ -278,16 +330,16 @@ const OffersPage = () => {
                 >
                   <p className="text-gold-light/60 text-sm mb-4 font-body flex items-center justify-center gap-2">
                     <Clock className="w-4 h-4" />
-                    ينتهي العرض خلال
+                    تنتهي جميع العروض خلال
                   </p>
                   <div className="flex items-center justify-center gap-3 md:gap-6">
-                    <TimeBox value={timeLeft.days} label="يوم" />
+                    <TimeBox value={mainTimeLeft.days} label="يوم" />
                     <span className="text-gold text-2xl font-heading mt-[-20px]">:</span>
-                    <TimeBox value={timeLeft.hours} label="ساعة" />
+                    <TimeBox value={mainTimeLeft.hours} label="ساعة" />
                     <span className="text-gold text-2xl font-heading mt-[-20px]">:</span>
-                    <TimeBox value={timeLeft.minutes} label="دقيقة" />
+                    <TimeBox value={mainTimeLeft.minutes} label="دقيقة" />
                     <span className="text-gold text-2xl font-heading mt-[-20px]">:</span>
-                    <TimeBox value={timeLeft.seconds} label="ثانية" />
+                    <TimeBox value={mainTimeLeft.seconds} label="ثانية" />
                   </div>
                 </motion.div>
               )}
@@ -334,91 +386,33 @@ const OffersPage = () => {
           </section>
         )}
 
-        {/* Featured Offers Section with Products */}
-        {offers.length > 0 &&
-          offers.map((offer, offerIndex) => {
-            const offerLinkedProducts = offerProducts.filter((p) => offer.product_ids?.includes(p.id));
-
-            return (
-              <section key={offer.id} className="py-12 md:py-16">
-                <div className="container mx-auto px-4">
-                  {/* Offer Header Card */}
-                  <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-secondary via-charcoal to-secondary mb-8 border border-gold/20"
-                  >
-                    <div className="flex flex-col md:flex-row">
-                      {offer.image_url && (
-                        <div className="md:w-1/3 aspect-video md:aspect-auto">
-                          <img src={offer.image_url} alt={offer.title_ar} className="w-full h-full object-cover" />
-                        </div>
-                      )}
-                      <div
-                        className={`p-6 md:p-8 flex flex-col justify-center ${offer.image_url ? "md:w-2/3" : "w-full text-center"}`}
-                      >
-                        {offer.discount_percentage > 0 && (
-                          <span className="inline-block w-fit bg-destructive text-destructive-foreground px-4 py-1.5 rounded-full text-sm font-bold mb-4">
-                            {offer.discount_percentage}% خصم
-                          </span>
-                        )}
-                        <h2 className="font-heading text-2xl md:text-3xl text-gold mb-2">{offer.title_ar}</h2>
-                        {offer.subtitle_ar && <p className="text-gold-light/70 text-base mb-4">{offer.subtitle_ar}</p>}
-                        {offer.description_ar && (
-                          <p className="text-muted-foreground text-sm mb-4">{offer.description_ar}</p>
-                        )}
-                        {offer.discount_code && (
-                          <div className="inline-flex items-center gap-2 bg-gold/10 border border-gold/30 px-5 py-3 rounded-lg w-fit">
-                            <span className="text-gold-light/70">كود الخصم:</span>
-                            <span className="font-mono font-bold text-gold text-lg">{offer.discount_code}</span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  </motion.div>
-
-                  {/* Offer Products */}
-                  {offerLinkedProducts.length > 0 && (
-                    <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                      {offerLinkedProducts.map((product, index) => (
-                        <ProductCard key={product.id} product={product} index={index} />
-                      ))}
-                    </div>
-                  )}
+        {/* Content */}
+        {offersLoading ? (
+          <div className="flex flex-col items-center justify-center py-20 gap-4">
+            <Loader2 className="w-12 h-12 animate-spin text-gold" />
+            <p className="text-muted-foreground font-body">جاري تحميل العروض...</p>
+          </div>
+        ) : mainTimerExpired ? (
+          <section className="py-20">
+            <div className="container mx-auto px-4">
+              <motion.div
+                initial={{ opacity: 0, scale: 0.9 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="text-center py-20"
+              >
+                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
+                  <Clock className="w-12 h-12 text-muted-foreground" />
                 </div>
-              </section>
-            );
-          })}
-
-        {/* Products Section */}
-        <section className="py-16 md:py-20">
-          <div className="container mx-auto px-4">
-            {/* Section Header */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              className="text-center mb-12"
-            >
-              <h2 className="font-heading text-3xl md:text-4xl text-foreground mb-4">
-                جميع <span className="text-gold">العروض</span>
-              </h2>
-              <div className="w-24 h-1 bg-gradient-to-r from-transparent via-gold to-transparent mx-auto mb-4" />
-              <p className="text-muted-foreground font-body max-w-lg mx-auto">
-                اكتشف تشكيلتنا الفاخرة من المجوهرات الذهبية بأسعار مخفضة
-              </p>
-            </motion.div>
-
-            {isLoading ? (
-              <div className="flex flex-col items-center justify-center py-20 gap-4">
-                <div className="relative">
-                  <Loader2 className="w-12 h-12 animate-spin text-gold" />
-                  <div className="absolute inset-0 w-12 h-12 border-2 border-gold/20 rounded-full" />
-                </div>
-                <p className="text-muted-foreground font-body">جاري تحميل العروض...</p>
-              </div>
-            ) : discountedProducts.length === 0 ? (
+                <h3 className="font-heading text-2xl text-foreground mb-3">انتهت العروض</h3>
+                <p className="text-muted-foreground font-body text-lg max-w-md mx-auto">
+                  ترقبوا عروضنا القادمة! سنُعلمكم فور توفر عروض جديدة
+                </p>
+              </motion.div>
+            </div>
+          </section>
+        ) : offers.length === 0 ? (
+          <section className="py-20">
+            <div className="container mx-auto px-4">
               <motion.div
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
@@ -432,39 +426,86 @@ const OffersPage = () => {
                   ترقبوا عروضنا القادمة! سنُعلمكم فور توفر عروض جديدة
                 </p>
               </motion.div>
-            ) : (
-              <>
-                {/* Stats */}
-                <div className="grid grid-cols-3 gap-4 mb-12 max-w-2xl mx-auto">
-                  {[
-                    { value: discountedProducts.length, label: "منتج بالعرض" },
-                    { value: Math.max(...discountedProducts.map((p) => p.discount || 0)), label: "% أعلى خصم" },
-                    { value: discountedProducts.filter((p) => p.inStock).length, label: "متوفر حالياً" },
-                  ].map((stat, index) => (
+            </div>
+          </section>
+        ) : (
+          <>
+            {/* Individual Offers */}
+            {offers.map((offer, offerIndex) => {
+              const offerLinkedProducts = offerProducts.filter((p) => offer.product_ids?.includes(p.id));
+              const hasProducts = offerLinkedProducts.length > 0 || (offer.product_ids === null || offer.product_ids.length === 0);
+
+              return (
+                <section key={offer.id} className="py-12 md:py-16 border-b border-border/30 last:border-b-0">
+                  <div className="container mx-auto px-4">
+                    {/* Offer Header Card */}
                     <motion.div
-                      key={index}
                       initial={{ opacity: 0, y: 20 }}
                       whileInView={{ opacity: 1, y: 0 }}
                       viewport={{ once: true }}
-                      transition={{ delay: index * 0.1 }}
-                      className="text-center p-4 rounded-xl bg-muted/50 border border-border/30"
+                      className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-secondary via-charcoal to-secondary mb-8 border border-gold/20"
                     >
-                      <span className="font-heading text-3xl text-gold">{stat.value}</span>
-                      <p className="text-sm text-muted-foreground font-body mt-1">{stat.label}</p>
+                      <div className="flex flex-col md:flex-row">
+                        {offer.image_url && (
+                          <div className="md:w-1/3 aspect-video md:aspect-auto relative">
+                            <img src={offer.image_url} alt={offer.title_ar} className="w-full h-full object-cover" />
+                            {offer.discount_percentage > 0 && (
+                              <div className="absolute top-4 left-4 bg-destructive text-destructive-foreground px-4 py-2 rounded-lg text-lg font-bold">
+                                {offer.discount_percentage}% خصم
+                              </div>
+                            )}
+                          </div>
+                        )}
+                        <div
+                          className={`p-6 md:p-8 flex flex-col justify-center ${offer.image_url ? "md:w-2/3" : "w-full text-center"}`}
+                        >
+                          {!offer.image_url && offer.discount_percentage > 0 && (
+                            <span className="inline-block w-fit bg-destructive text-destructive-foreground px-4 py-1.5 rounded-full text-sm font-bold mb-4 mx-auto">
+                              {offer.discount_percentage}% خصم
+                            </span>
+                          )}
+                          <h2 className="font-heading text-2xl md:text-3xl text-gold mb-2">{offer.title_ar}</h2>
+                          {offer.subtitle_ar && <p className="text-gold-light/70 text-base mb-4">{offer.subtitle_ar}</p>}
+                          {offer.description_ar && (
+                            <p className="text-muted-foreground text-sm mb-4">{offer.description_ar}</p>
+                          )}
+                          
+                          {/* Offer-specific timer */}
+                          {offer.end_date && (
+                            <div className="mb-4">
+                              <OfferTimer endDate={offer.end_date} label="ينتهي خلال:" />
+                            </div>
+                          )}
+                          
+                          {/* Coupon code */}
+                          {offer.discount_code && (
+                            <div className="flex items-center gap-3 flex-wrap">
+                              <span className="text-gold-light/70">كود الخصم:</span>
+                              <CopyCodeButton code={offer.discount_code} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
                     </motion.div>
-                  ))}
-                </div>
 
-                {/* Products Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                  {discountedProducts.map((product, index) => (
-                    <ProductCard key={product.id} product={product} index={index} />
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
-        </section>
+                    {/* Offer Products */}
+                    {offerLinkedProducts.length > 0 ? (
+                      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
+                        {offerLinkedProducts.map((product, index) => (
+                          <ProductCard key={product.id} product={product} index={index} />
+                        ))}
+                      </div>
+                    ) : offer.product_ids && offer.product_ids.length > 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        جاري تحميل المنتجات...
+                      </div>
+                    ) : null}
+                  </div>
+                </section>
+              );
+            })}
+          </>
+        )}
 
         {/* CTA Section */}
         <section className="py-16 bg-muted/50">
@@ -477,6 +518,7 @@ const OffersPage = () => {
             >
               <Sparkles className="w-10 h-10 text-gold mx-auto mb-4" />
               <h2 className="font-heading text-2xl md:text-3xl text-foreground mb-4">لا تفوت أي عرض!</h2>
+              <p className="text-muted-foreground">تابعنا للحصول على آخر العروض والخصومات الحصرية</p>
             </motion.div>
           </div>
         </section>

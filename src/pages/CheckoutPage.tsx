@@ -275,26 +275,32 @@ const CheckoutPage = () => {
     const orderItems = validationResult.data;
 
     try {
-      await createOrderMutation.mutateAsync({
+      const orderPayload: Record<string, unknown> = {
         order_number: orderNumber,
-        customer_id: customer!.id,
-        customer_name: customer!.name,
-        customer_phone: customer!.phone,
+        customer_name: customer?.name || formData.name || "عميل",
+        customer_phone: customer?.phone || formData.phone || "",
         customer_address: formData.address,
-        customer_notes: formData.notes,
-        country: country!,
+        customer_notes: formData.notes || null,
+        country: country || "SA",
         items: orderItems,
         subtotal,
         delivery_fee: deliveryFee,
         total,
         delivery_company_id: selectedDelivery,
         payment_method: paymentMethod,
-      });
+      };
+      
+      // Only add customer_id if it exists
+      if (customer?.id) {
+        orderPayload.customer_id = customer.id;
+      }
+      
+      await createOrderMutation.mutateAsync(orderPayload);
       const selectedRegionData = codRegions.find((r) => r.id === selectedRegion);
       const orderData = {
         orderNumber,
-        customerName: customer!.name,
-        customerPhone: customer!.phone,
+        customerName: customer?.name || formData.name || "عميل",
+        customerPhone: customer?.phone || formData.phone || "",
         customerAddress: formData.address,
         customerNotes: formData.notes,
         items: orderItems,
@@ -304,7 +310,7 @@ const CheckoutPage = () => {
         paymentMethod,
         deliveryCompany: selectedCompany?.name || "",
         selectedRegion: paymentMethod === "cod" && selectedRegionData ? selectedRegionData.region_name_ar : null,
-        country: country!,
+        country: country || "SA",
         whatsappNumber: whatsappNumber || (country === "SA" ? "966123456789" : "967123456789"),
         createdAt: new Date().toISOString(),
       };

@@ -76,7 +76,10 @@ const CheckoutPage = () => {
 
   // Apply coupon - checks both coupons table and offers table
   const applyCoupon = async () => {
-    if (!couponCode.trim()) {
+    const normalized = couponCode.trim().toUpperCase();
+    const effectiveCountry = country || "SA";
+
+    if (!normalized) {
       toast({
         title: "خطأ",
         description: "الرجاء إدخال كود الخصم",
@@ -90,9 +93,9 @@ const CheckoutPage = () => {
       const { data: couponData } = await supabase
         .from("coupons")
         .select("type, value")
-        .eq("code", couponCode.trim().toUpperCase())
+        .eq("code", normalized)
         .eq("is_active", true)
-        .contains("countries", [country])
+        .contains("countries", [effectiveCountry])
         .limit(1)
         .maybeSingle();
 
@@ -117,9 +120,9 @@ const CheckoutPage = () => {
       const { data: offerData } = await supabase
         .from("offers")
         .select("discount_percentage")
-        .eq("discount_code", couponCode.trim().toUpperCase())
+        .eq("discount_code", normalized)
         .eq("is_active", true)
-        .contains("countries", [country])
+        .contains("countries", [effectiveCountry])
         .limit(1)
         .maybeSingle();
 
@@ -140,7 +143,8 @@ const CheckoutPage = () => {
         description: "كود الخصم غير موجود أو غير صالح",
         variant: "destructive",
       });
-    } catch {
+    } catch (error) {
+      console.error("Coupon check error:", error);
       setDiscountAmount(0);
       toast({
         title: "خطأ",

@@ -108,24 +108,28 @@ const OrderConfirmationPage = () => {
       
       pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, 297));
       
-      // Upload to storage
+      // Upload to storage (non-blocking)
       const pdfBlob = pdf.output('blob');
       const fileName = `invoice-${orderData.orderNumber}-${Date.now()}.pdf`;
-      
-      const { error } = await supabase.storage
+
+      const { error: uploadError } = await supabase.storage
         .from('invoices')
         .upload(fileName, pdfBlob, {
           contentType: 'application/pdf',
           cacheControl: '3600',
         });
-      
-      if (error) {
-        console.error('Upload error:', error);
-        throw error;
+
+      if (uploadError) {
+        console.error('Upload error:', uploadError);
+        // Continue anyway so the customer isn't blocked
+        toast({
+          title: 'تنبيه',
+          description: 'تعذر رفع ملف الفاتورة حالياً، لكن تم تأكيد الطلب بنجاح.',
+        });
       }
-      
+
       setIsConfirmed(true);
-      
+
       toast({
         title: 'تم تأكيد الطلب',
         description: 'جاري فتح الواتساب...',

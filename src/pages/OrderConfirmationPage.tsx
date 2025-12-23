@@ -37,6 +37,8 @@ interface OrderData {
   items: OrderItem[];
   subtotal: number;
   deliveryFee: number;
+  discountAmount?: number;
+  couponCode?: string | null;
   total: number;
   paymentMethod: string;
   deliveryCompany: string;
@@ -333,6 +335,14 @@ const OrderConfirmationPage = () => {
                 <span className="text-gray-500">رسوم التوصيل ({orderData.deliveryCompany})</span>
                 <span className="text-gray-900">{orderData.deliveryFee.toFixed(2)} {currency}</span>
               </div>
+              {orderData.discountAmount && orderData.discountAmount > 0 && (
+                <div className="flex justify-between text-sm font-body text-green-600">
+                  <span>
+                    الخصم {orderData.couponCode && <span className="font-mono bg-green-100 px-1.5 py-0.5 rounded text-xs mr-1">{orderData.couponCode}</span>}
+                  </span>
+                  <span>-{orderData.discountAmount.toFixed(2)} {currency}</span>
+                </div>
+              )}
               <div className="h-px bg-gray-200 my-2" />
               <div className="flex justify-between font-heading text-lg">
                 <span className="text-gray-900">الإجمالي</span>

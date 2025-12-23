@@ -292,6 +292,8 @@ const CheckoutPage = () => {
         total,
         delivery_company_id: selectedDelivery,
         payment_method: paymentMethod,
+        coupon_code: discountAmount > 0 ? couponCode.trim().toUpperCase() : null,
+        discount_amount: discountAmount,
       };
       
       // Only add customer_id if it exists
@@ -310,6 +312,8 @@ const CheckoutPage = () => {
         items: orderItems,
         subtotal,
         deliveryFee,
+        discountAmount,
+        couponCode: discountAmount > 0 ? couponCode.trim().toUpperCase() : null,
         total,
         paymentMethod,
         deliveryCompany: selectedCompany?.name || "",

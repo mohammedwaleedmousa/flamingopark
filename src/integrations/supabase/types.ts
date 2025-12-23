@@ -431,6 +431,7 @@ export type Database = {
       orders: {
         Row: {
           country: string
+          coupon_code: string | null
           created_at: string
           customer_address: string
           customer_id: string | null
@@ -439,6 +440,7 @@ export type Database = {
           customer_phone: string
           delivery_company_id: string | null
           delivery_fee: number
+          discount_amount: number | null
           id: string
           invoice_url: string | null
           items: Json
@@ -451,6 +453,7 @@ export type Database = {
         }
         Insert: {
           country: string
+          coupon_code?: string | null
           created_at?: string
           customer_address: string
           customer_id?: string | null
@@ -459,6 +462,7 @@ export type Database = {
           customer_phone: string
           delivery_company_id?: string | null
           delivery_fee?: number
+          discount_amount?: number | null
           id?: string
           invoice_url?: string | null
           items?: Json
@@ -471,6 +475,7 @@ export type Database = {
         }
         Update: {
           country?: string
+          coupon_code?: string | null
           created_at?: string
           customer_address?: string
           customer_id?: string | null
@@ -479,6 +484,7 @@ export type Database = {
           customer_phone?: string
           delivery_company_id?: string | null
           delivery_fee?: number
+          discount_amount?: number | null
           id?: string
           invoice_url?: string | null
           items?: Json

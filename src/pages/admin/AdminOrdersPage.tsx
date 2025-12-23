@@ -22,6 +22,8 @@ interface Order {
   payment_method: string;
   status: string;
   created_at: string;
+  coupon_code?: string | null;
+  discount_amount?: number;
 }
 
 const statusOptions = [
@@ -457,17 +459,49 @@ const AdminOrdersPage = () => {
                   </h3>
                   <div className="space-y-2">
                     {(selectedOrder.items as any[])?.map((item, index) => (
-                      <div key={index} className="flex items-center gap-3 p-3 bg-card border border-border rounded-lg">
-                        {item.image && (
-                          <img src={item.image} alt="" className="w-14 h-14 object-cover rounded-lg" />
-                        )}
-                        <div className="flex-1 min-w-0">
-                          <p className="font-heading text-sm truncate">{item.name}</p>
-                          <p className="text-xs text-muted-foreground">{item.quantity} × {item.price} ر.س</p>
+                      <div key={index} className="p-3 bg-card border border-border rounded-lg">
+                        <div className="flex items-center gap-3">
+                          {(item.image || item.product_image) && (
+                            <img src={item.image || item.product_image} alt="" className="w-14 h-14 object-cover rounded-lg" />
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <p className="font-heading text-sm truncate">{item.name || item.product_name}</p>
+                            <p className="text-xs text-muted-foreground">{item.quantity} × {item.price} ر.س</p>
+                            {item.selected_size && (
+                              <p className="text-xs text-muted-foreground">الحجم: {item.selected_size}</p>
+                            )}
+                          </div>
+                          <span className="font-heading text-primary shrink-0">
+                            {(item.quantity * item.price).toFixed(0)} ر.س
+                          </span>
                         </div>
-                        <span className="font-heading text-primary shrink-0">
-                          {(item.quantity * item.price).toFixed(0)} ر.س
-                        </span>
+                        {/* Accessories with images */}
+                        {item.selected_accessories && item.selected_accessories.length > 0 && (
+                          <div className="mt-3 pt-3 border-t border-border">
+                            <p className="text-xs text-muted-foreground mb-2">الملحقات:</p>
+                            <div className="flex flex-wrap gap-2">
+                              {item.selected_accessories.map((acc: any, i: number) => (
+                                <div 
+                                  key={i} 
+                                  className="flex items-center gap-2 bg-muted px-2 py-1.5 rounded-lg border border-border"
+                                >
+                                  {acc.image_url && (
+                                    <img 
+                                      src={acc.image_url} 
+                                      alt={acc.name_ar || acc.name} 
+                                      className="w-8 h-8 object-cover rounded"
+                                    />
+                                  )}
+                                  <div className="text-xs">
+                                    <span className="font-medium">{acc.name_ar || acc.name}</span>
+                                    <span className="text-muted-foreground mx-1">×{acc.quantity}</span>
+                                    <span className="text-primary">+{(acc.price * acc.quantity).toFixed(0)}</span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
                   </div>
@@ -483,6 +517,19 @@ const AdminOrdersPage = () => {
                     <span className="text-muted-foreground">التوصيل</span>
                     <span>{parseFloat(String(selectedOrder.delivery_fee)).toFixed(0)} ر.س</span>
                   </div>
+                  {selectedOrder.discount_amount && selectedOrder.discount_amount > 0 && (
+                    <div className="flex justify-between text-sm text-green-600">
+                      <span className="flex items-center gap-2">
+                        الخصم
+                        {selectedOrder.coupon_code && (
+                          <span className="font-mono bg-green-500/15 px-1.5 py-0.5 rounded text-xs">
+                            {selectedOrder.coupon_code}
+                          </span>
+                        )}
+                      </span>
+                      <span>-{parseFloat(String(selectedOrder.discount_amount)).toFixed(0)} ر.س</span>
+                    </div>
+                  )}
                   <div className="flex justify-between font-heading text-lg pt-3 border-t border-border">
                     <span>الإجمالي</span>
                     <span className="text-primary">{parseFloat(String(selectedOrder.total)).toFixed(0)} ر.س</span>

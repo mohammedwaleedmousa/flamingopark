@@ -18,8 +18,15 @@ interface Coupon {
   countries: string[];
 }
 
+interface CouponStats {
+  code: string;
+  usageCount: number;
+  totalDiscount: number;
+}
+
 const AdminCouponsPage = () => {
   const [coupons, setCoupons] = useState<Coupon[]>([]);
+  const [couponStats, setCouponStats] = useState<CouponStats[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
@@ -34,6 +41,7 @@ const AdminCouponsPage = () => {
 
   useEffect(() => {
     fetchCoupons();
+    fetchCouponStats();
   }, []);
 
   const fetchCoupons = async () => {
@@ -52,6 +60,36 @@ const AdminCouponsPage = () => {
       })));
     }
     setIsLoading(false);
+  };
+
+  const fetchCouponStats = async () => {
+    const { data, error } = await supabase
+      .from('orders')
+      .select('coupon_code, discount_amount')
+      .not('coupon_code', 'is', null);
+
+    if (!error && data) {
+      const statsMap: Record<string, { usageCount: number; totalDiscount: number }> = {};
+      
+      data.forEach(order => {
+        const code = order.coupon_code?.toUpperCase() || '';
+        if (code) {
+          if (!statsMap[code]) {
+            statsMap[code] = { usageCount: 0, totalDiscount: 0 };
+          }
+          statsMap[code].usageCount += 1;
+          statsMap[code].totalDiscount += Number(order.discount_amount) || 0;
+        }
+      });
+
+      const statsArray = Object.entries(statsMap).map(([code, stats]) => ({
+        code,
+        usageCount: stats.usageCount,
+        totalDiscount: stats.totalDiscount,
+      }));
+
+      setCouponStats(statsArray);
+    }
   };
 
   const resetForm = () => {
@@ -185,6 +223,43 @@ const AdminCouponsPage = () => {
           إضافة كوبون
         </Button>
       </div>
+
+      {/* Coupon Stats Report */}
+      {couponStats.length > 0 && (
+        <div className="bg-card border border-border rounded-lg p-4">
+          <h2 className="font-heading text-lg mb-4 flex items-center gap-2">
+            <Percent className="w-5 h-5 text-primary" />
+            تقرير استخدام الكوبونات
+          </h2>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-border">
+                  <th className="text-right p-2 font-heading">الكوبون</th>
+                  <th className="text-right p-2 font-heading">عدد الاستخدامات</th>
+                  <th className="text-right p-2 font-heading">إجمالي الخصومات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {couponStats.map((stat) => (
+                  <tr key={stat.code} className="border-b border-border/50 hover:bg-muted/30">
+                    <td className="p-2 font-mono text-primary">{stat.code}</td>
+                    <td className="p-2">{stat.usageCount} مرة</td>
+                    <td className="p-2 text-green-600">{stat.totalDiscount.toFixed(0)} ر.س</td>
+                  </tr>
+                ))}
+              </tbody>
+              <tfoot>
+                <tr className="bg-muted/50 font-heading">
+                  <td className="p-2">الإجمالي</td>
+                  <td className="p-2">{couponStats.reduce((sum, s) => sum + s.usageCount, 0)} مرة</td>
+                  <td className="p-2 text-green-600">{couponStats.reduce((sum, s) => sum + s.totalDiscount, 0).toFixed(0)} ر.س</td>
+                </tr>
+              </tfoot>
+            </table>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {coupons.map((coupon) => (

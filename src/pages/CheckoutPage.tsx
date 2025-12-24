@@ -264,8 +264,10 @@ const CheckoutPage = () => {
         selected_size: item.selectedSize || null,
         selected_accessories: (item.selectedAccessories || []).map((acc) => ({
           name: String((acc as any).name || ""),
+          name_ar: String((acc as any).name_ar || (acc as any).name || ""),
           price: Number((acc as any).price) || 0,
           quantity: Number((acc as any).quantity) || 1,
+          image_url: String((acc as any).image_url || ""),
         })),
       };
     });

@@ -70,6 +70,7 @@ const CheckoutPage = () => {
   });
   const [couponCode, setCouponCode] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const subtotal = getCartTotal();
   const currency = country === "SA" ? "ريال" : "ريال";
@@ -119,7 +120,7 @@ const CheckoutPage = () => {
       // Then check offers table for discount_code
       const { data: offerData } = await supabase
         .from("offers")
-        .select("discount_percentage")
+        .select("discount_percentage, product_ids")
         .eq("discount_code", normalized)
         .eq("is_active", true)
         .contains("countries", [effectiveCountry])
@@ -127,7 +128,38 @@ const CheckoutPage = () => {
         .maybeSingle();
 
       if (offerData && offerData.discount_percentage > 0) {
-        const discount = Math.min((subtotal * offerData.discount_percentage) / 100, subtotal);
+        // Check if offer has specific products
+        const offerProductIds = offerData.product_ids as string[] | null;
+        
+        let applicableSubtotal = subtotal;
+        
+        if (offerProductIds && offerProductIds.length > 0) {
+          // Only apply discount to products in the offer
+          applicableSubtotal = cart.reduce((sum, item) => {
+            if (offerProductIds.includes(item.product.id)) {
+              const basePrice = item.product.discount
+                ? item.product.price * (1 - item.product.discount / 100)
+                : item.product.price;
+              const accessoriesTotal = item.selectedAccessories
+                ? item.selectedAccessories.reduce((accSum, acc) => accSum + acc.price * acc.quantity, 0)
+                : 0;
+              return sum + (basePrice + accessoriesTotal) * item.quantity;
+            }
+            return sum;
+          }, 0);
+          
+          if (applicableSubtotal === 0) {
+            setDiscountAmount(0);
+            toast({
+              title: "غير قابل للتطبيق",
+              description: "هذا الكوبون صالح لمنتجات معينة غير موجودة في سلتك",
+              variant: "destructive",
+            });
+            return;
+          }
+        }
+        
+        const discount = Math.min((applicableSubtotal * offerData.discount_percentage) / 100, applicableSubtotal);
         setDiscountAmount(discount);
         toast({
           title: "تم التطبيق",
@@ -242,10 +274,16 @@ const CheckoutPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    // Prevent double submission
+    if (isSubmitting) return;
+    
     if (!formData.address || !selectedDelivery)
       return toast({ title: "خطأ", description: "يرجى ملء جميع الحقول المطلوبة", variant: "destructive" });
     if (paymentMethod === "cod" && codRegions.length > 0 && !selectedRegion)
       return toast({ title: "خطأ", description: "يرجى اختيار منطقة الاستلام", variant: "destructive" });
+    
+    setIsSubmitting(true);
 
     const orderNumber = `ORD-${Date.now()}`;
     const rawOrderItems = cart.map((item) => {
@@ -328,6 +366,7 @@ const CheckoutPage = () => {
       navigate("/order-confirmation", { state: { orderData } });
     } catch {
       toast({ title: "خطأ", description: "حدث خطأ أثناء إرسال الطلب", variant: "destructive" });
+      setIsSubmitting(false);
     }
   };
 

@@ -4,7 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, Edit, Trash2, Eye, EyeOff, Package, Filter } from 'lucide-react';
+import { Plus, Search, Edit, Trash2, Eye, EyeOff, Package, ArrowUp, ArrowDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -21,6 +21,7 @@ interface Product {
   is_active: boolean;
   countries: string[];
   images: string[];
+  sort_order: number;
 }
 
 const AdminProductsPage = () => {
@@ -37,7 +38,7 @@ const AdminProductsPage = () => {
     const { data, error } = await supabase
       .from('products')
       .select('*')
-      .order('created_at', { ascending: false });
+      .order('sort_order', { ascending: true });
 
     if (error) {
       toast({ title: 'خطأ', description: 'فشل في تحميل المنتجات', variant: 'destructive' });
@@ -74,11 +75,51 @@ const AdminProductsPage = () => {
     }
   };
 
-  const filteredProducts = products.filter(p => {
-    const matchesSearch = p.name_ar.includes(search) || p.name.toLowerCase().includes(search.toLowerCase());
-    const matchesFilter = filter === 'all' || (filter === 'active' ? p.is_active : !p.is_active);
-    return matchesSearch && matchesFilter;
-  });
+  const updateSortOrder = async (id: string, newSortOrder: number) => {
+    const { error } = await supabase
+      .from('products')
+      .update({ sort_order: newSortOrder })
+      .eq('id', id);
+
+    if (error) {
+      toast({ title: 'خطأ', description: 'فشل في تحديث الترتيب', variant: 'destructive' });
+    } else {
+      setProducts(products.map(p => p.id === id ? { ...p, sort_order: newSortOrder } : p));
+      toast({ title: 'تم', description: 'تم تحديث الترتيب' });
+    }
+  };
+
+  const moveUp = async (index: number) => {
+    if (index === 0) return;
+    const sortedProducts = [...filteredProducts].sort((a, b) => a.sort_order - b.sort_order);
+    const current = sortedProducts[index];
+    const prev = sortedProducts[index - 1];
+    
+    // Swap sort orders
+    await updateSortOrder(current.id, prev.sort_order);
+    await updateSortOrder(prev.id, current.sort_order);
+    fetchProducts();
+  };
+
+  const moveDown = async (index: number) => {
+    const sortedProducts = [...filteredProducts].sort((a, b) => a.sort_order - b.sort_order);
+    if (index === sortedProducts.length - 1) return;
+    const current = sortedProducts[index];
+    const next = sortedProducts[index + 1];
+    
+    // Swap sort orders
+    await updateSortOrder(current.id, next.sort_order);
+    await updateSortOrder(next.id, current.sort_order);
+    fetchProducts();
+  };
+
+  const filteredProducts = products
+    .filter(p => {
+      const matchesSearch = p.name_ar.includes(search) || p.name.toLowerCase().includes(search.toLowerCase());
+      const matchesFilter = filter === 'all' || (filter === 'active' ? p.is_active : !p.is_active);
+      return matchesSearch && matchesFilter;
+    })
+    .sort((a, b) => a.sort_order - b.sort_order);
 
   const stats = {
     total: products.length,
@@ -189,16 +230,37 @@ const AdminProductsPage = () => {
                     </span>
                   )}
                 </div>
-                <div className="flex gap-1 mt-2">
-                  {product.countries?.map(c => (
-                    <span key={c} className="text-sm">
-                      {c === 'SA' ? '🇸🇦' : '🇾🇪'}
-                    </span>
-                  ))}
+                <div className="flex items-center gap-2 mt-1">
+                  <span className="text-xs text-muted-foreground">ترتيب: {product.sort_order}</span>
+                  <div className="flex gap-1">
+                    {product.countries?.map(c => (
+                      <span key={c} className="text-sm">
+                        {c === 'SA' ? '🇸🇦' : '🇾🇪'}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
             </div>
             <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1"
+                onClick={() => moveUp(index)}
+                disabled={index === 0}
+              >
+                <ArrowUp className="w-4 h-4" />
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                className="gap-1"
+                onClick={() => moveDown(index)}
+                disabled={index === filteredProducts.length - 1}
+              >
+                <ArrowDown className="w-4 h-4" />
+              </Button>
               <Button
                 size="sm"
                 variant="outline"
@@ -239,6 +301,7 @@ const AdminProductsPage = () => {
           <table className="w-full">
             <thead className="bg-muted/50">
               <tr>
+                <th className="text-right p-4 font-heading text-sm">الترتيب</th>
                 <th className="text-right p-4 font-heading text-sm">الصورة</th>
                 <th className="text-right p-4 font-heading text-sm">المنتج</th>
                 <th className="text-right p-4 font-heading text-sm">السعر</th>
@@ -249,8 +312,31 @@ const AdminProductsPage = () => {
               </tr>
             </thead>
             <tbody>
-              {filteredProducts.map((product) => (
+              {filteredProducts.map((product, index) => (
                 <tr key={product.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+                  <td className="p-4">
+                    <div className="flex items-center gap-1">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 hover:bg-muted"
+                        onClick={() => moveUp(index)}
+                        disabled={index === 0}
+                      >
+                        <ArrowUp className="w-4 h-4" />
+                      </Button>
+                      <span className="text-sm font-mono w-8 text-center">{product.sort_order}</span>
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-8 w-8 hover:bg-muted"
+                        onClick={() => moveDown(index)}
+                        disabled={index === filteredProducts.length - 1}
+                      >
+                        <ArrowDown className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </td>
                   <td className="p-4">
                     <img
                       src={product.images?.[0] || '/placeholder.svg'}
@@ -319,7 +405,7 @@ const AdminProductsPage = () => {
               ))}
               {filteredProducts.length === 0 && (
                 <tr>
-                  <td colSpan={7} className="p-12 text-center text-muted-foreground">
+                  <td colSpan={8} className="p-12 text-center text-muted-foreground">
                     <Package className="w-12 h-12 mx-auto mb-4 opacity-50" />
                     <p>{isLoading ? 'جاري التحميل...' : 'لا توجد منتجات'}</p>
                   </td>

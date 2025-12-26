@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { Link } from 'react-router-dom';
-import { ArrowLeft, Sparkles, Crown, Percent, Star, ChevronDown } from 'lucide-react';
+import { Sparkles, Crown, Percent, Star, ChevronDown, Loader2 } from 'lucide-react';
 import { useState } from 'react';
 import ProductCard from '@/components/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
@@ -39,16 +38,11 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
   const Icon = filterIcons[section.filter_type] || Sparkles;
   const isDiscounted = section.filter_type === 'discounted';
   const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY);
+  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const { data: products = [] } = useQuery({
-    queryKey: ['section-products', section.id, country],
+  const { data: products = [], refetch } = useQuery({
+    queryKey: ['section-products', section.id, country, displayCount],
     queryFn: async () => {
-      let query = supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .contains('countries', [country]);
-
       // First try to get products assigned directly to this section
       const { data: directProducts, error: directError } = await supabase
         .from('products')
@@ -56,7 +50,8 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
         .eq('is_active', true)
         .contains('countries', [country])
         .contains('section_ids', [section.id])
-        .limit(section.max_products);
+        .order('sort_order', { ascending: true })
+        .limit(displayCount);
 
       // If there are directly assigned products, use them
       if (!directError && directProducts && directProducts.length > 0) {
@@ -81,6 +76,12 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
       }
 
       // Otherwise, fall back to filter_type based filtering
+      let query = supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .contains('countries', [country]);
+
       switch (section.filter_type) {
         case 'featured':
           query = query.eq('is_featured', true);
@@ -98,7 +99,10 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
           break;
       }
 
-      const { data, error } = await query.limit(section.max_products);
+      // Always use sort_order as secondary sort
+      query = query.order('sort_order', { ascending: true });
+
+      const { data, error } = await query.limit(displayCount);
       if (error) throw error;
 
       return data.map((p) => ({
@@ -123,14 +127,60 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
     enabled: !!country,
   });
 
+  // Check if there are more products available
+  const { data: totalCount = 0 } = useQuery({
+    queryKey: ['section-products-count', section.id, country],
+    queryFn: async () => {
+      // First check for directly assigned products
+      const { count: directCount } = await supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true)
+        .contains('countries', [country])
+        .contains('section_ids', [section.id]);
+
+      if (directCount && directCount > 0) {
+        return directCount;
+      }
+
+      // Fall back to filter_type based count
+      let query = supabase
+        .from('products')
+        .select('*', { count: 'exact', head: true })
+        .eq('is_active', true)
+        .contains('countries', [country]);
+
+      switch (section.filter_type) {
+        case 'featured':
+          query = query.eq('is_featured', true);
+          break;
+        case 'best_seller':
+          query = query.eq('is_best_seller', true);
+          break;
+        case 'discounted':
+          query = query.gt('discount', 0);
+          break;
+        default:
+          break;
+      }
+
+      const { count } = await query;
+      return count || 0;
+    },
+    enabled: !!country,
+  });
+
   if (products.length === 0) return null;
 
   const isEven = index % 2 === 0;
-  const displayedProducts = products.slice(0, displayCount);
-  const hasMore = displayCount < products.length;
+  const hasMore = displayCount < totalCount;
+  const remainingCount = totalCount - displayCount;
 
-  const handleLoadMore = () => {
-    setDisplayCount(prev => Math.min(prev + LOAD_MORE_COUNT, products.length));
+  const handleLoadMore = async () => {
+    setIsLoadingMore(true);
+    setDisplayCount(prev => prev + LOAD_MORE_COUNT);
+    await refetch();
+    setIsLoadingMore(false);
   };
 
   return (
@@ -198,29 +248,15 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
               </>
             )}
           </div>
-
-          {section.show_view_all && section.view_all_link && isEven && (
-            <Link
-              to={section.view_all_link}
-              className={`hidden md:inline-flex items-center gap-2 px-6 py-3 font-heading text-sm tracking-wider uppercase transition-all duration-300 rounded-lg ${
-                isDiscounted
-                  ? 'bg-gradient-to-r from-gold to-gold-light text-secondary hover:shadow-lg'
-                  : 'border border-gold/30 text-gold hover:bg-gold hover:text-secondary'
-              }`}
-            >
-              عرض الكل
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
-          )}
         </motion.div>
 
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {displayedProducts.map((product, idx) => (
+          {products.map((product, idx) => (
             <ProductCard key={product.id} product={product} index={idx} />
           ))}
         </div>
 
-        {/* Load More Button */}
+        {/* Load More Button - Always shows if there are more products */}
         {hasMore && (
           <motion.div
             initial={{ opacity: 0, y: 10 }}
@@ -229,29 +265,18 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
           >
             <Button
               onClick={handleLoadMore}
+              disabled={isLoadingMore}
               variant="outline"
-              className="gap-2 border-gold/30 text-gold hover:bg-gold hover:text-secondary"
+              className="gap-2 border-gold/30 text-gold hover:bg-gold hover:text-secondary px-8 py-6"
             >
-              <ChevronDown className="w-4 h-4" />
-              عرض المزيد ({products.length - displayCount} منتج)
+              {isLoadingMore ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
+              عرض المزيد ({remainingCount > 0 ? remainingCount : ''} منتج)
             </Button>
           </motion.div>
-        )}
-
-        {section.show_view_all && section.view_all_link && (
-          <div className={`text-center mt-8 ${isEven ? 'md:hidden' : ''}`}>
-            <Link
-              to={section.view_all_link}
-              className={`inline-flex items-center gap-2 px-6 py-3 font-heading text-sm tracking-wider uppercase transition-all duration-300 rounded-lg ${
-                isDiscounted
-                  ? 'bg-gradient-to-r from-gold to-gold-light text-secondary'
-                  : 'border border-gold/30 text-gold hover:bg-gold hover:text-secondary'
-              }`}
-            >
-              عرض الكل
-              <ArrowLeft className="w-4 h-4" />
-            </Link>
-          </div>
         )}
       </div>
     </section>

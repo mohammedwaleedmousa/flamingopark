@@ -16,9 +16,11 @@ import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, Aler
 
 // Zod schemas
 const orderAccessorySchema = z.object({
-  name: z.string().min(1).max(200),
+  name: z.string().max(200).optional(),
+  name_ar: z.string().max(200).optional(),
   price: z.number().nonnegative().max(1000000),
   quantity: z.number().int().min(1).max(100),
+  image_url: z.string().max(2000).optional(),
 });
 
 const orderItemSchema = z.object({

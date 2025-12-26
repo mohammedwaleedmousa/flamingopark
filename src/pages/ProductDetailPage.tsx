@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -45,7 +45,11 @@ const ProductDetailPage = () => {
   
   // Pinch zoom state
   const [scale, setScale] = useState(1);
+  const [position, setPosition] = useState({ x: 0, y: 0 });
   const [initialDistance, setInitialDistance] = useState<number | null>(null);
+  const [initialCenter, setInitialCenter] = useState<{ x: number; y: number } | null>(null);
+  const [lastPosition, setLastPosition] = useState({ x: 0, y: 0 });
+  const imageContainerRef = useRef<HTMLDivElement>(null);
 
   // Fetch product by slug
   const { data: product, isLoading } = useQuery({
@@ -124,6 +128,99 @@ const ProductDetailPage = () => {
     enabled: !!product && !!country,
   });
 
+  // Touch handlers for zoom and pan
+  const handleTouchStart = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      // Pinch zoom start
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      setInitialDistance(dist);
+      setInitialCenter({
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+      });
+      setLastPosition(position);
+    } else if (e.touches.length === 1) {
+      if (scale > 1) {
+        // Pan mode when zoomed
+        setInitialCenter({ x: e.touches[0].clientX, y: e.touches[0].clientY });
+        setLastPosition(position);
+      } else {
+        // Swipe mode when not zoomed
+        setTouchEnd(null);
+        setTouchStart(e.touches[0].clientX);
+      }
+    }
+  }, [position, scale]);
+
+  const handleTouchMove = useCallback((e: React.TouchEvent) => {
+    if (e.touches.length === 2 && initialDistance && initialCenter) {
+      // Pinch zoom
+      const dist = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const newScale = Math.min(4, Math.max(1, scale * (dist / initialDistance)));
+      setScale(newScale);
+      setInitialDistance(dist);
+      
+      // Pan while zooming
+      const currentCenter = {
+        x: (e.touches[0].clientX + e.touches[1].clientX) / 2,
+        y: (e.touches[0].clientY + e.touches[1].clientY) / 2,
+      };
+      const deltaX = currentCenter.x - initialCenter.x;
+      const deltaY = currentCenter.y - initialCenter.y;
+      setPosition({
+        x: lastPosition.x + deltaX,
+        y: lastPosition.y + deltaY,
+      });
+      setInitialCenter(currentCenter);
+      setLastPosition({ x: lastPosition.x + deltaX, y: lastPosition.y + deltaY });
+    } else if (e.touches.length === 1 && scale > 1 && initialCenter) {
+      // Pan when zoomed
+      const deltaX = e.touches[0].clientX - initialCenter.x;
+      const deltaY = e.touches[0].clientY - initialCenter.y;
+      setPosition({
+        x: lastPosition.x + deltaX,
+        y: lastPosition.y + deltaY,
+      });
+    } else if (e.touches.length === 1 && scale === 1) {
+      // Swipe
+      setTouchEnd(e.touches[0].clientX);
+    }
+  }, [initialDistance, initialCenter, scale, lastPosition]);
+
+  const handleTouchEnd = useCallback(() => {
+    setInitialDistance(null);
+    setInitialCenter(null);
+    
+    if (scale === 1 && touchStart && touchEnd && product) {
+      const distance = touchStart - touchEnd;
+      const minSwipeDistance = 50;
+      if (Math.abs(distance) > minSwipeDistance && product.images.length > 1) {
+        if (distance > 0) {
+          setSelectedImage(prev => prev === 0 ? product.images.length - 1 : prev - 1);
+          setImageLoaded(false);
+        } else {
+          setSelectedImage(prev => prev === product.images.length - 1 ? 0 : prev + 1);
+          setImageLoaded(false);
+        }
+      }
+    }
+    
+    // Reset on double tap or when scale is close to 1
+    if (scale < 1.1) {
+      setScale(1);
+      setPosition({ x: 0, y: 0 });
+    }
+    
+    setTouchStart(null);
+    setTouchEnd(null);
+  }, [scale, touchStart, touchEnd, product]);
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -164,6 +261,7 @@ const ProductDetailPage = () => {
     ? product.price * (1 - product.discount / 100)
     : product.price;
 
+  // Total price including accessories
   const totalPrice = discountedPrice + accessoriesTotal;
 
   const currency = country === 'SA' ? 'ر.س' : 'ر.ي';
@@ -256,7 +354,7 @@ const ProductDetailPage = () => {
       <Navbar />
       <CartDrawer />
 
-      <main className="pt-20 pb-16">
+      <main className="pt-20 pb-32">
         {/* Breadcrumb */}
         <div className="bg-muted/50 border-b border-border/50">
           <div className="container mx-auto px-4 py-4">
@@ -286,7 +384,10 @@ const ProductDetailPage = () => {
               className="space-y-4"
             >
               {/* Main Image */}
-              <div className="relative aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-muted to-muted/50 border border-border/30">
+              <div 
+                ref={imageContainerRef}
+                className="relative aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-muted to-muted/50 border border-border/30"
+              >
                 {/* Badges */}
                 <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
                   {product.discount && (
@@ -325,6 +426,13 @@ const ProductDetailPage = () => {
                   </div>
                 )}
 
+                {/* Zoom hint */}
+                {scale === 1 && product.images[selectedImage] && (
+                  <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-10 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs text-muted-foreground">
+                    استخدم إصبعين للتكبير
+                  </div>
+                )}
+
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={selectedImage}
@@ -332,68 +440,24 @@ const ProductDetailPage = () => {
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.95 }}
                     transition={{ duration: 0.3 }}
-                    className="w-full h-full touch-none"
-                    onTouchStart={(e) => {
-                      if (e.touches.length === 2) {
-                        // Pinch zoom start
-                        const dist = Math.hypot(
-                          e.touches[0].clientX - e.touches[1].clientX,
-                          e.touches[0].clientY - e.touches[1].clientY
-                        );
-                        setInitialDistance(dist);
-                      } else if (e.touches.length === 1) {
-                        setTouchEnd(null);
-                        setTouchStart(e.touches[0].clientX);
-                      }
-                    }}
-                    onTouchMove={(e) => {
-                      if (e.touches.length === 2 && initialDistance) {
-                        // Pinch zoom
-                        const dist = Math.hypot(
-                          e.touches[0].clientX - e.touches[1].clientX,
-                          e.touches[0].clientY - e.touches[1].clientY
-                        );
-                        const newScale = Math.min(3, Math.max(1, scale * (dist / initialDistance)));
-                        setScale(newScale);
-                        setInitialDistance(dist);
-                      } else if (e.touches.length === 1) {
-                        setTouchEnd(e.touches[0].clientX);
-                      }
-                    }}
-                    onTouchEnd={() => {
-                      setInitialDistance(null);
-                      if (!touchStart || !touchEnd) return;
-                      const distance = touchStart - touchEnd;
-                      const minSwipeDistance = 50;
-                      if (Math.abs(distance) > minSwipeDistance && product.images.length > 1) {
-                        // Fix: Swipe direction was inverted - now correct
-                        if (distance > 0) {
-                          // Swipe left - previous image (RTL layout)
-                          setSelectedImage(prev => prev === 0 ? product.images.length - 1 : prev - 1);
-                          setImageLoaded(false);
-                        } else {
-                          // Swipe right - next image (RTL layout)
-                          setSelectedImage(prev => prev === product.images.length - 1 ? 0 : prev + 1);
-                          setImageLoaded(false);
-                        }
-                      }
-                      // Reset scale on single touch end
-                      if (scale > 1) {
-                        setScale(1);
-                      }
-                      setTouchStart(null);
-                      setTouchEnd(null);
-                    }}
+                    className="w-full h-full touch-none select-none"
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
                   >
                     {product.images[selectedImage] ? (
                       <img
                         src={product.images[selectedImage]}
                         alt={product.nameAr}
                         onLoad={() => setImageLoaded(true)}
-                        style={{ transform: `scale(${scale})`, transformOrigin: 'center center' }}
-                        className={`w-full h-full object-cover transition-all duration-200 ${
+                        style={{ 
+                          transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
+                          transformOrigin: 'center center',
+                        }}
+                        className={`w-full h-full object-cover transition-opacity duration-200 ${
                           imageLoaded ? 'opacity-100' : 'opacity-0'
                         }`}
+                        draggable={false}
                       />
                     ) : (
                       <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground gap-3">
@@ -410,7 +474,7 @@ const ProductDetailPage = () => {
                     {product.images.map((_, index) => (
                       <button
                         key={index}
-                        onClick={() => { setSelectedImage(index); setImageLoaded(false); }}
+                        onClick={() => { setSelectedImage(index); setImageLoaded(false); setScale(1); setPosition({ x: 0, y: 0 }); }}
                         className={`w-2 h-2 rounded-full transition-all ${
                           selectedImage === index ? 'bg-gold w-4' : 'bg-background/60'
                         }`}
@@ -429,6 +493,8 @@ const ProductDetailPage = () => {
                       onClick={() => {
                         setSelectedImage(index);
                         setImageLoaded(false);
+                        setScale(1);
+                        setPosition({ x: 0, y: 0 });
                       }}
                       whileHover={{ scale: 1.05 }}
                       whileTap={{ scale: 0.95 }}
@@ -465,37 +531,31 @@ const ProductDetailPage = () => {
                 </span>
               </div>
 
-              {/* Title */}
-              <h1 className="font-heading text-3xl md:text-4xl lg:text-5xl text-foreground leading-tight">
-                {product.nameAr}
-              </h1>
-              
-              {/* Price */}
-              <div className="flex items-baseline gap-4 flex-wrap">
-                <span className="font-heading text-4xl md:text-5xl text-gold">
-                  {discountedPrice.toFixed(0)}
-                  <span className="text-lg mr-1">{currency}</span>
-                </span>
-                {product.originalPrice && (
-                  <div className="flex items-center gap-3">
-                    <span className="text-xl text-muted-foreground line-through">
-                      {product.originalPrice.toFixed(0)} {currency}
-                    </span>
-                    <span className="px-3 py-1 bg-destructive/10 text-destructive text-sm font-bold rounded-full">
-                      وفر {(product.originalPrice - discountedPrice).toFixed(0)} {currency}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="h-px bg-gradient-to-r from-border via-gold/30 to-border" />
-
-              {/* Description */}
-              <div className="space-y-3">
-                <h3 className="font-heading text-lg text-foreground">الوصف</h3>
-                <p className="font-body text-foreground/70 leading-relaxed text-base">
-                  {product.descriptionAr || 'منتج فاخر من ERMGOLD بجودة عالية وتصميم أنيق يناسب جميع المناسبات.'}
-                </p>
+              {/* Title + Price (side by side) */}
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <h1 className="font-heading text-2xl md:text-3xl lg:text-4xl text-foreground leading-tight flex-1 min-w-0">
+                  {product.nameAr}
+                </h1>
+                <div className="flex flex-col items-end flex-shrink-0">
+                  <span className="font-heading text-3xl md:text-4xl text-gold whitespace-nowrap">
+                    {totalPrice.toFixed(0)}
+                    <span className="text-base mr-1">{currency}</span>
+                  </span>
+                  {(product.originalPrice || accessoriesTotal > 0) && (
+                    <div className="flex items-center gap-2 mt-1">
+                      {product.originalPrice && (
+                        <span className="text-sm text-muted-foreground line-through">
+                          {product.originalPrice.toFixed(0)} {currency}
+                        </span>
+                      )}
+                      {accessoriesTotal > 0 && (
+                        <span className="text-xs text-gold bg-gold/10 px-2 py-0.5 rounded">
+                          +{accessoriesTotal} ملحقات
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Stock Status */}
@@ -537,7 +597,7 @@ const ProductDetailPage = () => {
                 </div>
               )}
 
-              {/* Accessories Selector */}
+              {/* Accessories Selector - MOVED BEFORE DESCRIPTION */}
               {product.accessories && product.accessories.length > 0 && (
                 <div className="space-y-3">
                   <span className="font-body text-foreground">الملحقات الإضافية:</span>
@@ -588,6 +648,17 @@ const ProductDetailPage = () => {
                 </div>
               )}
 
+              {/* Gold Divider Line */}
+              <div className="h-px bg-gradient-to-r from-border via-gold/50 to-border" />
+
+              {/* Description - MOVED AFTER ACCESSORIES */}
+              <div className="space-y-3">
+                <h3 className="font-heading text-lg text-foreground">الوصف</h3>
+                <p className="font-body text-foreground/70 leading-relaxed text-base">
+                  {product.descriptionAr || 'منتج فاخر من ERMGOLD بجودة عالية وتصميم أنيق يناسب جميع المناسبات.'}
+                </p>
+              </div>
+
               {/* Quantity Selector */}
               <div className="flex items-center gap-6">
                 <span className="font-body text-foreground">الكمية:</span>
@@ -609,27 +680,6 @@ const ProductDetailPage = () => {
                 <span className="text-sm text-muted-foreground">
                   الإجمالي: <span className="text-gold font-heading">{(totalPrice * quantity).toFixed(0)} {currency}</span>
                 </span>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3 pt-2">
-                <Button
-                  onClick={handleAddToCart}
-                  disabled={!product.inStock}
-                  size="lg"
-                  className="flex-1 btn-gold py-7 font-heading text-lg tracking-wider gap-3 rounded-xl disabled:opacity-50"
-                >
-                  <ShoppingBag className="w-6 h-6" />
-                  إضافة للسلة
-                </Button>
-                <Button
-                  onClick={handleShare}
-                  variant="outline"
-                  size="lg"
-                  className="px-6 py-7 border-2 border-border hover:border-gold hover:text-gold hover:bg-gold/5 rounded-xl transition-all"
-                >
-                  <Share2 className="w-5 h-5" />
-                </Button>
               </div>
 
               {/* Features */}
@@ -680,6 +730,31 @@ const ProductDetailPage = () => {
           )}
         </div>
       </main>
+
+      {/* Fixed Action Buttons */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t border-border/50 p-4 shadow-lg">
+        <div className="container mx-auto max-w-lg">
+          <div className="flex gap-3">
+            <Button
+              onClick={handleAddToCart}
+              disabled={!product.inStock}
+              size="lg"
+              className="flex-1 btn-gold py-6 font-heading text-lg tracking-wider gap-3 rounded-xl disabled:opacity-50"
+            >
+              <ShoppingBag className="w-6 h-6" />
+              إضافة للسلة
+            </Button>
+            <Button
+              onClick={handleShare}
+              variant="outline"
+              size="lg"
+              className="px-6 py-6 border-2 border-border hover:border-gold hover:text-gold hover:bg-gold/5 rounded-xl transition-all"
+            >
+              <Share2 className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <Footer />
     </div>

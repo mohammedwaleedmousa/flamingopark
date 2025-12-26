@@ -571,6 +571,7 @@ export type Database = {
           section_ids: string[] | null
           sizes: string[] | null
           slug: string
+          sort_order: number | null
           updated_at: string
         }
         Insert: {
@@ -598,6 +599,7 @@ export type Database = {
           section_ids?: string[] | null
           sizes?: string[] | null
           slug: string
+          sort_order?: number | null
           updated_at?: string
         }
         Update: {
@@ -625,6 +627,7 @@ export type Database = {
           section_ids?: string[] | null
           sizes?: string[] | null
           slug?: string
+          sort_order?: number | null
           updated_at?: string
         }
         Relationships: []

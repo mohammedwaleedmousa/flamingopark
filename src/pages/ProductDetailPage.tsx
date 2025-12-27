@@ -7,6 +7,7 @@ import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import ProductCard from '@/components/ProductCard';
 import ProductReviews from '@/components/ProductReviews';
+import AccessoryCard from '@/components/AccessoryCard';
 import { useStore, Product } from '@/store/useStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import { supabase } from '@/integrations/supabase/client';
@@ -86,7 +87,7 @@ const ProductDetailPage = () => {
         isBestSeller: data.is_best_seller,
         hasSizes: (data as any).has_sizes ?? false,
         sizes: (data as any).sizes || [],
-        accessories: accessories as { name: string; name_ar: string; price: number; image_url?: string }[],
+        accessories: accessories as { name: string; name_ar: string; price: number; image_url?: string; description?: string; description_ar?: string }[],
         features: ((data as any).features || []) as { icon: string; title: string; desc: string }[],
       };
     },
@@ -521,22 +522,19 @@ const ProductDetailPage = () => {
               transition={{ duration: 0.6, delay: 0.1 }}
               className="space-y-6"
             >
-              {/* Brand & Category */}
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-medium text-gold uppercase tracking-widest bg-gold/10 px-3 py-1.5 rounded-full">
-                  {product.brand}
-                </span>
+              {/* Brand & Category - MOVED TO LEFT */}
+              <div className="flex items-center justify-end gap-3">
                 <span className="text-xs text-muted-foreground">
                   {product.category}
                 </span>
+                <span className="text-xs font-medium text-gold uppercase tracking-widest bg-gold/10 px-3 py-1.5 rounded-full">
+                  {product.brand}
+                </span>
               </div>
 
-              {/* Title + Price (side by side) */}
+              {/* Title + Price (SWAPPED POSITIONS) */}
               <div className="flex flex-wrap items-start justify-between gap-4">
-                <h1 className="font-heading text-2xl md:text-3xl lg:text-4xl text-foreground leading-tight flex-1 min-w-0">
-                  {product.nameAr}
-                </h1>
-                <div className="flex flex-col items-end flex-shrink-0">
+                <div className="flex flex-col items-start flex-shrink-0">
                   <span className="font-heading text-3xl md:text-4xl text-gold whitespace-nowrap">
                     {totalPrice.toFixed(0)}
                     <span className="text-base mr-1">{currency}</span>
@@ -556,6 +554,9 @@ const ProductDetailPage = () => {
                     </div>
                   )}
                 </div>
+                <h1 className="font-heading text-2xl md:text-3xl lg:text-4xl text-foreground leading-tight flex-1 min-w-0 text-left">
+                  {product.nameAr}
+                </h1>
               </div>
 
               {/* Stock Status */}
@@ -575,7 +576,48 @@ const ProductDetailPage = () => {
                 )}
               </div>
 
-              {/* Size Selector */}
+              {/* Quantity Selector - MOVED BEFORE ACCESSORIES */}
+              <div className="flex items-center gap-6">
+                <span className="font-body text-foreground">الكمية:</span>
+                <div className="flex items-center bg-muted rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="p-4 hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="w-14 text-center font-heading text-xl">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="p-4 hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  الإجمالي: <span className="text-gold font-heading">{(totalPrice * quantity).toFixed(0)} {currency}</span>
+                </span>
+              </div>
+
+              {/* Accessories Selector - NEW DESIGN */}
+              {product.accessories && product.accessories.length > 0 && (
+                <div className="space-y-4">
+                  <span className="font-heading text-lg text-foreground">الملحقات الإضافية</span>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {product.accessories.map((acc) => (
+                      <AccessoryCard
+                        key={acc.name_ar}
+                        accessory={acc}
+                        quantity={accessoryQuantities[acc.name_ar] || 0}
+                        currency={currency}
+                        onQuantityChange={(delta) => updateAccessoryQuantity(acc.name_ar, delta)}
+                      />
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Size Selector - MOVED AFTER ACCESSORIES */}
               {product.hasSizes && product.sizes && product.sizes.length > 0 && (
                 <div className="space-y-3">
                   <span className="font-body text-foreground">الحجم:</span>
@@ -597,89 +639,15 @@ const ProductDetailPage = () => {
                 </div>
               )}
 
-              {/* Accessories Selector - MOVED BEFORE DESCRIPTION */}
-              {product.accessories && product.accessories.length > 0 && (
-                <div className="space-y-3">
-                  <span className="font-body text-foreground">الملحقات الإضافية:</span>
-                  <div className="space-y-2">
-                    {product.accessories.map((acc) => {
-                      const qty = accessoryQuantities[acc.name_ar] || 0;
-                      return (
-                        <div
-                          key={acc.name_ar}
-                          className={`w-full flex items-center justify-between p-3 rounded-lg border-2 transition-all ${
-                            qty > 0
-                              ? 'border-gold bg-gold/10'
-                              : 'border-border'
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            {acc.image_url && (
-                              <img 
-                                src={acc.image_url} 
-                                alt={acc.name_ar} 
-                                className="w-12 h-12 object-cover rounded"
-                              />
-                            )}
-                            <div>
-                              <span className="font-medium block">{acc.name_ar}</span>
-                              <span className="text-gold text-sm">+{acc.price} {currency}</span>
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <button
-                              onClick={() => updateAccessoryQuantity(acc.name_ar, -1)}
-                              className="w-8 h-8 rounded-full bg-muted flex items-center justify-center hover:bg-muted-foreground/20 transition-colors"
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
-                            <span className="w-8 text-center font-heading">{qty}</span>
-                            <button
-                              onClick={() => updateAccessoryQuantity(acc.name_ar, 1)}
-                              className="w-8 h-8 rounded-full bg-muted flex items-center justify-center hover:bg-muted-foreground/20 transition-colors"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
               {/* Gold Divider Line */}
               <div className="h-px bg-gradient-to-r from-border via-gold/50 to-border" />
 
-              {/* Description - MOVED AFTER ACCESSORIES */}
+              {/* Description */}
               <div className="space-y-3">
                 <h3 className="font-heading text-lg text-foreground">الوصف</h3>
                 <p className="font-body text-foreground/70 leading-relaxed text-base">
                   {product.descriptionAr || 'منتج فاخر من ERMGOLD بجودة عالية وتصميم أنيق يناسب جميع المناسبات.'}
                 </p>
-              </div>
-
-              {/* Quantity Selector */}
-              <div className="flex items-center gap-6">
-                <span className="font-body text-foreground">الكمية:</span>
-                <div className="flex items-center bg-muted rounded-xl overflow-hidden">
-                  <button
-                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                    className="p-4 hover:bg-muted-foreground/10 transition-colors"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-                  <span className="w-14 text-center font-heading text-xl">{quantity}</span>
-                  <button
-                    onClick={() => setQuantity(quantity + 1)}
-                    className="p-4 hover:bg-muted-foreground/10 transition-colors"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
-                <span className="text-sm text-muted-foreground">
-                  الإجمالي: <span className="text-gold font-heading">{(totalPrice * quantity).toFixed(0)} {currency}</span>
-                </span>
               </div>
 
               {/* Features */}

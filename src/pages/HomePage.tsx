@@ -79,7 +79,7 @@ const HomePage = () => {
         {categoriesLoading ? (
           <div className="text-center py-12 text-muted-foreground">
             <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-            <p>جاري تحميل الفئات...</p>
+            <p>جاري تحميل الماركات...</p>
           </div>
         ) : categories.length > 0 ? (
           <section className="py-10 md:py-14 bg-gradient-to-b from-muted/30 to-background overflow-hidden">
@@ -92,7 +92,7 @@ const HomePage = () => {
               >
                 <span className="text-gold font-body text-sm tracking-widest uppercase">تصفح</span>
                 <h2 className="font-heading text-3xl md:text-4xl text-foreground mt-2">
-                  الفئات <span className="text-gold">الرئيسية</span>
+                  الماركات <span className="text-gold">الرئيسية</span>
                 </h2>
               </motion.div>
             </div>

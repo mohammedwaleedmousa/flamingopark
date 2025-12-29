@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Minus, Plus, X, ZoomIn } from 'lucide-react';
+import { Minus, Plus, X } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
 interface Accessory {
@@ -24,17 +24,17 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
 
   return (
     <>
-      {/* Accessory Card - New Design */}
+      {/* Accessory Card - Compact Solid Design */}
       <div
-        className={`relative rounded-xl overflow-hidden border-2 transition-all duration-300 cursor-pointer ${
+        className={`relative rounded-lg overflow-hidden border cursor-pointer ${
           quantity > 0
-            ? 'border-gold shadow-[0_0_15px_hsl(var(--gold)/0.2)]'
-            : 'border-border/50 hover:border-gold/50'
+            ? 'border-gold bg-gold/5'
+            : 'border-border bg-card hover:border-gold/50'
         }`}
         onClick={() => setShowPopup(true)}
       >
-        {/* Image Background */}
-        <div className="relative aspect-[16/9] bg-gradient-to-br from-muted to-muted/50">
+        {/* Image */}
+        <div className="relative aspect-square bg-muted">
           {accessory.image_url ? (
             <img
               src={accessory.image_url}
@@ -43,61 +43,47 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <span className="text-4xl opacity-30">📦</span>
+              <span className="text-2xl opacity-30">📦</span>
             </div>
           )}
           
-          {/* Overlay Gradient */}
-          <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent" />
-          
-          {/* Title Overlay */}
-          <div className="absolute bottom-0 left-0 right-0 p-4">
-            <h4 className="font-heading text-lg text-foreground mb-1">{accessory.name_ar}</h4>
-            <div className="flex items-center justify-between">
-              <span className="text-gold font-heading text-xl">
-                {accessory.price} <span className="text-sm">{currency}</span>
-              </span>
-              <button 
-                className="p-1.5 rounded-full bg-background/50 backdrop-blur-sm text-muted-foreground hover:text-gold transition-colors"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setShowPopup(true);
-                }}
-              >
-                <ZoomIn className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-
           {/* Selected Badge */}
           {quantity > 0 && (
-            <div className="absolute top-3 right-3 bg-gold text-secondary text-sm font-bold px-3 py-1 rounded-full shadow-lg">
+            <div className="absolute top-1.5 right-1.5 bg-gold text-secondary text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
               {quantity}
             </div>
           )}
         </div>
 
-        {/* Quantity Controls */}
-        <div className="flex items-center justify-center gap-4 p-3 bg-muted/50">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onQuantityChange(-1);
-            }}
-            className="w-9 h-9 rounded-full bg-background border border-border flex items-center justify-center hover:border-gold hover:text-gold transition-all"
-          >
-            <Minus className="w-4 h-4" />
-          </button>
-          <span className="w-8 text-center font-heading text-xl">{quantity}</span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onQuantityChange(1);
-            }}
-            className="w-9 h-9 rounded-full bg-background border border-border flex items-center justify-center hover:border-gold hover:text-gold transition-all"
-          >
-            <Plus className="w-4 h-4" />
-          </button>
+        {/* Info */}
+        <div className="p-2 space-y-1">
+          <h4 className="font-body text-xs text-foreground truncate">{accessory.name_ar}</h4>
+          <div className="flex items-center justify-between">
+            <span className="text-gold font-heading text-sm">
+              +{accessory.price} <span className="text-[10px]">{currency}</span>
+            </span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onQuantityChange(-1);
+                }}
+                className="w-6 h-6 rounded bg-muted flex items-center justify-center hover:bg-gold/10 hover:text-gold"
+              >
+                <Minus className="w-3 h-3" />
+              </button>
+              <span className="w-5 text-center text-xs font-medium">{quantity}</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onQuantityChange(1);
+                }}
+                className="w-6 h-6 rounded bg-muted flex items-center justify-center hover:bg-gold/10 hover:text-gold"
+              >
+                <Plus className="w-3 h-3" />
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -125,17 +111,16 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
               <div className="min-h-full flex items-center justify-center p-4 py-8">
                 {/* Popup Content */}
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
-                  animate={{ opacity: 1, scale: 1, y: 0 }}
-                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
-                  transition={{ type: 'spring', damping: 25, stiffness: 300 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
                   className="relative w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
                   onClick={(e) => e.stopPropagation()}
                 >
                   {/* Close Button */}
                   <button
                     onClick={() => setShowPopup(false)}
-                    className="absolute top-4 left-4 z-20 p-2 rounded-full bg-background/90 backdrop-blur-sm hover:bg-muted transition-colors shadow-lg"
+                    className="absolute top-4 left-4 z-20 p-2 rounded-full bg-background/90 hover:bg-muted transition-colors shadow-lg"
                   >
                     <X className="w-5 h-5" />
                   </button>
@@ -148,7 +133,7 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
                   )}
 
                   {/* Accessory Image */}
-                  <div className="relative aspect-[4/3] bg-gradient-to-br from-muted to-muted/50">
+                  <div className="relative aspect-[4/3] bg-muted">
                     {accessory.image_url ? (
                       <img
                         src={accessory.image_url}
@@ -160,8 +145,6 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
                         <span className="text-6xl opacity-30">📦</span>
                       </div>
                     )}
-                    {/* Gradient overlay at bottom */}
-                    <div className="absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-card to-transparent" />
                   </div>
 
                   {/* Accessory Details */}

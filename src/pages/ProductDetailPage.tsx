@@ -427,12 +427,6 @@ const ProductDetailPage = () => {
                   </div>
                 )}
 
-                {/* Zoom hint */}
-                {scale === 1 && product.images[selectedImage] && (
-                  <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-10 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs text-muted-foreground">
-                    استخدم إصبعين للتكبير
-                  </div>
-                )}
 
                 <AnimatePresence mode="wait">
                   <motion.div

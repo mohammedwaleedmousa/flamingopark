@@ -427,6 +427,12 @@ const ProductDetailPage = () => {
                   </div>
                 )}
 
+                {/* Zoom hint */}
+                {scale === 1 && product.images[selectedImage] && (
+                  <div className="absolute bottom-16 left-1/2 -translate-x-1/2 z-10 bg-background/80 backdrop-blur-sm px-3 py-1.5 rounded-full text-xs text-muted-foreground">
+                    استخدم إصبعين للتكبير
+                  </div>
+                )}
 
                 <AnimatePresence mode="wait">
                   <motion.div
@@ -526,31 +532,31 @@ const ProductDetailPage = () => {
                 </span>
               </div>
 
-              {/* 1- Product Name - RIGHT ALIGNED */}
-              <h1 className="font-heading text-2xl md:text-3xl lg:text-4xl text-foreground leading-tight text-right">
-                {product.nameAr}
-              </h1>
-
-              {/* 2- Price - BELOW NAME */}
-              <div className="flex flex-col items-end gap-1">
-                <span className="font-heading text-3xl md:text-4xl text-gold">
-                  {(totalPrice * quantity).toFixed(0)}
-                  <span className="text-base mr-1">{currency}</span>
-                </span>
-                {(product.originalPrice || accessoriesTotal > 0) && (
-                  <div className="flex items-center gap-2">
-                    {product.originalPrice && (
-                      <span className="text-sm text-muted-foreground line-through">
-                        {product.originalPrice.toFixed(0)} {currency}
-                      </span>
-                    )}
-                    {accessoriesTotal > 0 && (
-                      <span className="text-xs text-gold bg-gold/10 px-2 py-0.5 rounded">
-                        +{accessoriesTotal} ملحقات
-                      </span>
-                    )}
-                  </div>
-                )}
+              {/* Title + Price (SWAPPED POSITIONS) */}
+              <div className="flex flex-wrap items-start justify-between gap-4">
+                <div className="flex flex-col items-start flex-shrink-0">
+                  <span className="font-heading text-3xl md:text-4xl text-gold whitespace-nowrap">
+                    {totalPrice.toFixed(0)}
+                    <span className="text-base mr-1">{currency}</span>
+                  </span>
+                  {(product.originalPrice || accessoriesTotal > 0) && (
+                    <div className="flex items-center gap-2 mt-1">
+                      {product.originalPrice && (
+                        <span className="text-sm text-muted-foreground line-through">
+                          {product.originalPrice.toFixed(0)} {currency}
+                        </span>
+                      )}
+                      {accessoriesTotal > 0 && (
+                        <span className="text-xs text-gold bg-gold/10 px-2 py-0.5 rounded">
+                          +{accessoriesTotal} ملحقات
+                        </span>
+                      )}
+                    </div>
+                  )}
+                </div>
+                <h1 className="font-heading text-2xl md:text-3xl lg:text-4xl text-foreground leading-tight flex-1 min-w-0 text-left">
+                  {product.nameAr}
+                </h1>
               </div>
 
               {/* Stock Status */}
@@ -570,22 +576,34 @@ const ProductDetailPage = () => {
                 )}
               </div>
 
-              {/* 3- Description */}
-              <div className="space-y-3">
-                <h3 className="font-heading text-lg text-foreground">الوصف</h3>
-                <p className="font-body text-foreground/70 leading-relaxed text-base">
-                  {product.descriptionAr || 'منتج فاخر من ERMGOLD بجودة عالية وتصميم أنيق يناسب جميع المناسبات.'}
-                </p>
+              {/* Quantity Selector - MOVED BEFORE ACCESSORIES */}
+              <div className="flex items-center gap-6">
+                <span className="font-body text-foreground">الكمية:</span>
+                <div className="flex items-center bg-muted rounded-xl overflow-hidden">
+                  <button
+                    onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                    className="p-4 hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="w-14 text-center font-heading text-xl">{quantity}</span>
+                  <button
+                    onClick={() => setQuantity(quantity + 1)}
+                    className="p-4 hover:bg-muted-foreground/10 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+                <span className="text-sm text-muted-foreground">
+                  الإجمالي: <span className="text-gold font-heading">{(totalPrice * quantity).toFixed(0)} {currency}</span>
+                </span>
               </div>
 
-              {/* Gold Divider Line */}
-              <div className="h-px bg-gradient-to-r from-border via-gold/50 to-border" />
-
-              {/* 4- Accessories - SMALLER WITHOUT EFFECTS */}
+              {/* Accessories Selector - NEW DESIGN */}
               {product.accessories && product.accessories.length > 0 && (
-                <div className="space-y-3">
+                <div className="space-y-4">
                   <span className="font-heading text-lg text-foreground">الملحقات الإضافية</span>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {product.accessories.map((acc) => (
                       <AccessoryCard
                         key={acc.name_ar}
@@ -599,7 +617,7 @@ const ProductDetailPage = () => {
                 </div>
               )}
 
-              {/* 5- Size Selector */}
+              {/* Size Selector - MOVED AFTER ACCESSORIES */}
               {product.hasSizes && product.sizes && product.sizes.length > 0 && (
                 <div className="space-y-3">
                   <span className="font-body text-foreground">الحجم:</span>
@@ -624,47 +642,30 @@ const ProductDetailPage = () => {
               {/* Gold Divider Line */}
               <div className="h-px bg-gradient-to-r from-border via-gold/50 to-border" />
 
-              {/* 6- Total + Quantity Selector */}
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="font-heading text-lg text-foreground">الإجمالي:</span>
-                  <span className="font-heading text-2xl text-gold">
-                    {(totalPrice * quantity).toFixed(0)} {currency}
-                  </span>
-                </div>
-                <div className="flex items-center gap-4">
-                  <span className="font-body text-foreground">الكمية:</span>
-                  <div className="flex items-center bg-muted rounded-xl overflow-hidden">
-                    <button
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="p-3 hover:bg-muted-foreground/10 transition-colors"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </button>
-                    <span className="w-12 text-center font-heading text-xl">{quantity}</span>
-                    <button
-                      onClick={() => setQuantity(quantity + 1)}
-                      className="p-3 hover:bg-muted-foreground/10 transition-colors"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
+              {/* Description */}
+              <div className="space-y-3">
+                <h3 className="font-heading text-lg text-foreground">الوصف</h3>
+                <p className="font-body text-foreground/70 leading-relaxed text-base">
+                  {product.descriptionAr || 'منتج فاخر من ERMGOLD بجودة عالية وتصميم أنيق يناسب جميع المناسبات.'}
+                </p>
               </div>
 
               {/* Features */}
-              <div className="grid grid-cols-3 gap-4 pt-4">
+              <div className="grid grid-cols-3 gap-4 pt-6">
                 {features.map((feature, index) => {
                   const IconComponent = getFeatureIcon(feature.icon);
                   return (
-                    <div
+                    <motion.div
                       key={index}
-                      className="text-center p-4 rounded-xl bg-muted/50 border border-border/30"
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.3 + index * 0.1 }}
+                      className="text-center p-4 rounded-xl bg-muted/50 border border-border/30 hover:border-gold/30 transition-colors"
                     >
                       <IconComponent className="w-6 h-6 text-gold mx-auto mb-2" />
                       <h4 className="font-heading text-sm text-foreground mb-1">{feature.title}</h4>
                       <p className="text-xs text-muted-foreground">{feature.desc}</p>
-                    </div>
+                    </motion.div>
                   );
                 })}
               </div>

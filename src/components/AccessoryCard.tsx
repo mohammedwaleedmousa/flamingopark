@@ -26,12 +26,12 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
     <>
       {/* Accessory Card - Full Width Image Background Design */}
       <div
-        className={`relative w-full h-28 rounded-xl overflow-hidden cursor-pointer ${
-          quantity > 0 ? 'ring-2 ring-gold' : ''
+        className={`relative w-full h-28 rounded-xl overflow-hidden cursor-pointer border ${
+          quantity > 0 ? 'border-gold' : 'border-border'
         }`}
         onClick={() => setShowPopup(true)}
       >
-        {/* Background Image */}
+        {/* Background Image - No effects */}
         <div className="absolute inset-0">
           {accessory.image_url ? (
             <img
@@ -44,57 +44,52 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
               <span className="text-4xl opacity-30">📦</span>
             </div>
           )}
-          {/* Overlay Gradient */}
-          <div className="absolute inset-0 bg-gradient-to-l from-background/90 via-background/60 to-transparent" />
         </div>
 
-        {/* Content */}
-        <div className="relative h-full flex flex-col justify-between p-3">
-          {/* Top - Name */}
-          <div className="text-right">
-            <h4 className="font-heading text-sm md:text-base text-foreground leading-tight">
-              {accessory.name_ar}
-            </h4>
-          </div>
-
-          {/* Middle - Price */}
-          <div className="text-center">
-            <div className="inline-flex items-center gap-2 bg-background/80 backdrop-blur-sm px-3 py-1 rounded-lg border border-border/50">
-              <span className="font-heading text-lg text-gold">
-                {accessory.price}
-              </span>
-              <span className="text-xs text-muted-foreground">{currency}</span>
+        {/* Content - Positioned at bottom */}
+        <div className="absolute bottom-0 left-0 right-0 p-2">
+          <div className="flex items-center justify-between">
+            {/* Quantity Controls */}
+            <div className="flex items-center gap-1">
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onQuantityChange(1);
+                }}
+                className="w-7 h-7 rounded-full bg-background/90 border border-border/50 flex items-center justify-center hover:bg-gold hover:text-secondary hover:border-gold transition-all"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+              <span className="w-5 text-center font-heading text-sm text-foreground bg-background/90 rounded px-1">{quantity}</span>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onQuantityChange(-1);
+                }}
+                className="w-7 h-7 rounded-full bg-background/90 border border-border/50 flex items-center justify-center hover:bg-gold hover:text-secondary hover:border-gold transition-all"
+              >
+                <Minus className="w-3.5 h-3.5" />
+              </button>
             </div>
-          </div>
 
-          {/* Bottom - Quantity Controls */}
-          <div className="flex items-center justify-start gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onQuantityChange(1);
-              }}
-              className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 flex items-center justify-center hover:bg-gold hover:text-secondary hover:border-gold transition-all"
-            >
-              <Plus className="w-4 h-4" />
-            </button>
-            <span className="w-6 text-center font-heading text-lg text-foreground">{quantity}</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                onQuantityChange(-1);
-              }}
-              className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 flex items-center justify-center hover:bg-gold hover:text-secondary hover:border-gold transition-all"
-            >
-              <Minus className="w-4 h-4" />
-            </button>
+            {/* Price & Name */}
+            <div className="text-right">
+              <h4 className="font-heading text-xs text-foreground bg-background/90 px-1.5 py-0.5 rounded inline-block mb-0.5">
+                {accessory.name_ar}
+              </h4>
+              <div className="flex items-center justify-end gap-1">
+                <span className="font-heading text-sm text-gold bg-background/90 px-1.5 py-0.5 rounded">
+                  {accessory.price} {currency}
+                </span>
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Selected Badge */}
         {quantity > 0 && (
           <div className="absolute top-2 left-2 bg-gold text-secondary text-xs font-bold px-2 py-0.5 rounded-full">
-            ✓ {quantity}
+            ✓
           </div>
         )}
       </div>

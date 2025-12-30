@@ -24,9 +24,9 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
 
   return (
     <>
-      {/* Accessory Card - Compact Solid Design */}
+      {/* Accessory Card - Horizontal Rectangular Design */}
       <div
-        className={`relative rounded-lg overflow-hidden border cursor-pointer ${
+        className={`relative flex items-center gap-3 rounded-lg overflow-hidden border cursor-pointer p-2 ${
           quantity > 0
             ? 'border-gold bg-gold/5'
             : 'border-border bg-card hover:border-gold/50'
@@ -34,7 +34,7 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
         onClick={() => setShowPopup(true)}
       >
         {/* Image */}
-        <div className="relative aspect-square bg-muted">
+        <div className="relative w-14 h-14 flex-shrink-0 rounded-md overflow-hidden bg-muted">
           {accessory.image_url ? (
             <img
               src={accessory.image_url}
@@ -43,48 +43,48 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
             />
           ) : (
             <div className="w-full h-full flex items-center justify-center">
-              <span className="text-2xl opacity-30">📦</span>
-            </div>
-          )}
-          
-          {/* Selected Badge */}
-          {quantity > 0 && (
-            <div className="absolute top-1.5 right-1.5 bg-gold text-secondary text-xs font-bold w-5 h-5 flex items-center justify-center rounded-full">
-              {quantity}
+              <span className="text-xl opacity-30">📦</span>
             </div>
           )}
         </div>
 
         {/* Info */}
-        <div className="p-2 space-y-1">
-          <h4 className="font-body text-xs text-foreground truncate">{accessory.name_ar}</h4>
-          <div className="flex items-center justify-between">
-            <span className="text-gold font-heading text-sm">
-              +{accessory.price} <span className="text-[10px]">{currency}</span>
-            </span>
-            <div className="flex items-center gap-1">
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onQuantityChange(-1);
-                }}
-                className="w-6 h-6 rounded bg-muted flex items-center justify-center hover:bg-gold/10 hover:text-gold"
-              >
-                <Minus className="w-3 h-3" />
-              </button>
-              <span className="w-5 text-center text-xs font-medium">{quantity}</span>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onQuantityChange(1);
-                }}
-                className="w-6 h-6 rounded bg-muted flex items-center justify-center hover:bg-gold/10 hover:text-gold"
-              >
-                <Plus className="w-3 h-3" />
-              </button>
-            </div>
-          </div>
+        <div className="flex-1 min-w-0">
+          <h4 className="font-body text-sm text-foreground truncate">{accessory.name_ar}</h4>
+          <span className="text-gold font-heading text-sm">
+            +{accessory.price} <span className="text-[10px]">{currency}</span>
+          </span>
         </div>
+
+        {/* Quantity Controls */}
+        <div className="flex items-center gap-1 flex-shrink-0">
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onQuantityChange(-1);
+            }}
+            className="w-7 h-7 rounded bg-muted flex items-center justify-center hover:bg-gold/10 hover:text-gold"
+          >
+            <Minus className="w-3 h-3" />
+          </button>
+          <span className="w-6 text-center text-sm font-medium">{quantity}</span>
+          <button
+            onClick={(e) => {
+              e.stopPropagation();
+              onQuantityChange(1);
+            }}
+            className="w-7 h-7 rounded bg-muted flex items-center justify-center hover:bg-gold/10 hover:text-gold"
+          >
+            <Plus className="w-3 h-3" />
+          </button>
+        </div>
+
+        {/* Selected Badge */}
+        {quantity > 0 && (
+          <div className="absolute top-1 right-1 bg-gold text-secondary text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
+            ✓
+          </div>
+        )}
       </div>
 
       {/* Floating Popup */}

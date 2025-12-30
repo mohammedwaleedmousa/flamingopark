@@ -531,8 +531,8 @@ const ProductDetailPage = () => {
                 {product.nameAr}
               </h1>
 
-              {/* 2- Price - BELOW NAME */}
-              <div className="flex flex-col items-end gap-1">
+              {/* 2- Price - BELOW NAME - RIGHT ALIGNED */}
+              <div className="flex flex-col items-start gap-1">
                 <span className="font-heading text-3xl md:text-4xl text-gold">
                   {(totalPrice * quantity).toFixed(0)}
                   <span className="text-base mr-1">{currency}</span>
@@ -585,7 +585,7 @@ const ProductDetailPage = () => {
               {product.accessories && product.accessories.length > 0 && (
                 <div className="space-y-3">
                   <span className="font-heading text-lg text-foreground">الملحقات الإضافية</span>
-                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 gap-2">
                     {product.accessories.map((acc) => (
                       <AccessoryCard
                         key={acc.name_ar}

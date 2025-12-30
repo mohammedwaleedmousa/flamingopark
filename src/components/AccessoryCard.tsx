@@ -94,7 +94,7 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
         )}
       </div>
 
-      {/* Floating Popup - Full Image View */}
+      {/* Floating Popup for Description */}
       <AnimatePresence>
         {showPopup && (
           <>
@@ -103,94 +103,105 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/95 z-[60]"
+              className="fixed inset-0 bg-background/80 backdrop-blur-sm z-[60]"
               onClick={() => setShowPopup(false)}
             />
             
-            {/* Popup Container */}
+            {/* Popup Container - Scrollable */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[60] flex flex-col"
+              className="fixed inset-0 z-[60] overflow-y-auto"
               onClick={() => setShowPopup(false)}
             >
-              {/* Close Button */}
-              <div className="absolute top-4 left-4 z-20">
-                <button
-                  onClick={() => setShowPopup(false)}
-                  className="p-3 rounded-full bg-background/20 hover:bg-background/40 transition-colors"
+              <div className="min-h-full flex items-center justify-center p-4 py-8">
+                {/* Popup Content */}
+                <motion.div
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
+                  className="relative w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
                 >
-                  <X className="w-6 h-6 text-white" />
-                </button>
-              </div>
-
-              {/* Full Image */}
-              <div className="flex-1 flex items-center justify-center p-4">
-                {accessory.image_url ? (
-                  <motion.img
-                    initial={{ scale: 0.9 }}
-                    animate={{ scale: 1 }}
-                    src={accessory.image_url}
-                    alt={accessory.name_ar}
-                    className="max-w-full max-h-[70vh] object-contain rounded-lg"
-                    onClick={(e) => e.stopPropagation()}
-                  />
-                ) : (
-                  <div className="w-64 h-64 bg-muted rounded-lg flex items-center justify-center">
-                    <span className="text-6xl opacity-30">📦</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Bottom Info Panel */}
-              <motion.div
-                initial={{ y: 100 }}
-                animate={{ y: 0 }}
-                className="bg-card border-t border-border p-4 space-y-4"
-                onClick={(e) => e.stopPropagation()}
-              >
-                {/* Title and Price */}
-                <div className="flex items-center justify-between">
-                  <h3 className="font-heading text-lg text-foreground">{accessory.name_ar}</h3>
-                  <span className="font-heading text-lg text-gold">+{accessory.price} {currency}</span>
-                </div>
-
-                {/* Description */}
-                {accessory.description_ar && (
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {accessory.description_ar}
-                  </p>
-                )}
-
-                {/* Quantity Controls */}
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <button
-                      onClick={() => onQuantityChange(-1)}
-                      className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-gold/10 hover:text-gold transition-all"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </button>
-                    <span className="w-8 text-center font-heading text-xl">{quantity}</span>
-                    <button
-                      onClick={() => onQuantityChange(1)}
-                      className="w-10 h-10 rounded-full bg-muted flex items-center justify-center hover:bg-gold/10 hover:text-gold transition-all"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                  </div>
-                  <Button
-                    onClick={() => {
-                      if (quantity === 0) onQuantityChange(1);
-                      setShowPopup(false);
-                    }}
-                    className="btn-gold px-6"
+                  {/* Close Button */}
+                  <button
+                    onClick={() => setShowPopup(false)}
+                    className="absolute top-4 left-4 z-20 p-2 rounded-full bg-background/90 hover:bg-muted transition-colors shadow-lg"
                   >
-                    {quantity > 0 ? 'تم ✓' : 'إضافة'}
-                  </Button>
-                </div>
-              </motion.div>
+                    <X className="w-5 h-5" />
+                  </button>
+
+                  {/* Accessory Image */}
+                  <div className="relative aspect-[16/9] bg-muted">
+                    {accessory.image_url ? (
+                      <img
+                        src={accessory.image_url}
+                        alt={accessory.name_ar}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center bg-muted">
+                        <span className="text-6xl opacity-30">📦</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Accessory Details */}
+                  <div className="p-5 space-y-4">
+                    {/* Title and Price */}
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h3 className="font-heading text-xl text-foreground leading-tight">{accessory.name_ar}</h3>
+                      </div>
+                      <div className="text-left flex-shrink-0 bg-gold/10 px-3 py-1.5 rounded-lg">
+                        <span className="font-heading text-xl text-gold">+{accessory.price}</span>
+                        <span className="text-gold text-sm mr-1">{currency}</span>
+                      </div>
+                    </div>
+
+                    {/* Description */}
+                    {accessory.description_ar && (
+                      <div className="bg-muted/50 rounded-xl p-4">
+                        <p className="text-foreground/80 leading-relaxed text-sm">
+                          {accessory.description_ar}
+                        </p>
+                      </div>
+                    )}
+
+                    {/* Quantity Controls */}
+                    <div className="flex items-center justify-between bg-muted/30 rounded-xl p-3">
+                      <span className="text-foreground font-medium text-sm">الكمية:</span>
+                      <div className="flex items-center gap-3">
+                        <button
+                          onClick={() => onQuantityChange(-1)}
+                          className="w-10 h-10 rounded-full bg-background border border-border flex items-center justify-center hover:bg-gold/10 hover:border-gold hover:text-gold transition-all"
+                        >
+                          <Minus className="w-4 h-4" />
+                        </button>
+                        <span className="w-8 text-center font-heading text-xl">{quantity}</span>
+                        <button
+                          onClick={() => onQuantityChange(1)}
+                          className="w-10 h-10 rounded-full bg-background border border-border flex items-center justify-center hover:bg-gold/10 hover:border-gold hover:text-gold transition-all"
+                        >
+                          <Plus className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Action Button */}
+                    <Button
+                      onClick={() => {
+                        if (quantity === 0) onQuantityChange(1);
+                        setShowPopup(false);
+                      }}
+                      className="w-full btn-gold py-5 font-heading text-base"
+                    >
+                      {quantity > 0 ? 'تم الإضافة ✓' : 'إضافة للمنتج'}
+                    </Button>
+                  </div>
+                </motion.div>
+              </div>
             </motion.div>
           </>
         )}

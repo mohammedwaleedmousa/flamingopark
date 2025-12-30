@@ -24,17 +24,15 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
 
   return (
     <>
-      {/* Accessory Card - Horizontal Rectangular Design */}
+      {/* Accessory Card - Full Width Image Background Design */}
       <div
-        className={`relative flex items-center gap-3 rounded-lg overflow-hidden border cursor-pointer p-2 ${
-          quantity > 0
-            ? 'border-gold bg-gold/5'
-            : 'border-border bg-card hover:border-gold/50'
+        className={`relative w-full h-28 rounded-xl overflow-hidden cursor-pointer ${
+          quantity > 0 ? 'ring-2 ring-gold' : ''
         }`}
         onClick={() => setShowPopup(true)}
       >
-        {/* Image */}
-        <div className="relative w-14 h-14 flex-shrink-0 rounded-md overflow-hidden bg-muted">
+        {/* Background Image */}
+        <div className="absolute inset-0">
           {accessory.image_url ? (
             <img
               src={accessory.image_url}
@@ -42,52 +40,66 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
               className="w-full h-full object-cover"
             />
           ) : (
-            <div className="w-full h-full flex items-center justify-center">
-              <span className="text-xl opacity-30">📦</span>
+            <div className="w-full h-full bg-muted flex items-center justify-center">
+              <span className="text-4xl opacity-30">📦</span>
             </div>
           )}
+          {/* Overlay Gradient */}
+          <div className="absolute inset-0 bg-gradient-to-l from-background/90 via-background/60 to-transparent" />
         </div>
 
-        {/* Info */}
-        <div className="flex-1 min-w-0">
-          <h4 className="font-body text-sm text-foreground truncate">{accessory.name_ar}</h4>
-          <span className="text-gold font-heading text-sm">
-            +{accessory.price} <span className="text-[10px]">{currency}</span>
-          </span>
-        </div>
+        {/* Content */}
+        <div className="relative h-full flex flex-col justify-between p-3">
+          {/* Top - Name */}
+          <div className="text-right">
+            <h4 className="font-heading text-sm md:text-base text-foreground leading-tight">
+              {accessory.name_ar}
+            </h4>
+          </div>
 
-        {/* Quantity Controls */}
-        <div className="flex items-center gap-1 flex-shrink-0">
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onQuantityChange(-1);
-            }}
-            className="w-7 h-7 rounded bg-muted flex items-center justify-center hover:bg-gold/10 hover:text-gold"
-          >
-            <Minus className="w-3 h-3" />
-          </button>
-          <span className="w-6 text-center text-sm font-medium">{quantity}</span>
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onQuantityChange(1);
-            }}
-            className="w-7 h-7 rounded bg-muted flex items-center justify-center hover:bg-gold/10 hover:text-gold"
-          >
-            <Plus className="w-3 h-3" />
-          </button>
+          {/* Middle - Price */}
+          <div className="text-center">
+            <div className="inline-flex items-center gap-2 bg-background/80 backdrop-blur-sm px-3 py-1 rounded-lg border border-border/50">
+              <span className="font-heading text-lg text-gold">
+                {accessory.price}
+              </span>
+              <span className="text-xs text-muted-foreground">{currency}</span>
+            </div>
+          </div>
+
+          {/* Bottom - Quantity Controls */}
+          <div className="flex items-center justify-start gap-2">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuantityChange(1);
+              }}
+              className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 flex items-center justify-center hover:bg-gold hover:text-secondary hover:border-gold transition-all"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <span className="w-6 text-center font-heading text-lg text-foreground">{quantity}</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onQuantityChange(-1);
+              }}
+              className="w-8 h-8 rounded-full bg-background/80 backdrop-blur-sm border border-border/50 flex items-center justify-center hover:bg-gold hover:text-secondary hover:border-gold transition-all"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+          </div>
         </div>
 
         {/* Selected Badge */}
         {quantity > 0 && (
-          <div className="absolute top-1 right-1 bg-gold text-secondary text-[10px] font-bold w-4 h-4 flex items-center justify-center rounded-full">
-            ✓
+          <div className="absolute top-2 left-2 bg-gold text-secondary text-xs font-bold px-2 py-0.5 rounded-full">
+            ✓ {quantity}
           </div>
         )}
       </div>
 
-      {/* Floating Popup */}
+      {/* Floating Popup for Description */}
       <AnimatePresence>
         {showPopup && (
           <>
@@ -111,9 +123,9 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
               <div className="min-h-full flex items-center justify-center p-4 py-8">
                 {/* Popup Content */}
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  exit={{ opacity: 0, scale: 0.95 }}
+                  initial={{ opacity: 0, scale: 0.95, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95, y: 20 }}
                   className="relative w-full max-w-md bg-card border border-border rounded-2xl shadow-2xl overflow-hidden"
                   onClick={(e) => e.stopPropagation()}
                 >
@@ -125,15 +137,8 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
                     <X className="w-5 h-5" />
                   </button>
 
-                  {/* Selected Badge on popup */}
-                  {quantity > 0 && (
-                    <div className="absolute top-4 right-4 z-20 bg-gold text-secondary text-sm font-bold px-3 py-1.5 rounded-full shadow-lg">
-                      الكمية: {quantity}
-                    </div>
-                  )}
-
                   {/* Accessory Image */}
-                  <div className="relative aspect-[4/3] bg-muted">
+                  <div className="relative aspect-[16/9] bg-muted">
                     {accessory.image_url ? (
                       <img
                         src={accessory.image_url}
@@ -148,17 +153,14 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
                   </div>
 
                   {/* Accessory Details */}
-                  <div className="p-6 space-y-5">
+                  <div className="p-5 space-y-4">
                     {/* Title and Price */}
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1">
-                        <h3 className="font-heading text-2xl text-foreground leading-tight">{accessory.name_ar}</h3>
-                        {accessory.name && (
-                          <p className="text-muted-foreground text-sm mt-1">{accessory.name}</p>
-                        )}
+                        <h3 className="font-heading text-xl text-foreground leading-tight">{accessory.name_ar}</h3>
                       </div>
-                      <div className="text-left flex-shrink-0 bg-gold/10 px-4 py-2 rounded-xl">
-                        <span className="font-heading text-2xl text-gold">+{accessory.price}</span>
+                      <div className="text-left flex-shrink-0 bg-gold/10 px-3 py-1.5 rounded-lg">
+                        <span className="font-heading text-xl text-gold">+{accessory.price}</span>
                         <span className="text-gold text-sm mr-1">{currency}</span>
                       </div>
                     </div>
@@ -172,48 +174,36 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
                       </div>
                     )}
 
-                    {/* Gold divider */}
-                    <div className="h-px bg-gradient-to-r from-border via-gold/40 to-border" />
-
                     {/* Quantity Controls */}
-                    <div className="flex items-center justify-between">
-                      <span className="text-foreground font-medium">اختر الكمية:</span>
-                      <div className="flex items-center gap-3 bg-muted rounded-xl p-1">
+                    <div className="flex items-center justify-between bg-muted/30 rounded-xl p-3">
+                      <span className="text-foreground font-medium text-sm">الكمية:</span>
+                      <div className="flex items-center gap-3">
                         <button
                           onClick={() => onQuantityChange(-1)}
-                          className="w-11 h-11 rounded-lg bg-background flex items-center justify-center hover:bg-gold/10 hover:text-gold transition-colors"
+                          className="w-10 h-10 rounded-full bg-background border border-border flex items-center justify-center hover:bg-gold/10 hover:border-gold hover:text-gold transition-all"
                         >
-                          <Minus className="w-5 h-5" />
+                          <Minus className="w-4 h-4" />
                         </button>
-                        <span className="w-12 text-center font-heading text-2xl">{quantity}</span>
+                        <span className="w-8 text-center font-heading text-xl">{quantity}</span>
                         <button
                           onClick={() => onQuantityChange(1)}
-                          className="w-11 h-11 rounded-lg bg-background flex items-center justify-center hover:bg-gold/10 hover:text-gold transition-colors"
+                          className="w-10 h-10 rounded-full bg-background border border-border flex items-center justify-center hover:bg-gold/10 hover:border-gold hover:text-gold transition-all"
                         >
-                          <Plus className="w-5 h-5" />
+                          <Plus className="w-4 h-4" />
                         </button>
                       </div>
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex gap-3 pt-2">
-                      <Button
-                        onClick={() => {
-                          if (quantity === 0) onQuantityChange(1);
-                          setShowPopup(false);
-                        }}
-                        className="flex-1 btn-gold py-6 font-heading text-lg"
-                      >
-                        {quantity > 0 ? 'تم ✓' : 'إضافة للمنتج'}
-                      </Button>
-                      <Button
-                        variant="outline"
-                        onClick={() => setShowPopup(false)}
-                        className="py-6 px-6 border-2"
-                      >
-                        إغلاق
-                      </Button>
-                    </div>
+                    {/* Action Button */}
+                    <Button
+                      onClick={() => {
+                        if (quantity === 0) onQuantityChange(1);
+                        setShowPopup(false);
+                      }}
+                      className="w-full btn-gold py-5 font-heading text-base"
+                    >
+                      {quantity > 0 ? 'تم الإضافة ✓' : 'إضافة للمنتج'}
+                    </Button>
                   </div>
                 </motion.div>
               </div>

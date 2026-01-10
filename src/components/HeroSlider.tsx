@@ -1,10 +1,12 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
 import { ChevronLeft, ChevronRight, Sparkles, ArrowLeft } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/store/useStore';
 import { Link } from 'react-router-dom';
+import useEmblaCarousel from 'embla-carousel-react';
+import Autoplay from 'embla-carousel-autoplay';
 
 interface Banner {
   id: string;
@@ -23,9 +25,15 @@ interface Banner {
 
 const HeroSlider = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
-  const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const { country } = useStore();
+
+  const autoplayPlugin = Autoplay({ delay: 6000, stopOnInteraction: false });
+
+  const [emblaRef, emblaApi] = useEmblaCarousel(
+    { loop: true, direction: 'rtl' },
+    [autoplayPlugin]
+  );
 
   const { data: banners = [] } = useQuery({
     queryKey: ['banners', country],
@@ -42,26 +50,22 @@ const HeroSlider = () => {
     enabled: !!country,
   });
 
+  const onSelect = useCallback(() => {
+    if (!emblaApi) return;
+    setCurrentIndex(emblaApi.selectedScrollSnap());
+    setImageLoaded(false);
+  }, [emblaApi]);
+
   useEffect(() => {
-    if (banners.length === 0 || isHovered) return;
-    const timer = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % banners.length);
-      setImageLoaded(false);
-    }, 6000);
-    return () => clearInterval(timer);
-  }, [banners.length, isHovered]);
+    if (!emblaApi) return;
+    emblaApi.on('select', onSelect);
+    return () => {
+      emblaApi.off('select', onSelect);
+    };
+  }, [emblaApi, onSelect]);
 
   const goTo = (index: number) => {
-    setCurrentIndex(index);
-    setImageLoaded(false);
-  };
-  const goPrev = () => {
-    setCurrentIndex((prev) => (prev - 1 + banners.length) % banners.length);
-    setImageLoaded(false);
-  };
-  const goNext = () => {
-    setCurrentIndex((prev) => (prev + 1) % banners.length);
-    setImageLoaded(false);
+    if (emblaApi) emblaApi.scrollTo(index);
   };
 
   // Default Hero when no banners
@@ -158,160 +162,147 @@ const HeroSlider = () => {
   const currentBanner = banners[currentIndex];
 
   return (
-    <section 
-      className="relative h-[90vh] min-h-[700px] overflow-hidden bg-secondary"
-      onMouseEnter={() => setIsHovered(true)}
-      onMouseLeave={() => setIsHovered(false)}
-    >
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={currentIndex}
-          initial={{ opacity: 0, scale: 1.1 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0, scale: 0.95 }}
-          transition={{ duration: 0.8, ease: [0.25, 0.46, 0.45, 0.94] }}
-          className="absolute inset-0"
-        >
-          {/* Background Image with Parallax Effect */}
-          <motion.div 
-            className="absolute inset-0"
-            animate={{ scale: isHovered ? 1.02 : 1 }}
-            transition={{ duration: 0.5 }}
-          >
-            {/* Image Skeleton */}
-            {!imageLoaded && (
-              <div className="absolute inset-0 bg-secondary animate-pulse" />
-            )}
-            
-            <img
-              src={currentBanner.image_url}
-              alt={currentBanner.title_ar}
-              onLoad={() => setImageLoaded(true)}
-              className={`w-full h-full object-cover transition-opacity duration-500 ${
-                imageLoaded ? 'opacity-100' : 'opacity-0'
-              }`}
-              style={{
-                transform: `scale(${currentBanner.image_zoom || 1})`,
-                objectPosition: `${currentBanner.image_position_x ?? 50}% ${currentBanner.image_position_y ?? 50}%`,
-              }}
-            />
-            
-            {/* Multi-layer Gradient Overlay */}
-            <div className="absolute inset-0 bg-gradient-to-r from-secondary via-secondary/80 to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-t from-secondary/60 via-transparent to-transparent" />
-            <div className="absolute inset-0 bg-gradient-to-b from-secondary/40 via-transparent to-transparent" />
-          </motion.div>
+    <section className="relative h-[90vh] min-h-[700px] overflow-hidden bg-secondary">
+      {/* Embla Carousel Container */}
+      <div className="absolute inset-0" ref={emblaRef}>
+        <div className="flex h-full">
+          {banners.map((banner, index) => (
+            <div key={banner.id} className="flex-[0_0_100%] min-w-0 h-full relative">
+              {/* Background Image */}
+              <div className="absolute inset-0">
+                <img
+                  src={banner.image_url}
+                  alt={banner.title_ar}
+                  onLoad={() => index === currentIndex && setImageLoaded(true)}
+                  className="w-full h-full object-cover"
+                  style={{
+                    transform: `scale(${banner.image_zoom || 1})`,
+                    objectPosition: `${banner.image_position_x ?? 50}% ${banner.image_position_y ?? 50}%`,
+                  }}
+                />
+                
+                {/* Multi-layer Gradient Overlay */}
+                <div className="absolute inset-0 bg-gradient-to-r from-secondary via-secondary/80 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-secondary/60 via-transparent to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-b from-secondary/40 via-transparent to-transparent" />
+              </div>
 
-          {/* Animated Gold Particles */}
-          <div className="absolute inset-0 pointer-events-none">
-            {[...Array(15)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute w-1 h-1 bg-gold rounded-full"
-                initial={{ 
-                  x: `${20 + Math.random() * 30}%`, 
-                  y: `${Math.random() * 100}%`,
-                  opacity: 0 
-                }}
-                animate={{ 
-                  y: [null, '-100%'],
-                  opacity: [0, 0.8, 0]
-                }}
-                transition={{ 
-                  duration: 4 + Math.random() * 3,
-                  repeat: Infinity,
-                  delay: Math.random() * 2
-                }}
-              />
-            ))}
-          </div>
-
-          {/* Content - Centered */}
-          <div className="relative h-full container mx-auto px-4 flex items-center justify-center">
-            <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3, duration: 0.6, ease: [0.25, 0.46, 0.45, 0.94] }}
-              className="max-w-2xl text-center flex flex-col items-center justify-center"
-            >
-              {/* Subtitle Badge */}
-              {currentBanner.subtitle_ar && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.4 }}
-                  className="inline-flex items-center gap-2 px-5 py-2.5 bg-gold/10 backdrop-blur-sm rounded-full mb-6 border border-gold/20"
-                >
-                  <Sparkles className="w-4 h-4 text-gold" />
-                  <span className="text-gold font-body text-sm tracking-[0.2em] uppercase">
-                    {currentBanner.subtitle_ar}
-                  </span>
-                </motion.div>
-              )}
-
-              {/* Title */}
-              <motion.h1
-                initial={{ opacity: 0, y: 40 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.5, duration: 0.6 }}
-                className="font-heading text-5xl md:text-6xl lg:text-7xl text-secondary-foreground leading-[1.1] mb-6 text-center"
-              >
-                {currentBanner.title_ar.split(' ').map((word, idx) => (
-                  <span key={idx}>
-                    {idx === 0 ? (
-                      <span className="text-gold-gradient">{word}</span>
-                    ) : (
-                      <span> {word}</span>
-                    )}
-                  </span>
+              {/* Animated Gold Particles */}
+              <div className="absolute inset-0 pointer-events-none">
+                {[...Array(15)].map((_, i) => (
+                  <motion.div
+                    key={i}
+                    className="absolute w-1 h-1 bg-gold rounded-full"
+                    initial={{ 
+                      x: `${20 + Math.random() * 30}%`, 
+                      y: `${Math.random() * 100}%`,
+                      opacity: 0 
+                    }}
+                    animate={{ 
+                      y: [null, '-100%'],
+                      opacity: [0, 0.8, 0]
+                    }}
+                    transition={{ 
+                      duration: 4 + Math.random() * 3,
+                      repeat: Infinity,
+                      delay: Math.random() * 2
+                    }}
+                  />
                 ))}
-              </motion.h1>
+              </div>
 
-              {/* Decorative Line - Centered */}
-              <motion.div
-                initial={{ scaleX: 0 }}
-                animate={{ scaleX: 1 }}
-                transition={{ delay: 0.7, duration: 0.6 }}
-                className="w-24 h-1 bg-gradient-to-r from-gold to-gold-light mb-8"
-              />
+              {/* Content - Positioned at bottom */}
+              <div className="relative h-full container mx-auto px-4 flex items-end justify-center pb-28 md:pb-32">
+                <AnimatePresence mode="wait">
+                  {index === currentIndex && (
+                    <motion.div
+                      key={banner.id}
+                      initial={{ opacity: 0, y: 30 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -20 }}
+                      transition={{ delay: 0.2, duration: 0.5 }}
+                      className="max-w-2xl text-center flex flex-col items-center justify-center"
+                    >
+                      {/* Subtitle Badge */}
+                      {banner.subtitle_ar && (
+                        <motion.div
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: 0.3 }}
+                          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gold/10 backdrop-blur-sm rounded-full mb-4 border border-gold/20"
+                        >
+                          <Sparkles className="w-4 h-4 text-gold" />
+                          <span className="text-gold font-body text-sm tracking-[0.2em] uppercase">
+                            {banner.subtitle_ar}
+                          </span>
+                        </motion.div>
+                      )}
 
-              {/* CTA Buttons - Centered */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.8 }}
-                className="flex flex-col items-center gap-3"
-              >
-                <Link
-                  to={currentBanner.cta_link || '/products'}
-                  className="group relative inline-flex items-center justify-center gap-3 px-10 py-4 bg-gold text-secondary font-heading tracking-wider text-sm uppercase overflow-hidden rounded-lg transition-all duration-300 hover:shadow-[0_10px_40px_-10px_hsl(var(--gold)/0.5)] min-w-[200px]"
-                >
-                  {/* Shine Effect */}
-                  <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
-                  
-                  <span className="relative">{currentBanner.cta_text_ar || 'تسوق الآن'}</span>
-                  <ArrowLeft className="w-5 h-5 relative group-hover:-translate-x-1 transition-transform" />
-                </Link>
+                      {/* Title */}
+                      <motion.h1
+                        initial={{ opacity: 0, y: 40 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.4, duration: 0.6 }}
+                        className="font-heading text-4xl md:text-5xl lg:text-6xl text-secondary-foreground leading-[1.1] mb-4 text-center"
+                      >
+                        {banner.title_ar.split(' ').map((word, idx) => (
+                          <span key={idx}>
+                            {idx === 0 ? (
+                              <span className="text-gold-gradient">{word}</span>
+                            ) : (
+                              <span> {word}</span>
+                            )}
+                          </span>
+                        ))}
+                      </motion.h1>
 
-                {/* Secondary Link */}
-                <Link
-                  to="/about"
-                  className="inline-flex items-center justify-center gap-2 px-10 py-4 bg-gold/10 backdrop-blur-sm border border-gold/30 text-gold font-heading tracking-wider text-sm uppercase hover:bg-gold/20 transition-all duration-300 rounded-lg min-w-[200px]"
-                >
-                  اعرف المزيد
-                  <ChevronLeft className="w-4 h-4" />
-                </Link>
-              </motion.div>
-            </motion.div>
-          </div>
-        </motion.div>
-      </AnimatePresence>
+                      {/* Decorative Line - Centered */}
+                      <motion.div
+                        initial={{ scaleX: 0 }}
+                        animate={{ scaleX: 1 }}
+                        transition={{ delay: 0.5, duration: 0.6 }}
+                        className="w-20 h-0.5 bg-gradient-to-r from-gold to-gold-light mb-6"
+                      />
 
-      {/* Navigation Arrows - Hidden on mobile */}
+                      {/* CTA Buttons - Centered */}
+                      <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.6 }}
+                        className="flex flex-col sm:flex-row items-center gap-3"
+                      >
+                        <Link
+                          to={banner.cta_link || '/products'}
+                          className="group relative inline-flex items-center justify-center gap-3 px-8 py-3 bg-gold text-secondary font-heading tracking-wider text-sm uppercase overflow-hidden rounded-lg transition-all duration-300 hover:shadow-[0_10px_40px_-10px_hsl(var(--gold)/0.5)] min-w-[180px]"
+                        >
+                          {/* Shine Effect */}
+                          <span className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700" />
+                          
+                          <span className="relative">{banner.cta_text_ar || 'تسوق الآن'}</span>
+                          <ArrowLeft className="w-4 h-4 relative group-hover:-translate-x-1 transition-transform" />
+                        </Link>
+
+                        {/* Secondary Link */}
+                        <Link
+                          to="/about"
+                          className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-gold/10 backdrop-blur-sm border border-gold/30 text-gold font-heading tracking-wider text-sm uppercase hover:bg-gold/20 transition-all duration-300 rounded-lg min-w-[180px]"
+                        >
+                          اعرف المزيد
+                          <ChevronLeft className="w-4 h-4" />
+                        </Link>
+                      </motion.div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
 
       {/* Progress Bar & Dots */}
       {banners.length > 1 && (
-        <div className="absolute bottom-8 left-1/2 -translate-x-1/2">
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 z-10">
           <div className="flex items-center gap-4">
             {banners.map((_, index) => (
               <button
@@ -328,6 +319,7 @@ const HeroSlider = () => {
                       initial={{ width: '0%' }}
                       animate={{ width: '100%' }}
                       transition={{ duration: 6, ease: 'linear' }}
+                      key={`progress-${currentIndex}`}
                     />
                   )}
                 </div>
@@ -343,14 +335,14 @@ const HeroSlider = () => {
       )}
 
       {/* Bottom Gradient */}
-      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent pointer-events-none" />
+      <div className="absolute bottom-0 left-0 right-0 h-32 bg-gradient-to-t from-background to-transparent pointer-events-none z-10" />
 
       {/* Scroll Indicator */}
       <motion.div
         initial={{ opacity: 0 }}
         animate={{ opacity: 1, y: [0, 10, 0] }}
         transition={{ delay: 1.5, y: { repeat: Infinity, duration: 1.5 } }}
-        className="absolute bottom-20 left-1/2 -translate-x-1/2 hidden md:block"
+        className="absolute bottom-20 left-1/2 -translate-x-1/2 hidden md:block z-10"
       >
         <div className="w-6 h-10 border-2 border-gold/30 rounded-full flex items-start justify-center p-2">
           <motion.div

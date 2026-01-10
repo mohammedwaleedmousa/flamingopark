@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2 } from "lucide-react";
+import { Loader2, UserX } from "lucide-react";
 import Logo from "@/components/Logo";
 
 const CustomerAuthPage = () => {
@@ -41,7 +41,7 @@ const CustomerAuthPage = () => {
     if (!detectedCountry) {
       toast({
         title: "خطأ",
-        description: "يرجى إدخال رقم هاتف صحيح  )",
+        description: "يرجى إدخال رقم هاتف صحيح",
         variant: "destructive",
       });
       return;
@@ -87,6 +87,27 @@ const CustomerAuthPage = () => {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleSkipLogin = () => {
+    // Set a guest customer with default country based on a simple check
+    // User will need to enter their details at checkout
+    const guestCountry: "SA" | "YE" = "SA"; // Default to Saudi
+    
+    setCustomer({
+      id: "guest",
+      name: "ضيف",
+      phone: "",
+      country: guestCountry,
+    });
+    setCountry(guestCountry);
+    
+    toast({
+      title: "مرحباً بك",
+      description: "ستحتاج لإدخال بياناتك عند إتمام الطلب",
+    });
+    
+    navigate("/home");
   };
 
   return (
@@ -139,6 +160,22 @@ const CustomerAuthPage = () => {
               {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "دخول"}
             </Button>
           </form>
+
+          {/* Skip Login Button */}
+          <div className="pt-2 border-t border-border/30">
+            <Button
+              type="button"
+              variant="ghost"
+              onClick={handleSkipLogin}
+              className="w-full text-muted-foreground hover:text-foreground h-10 rounded-xl font-body text-sm gap-2"
+            >
+              <UserX className="w-4 h-4" />
+              تخطي التسجيل والتصفح كضيف
+            </Button>
+            <p className="text-xs text-muted-foreground/70 text-center mt-2">
+              ستحتاج لإدخال بياناتك عند إتمام الطلب
+            </p>
+          </div>
         </div>
       </motion.div>
     </div>

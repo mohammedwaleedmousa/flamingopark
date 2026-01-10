@@ -280,6 +280,15 @@ const CheckoutPage = () => {
     // Prevent double submission
     if (isSubmitting) return;
     
+    // For guest users, validate name and phone
+    const isGuest = customer?.id === "guest";
+    const customerName = isGuest ? formData.name : customer?.name;
+    const customerPhone = isGuest ? formData.phone : customer?.phone;
+    
+    if (isGuest && (!formData.name.trim() || !formData.phone.trim())) {
+      return toast({ title: "خطأ", description: "يرجى إدخال الاسم ورقم الهاتف", variant: "destructive" });
+    }
+    
     if (!formData.address || !selectedDelivery)
       return toast({ title: "خطأ", description: "يرجى ملء جميع الحقول المطلوبة", variant: "destructive" });
     if (paymentMethod === "cod" && codRegions.length > 0 && !selectedRegion)
@@ -413,22 +422,42 @@ const CheckoutPage = () => {
                 <h2 className="font-heading text-xl text-foreground mb-6">معلومات التوصيل</h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-body text-muted-foreground mb-2">الاسم الكامل</label>
-                    <Input
-                      value={customer?.name || ""}
-                      disabled
-                      className="bg-muted/50 border-border text-foreground"
-                      dir="rtl"
-                    />
+                    <label className="block text-sm font-body text-muted-foreground mb-2">الاسم الكامل *</label>
+                    {customer?.id === "guest" ? (
+                      <Input
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
+                        dir="rtl"
+                        placeholder="أدخل اسمك الكامل"
+                      />
+                    ) : (
+                      <Input
+                        value={customer?.name || ""}
+                        disabled
+                        className="bg-muted/50 border-border text-foreground"
+                        dir="rtl"
+                      />
+                    )}
                   </div>
                   <div>
-                    <label className="block text-sm font-body text-muted-foreground mb-2">رقم الهاتف</label>
-                    <Input
-                      value={customer?.phone || ""}
-                      disabled
-                      className="bg-muted/50 border-border text-foreground"
-                      dir="ltr"
-                    />
+                    <label className="block text-sm font-body text-muted-foreground mb-2">رقم الهاتف *</label>
+                    {customer?.id === "guest" ? (
+                      <Input
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
+                        dir="ltr"
+                        placeholder="05xxxxxxxx"
+                      />
+                    ) : (
+                      <Input
+                        value={customer?.phone || ""}
+                        disabled
+                        className="bg-muted/50 border-border text-foreground"
+                        dir="ltr"
+                      />
+                    )}
                   </div>
                   <div className="md:col-span-2">
                     <label className="block text-sm font-body text-muted-foreground mb-2">العنوان *</label>

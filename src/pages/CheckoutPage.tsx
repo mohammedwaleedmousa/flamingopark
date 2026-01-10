@@ -347,8 +347,8 @@ const CheckoutPage = () => {
         discount_amount: discountAmount,
       };
       
-      // Only add customer_id if it exists
-      if (customer?.id) {
+      // Only add customer_id if it's a valid registered customer (not guest)
+      if (customer?.id && customer.id !== "guest") {
         orderPayload.customer_id = customer.id;
       }
       

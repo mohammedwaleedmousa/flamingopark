@@ -17,7 +17,8 @@ import {
   MapPin,
   TrendingUp,
   Percent,
-  Ticket
+  Ticket,
+  QrCode
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -54,6 +55,7 @@ const menuItems = [
   { title: 'التقييمات', url: '/admin/reviews', icon: Star },
   { title: 'الأقسام', url: '/admin/sections', icon: LayoutGrid },
   { title: 'المحتوى', url: '/admin/content', icon: FileText },
+  { title: 'باركود الموقع', url: '/qr-code', icon: QrCode },
   { title: 'الإعدادات', url: '/admin/settings', icon: Settings },
 ];
 

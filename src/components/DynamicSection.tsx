@@ -177,17 +177,13 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
   const remainingCount = totalCount - displayCount;
 
   const handleLoadMore = () => {
-    // Store current scroll position
-    const currentScrollY = window.scrollY;
-    
     setIsLoadingMore(true);
+    // Simply update the display count - React Query will handle fetching
     setDisplayCount(prev => prev + LOAD_MORE_COUNT);
-    
-    // Restore scroll position after state update
-    requestAnimationFrame(() => {
-      window.scrollTo(0, currentScrollY);
+    // Small delay to show loading state
+    setTimeout(() => {
       setIsLoadingMore(false);
-    });
+    }, 100);
   };
 
   return (

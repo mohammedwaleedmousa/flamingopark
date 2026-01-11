@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
-import { ShoppingBag, Search, Menu, X, MapPin, Heart } from "lucide-react";
+import { ShoppingBag, Search, Menu, X, MapPin, Heart, QrCode } from "lucide-react";
 import { useState } from "react";
 import { useStore } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
@@ -165,8 +165,20 @@ const Navbar = () => {
                 ))}
               </div>
 
-              {/* Country Selector */}
+              {/* Share QR Code */}
               <div className="mt-6 pt-4 border-t border-gold/20">
+                <Link
+                  to="/qr-code"
+                  onClick={() => setIsMenuOpen(false)}
+                  className="flex items-center justify-center gap-2 w-full py-3 text-gold/70 hover:text-gold transition-colors"
+                >
+                  <QrCode className="w-4 h-4" />
+                  <span className="font-body text-sm">شارك الموقع</span>
+                </Link>
+              </div>
+
+              {/* Country Selector */}
+              <div className="mt-4 pt-4 border-t border-gold/20">
                 <button
                   onClick={() => {
                     navigate("/select-country");

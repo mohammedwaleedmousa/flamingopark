@@ -89,28 +89,57 @@ const CustomerAuthPage = () => {
     }
   };
 
-  const [showCountrySelect, setShowCountrySelect] = useState(false);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
 
-  const handleSkipLogin = () => {
-    // Show country selection modal
-    setShowCountrySelect(true);
-  };
-
-  const handleSelectCountry = (selectedCountry: Country) => {
+  const handleSkipLogin = async () => {
+    setIsDetectingLocation(true);
+    
+    try {
+      // Try to detect country using IP geolocation
+      const response = await fetch('https://ipapi.co/json/', { 
+        signal: AbortSignal.timeout(3000) // 3 second timeout
+      });
+      
+      if (response.ok) {
+        const data = await response.json();
+        const detectedCountry: Country = data.country_code === 'SA' ? 'SA' : 
+                                          data.country_code === 'YE' ? 'YE' : 'SA';
+        
+        setCustomer({
+          id: "guest",
+          name: "ضيف",
+          phone: "",
+          country: detectedCountry,
+        });
+        setCountry(detectedCountry);
+        
+        toast({
+          title: "مرحباً بك",
+          description: `تم تحديد موقعك: ${detectedCountry === 'SA' ? 'السعودية 🇸🇦' : 'اليمن 🇾🇪'}`,
+        });
+        
+        navigate("/home");
+        return;
+      }
+    } catch (error) {
+      console.log('Geolocation failed, using default');
+    }
+    
+    // Fallback to Saudi Arabia
     setCustomer({
       id: "guest",
       name: "ضيف",
       phone: "",
-      country: selectedCountry,
+      country: "SA",
     });
-    setCountry(selectedCountry);
+    setCountry("SA");
     
     toast({
       title: "مرحباً بك",
       description: "ستحتاج لإدخال بياناتك عند إتمام الطلب",
     });
     
-    setShowCountrySelect(false);
+    setIsDetectingLocation(false);
     navigate("/home");
   };
 
@@ -171,62 +200,25 @@ const CustomerAuthPage = () => {
               type="button"
               variant="ghost"
               onClick={handleSkipLogin}
+              disabled={isDetectingLocation}
               className="w-full text-muted-foreground hover:text-foreground h-10 rounded-xl font-body text-sm gap-2"
             >
-              <UserX className="w-4 h-4" />
-              تخطي التسجيل والتصفح كضيف
+              {isDetectingLocation ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  جاري تحديد الموقع...
+                </>
+              ) : (
+                <>
+                  <UserX className="w-4 h-4" />
+                  تخطي التسجيل والتصفح كضيف
+                </>
+              )}
             </Button>
             <p className="text-xs text-muted-foreground/70 text-center mt-2">
-              ستحتاج لإدخال بياناتك عند إتمام الطلب
+              سيتم تحديد موقعك تلقائياً
             </p>
           </div>
-
-          {/* Country Selection Modal */}
-          <AnimatePresence>
-            {showCountrySelect && (
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-                onClick={() => setShowCountrySelect(false)}
-              >
-                <motion.div
-                  initial={{ scale: 0.9, opacity: 0 }}
-                  animate={{ scale: 1, opacity: 1 }}
-                  exit={{ scale: 0.9, opacity: 0 }}
-                  className="bg-card rounded-2xl p-6 w-full max-w-sm border border-primary/40 shadow-2xl"
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <div className="text-center mb-6">
-                    <MapPin className="w-10 h-10 text-primary mx-auto mb-3" />
-                    <h2 className="text-xl font-heading text-foreground">اختر دولتك</h2>
-                    <p className="text-sm text-muted-foreground mt-1">لعرض المنتجات والأسعار المناسبة</p>
-                  </div>
-                  
-                  <div className="grid grid-cols-2 gap-4">
-                    <Button
-                      variant="outline"
-                      onClick={() => handleSelectCountry("SA")}
-                      className="h-24 flex-col gap-2 border-primary/30 hover:bg-primary hover:text-primary-foreground transition-all"
-                    >
-                      <span className="text-3xl">🇸🇦</span>
-                      <span className="font-heading">السعودية</span>
-                    </Button>
-                    
-                    <Button
-                      variant="outline"
-                      onClick={() => handleSelectCountry("YE")}
-                      className="h-24 flex-col gap-2 border-primary/30 hover:bg-primary hover:text-primary-foreground transition-all"
-                    >
-                      <span className="text-3xl">🇾🇪</span>
-                      <span className="font-heading">اليمن</span>
-                    </Button>
-                  </div>
-                </motion.div>
-              </motion.div>
-            )}
-          </AnimatePresence>
         </div>
       </motion.div>
     </div>

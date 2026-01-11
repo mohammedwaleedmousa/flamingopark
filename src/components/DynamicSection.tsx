@@ -176,11 +176,18 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
   const hasMore = displayCount < totalCount;
   const remainingCount = totalCount - displayCount;
 
-  const handleLoadMore = async () => {
+  const handleLoadMore = () => {
+    // Store current scroll position
+    const currentScrollY = window.scrollY;
+    
     setIsLoadingMore(true);
     setDisplayCount(prev => prev + LOAD_MORE_COUNT);
-    await refetch();
-    setIsLoadingMore(false);
+    
+    // Restore scroll position after state update
+    requestAnimationFrame(() => {
+      window.scrollTo(0, currentScrollY);
+      setIsLoadingMore(false);
+    });
   };
 
   return (

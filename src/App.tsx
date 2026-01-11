@@ -16,6 +16,7 @@ import AboutPage from "./pages/AboutPage";
 import OffersPage from "./pages/OffersPage";
 import ReviewsPage from "./pages/ReviewsPage";
 import NotFound from "./pages/NotFound";
+import QRCodePage from "./pages/QRCodePage";
 
 // Admin pages
 import AdminLoginPage from "./pages/admin/AdminLoginPage";
@@ -87,7 +88,7 @@ const App = () => (
           <Route path="/offers" element={<ProtectedRoute><OffersPage /></ProtectedRoute>} />
           <Route path="/reviews" element={<ProtectedRoute><ReviewsPage /></ProtectedRoute>} />
           <Route path="/favorites" element={<ProtectedRoute><FavoritesPage /></ProtectedRoute>} />
-          
+          <Route path="/qr-code" element={<QRCodePage />} />
           {/* Admin Routes */}
           <Route path="/admin/login" element={<AdminLoginPage />} />
           <Route path="/admin" element={<AdminLayout />}>

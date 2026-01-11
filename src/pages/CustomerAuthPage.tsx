@@ -1,12 +1,12 @@
 import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useStore, detectCountryFromPhone } from "@/store/useStore";
+import { useStore, detectCountryFromPhone, Country } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, UserX } from "lucide-react";
+import { Loader2, UserX, MapPin } from "lucide-react";
 import Logo from "@/components/Logo";
 
 const CustomerAuthPage = () => {
@@ -89,24 +89,28 @@ const CustomerAuthPage = () => {
     }
   };
 
+  const [showCountrySelect, setShowCountrySelect] = useState(false);
+
   const handleSkipLogin = () => {
-    // Set a guest customer with default country based on a simple check
-    // User will need to enter their details at checkout
-    const guestCountry: "SA" | "YE" = "SA"; // Default to Saudi
-    
+    // Show country selection modal
+    setShowCountrySelect(true);
+  };
+
+  const handleSelectCountry = (selectedCountry: Country) => {
     setCustomer({
       id: "guest",
       name: "ضيف",
       phone: "",
-      country: guestCountry,
+      country: selectedCountry,
     });
-    setCountry(guestCountry);
+    setCountry(selectedCountry);
     
     toast({
       title: "مرحباً بك",
       description: "ستحتاج لإدخال بياناتك عند إتمام الطلب",
     });
     
+    setShowCountrySelect(false);
     navigate("/home");
   };
 
@@ -176,6 +180,53 @@ const CustomerAuthPage = () => {
               ستحتاج لإدخال بياناتك عند إتمام الطلب
             </p>
           </div>
+
+          {/* Country Selection Modal */}
+          <AnimatePresence>
+            {showCountrySelect && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+                onClick={() => setShowCountrySelect(false)}
+              >
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  exit={{ scale: 0.9, opacity: 0 }}
+                  className="bg-card rounded-2xl p-6 w-full max-w-sm border border-primary/40 shadow-2xl"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <div className="text-center mb-6">
+                    <MapPin className="w-10 h-10 text-primary mx-auto mb-3" />
+                    <h2 className="text-xl font-heading text-foreground">اختر دولتك</h2>
+                    <p className="text-sm text-muted-foreground mt-1">لعرض المنتجات والأسعار المناسبة</p>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-4">
+                    <Button
+                      variant="outline"
+                      onClick={() => handleSelectCountry("SA")}
+                      className="h-24 flex-col gap-2 border-primary/30 hover:bg-primary hover:text-primary-foreground transition-all"
+                    >
+                      <span className="text-3xl">🇸🇦</span>
+                      <span className="font-heading">السعودية</span>
+                    </Button>
+                    
+                    <Button
+                      variant="outline"
+                      onClick={() => handleSelectCountry("YE")}
+                      className="h-24 flex-col gap-2 border-primary/30 hover:bg-primary hover:text-primary-foreground transition-all"
+                    >
+                      <span className="text-3xl">🇾🇪</span>
+                      <span className="font-heading">اليمن</span>
+                    </Button>
+                  </div>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </motion.div>
     </div>

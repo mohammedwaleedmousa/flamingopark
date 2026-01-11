@@ -110,24 +110,25 @@ const OrderConfirmationPage = () => {
       
       pdf.addImage(imgData, 'JPEG', 0, 0, imgWidth, Math.min(imgHeight, 297));
       
-      // Upload to storage (non-blocking)
-      const pdfBlob = pdf.output('blob');
-      const fileName = `invoice-${orderData.orderNumber}-${Date.now()}.pdf`;
+      // Try to upload to storage (non-blocking)
+      try {
+        const pdfBlob = pdf.output('blob');
+        const fileName = `invoice-${orderData.orderNumber}-${Date.now()}.pdf`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('invoices')
-        .upload(fileName, pdfBlob, {
-          contentType: 'application/pdf',
-          cacheControl: '3600',
-        });
+        const { error: uploadError } = await supabase.storage
+          .from('invoices')
+          .upload(fileName, pdfBlob, {
+            contentType: 'application/pdf',
+            cacheControl: '3600',
+          });
 
-      if (uploadError) {
-        console.error('Upload error:', uploadError);
-        // Continue anyway so the customer isn't blocked
-        toast({
-          title: 'تنبيه',
-          description: 'تعذر رفع ملف الفاتورة حالياً، لكن تم تأكيد الطلب بنجاح.',
-        });
+        if (uploadError) {
+          console.warn('Upload warning:', uploadError);
+          // Continue anyway so the customer isn't blocked
+        }
+      } catch (uploadErr) {
+        console.warn('Upload failed:', uploadErr);
+        // Continue anyway
       }
 
       setIsConfirmed(true);
@@ -151,11 +152,25 @@ const OrderConfirmationPage = () => {
       
     } catch (error) {
       console.error('Error:', error);
+      
+      // Even if there's an error, try to open WhatsApp with order details
+      setIsConfirmed(true);
+      
       toast({
-        title: 'خطأ',
-        description: 'فشل في تأكيد الطلب، حاول مرة أخرى',
-        variant: 'destructive',
+        title: 'تم تأكيد الطلب',
+        description: 'جاري فتح الواتساب...',
       });
+      
+      const message = `طلب جديد ✨
+
+الاسم: ${orderData.customerName}
+الهاتف: ${orderData.customerPhone}
+رقم الفاتورة: ${orderData.orderNumber}
+
+يرجى مراجعة الطلب من لوحة التحكم`;
+      
+      const whatsappUrl = `https://wa.me/${orderData.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
+      window.location.href = whatsappUrl;
     } finally {
       setIsConfirming(false);
     }

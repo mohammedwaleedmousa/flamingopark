@@ -10,8 +10,8 @@ import ermgoldLogo from '@/assets/ermgold-logo-new.jpeg';
 const QRCodePage = () => {
   const qrRef = useRef<HTMLDivElement>(null);
   
-  // Get the current website URL
-  const websiteUrl = window.location.origin;
+  // Use a fully qualified URL so phone cameras treat it as a website link
+  const websiteUrl = new URL('/', window.location.origin).toString();
 
   const handleDownload = async () => {
     if (!qrRef.current) return;

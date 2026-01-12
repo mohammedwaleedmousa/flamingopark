@@ -1,7 +1,6 @@
 import { motion } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { Sparkles, Crown, Percent, Star, ChevronDown, Loader2 } from 'lucide-react';
-import { useState } from 'react';
 import ProductCard from '@/components/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/store/useStore';
@@ -34,102 +33,36 @@ const filterIcons: Record<string, typeof Sparkles> = {
 const INITIAL_DISPLAY = 8;
 const LOAD_MORE_COUNT = 8;
 
+type ProductsCountInfo = {
+  totalCount: number;
+  useDirect: boolean;
+};
+
+const mapRowToProduct = (p: any): Product => ({
+  id: p.id,
+  name: p.name,
+  nameAr: p.name_ar,
+  slug: p.slug,
+  price: Number(p.price),
+  originalPrice: p.original_price ? Number(p.original_price) : undefined,
+  discount: p.discount || undefined,
+  description: p.description || '',
+  descriptionAr: p.description_ar || '',
+  images: p.images || [],
+  category: p.category,
+  brand: p.brand,
+  inStock: p.in_stock ?? true,
+  countries: (p.countries || ['SA', 'YE']) as ('SA' | 'YE')[],
+  isFeatured: p.is_featured,
+  isBestSeller: p.is_best_seller,
+});
+
 const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
   const Icon = filterIcons[section.filter_type] || Sparkles;
   const isDiscounted = section.filter_type === 'discounted';
-  const [displayCount, setDisplayCount] = useState(INITIAL_DISPLAY);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
 
-  const { data: products = [], refetch } = useQuery({
-    queryKey: ['section-products', section.id, country, displayCount],
-    queryFn: async () => {
-      // First try to get products assigned directly to this section
-      const { data: directProducts, error: directError } = await supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .contains('countries', [country])
-        .contains('section_ids', [section.id])
-        .order('sort_order', { ascending: true })
-        .limit(displayCount);
-
-      // If there are directly assigned products, use them
-      if (!directError && directProducts && directProducts.length > 0) {
-        return directProducts.map((p) => ({
-          id: p.id,
-          name: p.name,
-          nameAr: p.name_ar,
-          slug: p.slug,
-          price: Number(p.price),
-          originalPrice: p.original_price ? Number(p.original_price) : undefined,
-          discount: p.discount || undefined,
-          description: p.description || '',
-          descriptionAr: p.description_ar || '',
-          images: p.images || [],
-          category: p.category,
-          brand: p.brand,
-          inStock: p.in_stock ?? true,
-          countries: (p.countries || ['SA', 'YE']) as ('SA' | 'YE')[],
-          isFeatured: p.is_featured,
-          isBestSeller: p.is_best_seller,
-        })) as Product[];
-      }
-
-      // Otherwise, fall back to filter_type based filtering
-      let query = supabase
-        .from('products')
-        .select('*')
-        .eq('is_active', true)
-        .contains('countries', [country]);
-
-      switch (section.filter_type) {
-        case 'featured':
-          query = query.eq('is_featured', true);
-          break;
-        case 'best_seller':
-          query = query.eq('is_best_seller', true);
-          break;
-        case 'discounted':
-          query = query.gt('discount', 0).order('discount', { ascending: false });
-          break;
-        case 'new':
-          query = query.order('created_at', { ascending: false });
-          break;
-        default:
-          break;
-      }
-
-      // Always use sort_order as secondary sort
-      query = query.order('sort_order', { ascending: true });
-
-      const { data, error } = await query.limit(displayCount);
-      if (error) throw error;
-
-      return data.map((p) => ({
-        id: p.id,
-        name: p.name,
-        nameAr: p.name_ar,
-        slug: p.slug,
-        price: Number(p.price),
-        originalPrice: p.original_price ? Number(p.original_price) : undefined,
-        discount: p.discount || undefined,
-        description: p.description || '',
-        descriptionAr: p.description_ar || '',
-        images: p.images || [],
-        category: p.category,
-        brand: p.brand,
-        inStock: p.in_stock ?? true,
-        countries: (p.countries || ['SA', 'YE']) as ('SA' | 'YE')[],
-        isFeatured: p.is_featured,
-        isBestSeller: p.is_best_seller,
-      })) as Product[];
-    },
-    enabled: !!country,
-  });
-
-  // Check if there are more products available
-  const { data: totalCount = 0 } = useQuery({
-    queryKey: ['section-products-count', section.id, country],
+  const { data: countInfo } = useQuery<ProductsCountInfo>({
+    queryKey: ['section-products-count', section.id, country, section.filter_type],
     queryFn: async () => {
       // First check for directly assigned products
       const { count: directCount } = await supabase
@@ -139,8 +72,8 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
         .contains('countries', [country])
         .contains('section_ids', [section.id]);
 
-      if (directCount && directCount > 0) {
-        return directCount;
+      if ((directCount ?? 0) > 0) {
+        return { totalCount: directCount ?? 0, useDirect: true };
       }
 
       // Fall back to filter_type based count
@@ -165,45 +98,96 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
       }
 
       const { count } = await query;
-      return count || 0;
+      return { totalCount: count || 0, useDirect: false };
     },
     enabled: !!country,
   });
 
+  const totalCount = countInfo?.totalCount ?? 0;
+  const useDirect = countInfo?.useDirect ?? false;
+
+  const productsQuery = useInfiniteQuery<Product[]>({
+    queryKey: ['section-products', section.id, country, section.filter_type, useDirect],
+    enabled: !!country && !!countInfo,
+    initialPageParam: { offset: 0, limit: INITIAL_DISPLAY },
+    queryFn: async ({ pageParam }) => {
+      const offset = (pageParam as any)?.offset ?? 0;
+      const limit = (pageParam as any)?.limit ?? INITIAL_DISPLAY;
+
+      let query = supabase
+        .from('products')
+        .select('*')
+        .eq('is_active', true)
+        .contains('countries', [country]);
+
+      if (useDirect) {
+        query = query.contains('section_ids', [section.id]);
+        query = query.order('sort_order', { ascending: true });
+      } else {
+        switch (section.filter_type) {
+          case 'featured':
+            query = query.eq('is_featured', true);
+            break;
+          case 'best_seller':
+            query = query.eq('is_best_seller', true);
+            break;
+          case 'discounted':
+            query = query.gt('discount', 0).order('discount', { ascending: false });
+            break;
+          case 'new':
+            query = query.order('created_at', { ascending: false });
+            break;
+          default:
+            break;
+        }
+
+        // Always use sort_order as secondary sort
+        query = query.order('sort_order', { ascending: true });
+      }
+
+      const { data, error } = await query.range(offset, offset + limit - 1);
+      if (error) throw error;
+
+      return (data || []).map(mapRowToProduct);
+    },
+    getNextPageParam: (_lastPage, allPages) => {
+      const loaded = allPages.reduce((sum, page) => sum + page.length, 0);
+      if (loaded >= totalCount) return undefined;
+      return { offset: loaded, limit: LOAD_MORE_COUNT };
+    },
+  });
+
+  const products = productsQuery.data?.pages.flat() ?? [];
+
   if (products.length === 0) return null;
 
   const isEven = index % 2 === 0;
-  const hasMore = displayCount < totalCount;
-  const remainingCount = totalCount - displayCount;
+  const hasMore = products.length < totalCount;
+  const remainingCount = totalCount - products.length;
 
-  const handleLoadMore = () => {
-    setIsLoadingMore(true);
-    // Simply update the display count - React Query will handle fetching
-    setDisplayCount(prev => prev + LOAD_MORE_COUNT);
-    // Small delay to show loading state
-    setTimeout(() => {
-      setIsLoadingMore(false);
-    }, 100);
+  const handleLoadMore = async () => {
+    if (!productsQuery.hasNextPage || productsQuery.isFetchingNextPage) return;
+
+    // Prevent the browser from "following" the focused button downward when items are appended
+    const currentY = window.scrollY;
+    await productsQuery.fetchNextPage();
+    requestAnimationFrame(() => window.scrollTo({ top: currentY }));
   };
 
   return (
     <section
-      className={`py-16 md:py-20 ${
-        isEven ? '' : 'bg-gradient-to-b from-muted/50 to-muted'
-      } ${isDiscounted ? 'relative overflow-hidden' : ''}`}
+      className={`py-16 md:py-20 ${isEven ? '' : 'bg-gradient-to-b from-muted/50 to-muted'} ${
+        isDiscounted ? 'relative overflow-hidden' : ''
+      }`}
     >
-      {isDiscounted && (
-        <div className="absolute inset-0 bg-gradient-to-br from-gold/5 via-transparent to-gold/5" />
-      )}
+      {isDiscounted && <div className="absolute inset-0 bg-gradient-to-br from-gold/5 via-transparent to-gold/5" />}
 
       <div className="container mx-auto px-4 relative z-10">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className={`flex items-center justify-between mb-10 ${
-            !isEven ? 'flex-col text-center' : ''
-          }`}
+          className={`flex items-center justify-between mb-10 ${!isEven ? 'flex-col text-center' : ''}`}
         >
           <div className={!isEven ? 'mb-6' : ''}>
             {!isEven ? (
@@ -259,20 +243,20 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
           ))}
         </div>
 
-        {/* Load More Button - Always shows if there are more products */}
+        {/* Load More Button */}
         {hasMore && (
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="text-center mt-8"
-          >
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center mt-8">
             <Button
-              onClick={handleLoadMore}
-              disabled={isLoadingMore}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={(e) => {
+                (e.currentTarget as HTMLButtonElement).blur();
+                void handleLoadMore();
+              }}
+              disabled={productsQuery.isFetchingNextPage}
               variant="outline"
               className="gap-2 border-gold/30 text-gold hover:bg-gold hover:text-secondary px-8 py-6"
             >
-              {isLoadingMore ? (
+              {productsQuery.isFetchingNextPage ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <ChevronDown className="w-4 h-4" />
@@ -287,3 +271,4 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
 };
 
 export default DynamicSection;
+

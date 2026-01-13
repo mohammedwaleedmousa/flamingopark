@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -21,9 +21,10 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Copy, ExternalLink, GripVertical, Eye } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy, ExternalLink, Eye, QrCode, Download } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
+import { QRCodeSVG } from "qrcode.react";
 
 interface Beneficiary {
   id: string;
@@ -48,6 +49,9 @@ const AdminBeneficiariesPage = () => {
   const [editingBeneficiary, setEditingBeneficiary] = useState<Beneficiary | null>(null);
   const [selectedBeneficiary, setSelectedBeneficiary] = useState<Beneficiary | null>(null);
   const [isStatsDialogOpen, setIsStatsDialogOpen] = useState(false);
+  const [isQRDialogOpen, setIsQRDialogOpen] = useState(false);
+  const [qrBeneficiary, setQrBeneficiary] = useState<Beneficiary | null>(null);
+  const qrRef = useRef<HTMLDivElement>(null);
   
   const [formData, setFormData] = useState({
     name: "",
@@ -233,6 +237,56 @@ const AdminBeneficiariesPage = () => {
     setIsStatsDialogOpen(true);
   };
 
+  const handleViewQR = (beneficiary: Beneficiary) => {
+    setQrBeneficiary(beneficiary);
+    setIsQRDialogOpen(true);
+  };
+
+  const downloadQR = () => {
+    if (!qrRef.current || !qrBeneficiary) return;
+    
+    const svg = qrRef.current.querySelector('svg');
+    if (!svg) return;
+    
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      canvas.width = 400;
+      canvas.height = 500;
+      if (ctx) {
+        // White background
+        ctx.fillStyle = 'white';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        // Draw QR code centered
+        ctx.drawImage(img, 50, 30, 300, 300);
+        
+        // Add text
+        ctx.fillStyle = 'black';
+        ctx.font = 'bold 24px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(qrBeneficiary.name, canvas.width / 2, 370);
+        
+        ctx.font = '18px Arial';
+        ctx.fillStyle = '#666';
+        ctx.fillText(`كود: ${qrBeneficiary.code}`, canvas.width / 2, 400);
+        ctx.fillText(`خصم ${qrBeneficiary.discount_percentage}%`, canvas.width / 2, 430);
+        
+        // Download
+        const link = document.createElement('a');
+        link.download = `qr-${qrBeneficiary.code}.png`;
+        link.href = canvas.toDataURL('image/png');
+        link.click();
+      }
+    };
+    
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
+    toast.success("تم تحميل الباركود");
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -373,6 +427,55 @@ const AdminBeneficiariesPage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* QR Code Dialog */}
+      <Dialog open={isQRDialogOpen} onOpenChange={setIsQRDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-center">باركود المستفيد</DialogTitle>
+          </DialogHeader>
+          {qrBeneficiary && (
+            <div className="space-y-4">
+              <div 
+                ref={qrRef}
+                className="bg-white p-6 rounded-lg flex flex-col items-center"
+              >
+                <QRCodeSVG
+                  value={`${window.location.origin}?ref=${qrBeneficiary.code}`}
+                  size={200}
+                  level="H"
+                  includeMargin
+                />
+                <p className="mt-4 font-bold text-lg text-gray-900">{qrBeneficiary.name}</p>
+                <p className="text-gray-600">كود: {qrBeneficiary.code}</p>
+                <p className="text-primary font-medium">خصم {qrBeneficiary.discount_percentage}%</p>
+              </div>
+              
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => copyLink(qrBeneficiary.code)}
+                >
+                  <Copy className="h-4 w-4 ml-2" />
+                  نسخ الرابط
+                </Button>
+                <Button 
+                  className="flex-1"
+                  onClick={downloadQR}
+                >
+                  <Download className="h-4 w-4 ml-2" />
+                  تحميل الباركود
+                </Button>
+              </div>
+              
+              <p className="text-xs text-center text-muted-foreground">
+                الرابط: {window.location.origin}?ref={qrBeneficiary.code}
+              </p>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Beneficiaries Table */}
       <div className="bg-card rounded-lg border">
         <Table>
@@ -446,6 +549,14 @@ const AdminBeneficiariesPage = () => {
                         title="عرض الإحصائيات"
                       >
                         <Eye className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleViewQR(beneficiary)}
+                        title="عرض الباركود"
+                      >
+                        <QrCode className="h-4 w-4" />
                       </Button>
                       <Button
                         variant="ghost"

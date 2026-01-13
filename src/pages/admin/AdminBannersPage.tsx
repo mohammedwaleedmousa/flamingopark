@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
-import { Plus, Edit, Trash2, Upload, X, Loader2, ZoomIn, Move } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, X, Loader2, ZoomIn, Move, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -206,6 +206,34 @@ const AdminBannersPage = () => {
     }
   };
 
+  const moveBanner = async (index: number, direction: 'up' | 'down') => {
+    const newIndex = direction === 'up' ? index - 1 : index + 1;
+    if (newIndex < 0 || newIndex >= banners.length) return;
+
+    const newBanners = [...banners];
+    const temp = newBanners[index];
+    newBanners[index] = newBanners[newIndex];
+    newBanners[newIndex] = temp;
+
+    // Update sort_order for both banners
+    const updates = newBanners.map((banner, i) => ({
+      id: banner.id,
+      sort_order: i,
+    }));
+
+    setBanners(newBanners);
+
+    // Update in database
+    for (const update of updates) {
+      await supabase
+        .from('banners')
+        .update({ sort_order: update.sort_order })
+        .eq('id', update.id);
+    }
+
+    toast({ title: 'تم', description: 'تم تحديث ترتيب البانرات' });
+  };
+
   const toggleCountry = (country: string) => {
     setFormData(prev => ({
       ...prev,
@@ -225,10 +253,37 @@ const AdminBannersPage = () => {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {banners.map((banner) => (
-          <div key={banner.id} className="bg-card border border-border rounded overflow-hidden">
-            <div className="aspect-video relative">
+      <div className="space-y-4">
+        {banners.map((banner, index) => (
+          <div key={banner.id} className="bg-card border border-border rounded overflow-hidden flex">
+            {/* Sort Controls */}
+            <div className="flex flex-col items-center justify-center gap-1 p-2 bg-muted/50 border-l border-border">
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                className="h-8 w-8"
+                disabled={index === 0}
+                onClick={() => moveBanner(index, 'up')}
+              >
+                <ChevronUp className="w-4 h-4" />
+              </Button>
+              <div className="flex items-center gap-1 text-xs text-muted-foreground">
+                <GripVertical className="w-3 h-3" />
+                <span>{index + 1}</span>
+              </div>
+              <Button 
+                size="icon" 
+                variant="ghost" 
+                className="h-8 w-8"
+                disabled={index === banners.length - 1}
+                onClick={() => moveBanner(index, 'down')}
+              >
+                <ChevronDown className="w-4 h-4" />
+              </Button>
+            </div>
+            
+            {/* Banner Image */}
+            <div className="w-48 h-28 relative flex-shrink-0">
               <img
                 src={banner.image_url}
                 alt={banner.title_ar}
@@ -236,27 +291,29 @@ const AdminBannersPage = () => {
               />
               {!banner.is_active && (
                 <div className="absolute inset-0 bg-secondary/80 flex items-center justify-center">
-                  <span className="text-gold font-heading">معطل</span>
+                  <span className="text-gold font-heading text-sm">معطل</span>
                 </div>
               )}
             </div>
-            <div className="p-4">
-              <h3 className="font-heading text-foreground mb-1">{banner.title_ar}</h3>
-              <p className="text-sm text-muted-foreground mb-3">{banner.subtitle_ar}</p>
-              <div className="flex items-center justify-between">
+            
+            {/* Banner Info */}
+            <div className="flex-1 p-4 flex items-center justify-between">
+              <div>
+                <h3 className="font-heading text-foreground mb-1">{banner.title_ar}</h3>
+                <p className="text-sm text-muted-foreground mb-2">{banner.subtitle_ar}</p>
                 <div className="flex gap-1">
                   {banner.countries?.map(c => (
                     <span key={c} className="text-xs">{c === 'SA' ? '🇸🇦' : '🇾🇪'}</span>
                   ))}
                 </div>
-                <div className="flex gap-2">
-                  <Button size="icon" variant="ghost" onClick={() => openDialog(banner)}>
-                    <Edit className="w-4 h-4" />
-                  </Button>
-                  <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteBanner(banner.id)}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
+              </div>
+              <div className="flex gap-2">
+                <Button size="icon" variant="ghost" onClick={() => openDialog(banner)}>
+                  <Edit className="w-4 h-4" />
+                </Button>
+                <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteBanner(banner.id)}>
+                  <Trash2 className="w-4 h-4" />
+                </Button>
               </div>
             </div>
           </div>

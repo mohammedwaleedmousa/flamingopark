@@ -146,7 +146,7 @@ const BeneficiaryAuthPage = () => {
       <div className="w-full max-w-md">
         {/* Logo */}
         <div className="text-center mb-8">
-          <Logo className="h-16 mx-auto mb-4" />
+          <Logo size="sm" className="h-12 mx-auto mb-4" />
           <h1 className="text-2xl font-bold text-primary">برنامج المستفيدين</h1>
           <p className="text-muted-foreground mt-2">
             انضم إلينا واحصل على عمولة من كل عملية بيع

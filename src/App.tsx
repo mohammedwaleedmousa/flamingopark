@@ -40,7 +40,8 @@ import AdminRevenuePage from "./pages/admin/AdminRevenuePage";
 import AdminOffersPage from "./pages/admin/AdminOffersPage";
 import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
 import AdminBeneficiariesPage from "./pages/admin/AdminBeneficiariesPage";
-import BeneficiaryPage from "./pages/BeneficiaryPage";
+import BeneficiaryAuthPage from "./pages/BeneficiaryAuthPage";
+import BeneficiaryDashboard from "./pages/BeneficiaryDashboard";
 
 const queryClient = new QueryClient();
 
@@ -116,10 +117,10 @@ const App = () => (
             <Route path="settings" element={<AdminSettingsPage />} />
           </Route>
           
-          <Route path="/beneficiary/:code" element={<BeneficiaryPage />} />
-          <Route path="/bene/:code" element={<BeneficiaryPage />} />
-          <Route path="/bene" element={<Navigate to="/" replace />} />
-          <Route path="/beneficiary" element={<Navigate to="/" replace />} />
+          <Route path="/bene" element={<BeneficiaryAuthPage />} />
+          <Route path="/bene/:code" element={<BeneficiaryDashboard />} />
+          <Route path="/beneficiary" element={<BeneficiaryAuthPage />} />
+          <Route path="/beneficiary/:code" element={<BeneficiaryDashboard />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

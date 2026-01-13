@@ -219,8 +219,9 @@ const OffersPage = () => {
     return () => clearInterval(timer);
   }, [settings?.countdown_end_date, settings?.show_countdown, queryClient]);
 
-  // Check if main timer has expired
-  const mainTimerExpired = settings?.show_countdown && settings?.countdown_end_date && mainTimeLeft.expired;
+  // Check if main timer has expired - but only hide offers if there's a valid countdown date set
+  // Don't block offers if countdown expired but offers still have valid end_dates
+  const mainTimerExpired = settings?.show_countdown && settings?.countdown_end_date && mainTimeLeft.expired && offers.length === 0;
 
   const TimeBox = ({ value, label }: { value: number; label: string }) => (
     <div className="flex flex-col items-center">

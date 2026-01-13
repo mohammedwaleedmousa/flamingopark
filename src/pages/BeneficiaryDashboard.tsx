@@ -161,12 +161,12 @@ const BeneficiaryDashboard = () => {
     <div className="min-h-screen bg-background" dir="rtl">
       {/* Header */}
       <header className="bg-card border-b sticky top-0 z-10">
-        <div className="container mx-auto px-4 py-4">
+        <div className="container mx-auto px-4 py-3">
           <div className="flex items-center justify-between">
-            <Logo className="h-10" />
-            <div className="flex items-center gap-4">
+            <Logo size="sm" className="h-8" />
+            <div className="flex items-center gap-3">
               <div className="text-left">
-                <p className="text-sm text-muted-foreground">مرحباً</p>
+                <p className="text-xs text-muted-foreground">مرحباً</p>
                 <p className="font-bold">{beneficiary.name}</p>
               </div>
               <Button variant="ghost" size="icon" onClick={handleLogout}>

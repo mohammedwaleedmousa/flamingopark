@@ -5,6 +5,7 @@ interface LogoProps {
   size?: "sm" | "md" | "lg" | "xl";
   variant?: "auth" | "invoice" | "nav" | "footer";
   className?: string;
+  invert?: boolean;
 }
 
 const sizeClasses = {
@@ -21,12 +22,12 @@ const logos = {
   footer: logoFinal,
 };
 
-const Logo = ({ size = "md", variant = "nav", className = "" }: LogoProps) => {
+const Logo = ({ size = "md", variant = "nav", className = "", invert = false }: LogoProps) => {
   return (
     <img
       src={logos[variant]}
       alt={`ERMGOLD Logo - ${variant}`}
-      className={`object-contain ${sizeClasses[size]} ${className}`}
+      className={`object-contain ${sizeClasses[size]} ${className} ${invert ? "brightness-0 invert" : ""}`}
     />
   );
 };

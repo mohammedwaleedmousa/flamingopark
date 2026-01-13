@@ -18,7 +18,8 @@ import {
   TrendingUp,
   Percent,
   Ticket,
-  QrCode
+  QrCode,
+  UserCheck
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -47,6 +48,7 @@ const menuItems = [
   { title: 'العملاء', url: '/admin/customers', icon: Users },
   { title: 'العروض', url: '/admin/offers', icon: Percent },
   { title: 'الكوبونات', url: '/admin/coupons', icon: Ticket },
+  { title: 'المستفيدين', url: '/admin/beneficiaries', icon: UserCheck },
   { title: 'البانرات', url: '/admin/banners', icon: Image },
   { title: 'الفئات', url: '/admin/categories', icon: Grid3X3 },
   { title: 'الماركات', url: '/admin/brands', icon: Tag },

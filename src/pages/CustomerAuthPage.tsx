@@ -1,15 +1,26 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useStore, detectCountryFromPhone, Country } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, UserX, MapPin } from "lucide-react";
+import { Loader2, UserX, MapPin, Gift } from "lucide-react";
 import Logo from "@/components/Logo";
 
 const CustomerAuthPage = () => {
+  const [searchParams] = useSearchParams();
+  
+  // Check for referral code in URL
+  useEffect(() => {
+    const refCode = searchParams.get('ref');
+    if (refCode) {
+      localStorage.setItem('beneficiary_ref', refCode.toUpperCase());
+    }
+  }, [searchParams]);
+  
+  const refCode = searchParams.get('ref');
   const navigate = useNavigate();
   const { customer, setCustomer, setCountry } = useStore();
   const [isLoading, setIsLoading] = useState(false);
@@ -219,6 +230,14 @@ const CustomerAuthPage = () => {
               سيتم تحديد موقعك تلقائياً
             </p>
           </div>
+          
+          {/* Show referral code badge if present */}
+          {refCode && (
+            <div className="flex items-center justify-center gap-2 text-sm text-primary bg-primary/10 rounded-lg py-2 px-3">
+              <Gift className="w-4 h-4" />
+              <span>كود الإحالة: <strong>{refCode.toUpperCase()}</strong></span>
+            </div>
+          )}
         </div>
       </motion.div>
     </div>

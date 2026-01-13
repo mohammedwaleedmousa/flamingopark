@@ -39,6 +39,8 @@ import AdminCODRegionsPage from "./pages/admin/AdminCODRegionsPage";
 import AdminRevenuePage from "./pages/admin/AdminRevenuePage";
 import AdminOffersPage from "./pages/admin/AdminOffersPage";
 import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
+import AdminBeneficiariesPage from "./pages/admin/AdminBeneficiariesPage";
+import BeneficiaryPage from "./pages/BeneficiaryPage";
 
 const queryClient = new QueryClient();
 
@@ -110,9 +112,11 @@ const App = () => (
             <Route path="revenue" element={<AdminRevenuePage />} />
             <Route path="offers" element={<AdminOffersPage />} />
             <Route path="coupons" element={<AdminCouponsPage />} />
+            <Route path="beneficiaries" element={<AdminBeneficiariesPage />} />
             <Route path="settings" element={<AdminSettingsPage />} />
           </Route>
           
+          <Route path="/beneficiary/:code" element={<BeneficiaryPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

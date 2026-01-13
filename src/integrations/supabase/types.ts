@@ -71,6 +71,42 @@ export type Database = {
         }
         Relationships: []
       }
+      beneficiaries: {
+        Row: {
+          code: string
+          commission_percentage: number
+          created_at: string
+          discount_percentage: number
+          id: string
+          is_active: boolean | null
+          name: string
+          sort_order: number | null
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          commission_percentage?: number
+          created_at?: string
+          discount_percentage?: number
+          id?: string
+          is_active?: boolean | null
+          name: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          commission_percentage?: number
+          created_at?: string
+          discount_percentage?: number
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       brands: {
         Row: {
           countries: string[] | null
@@ -430,6 +466,9 @@ export type Database = {
       }
       orders: {
         Row: {
+          beneficiary_code: string | null
+          beneficiary_commission: number | null
+          beneficiary_id: string | null
           country: string
           coupon_code: string | null
           created_at: string
@@ -452,6 +491,9 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          beneficiary_code?: string | null
+          beneficiary_commission?: number | null
+          beneficiary_id?: string | null
           country: string
           coupon_code?: string | null
           created_at?: string
@@ -474,6 +516,9 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          beneficiary_code?: string | null
+          beneficiary_commission?: number | null
+          beneficiary_id?: string | null
           country?: string
           coupon_code?: string | null
           created_at?: string
@@ -496,6 +541,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_beneficiary_id_fkey"
+            columns: ["beneficiary_id"]
+            isOneToOne: false
+            referencedRelation: "beneficiaries"
+            referencedColumns: ["id"]
+          },
           {
             foreignKeyName: "orders_customer_id_fkey"
             columns: ["customer_id"]

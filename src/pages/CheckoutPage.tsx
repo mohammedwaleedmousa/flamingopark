@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -12,7 +12,16 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle } from "lucide-react";
+import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle, Gift, X } from "lucide-react";
+
+interface Beneficiary {
+  id: string;
+  name: string;
+  code: string;
+  commission_percentage: number;
+  discount_percentage: number;
+  is_active: boolean;
+}
 
 // Zod schemas
 const orderAccessorySchema = z.object({
@@ -73,9 +82,46 @@ const CheckoutPage = () => {
   const [couponCode, setCouponCode] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [activeBeneficiary, setActiveBeneficiary] = useState<Beneficiary | null>(null);
+  const [beneficiaryDiscount, setBeneficiaryDiscount] = useState(0);
 
   const subtotal = getCartTotal();
   const currency = country === "SA" ? "ريال" : "ريال";
+
+  // Check for beneficiary referral code
+  useEffect(() => {
+    const checkBeneficiaryCode = async () => {
+      const refCode = localStorage.getItem('beneficiary_ref');
+      if (!refCode) return;
+      
+      try {
+        const { data, error } = await supabase
+          .from("beneficiaries")
+          .select("*")
+          .eq("code", refCode.toUpperCase())
+          .eq("is_active", true)
+          .maybeSingle();
+        
+        if (data && !error) {
+          setActiveBeneficiary(data as Beneficiary);
+          // Auto-apply beneficiary discount
+          const discount = (subtotal * data.discount_percentage) / 100;
+          setBeneficiaryDiscount(discount);
+        }
+      } catch (err) {
+        console.error("Error checking beneficiary:", err);
+      }
+    };
+    
+    checkBeneficiaryCode();
+  }, [subtotal]);
+
+  // Clear beneficiary
+  const clearBeneficiary = () => {
+    localStorage.removeItem('beneficiary_ref');
+    setActiveBeneficiary(null);
+    setBeneficiaryDiscount(0);
+  };
 
   // Apply coupon - checks both coupons table and offers table
   const applyCoupon = async () => {
@@ -267,7 +313,8 @@ const CheckoutPage = () => {
 
   const selectedCompany = deliveryCompanies.find((c) => c.id === selectedDelivery);
   const deliveryFee = selectedCompany?.base_fee || 0;
-  const total = subtotal + deliveryFee - discountAmount;
+  const totalDiscount = discountAmount + beneficiaryDiscount;
+  const total = subtotal + deliveryFee - totalDiscount;
 
   const handleCopyAccount = (account: string) => {
     navigator.clipboard.writeText(account);
@@ -330,6 +377,11 @@ const CheckoutPage = () => {
     const orderItems = validationResult.data;
 
     try {
+      // Calculate beneficiary commission if applicable
+      const beneficiaryCommission = activeBeneficiary 
+        ? (subtotal * activeBeneficiary.commission_percentage) / 100 
+        : 0;
+
       const orderPayload: Record<string, unknown> = {
         order_number: orderNumber,
         customer_name: customer?.name || formData.name || "عميل",
@@ -344,7 +396,10 @@ const CheckoutPage = () => {
         delivery_company_id: selectedDelivery,
         payment_method: paymentMethod,
         coupon_code: discountAmount > 0 ? couponCode.trim().toUpperCase() : null,
-        discount_amount: discountAmount,
+        discount_amount: totalDiscount,
+        beneficiary_id: activeBeneficiary?.id || null,
+        beneficiary_code: activeBeneficiary?.code || null,
+        beneficiary_commission: beneficiaryCommission,
       };
       
       // Only add customer_id if it's a valid registered customer (not guest)
@@ -603,13 +658,46 @@ const CheckoutPage = () => {
               </motion.div>
             </div>
 
-            {/* Coupon + Summary */}
+            {/* Beneficiary + Coupon + Summary */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.3 }}
               className="space-y-6"
             >
+              {/* Beneficiary Badge */}
+              {activeBeneficiary && (
+                <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/30 rounded-lg p-4">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                        <Gift className="w-5 h-5 text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-sm text-foreground">كود الإحالة: {activeBeneficiary.code}</p>
+                        <p className="text-xs text-muted-foreground">
+                          خصم {activeBeneficiary.discount_percentage}% • المستفيد: {activeBeneficiary.name}
+                        </p>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={clearBeneficiary}
+                      className="p-1.5 hover:bg-destructive/10 rounded-full transition-colors"
+                      title="إزالة كود الإحالة"
+                    >
+                      <X className="w-4 h-4 text-muted-foreground hover:text-destructive" />
+                    </button>
+                  </div>
+                  <div className="mt-3 pt-3 border-t border-primary/20">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">خصم الإحالة ({activeBeneficiary.discount_percentage}%)</span>
+                      <span className="text-primary font-medium">-{beneficiaryDiscount.toFixed(2)} {currency}</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Coupon */}
               <div className="bg-card border border-border rounded-lg p-6">
                 <h2 className="font-heading text-lg text-foreground mb-4">كود الخصم</h2>
@@ -688,9 +776,17 @@ const CheckoutPage = () => {
                     {deliveryFee.toFixed(2)} {currency}
                   </span>
                 </div>
+                {beneficiaryDiscount > 0 && (
+                  <div className="flex justify-between text-primary font-medium text-sm">
+                    <span>خصم الإحالة ({activeBeneficiary?.discount_percentage}%)</span>
+                    <span>
+                      -{beneficiaryDiscount.toFixed(2)} {currency}
+                    </span>
+                  </div>
+                )}
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-green-600 font-medium text-sm">
-                    <span>الخصم</span>
+                    <span>خصم الكوبون</span>
                     <span>
                       -{discountAmount.toFixed(2)} {currency}
                     </span>

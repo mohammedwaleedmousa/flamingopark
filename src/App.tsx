@@ -117,6 +117,7 @@ const App = () => (
           </Route>
           
           <Route path="/beneficiary/:code" element={<BeneficiaryPage />} />
+          <Route path="/bene/:code" element={<BeneficiaryPage />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
       </BrowserRouter>

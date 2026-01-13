@@ -125,9 +125,13 @@ export type Database = {
           commission_percentage: number
           created_at: string
           discount_percentage: number
+          email: string | null
           id: string
           is_active: boolean | null
           name: string
+          password_hash: string | null
+          phone: string | null
+          registered_at: string | null
           sort_order: number | null
           updated_at: string
         }
@@ -136,9 +140,13 @@ export type Database = {
           commission_percentage?: number
           created_at?: string
           discount_percentage?: number
+          email?: string | null
           id?: string
           is_active?: boolean | null
           name: string
+          password_hash?: string | null
+          phone?: string | null
+          registered_at?: string | null
           sort_order?: number | null
           updated_at?: string
         }
@@ -147,9 +155,13 @@ export type Database = {
           commission_percentage?: number
           created_at?: string
           discount_percentage?: number
+          email?: string | null
           id?: string
           is_active?: boolean | null
           name?: string
+          password_hash?: string | null
+          phone?: string | null
+          registered_at?: string | null
           sort_order?: number | null
           updated_at?: string
         }

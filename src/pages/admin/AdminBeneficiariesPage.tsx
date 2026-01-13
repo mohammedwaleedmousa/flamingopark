@@ -229,7 +229,7 @@ const AdminBeneficiariesPage = () => {
   };
 
   const viewBeneficiaryPage = (code: string) => {
-    window.open(`/beneficiary/${code}`, "_blank");
+    window.open(`/bene/${code}`, "_blank");
   };
 
   const handleViewStats = (beneficiary: Beneficiary) => {

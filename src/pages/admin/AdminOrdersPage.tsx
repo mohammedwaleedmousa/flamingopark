@@ -88,8 +88,16 @@ const AdminOrdersPage = () => {
 
   const openWhatsApp = (order: Order) => {
     const message = `مرحباً ${order.customer_name}، بخصوص طلبك رقم ${order.order_number}`;
-    const phone = order.customer_phone.replace(/\D/g, '');
-    window.open(`https://wa.me/${phone}?text=${encodeURIComponent(message)}`, '_blank');
+    // أرقام التواصل حسب البلد
+    const storePhones = {
+      YE: '967782676054',
+      SA: '966557302919'
+    };
+    // استخدام الرقم المناسب حسب بلد العميل
+    const fromPhone = order.country === 'YE' ? storePhones.YE : storePhones.SA;
+    const toPhone = order.customer_phone.replace(/\D/g, '');
+    // فتح واتساب من الرقم المناسب
+    window.open(`https://wa.me/${toPhone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const deleteOrder = async (id: string) => {

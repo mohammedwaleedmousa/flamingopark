@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useSearchParams } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -7,6 +7,8 @@ import { Input } from '@/components/ui/input';
 import { Plus, Search, Edit, Trash2, Eye, EyeOff, Package, ArrowUp, ArrowDown } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+
+type CountryType = 'SA' | 'YE';
 
 interface Product {
   id: string;
@@ -25,19 +27,33 @@ interface Product {
 }
 
 const AdminProductsPage = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [products, setProducts] = useState<Product[]>([]);
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [selectedCountry, setSelectedCountry] = useState<CountryType | null>(
+    (searchParams.get('country') as CountryType) || null
+  );
 
   useEffect(() => {
-    fetchProducts();
-  }, []);
+    if (selectedCountry) {
+      fetchProducts();
+    }
+  }, [selectedCountry]);
+
+  const handleCountryChange = (country: CountryType) => {
+    setSelectedCountry(country);
+    setSearchParams({ country });
+  };
 
   const fetchProducts = async () => {
+    if (!selectedCountry) return;
+    
     const { data, error } = await supabase
       .from('products')
       .select('*')
+      .contains('countries', [selectedCountry])
       .order('sort_order', { ascending: true });
 
     if (error) {
@@ -127,16 +143,77 @@ const AdminProductsPage = () => {
     inactive: products.filter(p => !p.is_active).length,
   };
 
+  // Show country selection if no country is selected
+  if (!selectedCountry) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-8">
+        <div className="text-center">
+          <h1 className="font-heading text-2xl md:text-3xl text-foreground mb-2">اختر البلد</h1>
+          <p className="text-muted-foreground">اختر البلد لعرض وإدارة المنتجات</p>
+        </div>
+        <div className="flex gap-6">
+          <button
+            onClick={() => handleCountryChange('SA')}
+            className="flex flex-col items-center gap-3 p-8 bg-card border-2 border-border rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group"
+          >
+            <span className="text-6xl">🇸🇦</span>
+            <span className="font-heading text-lg text-foreground group-hover:text-primary transition-colors">السعودية</span>
+          </button>
+          <button
+            onClick={() => handleCountryChange('YE')}
+            className="flex flex-col items-center gap-3 p-8 bg-card border-2 border-border rounded-2xl hover:border-primary hover:bg-primary/5 transition-all group"
+          >
+            <span className="text-6xl">🇾🇪</span>
+            <span className="font-heading text-lg text-foreground group-hover:text-primary transition-colors">اليمن</span>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
+      {/* Country Selector */}
+      <div className="flex items-center gap-3 p-3 bg-card border border-border rounded-xl">
+        <span className="text-sm text-muted-foreground">البلد:</span>
+        <div className="flex gap-2">
+          <button
+            onClick={() => handleCountryChange('SA')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg transition-all",
+              selectedCountry === 'SA'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted hover:bg-muted/80'
+            )}
+          >
+            <span>🇸🇦</span>
+            <span className="text-sm font-medium">السعودية</span>
+          </button>
+          <button
+            onClick={() => handleCountryChange('YE')}
+            className={cn(
+              "flex items-center gap-2 px-4 py-2 rounded-lg transition-all",
+              selectedCountry === 'YE'
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted hover:bg-muted/80'
+            )}
+          >
+            <span>🇾🇪</span>
+            <span className="text-sm font-medium">اليمن</span>
+          </button>
+        </div>
+      </div>
+
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h1 className="font-heading text-2xl md:text-3xl text-foreground">المنتجات</h1>
+          <h1 className="font-heading text-2xl md:text-3xl text-foreground">
+            منتجات {selectedCountry === 'SA' ? '🇸🇦 السعودية' : '🇾🇪 اليمن'}
+          </h1>
           <p className="text-muted-foreground text-sm mt-1">{stats.total} منتج • {stats.active} نشط</p>
         </div>
         <Button asChild className="btn-gold gap-2 w-full sm:w-auto">
-          <Link to="/admin/products/new">
+          <Link to={`/admin/products/new?country=${selectedCountry}`}>
             <Plus className="w-4 h-4" />
             إضافة منتج
           </Link>

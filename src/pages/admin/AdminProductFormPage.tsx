@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -42,12 +42,18 @@ interface ProductFeature {
   desc: string;
 }
 
+type CountryType = 'SA' | 'YE';
+
 const AdminProductFormPage = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const isEditing = Boolean(id);
   const [isLoading, setIsLoading] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
+  
+  // Get country from URL params for new products
+  const countryFromUrl = searchParams.get('country') as CountryType | null;
 
   const [formData, setFormData] = useState({
     name: '',
@@ -64,7 +70,7 @@ const AdminProductFormPage = () => {
     is_featured: false,
     is_best_seller: false,
     is_active: true,
-    countries: ['SA', 'YE'] as string[],
+    countries: countryFromUrl ? [countryFromUrl] : ['SA', 'YE'] as string[],
     images: [] as string[],
     section_ids: [] as string[],
     has_sizes: false,
@@ -289,7 +295,7 @@ const AdminProductFormPage = () => {
         if (error) throw error;
         toast({ title: 'تم', description: 'تم إضافة المنتج بنجاح' });
       }
-      navigate('/admin/products');
+      navigate(countryFromUrl ? `/admin/products?country=${countryFromUrl}` : '/admin/products');
     } catch (error: any) {
       toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     } finally {
@@ -308,12 +314,19 @@ const AdminProductFormPage = () => {
   return (
     <div className="max-w-4xl space-y-6">
       <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate('/admin/products')}>
+        <Button variant="ghost" onClick={() => navigate(countryFromUrl ? `/admin/products?country=${countryFromUrl}` : '/admin/products')}>
           <ArrowRight className="w-4 h-4" />
         </Button>
-        <h1 className="font-heading text-3xl text-foreground">
-          {isEditing ? 'تعديل المنتج' : 'إضافة منتج جديد'}
-        </h1>
+        <div>
+          <h1 className="font-heading text-3xl text-foreground">
+            {isEditing ? 'تعديل المنتج' : 'إضافة منتج جديد'}
+          </h1>
+          {countryFromUrl && !isEditing && (
+            <p className="text-sm text-muted-foreground mt-1">
+              سيضاف لـ {countryFromUrl === 'SA' ? '🇸🇦 السعودية' : '🇾🇪 اليمن'} فقط
+            </p>
+          )}
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">

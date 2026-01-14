@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -44,6 +44,8 @@ interface ProductFeature {
 
 const AdminProductFormPage = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const countryFromUrl = searchParams.get('country') as 'SA' | 'YE' | null;
   const navigate = useNavigate();
   const isEditing = Boolean(id);
   const [isLoading, setIsLoading] = useState(false);
@@ -64,7 +66,7 @@ const AdminProductFormPage = () => {
     is_featured: false,
     is_best_seller: false,
     is_active: true,
-    countries: ['SA', 'YE'] as string[],
+    countries: countryFromUrl ? [countryFromUrl] : ['SA', 'YE'] as string[],
     images: [] as string[],
     section_ids: [] as string[],
     has_sizes: false,

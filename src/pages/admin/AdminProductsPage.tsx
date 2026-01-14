@@ -29,6 +29,7 @@ const AdminProductsPage = () => {
   const [search, setSearch] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [countryFilter, setCountryFilter] = useState<'SA' | 'YE'>('SA');
 
   useEffect(() => {
     fetchProducts();
@@ -117,7 +118,8 @@ const AdminProductsPage = () => {
     .filter(p => {
       const matchesSearch = p.name_ar.includes(search) || p.name.toLowerCase().includes(search.toLowerCase());
       const matchesFilter = filter === 'all' || (filter === 'active' ? p.is_active : !p.is_active);
-      return matchesSearch && matchesFilter;
+      const matchesCountry = p.countries?.includes(countryFilter);
+      return matchesSearch && matchesFilter && matchesCountry;
     })
     .sort((a, b) => a.sort_order - b.sort_order);
 
@@ -136,10 +138,28 @@ const AdminProductsPage = () => {
           <p className="text-muted-foreground text-sm mt-1">{stats.total} منتج • {stats.active} نشط</p>
         </div>
         <Button asChild className="btn-gold gap-2 w-full sm:w-auto">
-          <Link to="/admin/products/new">
+          <Link to={`/admin/products/new?country=${countryFilter}`}>
             <Plus className="w-4 h-4" />
             إضافة منتج
           </Link>
+        </Button>
+      </div>
+
+      {/* Country Filter */}
+      <div className="flex gap-2">
+        <Button
+          variant={countryFilter === 'SA' ? 'default' : 'outline'}
+          onClick={() => setCountryFilter('SA')}
+          className={countryFilter === 'SA' ? 'btn-gold' : ''}
+        >
+          🇸🇦 السعودية
+        </Button>
+        <Button
+          variant={countryFilter === 'YE' ? 'default' : 'outline'}
+          onClick={() => setCountryFilter('YE')}
+          className={countryFilter === 'YE' ? 'btn-gold' : ''}
+        >
+          🇾🇪 اليمن
         </Button>
       </div>
 

@@ -10,42 +10,24 @@ import { useStore, Product } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { Search, SlidersHorizontal, Loader2 } from "lucide-react";
 
-type CountryType = "SA" | "YE";
-
 const ProductsPage = () => {
-  const { country: storeCountry, setCountry } = useStore();
+  const { country: storeCountry } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
   
-  // Local country selection for this page
-  const [selectedCountry, setSelectedCountry] = useState<CountryType>(
-    (searchParams.get("country") as CountryType) || storeCountry || "SA"
-  );
+  // Use the country from store
+  const selectedCountry = storeCountry || "SA";
 
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
   const [selectedBrand, setSelectedBrand] = useState(searchParams.get("brand") || "all");
   const [showFilters, setShowFilters] = useState(false);
 
-  // Handle country change
-  const handleCountryChange = (country: CountryType) => {
-    setSelectedCountry(country);
-    setCountry(country);
-    setSearchParams((prev) => {
-      prev.set("country", country);
-      return prev;
-    });
-  };
-
   // Sync URL params with state
   useEffect(() => {
     const categoryParam = searchParams.get("category");
     const brandParam = searchParams.get("brand");
-    const countryParam = searchParams.get("country") as CountryType;
     if (categoryParam) setSelectedCategory(categoryParam);
     if (brandParam) setSelectedBrand(brandParam);
-    if (countryParam && (countryParam === "SA" || countryParam === "YE")) {
-      setSelectedCountry(countryParam);
-    }
   }, [searchParams]);
 
   // Fetch categories
@@ -134,39 +116,6 @@ const ProductsPage = () => {
       <CartDrawer />
 
       <main className="pt-20">
-        {/* Country Selector */}
-        <section className="py-4 bg-card border-b border-border">
-          <div className="container mx-auto px-4">
-            <div className="flex items-center justify-center gap-4">
-              <span className="text-sm text-muted-foreground font-body">اختر البلد:</span>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => handleCountryChange("SA")}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm transition-all ${
-                    selectedCountry === "SA"
-                      ? "bg-gold text-secondary shadow-md"
-                      : "bg-muted hover:bg-muted/80 text-foreground border border-border"
-                  }`}
-                >
-                  <span className="text-lg">🇸🇦</span>
-                  السعودية
-                </button>
-                <button
-                  onClick={() => handleCountryChange("YE")}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg font-body text-sm transition-all ${
-                    selectedCountry === "YE"
-                      ? "bg-gold text-secondary shadow-md"
-                      : "bg-muted hover:bg-muted/80 text-foreground border border-border"
-                  }`}
-                >
-                  <span className="text-lg">🇾🇪</span>
-                  اليمن
-                </button>
-              </div>
-            </div>
-          </div>
-        </section>
-
         {/* Hero */}
         <section className="py-16 bg-muted border-b border-border">
           <div className="container mx-auto px-4 text-center">
@@ -183,7 +132,7 @@ const ProductsPage = () => {
               transition={{ delay: 0.1 }}
               className="font-body text-muted-foreground max-w-xl mx-auto"
             >
-              منتجات {selectedCountry === "SA" ? "السعودية" : "اليمن"}
+              اكتشف أفخم المجوهرات والذهب
             </motion.p>
           </div>
         </section>

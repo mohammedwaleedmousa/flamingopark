@@ -237,13 +237,19 @@ const BeneficiaryDashboard = () => {
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row items-center gap-6">
               {/* QR Code */}
-              <div className="bg-white p-4 rounded-xl shadow-lg">
+              <div className="bg-white p-4 rounded-xl shadow-lg relative">
                 <QRCodeSVG 
                   value={`${window.location.origin}?ref=${beneficiary.code}`}
                   size={150}
                   level="H"
                   includeMargin
                 />
+                {/* Center Logo/Text */}
+                <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                  <div className="bg-white px-2 py-1 rounded shadow-sm">
+                    <span className="text-[10px] font-bold text-primary tracking-tight">ermgold</span>
+                  </div>
+                </div>
               </div>
               
               {/* Info and Actions */}

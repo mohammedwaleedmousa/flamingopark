@@ -170,6 +170,51 @@ export type Database = {
         }
         Relationships: []
       }
+      beneficiary_visits: {
+        Row: {
+          beneficiary_id: string
+          converted_to_order: boolean | null
+          id: string
+          order_id: string | null
+          visited_at: string
+          visitor_info: string | null
+          visitor_ip: string | null
+        }
+        Insert: {
+          beneficiary_id: string
+          converted_to_order?: boolean | null
+          id?: string
+          order_id?: string | null
+          visited_at?: string
+          visitor_info?: string | null
+          visitor_ip?: string | null
+        }
+        Update: {
+          beneficiary_id?: string
+          converted_to_order?: boolean | null
+          id?: string
+          order_id?: string | null
+          visited_at?: string
+          visitor_info?: string | null
+          visitor_ip?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "beneficiary_visits_beneficiary_id_fkey"
+            columns: ["beneficiary_id"]
+            isOneToOne: false
+            referencedRelation: "beneficiaries"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "beneficiary_visits_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brands: {
         Row: {
           countries: string[] | null

@@ -44,6 +44,7 @@ const mapRowToProduct = (p: any): Product => ({
   nameAr: p.name_ar,
   slug: p.slug,
   price: Number(p.price),
+  costPrice: p.cost_price ? Number(p.cost_price) : undefined,
   originalPrice: p.original_price ? Number(p.original_price) : undefined,
   discount: p.discount || undefined,
   description: p.description || '',

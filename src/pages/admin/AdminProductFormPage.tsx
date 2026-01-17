@@ -56,6 +56,7 @@ const AdminProductFormPage = () => {
     name_ar: '',
     slug: '',
     price: '',
+    cost_price: '',
     original_price: '',
     discount: '0',
     description: '',
@@ -145,6 +146,7 @@ const AdminProductFormPage = () => {
         name_ar: data.name_ar || '',
         slug: data.slug || '',
         price: data.price?.toString() || '',
+        cost_price: data.cost_price?.toString() || '',
         original_price: data.original_price?.toString() || '',
         discount: data.discount?.toString() || '0',
         description: data.description || '',
@@ -257,6 +259,7 @@ const AdminProductFormPage = () => {
       name_ar: formData.name_ar,
       slug: formData.slug || generateSlug(formData.name),
       price: parseFloat(formData.price),
+      cost_price: formData.cost_price ? parseFloat(formData.cost_price) : 0,
       original_price: formData.original_price ? parseFloat(formData.original_price) : null,
       discount: parseInt(formData.discount) || 0,
       description: formData.description,
@@ -353,24 +356,39 @@ const AdminProductFormPage = () => {
             />
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-body text-muted-foreground mb-2">السعر *</label>
+              <label className="block text-sm font-body text-muted-foreground mb-2">سعر البيع *</label>
               <Input
                 type="number"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 placeholder="0.00"
               />
+              <p className="text-xs text-muted-foreground mt-1">السعر الذي يظهر للعميل</p>
             </div>
             <div>
-              <label className="block text-sm font-body text-muted-foreground mb-2">السعر الأصلي</label>
+              <label className="block text-sm font-body text-muted-foreground mb-2">سعر التكلفة *</label>
+              <Input
+                type="number"
+                value={formData.cost_price}
+                onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
+                placeholder="0.00"
+              />
+              <p className="text-xs text-muted-foreground mt-1">السعر الأصلي (التكلفة) - الخصومات تُطبق على هذا السعر</p>
+            </div>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-body text-muted-foreground mb-2">السعر قبل الخصم (للعرض)</label>
               <Input
                 type="number"
                 value={formData.original_price}
                 onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
                 placeholder="0.00"
               />
+              <p className="text-xs text-muted-foreground mt-1">يظهر مشطوباً بجانب السعر الحالي</p>
             </div>
             <div>
               <label className="block text-sm font-body text-muted-foreground mb-2">الخصم %</label>
@@ -382,6 +400,32 @@ const AdminProductFormPage = () => {
               />
             </div>
           </div>
+          
+          {/* Profit Calculator */}
+          {formData.price && formData.cost_price && (
+            <div className="bg-muted/50 border border-border rounded p-4">
+              <h3 className="text-sm font-heading text-foreground mb-2">حاسبة الربح</h3>
+              <div className="grid grid-cols-3 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">سعر البيع:</span>
+                  <span className="text-foreground font-bold mr-2">{parseFloat(formData.price).toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">التكلفة:</span>
+                  <span className="text-foreground font-bold mr-2">{parseFloat(formData.cost_price).toFixed(2)}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">الربح:</span>
+                  <span className="text-green-500 font-bold mr-2">
+                    {(parseFloat(formData.price) - parseFloat(formData.cost_price)).toFixed(2)}
+                  </span>
+                  <span className="text-xs text-muted-foreground">
+                    ({(((parseFloat(formData.price) - parseFloat(formData.cost_price)) / parseFloat(formData.cost_price)) * 100).toFixed(1)}%)
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>

@@ -2,11 +2,12 @@ import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format } from "date-fns";
+import { format, startOfWeek, startOfMonth, endOfWeek, endOfMonth, subMonths, isWithinInterval } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   Table,
   TableBody,
@@ -15,7 +16,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TrendingUp, ShoppingCart, DollarSign, Percent, QrCode, Copy, LogOut, Share2 } from "lucide-react";
+import { TrendingUp, ShoppingCart, DollarSign, Percent, QrCode, Copy, LogOut, Share2, Calendar, Clock, CheckCircle, AlertCircle } from "lucide-react";
 import Logo from "@/components/Logo";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
@@ -39,7 +40,10 @@ interface Order {
   created_at: string;
   status: string;
   customer_name: string;
+  invoice_url: string | null;
 }
+
+const CONFIRMED_STATUSES = ["completed", "delivered"];
 
 const BeneficiaryDashboard = () => {
   const { code } = useParams<{ code: string }>();
@@ -77,7 +81,7 @@ const BeneficiaryDashboard = () => {
       
       const { data, error } = await supabase
         .from("orders")
-        .select("id, order_number, total, beneficiary_commission, created_at, status, customer_name")
+        .select("id, order_number, total, beneficiary_commission, created_at, status, customer_name, invoice_url")
         .eq("beneficiary_id", beneficiary.id)
         .order("created_at", { ascending: false });
       
@@ -87,11 +91,61 @@ const BeneficiaryDashboard = () => {
     enabled: !!beneficiary?.id,
   });
 
-  // Calculate stats
+  // Calculate stats - ONLY for confirmed orders with invoice
+  const now = new Date();
+  const weekStart = startOfWeek(now, { weekStartsOn: 6 }); // Saturday
+  const weekEnd = endOfWeek(now, { weekStartsOn: 6 });
+  const monthStart = startOfMonth(now);
+  const monthEnd = endOfMonth(now);
+  const lastMonthStart = startOfMonth(subMonths(now, 1));
+  const lastMonthEnd = endOfMonth(subMonths(now, 1));
+
+  // Filter confirmed orders (with invoice)
+  const confirmedOrders = orders.filter(order => 
+    CONFIRMED_STATUSES.includes(order.status) && order.invoice_url
+  );
+  
+  // Pending orders (not yet confirmed or no invoice)
+  const pendingOrders = orders.filter(order => 
+    !CONFIRMED_STATUSES.includes(order.status) || !order.invoice_url
+  );
+
+  // Weekly stats
+  const weeklyOrders = confirmedOrders.filter(order => 
+    isWithinInterval(new Date(order.created_at), { start: weekStart, end: weekEnd })
+  );
+  
+  // Monthly stats
+  const monthlyOrders = confirmedOrders.filter(order => 
+    isWithinInterval(new Date(order.created_at), { start: monthStart, end: monthEnd })
+  );
+  
+  // Last month stats
+  const lastMonthOrders = confirmedOrders.filter(order => 
+    isWithinInterval(new Date(order.created_at), { start: lastMonthStart, end: lastMonthEnd })
+  );
+
   const stats = {
-    totalSales: orders.reduce((sum, order) => sum + Number(order.total || 0), 0),
-    totalCommission: orders.reduce((sum, order) => sum + Number(order.beneficiary_commission || 0), 0),
-    ordersCount: orders.length,
+    // Confirmed stats
+    totalSales: confirmedOrders.reduce((sum, order) => sum + Number(order.total || 0), 0),
+    totalCommission: confirmedOrders.reduce((sum, order) => sum + Number(order.beneficiary_commission || 0), 0),
+    confirmedOrdersCount: confirmedOrders.length,
+    // Pending stats
+    pendingSales: pendingOrders.reduce((sum, order) => sum + Number(order.total || 0), 0),
+    pendingCommission: pendingOrders.reduce((sum, order) => sum + Number(order.beneficiary_commission || 0), 0),
+    pendingOrdersCount: pendingOrders.length,
+    // Weekly
+    weeklySales: weeklyOrders.reduce((sum, order) => sum + Number(order.total || 0), 0),
+    weeklyCommission: weeklyOrders.reduce((sum, order) => sum + Number(order.beneficiary_commission || 0), 0),
+    weeklyOrdersCount: weeklyOrders.length,
+    // Monthly
+    monthlySales: monthlyOrders.reduce((sum, order) => sum + Number(order.total || 0), 0),
+    monthlyCommission: monthlyOrders.reduce((sum, order) => sum + Number(order.beneficiary_commission || 0), 0),
+    monthlyOrdersCount: monthlyOrders.length,
+    // Last month
+    lastMonthSales: lastMonthOrders.reduce((sum, order) => sum + Number(order.total || 0), 0),
+    lastMonthCommission: lastMonthOrders.reduce((sum, order) => sum + Number(order.beneficiary_commission || 0), 0),
+    lastMonthOrdersCount: lastMonthOrders.length,
   };
 
   const handleLogout = () => {
@@ -219,61 +273,201 @@ const BeneficiaryDashboard = () => {
           </CardContent>
         </Card>
 
-        {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                إجمالي المبيعات
-              </CardTitle>
-              <TrendingUp className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.totalSales.toFixed(2)} ر.س</div>
-            </CardContent>
-          </Card>
+        {/* Performance Report Tabs */}
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-3 mb-4">
+            <TabsTrigger value="overview">نظرة عامة</TabsTrigger>
+            <TabsTrigger value="weekly">هذا الأسبوع</TabsTrigger>
+            <TabsTrigger value="monthly">هذا الشهر</TabsTrigger>
+          </TabsList>
+          
+          {/* Overview Tab */}
+          <TabsContent value="overview" className="space-y-4">
+            {/* Confirmed Stats */}
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <Card className="border-green-200 bg-green-50/50">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-green-700">
+                    المبيعات المؤكدة
+                  </CardTitle>
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-green-700">{stats.totalSales.toFixed(2)} ر.س</div>
+                  <p className="text-xs text-green-600">{stats.confirmedOrdersCount} طلب مؤكد</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                عدد الطلبات
-              </CardTitle>
-              <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{stats.ordersCount}</div>
-            </CardContent>
-          </Card>
+              <Card className="border-yellow-200 bg-yellow-50/50">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-yellow-700">
+                    المبيعات المعلقة
+                  </CardTitle>
+                  <Clock className="h-4 w-4 text-yellow-600" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-yellow-700">{stats.pendingSales.toFixed(2)} ر.س</div>
+                  <p className="text-xs text-yellow-600">{stats.pendingOrdersCount} طلب قيد الانتظار</p>
+                </CardContent>
+              </Card>
 
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">
-                نسبتك
-              </CardTitle>
-              <Percent className="h-4 w-4 text-muted-foreground" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{beneficiary.commission_percentage}%</div>
-            </CardContent>
-          </Card>
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    نسبتك
+                  </CardTitle>
+                  <Percent className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{beneficiary.commission_percentage}%</div>
+                </CardContent>
+              </Card>
 
-          <Card className="bg-primary/5 border-primary/20">
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-primary">
-                إجمالي أرباحك
-              </CardTitle>
-              <DollarSign className="h-4 w-4 text-primary" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-primary">{stats.totalCommission.toFixed(2)} ر.س</div>
-            </CardContent>
-          </Card>
-        </div>
+              <Card className="bg-primary/5 border-primary/20">
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-primary">
+                    أرباحك المؤكدة
+                  </CardTitle>
+                  <DollarSign className="h-4 w-4 text-primary" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{stats.totalCommission.toFixed(2)} ر.س</div>
+                  <p className="text-xs text-muted-foreground">+ {stats.pendingCommission.toFixed(2)} معلق</p>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Info Alert */}
+            <Card className="border-blue-200 bg-blue-50/50">
+              <CardContent className="pt-4">
+                <div className="flex items-start gap-3">
+                  <AlertCircle className="h-5 w-5 text-blue-600 mt-0.5" />
+                  <div>
+                    <h4 className="font-medium text-blue-800">كيف يتم احتساب الأرباح؟</h4>
+                    <p className="text-sm text-blue-700 mt-1">
+                      يتم احتساب أرباحك فقط عند تأكيد الطلب من قبل الإدارة وإرفاق الفاتورة. 
+                      الطلبات المعلقة ستظهر في قسم منفصل حتى يتم تأكيدها.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Weekly Tab */}
+          <TabsContent value="weekly" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    مبيعات الأسبوع
+                  </CardTitle>
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold">{stats.weeklySales.toFixed(2)} ر.س</div>
+                  <p className="text-xs text-muted-foreground">{stats.weeklyOrdersCount} طلب</p>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    عمولة الأسبوع
+                  </CardTitle>
+                  <DollarSign className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-2xl font-bold text-primary">{stats.weeklyCommission.toFixed(2)} ر.س</div>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between pb-2">
+                  <CardTitle className="text-sm font-medium text-muted-foreground">
+                    الفترة
+                  </CardTitle>
+                  <Clock className="h-4 w-4 text-muted-foreground" />
+                </CardHeader>
+                <CardContent>
+                  <div className="text-sm font-medium">
+                    {format(weekStart, "dd MMM", { locale: ar })} - {format(weekEnd, "dd MMM", { locale: ar })}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+
+          {/* Monthly Tab */}
+          <TabsContent value="monthly" className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {/* This Month */}
+              <Card>
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Calendar className="h-5 w-5" />
+                    هذا الشهر ({format(monthStart, "MMMM yyyy", { locale: ar })})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">المبيعات:</span>
+                    <span className="font-bold">{stats.monthlySales.toFixed(2)} ر.س</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">عدد الطلبات:</span>
+                    <span className="font-bold">{stats.monthlyOrdersCount}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="text-primary font-medium">العمولة:</span>
+                    <span className="font-bold text-primary">{stats.monthlyCommission.toFixed(2)} ر.س</span>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Last Month */}
+              <Card className="bg-muted/30">
+                <CardHeader>
+                  <CardTitle className="text-lg flex items-center gap-2 text-muted-foreground">
+                    <Calendar className="h-5 w-5" />
+                    الشهر الماضي ({format(lastMonthStart, "MMMM yyyy", { locale: ar })})
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">المبيعات:</span>
+                    <span className="font-bold">{stats.lastMonthSales.toFixed(2)} ر.س</span>
+                  </div>
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">عدد الطلبات:</span>
+                    <span className="font-bold">{stats.lastMonthOrdersCount}</span>
+                  </div>
+                  <div className="flex justify-between border-t pt-2">
+                    <span className="text-muted-foreground font-medium">العمولة:</span>
+                    <span className="font-bold">{stats.lastMonthCommission.toFixed(2)} ر.س</span>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Orders Table */}
         <Card>
           <CardHeader>
-            <CardTitle>سجل المبيعات</CardTitle>
+            <CardTitle className="flex items-center justify-between">
+              <span>سجل المبيعات</span>
+              <div className="flex gap-2 text-sm font-normal">
+                <Badge variant="outline" className="bg-green-50 text-green-700 border-green-300">
+                  <CheckCircle className="h-3 w-3 ml-1" />
+                  {stats.confirmedOrdersCount} مؤكد
+                </Badge>
+                <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
+                  <Clock className="h-3 w-3 ml-1" />
+                  {stats.pendingOrdersCount} معلق
+                </Badge>
+              </div>
+            </CardTitle>
           </CardHeader>
           <CardContent>
             {loadingOrders ? (
@@ -296,39 +490,62 @@ const BeneficiaryDashboard = () => {
                       <TableHead>قيمة الطلب</TableHead>
                       <TableHead>عمولتك</TableHead>
                       <TableHead>الحالة</TableHead>
+                      <TableHead>الفاتورة</TableHead>
                       <TableHead>التاريخ</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {orders.map((order) => (
-                      <TableRow key={order.id}>
-                        <TableCell className="font-mono">{order.order_number}</TableCell>
-                        <TableCell>{order.customer_name}</TableCell>
-                        <TableCell>{Number(order.total).toFixed(2)} ر.س</TableCell>
-                        <TableCell className="text-primary font-medium">
-                          {Number(order.beneficiary_commission).toFixed(2)} ر.س
-                        </TableCell>
-                        <TableCell>
-                          <Badge variant={
-                            order.status === "completed" || order.status === "delivered" ? "default" :
-                            order.status === "pending" ? "secondary" :
-                            order.status === "cancelled" ? "destructive" :
-                            "outline"
-                          }>
-                            {order.status === "pending" ? "قيد الانتظار" :
-                             order.status === "completed" ? "مكتمل" :
-                             order.status === "cancelled" ? "ملغي" :
-                             order.status === "processing" ? "قيد التنفيذ" :
-                             order.status === "shipped" ? "تم الشحن" :
-                             order.status === "delivered" ? "تم التوصيل" :
-                             order.status}
-                          </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {format(new Date(order.created_at), "dd MMM yyyy", { locale: ar })}
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {orders.map((order) => {
+                      const isConfirmed = CONFIRMED_STATUSES.includes(order.status) && order.invoice_url;
+                      return (
+                        <TableRow key={order.id} className={!isConfirmed ? "opacity-60" : ""}>
+                          <TableCell className="font-mono">{order.order_number}</TableCell>
+                          <TableCell>{order.customer_name}</TableCell>
+                          <TableCell>{Number(order.total).toFixed(2)} ر.س</TableCell>
+                          <TableCell className={isConfirmed ? "text-primary font-medium" : "text-muted-foreground"}>
+                            {isConfirmed ? (
+                              <>{Number(order.beneficiary_commission).toFixed(2)} ر.س</>
+                            ) : (
+                              <span className="flex items-center gap-1">
+                                <Clock className="h-3 w-3" />
+                                معلق
+                              </span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant={
+                              order.status === "completed" || order.status === "delivered" ? "default" :
+                              order.status === "pending" ? "secondary" :
+                              order.status === "cancelled" ? "destructive" :
+                              "outline"
+                            }>
+                              {order.status === "pending" ? "قيد الانتظار" :
+                               order.status === "completed" ? "مكتمل" :
+                               order.status === "cancelled" ? "ملغي" :
+                               order.status === "processing" ? "قيد التنفيذ" :
+                               order.status === "shipped" ? "تم الشحن" :
+                               order.status === "delivered" ? "تم التوصيل" :
+                               order.status}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            {order.invoice_url ? (
+                              <Badge variant="outline" className="bg-green-50 text-green-700">
+                                <CheckCircle className="h-3 w-3 ml-1" />
+                                مرفقة
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="bg-gray-50 text-gray-500">
+                                غير مرفقة
+                              </Badge>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {format(new Date(order.created_at), "dd MMM yyyy", { locale: ar })}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               </div>

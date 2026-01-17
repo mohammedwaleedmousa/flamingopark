@@ -20,7 +20,7 @@ const BeneficiaryAuthPage = () => {
   const [password, setPassword] = useState("");
   
   // Login form
-  const [loginCode, setLoginCode] = useState("");
+  const [loginPhone, setLoginPhone] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
 
   const generateCode = (name: string) => {
@@ -98,8 +98,8 @@ const BeneficiaryAuthPage = () => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!loginCode.trim() || !loginPassword.trim()) {
-      toast.error("يرجى إدخال الكود وكلمة المرور");
+    if (!loginPhone.trim() || !loginPassword.trim()) {
+      toast.error("يرجى إدخال رقم الجوال وكلمة المرور");
       return;
     }
 
@@ -109,7 +109,7 @@ const BeneficiaryAuthPage = () => {
       const { data: beneficiary, error } = await supabase
         .from("beneficiaries")
         .select("*")
-        .eq("code", loginCode.trim().toUpperCase())
+        .eq("phone", loginPhone.trim())
         .eq("password_hash", loginPassword)
         .maybeSingle();
 
@@ -174,7 +174,7 @@ const BeneficiaryAuthPage = () => {
             </CardTitle>
             <CardDescription>
               {isLogin 
-                ? "أدخل الكود وكلمة المرور للدخول إلى حسابك"
+                ? "أدخل رقم الجوال وكلمة المرور للدخول إلى حسابك"
                 : "أنشئ حسابك الآن وابدأ في الربح"
               }
             </CardDescription>
@@ -185,14 +185,15 @@ const BeneficiaryAuthPage = () => {
               // Login Form
               <form onSubmit={handleLogin} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="loginCode">كود المستفيد</Label>
+                  <Label htmlFor="loginPhone">رقم الجوال</Label>
                   <div className="relative">
-                    <User className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Phone className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      id="loginCode"
-                      value={loginCode}
-                      onChange={(e) => setLoginCode(e.target.value.toUpperCase())}
-                      placeholder="أدخل الكود الخاص بك"
+                      id="loginPhone"
+                      type="tel"
+                      value={loginPhone}
+                      onChange={(e) => setLoginPhone(e.target.value)}
+                      placeholder="أدخل رقم الجوال"
                       className="pr-10"
                       dir="ltr"
                     />

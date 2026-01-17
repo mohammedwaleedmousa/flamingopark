@@ -4,9 +4,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Plus, Search, Edit, Trash2, Eye, EyeOff, Package, ArrowUp, ArrowDown } from 'lucide-react';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Plus, Search, Edit, Trash2, Eye, EyeOff, Package, ArrowUp, ArrowDown, AlertTriangle } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+
+const LOW_MARGIN_THRESHOLD = 20; // 20% profit margin threshold
 
 interface Product {
   id: string;
@@ -14,6 +18,7 @@ interface Product {
   name_ar: string;
   slug: string;
   price: number;
+  cost_price: number | null;
   discount: number;
   category: string;
   brand: string;
@@ -123,10 +128,24 @@ const AdminProductsPage = () => {
     })
     .sort((a, b) => a.sort_order - b.sort_order);
 
+  // Products with low profit margin
+  const lowMarginProducts = filteredProducts.filter(p => {
+    if (!p.cost_price || p.cost_price === 0) return false;
+    const margin = ((p.price - p.cost_price) / p.price) * 100;
+    return margin < LOW_MARGIN_THRESHOLD && p.is_active;
+  });
+
+  // Helper function to calculate margin
+  const getMargin = (product: Product) => {
+    if (!product.cost_price || product.cost_price === 0) return null;
+    return ((product.price - product.cost_price) / product.price) * 100;
+  };
+
   const stats = {
     total: products.length,
     active: products.filter(p => p.is_active).length,
     inactive: products.filter(p => !p.is_active).length,
+    lowMargin: lowMarginProducts.length,
   };
 
   return (
@@ -144,6 +163,45 @@ const AdminProductsPage = () => {
           </Link>
         </Button>
       </div>
+
+      {/* Low Margin Alert */}
+      {lowMarginProducts.length > 0 && (
+        <Card className="border-yellow-500/50 bg-yellow-500/5">
+          <CardHeader className="py-3">
+            <CardTitle className="text-sm flex items-center gap-2 text-yellow-600">
+              <AlertTriangle className="w-4 h-4" />
+              تنبيه: {lowMarginProducts.length} منتج بهامش ربح أقل من {LOW_MARGIN_THRESHOLD}%
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="py-2">
+            <div className="flex flex-wrap gap-2">
+              {lowMarginProducts.slice(0, 5).map(product => {
+                const margin = getMargin(product);
+                return (
+                  <Link 
+                    key={product.id} 
+                    to={`/admin/products/${product.id}`}
+                    className="flex items-center gap-2 px-3 py-1.5 bg-card rounded-lg border border-border hover:border-primary transition-colors"
+                  >
+                    <span className="text-sm truncate max-w-[150px]">{product.name_ar}</span>
+                    <Badge variant="outline" className="text-yellow-600 border-yellow-600 text-xs">
+                      {margin?.toFixed(1)}%
+                    </Badge>
+                  </Link>
+                );
+              })}
+              {lowMarginProducts.length > 5 && (
+                <Link 
+                  to="/admin/profit-report"
+                  className="flex items-center gap-2 px-3 py-1.5 bg-yellow-500/10 rounded-lg border border-yellow-500/30 text-yellow-600 text-sm hover:bg-yellow-500/20 transition-colors"
+                >
+                  +{lowMarginProducts.length - 5} المزيد
+                </Link>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Country Filter */}
       <div className="flex gap-2">

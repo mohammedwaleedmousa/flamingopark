@@ -37,6 +37,7 @@ import AdminContentPage from "./pages/admin/AdminContentPage";
 import AdminInvoicesPage from "./pages/admin/AdminInvoicesPage";
 import AdminCODRegionsPage from "./pages/admin/AdminCODRegionsPage";
 import AdminRevenuePage from "./pages/admin/AdminRevenuePage";
+import AdminProfitReportPage from "./pages/admin/AdminProfitReportPage";
 import AdminOffersPage from "./pages/admin/AdminOffersPage";
 import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
 import AdminBeneficiariesPage from "./pages/admin/AdminBeneficiariesPage";
@@ -111,6 +112,7 @@ const App = () => (
             <Route path="content" element={<AdminContentPage />} />
             <Route path="invoices" element={<AdminInvoicesPage />} />
             <Route path="revenue" element={<AdminRevenuePage />} />
+            <Route path="profit-report" element={<AdminProfitReportPage />} />
             <Route path="offers" element={<AdminOffersPage />} />
             <Route path="coupons" element={<AdminCouponsPage />} />
             <Route path="beneficiaries" element={<AdminBeneficiariesPage />} />

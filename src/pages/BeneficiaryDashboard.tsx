@@ -1,8 +1,8 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import { format, startOfWeek, startOfMonth, endOfWeek, endOfMonth, subMonths, isWithinInterval } from "date-fns";
+import { format, startOfWeek, startOfMonth, endOfWeek, endOfMonth, subMonths, isWithinInterval, formatDistanceToNow } from "date-fns";
 import { ar } from "date-fns/locale";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -16,10 +16,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { TrendingUp, ShoppingCart, DollarSign, Percent, QrCode, Copy, LogOut, Share2, Calendar, Clock, CheckCircle, AlertCircle } from "lucide-react";
+import { TrendingUp, ShoppingCart, DollarSign, Percent, QrCode, Copy, LogOut, Share2, Calendar, Clock, CheckCircle, AlertCircle, Users, Eye, Bell } from "lucide-react";
 import Logo from "@/components/Logo";
 import { toast } from "sonner";
 import { QRCodeSVG } from "qrcode.react";
+
+interface BeneficiaryVisit {
+  id: string;
+  visited_at: string;
+  converted_to_order: boolean;
+  visitor_info: string | null;
+}
 
 interface Beneficiary {
   id: string;
@@ -49,6 +56,7 @@ const BeneficiaryDashboard = () => {
   const { code } = useParams<{ code: string }>();
   const navigate = useNavigate();
   const [showQR, setShowQR] = useState(false);
+  const queryClient = useQueryClient();
 
   // Check if logged in
   useEffect(() => {
@@ -90,6 +98,64 @@ const BeneficiaryDashboard = () => {
     },
     enabled: !!beneficiary?.id,
   });
+
+  // Fetch visits for this beneficiary
+  const { data: visits = [], isLoading: loadingVisits } = useQuery({
+    queryKey: ["beneficiary-visits", beneficiary?.id],
+    queryFn: async () => {
+      if (!beneficiary?.id) return [];
+      
+      const { data, error } = await supabase
+        .from("beneficiary_visits")
+        .select("id, visited_at, converted_to_order, visitor_info")
+        .eq("beneficiary_id", beneficiary.id)
+        .order("visited_at", { ascending: false })
+        .limit(50);
+      
+      if (error) throw error;
+      return data as BeneficiaryVisit[];
+    },
+    enabled: !!beneficiary?.id,
+  });
+
+  // Subscribe to realtime visits
+  useEffect(() => {
+    if (!beneficiary?.id) return;
+
+    const channel = supabase
+      .channel(`beneficiary-visits-${beneficiary.id}`)
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'beneficiary_visits',
+          filter: `beneficiary_id=eq.${beneficiary.id}`,
+        },
+        (payload) => {
+          console.log('New visit received:', payload);
+          // Show toast notification
+          toast.success("🎉 عميل جديد دخل من رابطك!", {
+            description: "عميل محتمل يتصفح المتجر الآن",
+            duration: 5000,
+          });
+          // Refresh visits data
+          queryClient.invalidateQueries({ queryKey: ["beneficiary-visits", beneficiary.id] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [beneficiary?.id, queryClient]);
+
+  // Today's visits count
+  const todayVisits = visits.filter(v => {
+    const visitDate = new Date(v.visited_at);
+    const today = new Date();
+    return visitDate.toDateString() === today.toDateString();
+  }).length;
 
   // Calculate stats - ONLY for confirmed orders with invoice
   const now = new Date();
@@ -272,6 +338,68 @@ const BeneficiaryDashboard = () => {
           </CardContent>
         </Card>
 
+        {/* Potential Customers (Visits) Section */}
+        <Card className="border-blue-200 bg-blue-50/30">
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center gap-2">
+                <Users className="h-5 w-5 text-blue-600" />
+                العملاء المحتملين
+              </span>
+              <div className="flex gap-2">
+                <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                  <Eye className="h-3 w-3 ml-1" />
+                  اليوم: {todayVisits}
+                </Badge>
+                <Badge variant="outline" className="bg-blue-100 text-blue-700 border-blue-300">
+                  الكل: {visits.length}
+                </Badge>
+              </div>
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            {loadingVisits ? (
+              <div className="flex justify-center py-4">
+                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+              </div>
+            ) : visits.length === 0 ? (
+              <div className="text-center py-4 text-muted-foreground">
+                <Eye className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">لا توجد زيارات بعد. شارك رابطك لجذب العملاء!</p>
+              </div>
+            ) : (
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {visits.slice(0, 10).map((visit) => (
+                  <div key={visit.id} className="flex items-center justify-between p-2 bg-white rounded-lg border border-blue-100">
+                    <div className="flex items-center gap-2">
+                      <div className="w-8 h-8 rounded-full bg-blue-100 flex items-center justify-center">
+                        <Users className="h-4 w-4 text-blue-600" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-medium">عميل محتمل</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDistanceToNow(new Date(visit.visited_at), { addSuffix: true, locale: ar })}
+                        </p>
+                      </div>
+                    </div>
+                    {visit.converted_to_order ? (
+                      <Badge className="bg-green-500 text-white">
+                        <CheckCircle className="h-3 w-3 ml-1" />
+                        تم الشراء
+                      </Badge>
+                    ) : (
+                      <Badge variant="outline" className="text-blue-600 border-blue-300">
+                        <Eye className="h-3 w-3 ml-1" />
+                        يتصفح
+                      </Badge>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
         {/* Performance Report Tabs */}
         <Tabs defaultValue="overview" className="w-full">
           <TabsList className="grid w-full grid-cols-3 mb-4">
@@ -344,8 +472,8 @@ const BeneficiaryDashboard = () => {
                   <div>
                     <h4 className="font-medium text-blue-800">كيف يتم احتساب الأرباح؟</h4>
                     <p className="text-sm text-blue-700 mt-1">
-                      يتم احتساب أرباحك فقط عند تأكيد الطلب من قبل الإدارة وإرفاق الفاتورة. 
-                      الطلبات المعلقة ستظهر في قسم منفصل حتى يتم تأكيدها.
+                      يتم احتساب أرباحك فقط بعد إرسال الفاتورة للعميل عبر الواتساب وتأكيد الطلب.
+                      الطلبات بدون فاتورة مرفقة ستظهر كمعلقة.
                     </p>
                   </div>
                 </div>
@@ -477,7 +605,7 @@ const BeneficiaryDashboard = () => {
               <div className="text-center py-8 text-muted-foreground">
                 <QrCode className="h-12 w-12 mx-auto mb-4 opacity-50" />
                 <p>لا توجد مبيعات بعد</p>
-                <p className="text-sm">شارك كود الخصم الخاص بك لبدء الربح!</p>
+                <p className="text-sm">شارك رابطك الخاص لبدء الربح!</p>
               </div>
             ) : (
               <div className="overflow-x-auto">

@@ -12,11 +12,39 @@ import Logo from "@/components/Logo";
 const CustomerAuthPage = () => {
   const [searchParams] = useSearchParams();
   
-  // Check for referral code in URL
+  // Check for referral code in URL and record visit
   useEffect(() => {
     const refCode = searchParams.get('ref');
     if (refCode) {
       localStorage.setItem('beneficiary_ref', refCode.toUpperCase());
+      
+      // Record the visit for this beneficiary
+      const recordVisit = async () => {
+        try {
+          // First get beneficiary ID
+          const { data: beneficiary } = await supabase
+            .from("beneficiaries")
+            .select("id")
+            .eq("code", refCode.toUpperCase())
+            .eq("is_active", true)
+            .eq("is_approved", true)
+            .maybeSingle();
+          
+          if (beneficiary) {
+            // Record the visit
+            await supabase
+              .from("beneficiary_visits")
+              .insert({
+                beneficiary_id: beneficiary.id,
+                visitor_info: navigator.userAgent,
+              });
+          }
+        } catch (error) {
+          console.error("Error recording visit:", error);
+        }
+      };
+      
+      recordVisit();
     }
   }, [searchParams]);
   

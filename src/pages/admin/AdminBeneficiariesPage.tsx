@@ -22,6 +22,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Plus, Pencil, Trash2, Copy, ExternalLink, Eye, QrCode, Download, Check, X } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { QRCodeSVG } from "qrcode.react";
@@ -553,36 +554,38 @@ const AdminBeneficiariesPage = () => {
                   <TableCell>{beneficiary.discount_percentage}%</TableCell>
                   <TableCell>
                     {beneficiary.is_approved ? (
-                      <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                      <Badge className="bg-green-500 hover:bg-green-600 text-white">
+                        <Check className="h-3 w-3 ml-1" />
                         مقبول
-                      </span>
+                      </Badge>
                     ) : (
-                      <div className="flex items-center gap-1">
-                        <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                      <div className="flex flex-col gap-2">
+                        <Badge variant="outline" className="bg-yellow-50 text-yellow-700 border-yellow-300">
                           قيد المراجعة
-                        </span>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50"
-                          onClick={() => approveMutation.mutate({ id: beneficiary.id, approved: true })}
-                          title="قبول"
-                        >
-                          <Check className="h-4 w-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          className="h-6 w-6 text-red-600 hover:text-red-700 hover:bg-red-50"
-                          onClick={() => {
-                            if (confirm("هل أنت متأكد من رفض هذا المستفيد؟")) {
-                              deleteMutation.mutate(beneficiary.id);
-                            }
-                          }}
-                          title="رفض وحذف"
-                        >
-                          <X className="h-4 w-4" />
-                        </Button>
+                        </Badge>
+                        <div className="flex gap-1">
+                          <Button
+                            size="sm"
+                            className="h-7 px-2 bg-green-500 hover:bg-green-600 text-white"
+                            onClick={() => approveMutation.mutate({ id: beneficiary.id, approved: true })}
+                          >
+                            <Check className="h-3 w-3 ml-1" />
+                            قبول
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="destructive"
+                            className="h-7 px-2"
+                            onClick={() => {
+                              if (confirm("هل أنت متأكد من رفض هذا المستفيد؟ سيتم حذفه نهائياً.")) {
+                                deleteMutation.mutate(beneficiary.id);
+                              }
+                            }}
+                          >
+                            <X className="h-3 w-3 ml-1" />
+                            رفض
+                          </Button>
+                        </div>
                       </div>
                     )}
                   </TableCell>

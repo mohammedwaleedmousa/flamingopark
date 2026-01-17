@@ -21,6 +21,7 @@ interface Beneficiary {
   commission_percentage: number;
   discount_percentage: number;
   is_active: boolean;
+  is_approved: boolean;
 }
 
 // Zod schemas
@@ -115,6 +116,7 @@ const CheckoutPage = () => {
           .select("*")
           .eq("code", refCode.toUpperCase())
           .eq("is_active", true)
+          .eq("is_approved", true)
           .maybeSingle();
         
         if (data && !error) {

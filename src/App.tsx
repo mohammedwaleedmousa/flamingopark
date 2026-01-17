@@ -55,9 +55,16 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 };
 
 // Redirect logged in customers to home
+// Also handles referral code from URL
 const AuthRedirect = () => {
   const { customer } = useStore();
-  if (customer) {
+  const location = window.location;
+  
+  // Check if there's a referral code in the URL
+  const searchParams = new URLSearchParams(location.search);
+  const refCode = searchParams.get('ref');
+  
+  if (customer && !refCode) {
     return <Navigate to="/home" replace />;
   }
   return <CustomerAuthPage />;

@@ -37,6 +37,7 @@ interface Beneficiary {
   is_active: boolean;
   phone: string | null;
   email: string | null;
+  country: string | null;
 }
 
 interface Order {
@@ -57,6 +58,11 @@ const BeneficiaryDashboard = () => {
   const navigate = useNavigate();
   const [showQR, setShowQR] = useState(false);
   const queryClient = useQueryClient();
+  
+  // Get currency based on beneficiary country
+  const getCurrency = (country: string | null | undefined) => {
+    return country === "YE" ? "ر.ي" : "ر.س";
+  };
 
   // Check if logged in
   useEffect(() => {
@@ -420,7 +426,7 @@ const BeneficiaryDashboard = () => {
                   <CheckCircle className="h-4 w-4 text-green-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-green-700">{stats.totalSales.toFixed(2)} ر.س</div>
+                  <div className="text-2xl font-bold text-green-700">{stats.totalSales.toFixed(2)} {getCurrency(beneficiary?.country)}</div>
                   <p className="text-xs text-green-600">{stats.confirmedOrdersCount} طلب مؤكد</p>
                 </CardContent>
               </Card>
@@ -433,7 +439,7 @@ const BeneficiaryDashboard = () => {
                   <Clock className="h-4 w-4 text-yellow-600" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-yellow-700">{stats.pendingSales.toFixed(2)} ر.س</div>
+                  <div className="text-2xl font-bold text-yellow-700">{stats.pendingSales.toFixed(2)} {getCurrency(beneficiary?.country)}</div>
                   <p className="text-xs text-yellow-600">{stats.pendingOrdersCount} طلب قيد الانتظار</p>
                 </CardContent>
               </Card>
@@ -458,7 +464,7 @@ const BeneficiaryDashboard = () => {
                   <DollarSign className="h-4 w-4 text-primary" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-primary">{stats.totalCommission.toFixed(2)} ر.س</div>
+                  <div className="text-2xl font-bold text-primary">{stats.totalCommission.toFixed(2)} {getCurrency(beneficiary?.country)}</div>
                   <p className="text-xs text-muted-foreground">+ {stats.pendingCommission.toFixed(2)} معلق</p>
                 </CardContent>
               </Card>
@@ -492,7 +498,7 @@ const BeneficiaryDashboard = () => {
                   <Calendar className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold">{stats.weeklySales.toFixed(2)} ر.س</div>
+                  <div className="text-2xl font-bold">{stats.weeklySales.toFixed(2)} {getCurrency(beneficiary?.country)}</div>
                   <p className="text-xs text-muted-foreground">{stats.weeklyOrdersCount} طلب</p>
                 </CardContent>
               </Card>
@@ -505,7 +511,7 @@ const BeneficiaryDashboard = () => {
                   <DollarSign className="h-4 w-4 text-muted-foreground" />
                 </CardHeader>
                 <CardContent>
-                  <div className="text-2xl font-bold text-primary">{stats.weeklyCommission.toFixed(2)} ر.س</div>
+                  <div className="text-2xl font-bold text-primary">{stats.weeklyCommission.toFixed(2)} {getCurrency(beneficiary?.country)}</div>
                 </CardContent>
               </Card>
 
@@ -539,7 +545,7 @@ const BeneficiaryDashboard = () => {
                 <CardContent className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">المبيعات:</span>
-                    <span className="font-bold">{stats.monthlySales.toFixed(2)} ر.س</span>
+                    <span className="font-bold">{stats.monthlySales.toFixed(2)} {getCurrency(beneficiary?.country)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">عدد الطلبات:</span>
@@ -547,7 +553,7 @@ const BeneficiaryDashboard = () => {
                   </div>
                   <div className="flex justify-between border-t pt-2">
                     <span className="text-primary font-medium">العمولة:</span>
-                    <span className="font-bold text-primary">{stats.monthlyCommission.toFixed(2)} ر.س</span>
+                    <span className="font-bold text-primary">{stats.monthlyCommission.toFixed(2)} {getCurrency(beneficiary?.country)}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -563,7 +569,7 @@ const BeneficiaryDashboard = () => {
                 <CardContent className="space-y-3">
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">المبيعات:</span>
-                    <span className="font-bold">{stats.lastMonthSales.toFixed(2)} ر.س</span>
+                    <span className="font-bold">{stats.lastMonthSales.toFixed(2)} {getCurrency(beneficiary?.country)}</span>
                   </div>
                   <div className="flex justify-between">
                     <span className="text-muted-foreground">عدد الطلبات:</span>
@@ -571,7 +577,7 @@ const BeneficiaryDashboard = () => {
                   </div>
                   <div className="flex justify-between border-t pt-2">
                     <span className="text-muted-foreground font-medium">العمولة:</span>
-                    <span className="font-bold">{stats.lastMonthCommission.toFixed(2)} ر.س</span>
+                    <span className="font-bold">{stats.lastMonthCommission.toFixed(2)} {getCurrency(beneficiary?.country)}</span>
                   </div>
                 </CardContent>
               </Card>
@@ -628,10 +634,10 @@ const BeneficiaryDashboard = () => {
                         <TableRow key={order.id} className={!isConfirmed ? "opacity-60" : ""}>
                           <TableCell className="font-mono">{order.order_number}</TableCell>
                           <TableCell>{order.customer_name}</TableCell>
-                          <TableCell>{Number(order.total).toFixed(2)} ر.س</TableCell>
+                          <TableCell>{Number(order.total).toFixed(2)} {getCurrency(beneficiary?.country)}</TableCell>
                           <TableCell className={isConfirmed ? "text-primary font-medium" : "text-muted-foreground"}>
                             {isConfirmed ? (
-                              <>{Number(order.beneficiary_commission).toFixed(2)} ر.س</>
+                              <>{Number(order.beneficiary_commission).toFixed(2)} {getCurrency(beneficiary?.country)}</>
                             ) : (
                               <span className="flex items-center gap-1">
                                 <Clock className="h-3 w-3" />

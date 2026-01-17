@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { toast } from "sonner";
 import Logo from "@/components/Logo";
 import { User, Phone, Lock, ArrowRight, UserPlus, LogIn } from "lucide-react";
+import { detectCountryFromPhone, Country } from "@/store/useStore";
 
 const BeneficiaryAuthPage = () => {
   const navigate = useNavigate();
@@ -57,6 +58,14 @@ const BeneficiaryAuthPage = () => {
       
       const finalCode = existingCode ? `${code}${Math.floor(10 + Math.random() * 90)}` : code;
       
+      // Detect country from phone number
+      const detectedCountry = detectCountryFromPhone(phone.trim());
+      if (!detectedCountry) {
+        toast.error("يرجى إدخال رقم هاتف صحيح (سعودي أو يمني)");
+        setLoading(false);
+        return;
+      }
+      
       // Create beneficiary with default commission/discount
       const { error } = await supabase
         .from("beneficiaries")
@@ -69,6 +78,7 @@ const BeneficiaryAuthPage = () => {
           discount_percentage: 10, // Default discount
           is_active: true,
           is_approved: false, // Requires admin approval
+          country: detectedCountry, // Add country based on phone
         });
 
       if (error) {

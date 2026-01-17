@@ -141,6 +141,15 @@ const BeneficiaryAuthPage = () => {
         return;
       }
 
+      // Auto-fix country based on phone if not set correctly
+      const detectedCountry = detectCountryFromPhone(loginPhone.trim());
+      if (detectedCountry && beneficiary.country !== detectedCountry) {
+        await supabase
+          .from("beneficiaries")
+          .update({ country: detectedCountry })
+          .eq("id", beneficiary.id);
+      }
+
       // Store code in localStorage for session
       localStorage.setItem("beneficiary_code", beneficiary.code);
       

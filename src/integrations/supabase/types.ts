@@ -128,6 +128,7 @@ export type Database = {
           email: string | null
           id: string
           is_active: boolean | null
+          is_approved: boolean | null
           name: string
           password_hash: string | null
           phone: string | null
@@ -143,6 +144,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean | null
+          is_approved?: boolean | null
           name: string
           password_hash?: string | null
           phone?: string | null
@@ -158,6 +160,7 @@ export type Database = {
           email?: string | null
           id?: string
           is_active?: boolean | null
+          is_approved?: boolean | null
           name?: string
           password_hash?: string | null
           phone?: string | null

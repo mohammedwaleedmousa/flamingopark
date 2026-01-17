@@ -123,6 +123,7 @@ export type Database = {
         Row: {
           code: string
           commission_percentage: number
+          country: string | null
           created_at: string
           discount_percentage: number
           email: string | null
@@ -139,6 +140,7 @@ export type Database = {
         Insert: {
           code: string
           commission_percentage?: number
+          country?: string | null
           created_at?: string
           discount_percentage?: number
           email?: string | null
@@ -155,6 +157,7 @@ export type Database = {
         Update: {
           code?: string
           commission_percentage?: number
+          country?: string | null
           created_at?: string
           discount_percentage?: number
           email?: string | null

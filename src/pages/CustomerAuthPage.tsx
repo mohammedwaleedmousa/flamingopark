@@ -16,28 +16,53 @@ const CustomerAuthPage = () => {
   useEffect(() => {
     const refCode = searchParams.get('ref');
     if (refCode) {
-      localStorage.setItem('beneficiary_ref', refCode.toUpperCase());
+      const normalizedCode = refCode.toUpperCase();
+      
+      // Store the referral code immediately
+      localStorage.setItem('beneficiary_ref', normalizedCode);
+      console.log('Referral code stored:', normalizedCode);
       
       // Record the visit for this beneficiary
       const recordVisit = async () => {
         try {
-          // First get beneficiary ID
-          const { data: beneficiary } = await supabase
+          // First get beneficiary details
+          const { data: beneficiary, error: beneficiaryError } = await supabase
             .from("beneficiaries")
-            .select("id")
-            .eq("code", refCode.toUpperCase())
+            .select("id, discount_percentage, name")
+            .eq("code", normalizedCode)
             .eq("is_active", true)
             .eq("is_approved", true)
             .maybeSingle();
           
+          if (beneficiaryError) {
+            console.error("Error fetching beneficiary:", beneficiaryError);
+            return;
+          }
+          
           if (beneficiary) {
+            console.log('Found beneficiary:', beneficiary.name, 'Discount:', beneficiary.discount_percentage);
+            
             // Record the visit
-            await supabase
+            const { error: visitError } = await supabase
               .from("beneficiary_visits")
               .insert({
                 beneficiary_id: beneficiary.id,
                 visitor_info: navigator.userAgent,
               });
+            
+            if (visitError) {
+              console.error("Error recording visit:", visitError);
+            } else {
+              console.log('Visit recorded successfully for beneficiary:', beneficiary.id);
+            }
+            
+            // Show discount toast
+            toast({
+              title: `🎉 خصم خاص لك!`,
+              description: `ستحصل على خصم ${beneficiary.discount_percentage}% من ${beneficiary.name}`,
+            });
+          } else {
+            console.log('Beneficiary not found or not active for code:', normalizedCode);
           }
         } catch (error) {
           console.error("Error recording visit:", error);
@@ -261,9 +286,12 @@ const CustomerAuthPage = () => {
           
           {/* Show referral code badge if present */}
           {refCode && (
-            <div className="flex items-center justify-center gap-2 text-sm text-primary bg-primary/10 rounded-lg py-2 px-3">
-              <Gift className="w-4 h-4" />
-              <span>كود الإحالة: <strong>{refCode.toUpperCase()}</strong></span>
+            <div className="flex items-center justify-center gap-2 text-sm text-green-700 bg-green-100 rounded-lg py-3 px-4 border border-green-200">
+              <Gift className="w-5 h-5" />
+              <div className="text-center">
+                <span className="block font-bold">🎉 لديك خصم خاص!</span>
+                <span className="text-xs">ادخل للحصول على الخصم عند الشراء</span>
+              </div>
             </div>
           )}
         </div>

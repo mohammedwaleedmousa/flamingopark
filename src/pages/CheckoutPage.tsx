@@ -427,7 +427,38 @@ const CheckoutPage = () => {
         orderPayload.customer_id = customer.id;
       }
       
-      await createOrderMutation.mutateAsync(orderPayload);
+      const createdOrder = await createOrderMutation.mutateAsync(orderPayload);
+      
+      // If there was a beneficiary, update the most recent visit to mark it as converted
+      if (activeBeneficiary) {
+        try {
+          // Find the most recent unconverted visit for this beneficiary
+          const { data: recentVisit } = await supabase
+            .from("beneficiary_visits")
+            .select("id")
+            .eq("beneficiary_id", activeBeneficiary.id)
+            .eq("converted_to_order", false)
+            .order("visited_at", { ascending: false })
+            .limit(1)
+            .maybeSingle();
+          
+          if (recentVisit) {
+            await supabase
+              .from("beneficiary_visits")
+              .update({ 
+                converted_to_order: true, 
+                order_id: createdOrder.id 
+              })
+              .eq("id", recentVisit.id);
+          }
+        } catch (err) {
+          console.error("Error updating visit:", err);
+        }
+        
+        // Clear the beneficiary ref after successful order
+        localStorage.removeItem('beneficiary_ref');
+      }
+      
       const selectedRegionData = codRegions.find((r) => r.id === selectedRegion);
       const orderData = {
         orderNumber,
@@ -486,6 +517,28 @@ const CheckoutPage = () => {
           >
             إتمام <span className="text-gold">الطلب</span>
           </motion.h1>
+          
+          {/* Beneficiary Discount Banner */}
+          {activeBeneficiary && (
+            <motion.div
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-200 rounded-xl p-4 mb-6"
+            >
+              <div className="flex items-center justify-center gap-3 text-center">
+                <Gift className="w-6 h-6 text-green-600" />
+                <div>
+                  <p className="font-bold text-green-700 text-lg">
+                    🎉 لديك خصم {activeBeneficiary.discount_percentage}%!
+                  </p>
+                  <p className="text-sm text-green-600">
+                    خصم حصري عبر رابط الإحالة من {activeBeneficiary.name} - مطبق تلقائياً
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          )}
+          
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
               {/* Customer Info */}

@@ -68,6 +68,7 @@ const BeneficiaryAuthPage = () => {
           commission_percentage: 10, // Default commission
           discount_percentage: 10, // Default discount
           is_active: true,
+          is_approved: false, // Requires admin approval
         });
 
       if (error) {
@@ -79,13 +80,12 @@ const BeneficiaryAuthPage = () => {
         return;
       }
 
-      toast.success(`تم إنشاء حسابك بنجاح! كودك هو: ${finalCode}`);
+      toast.success(`تم إرسال طلبك بنجاح! سيتم مراجعته من قبل الإدارة. كودك هو: ${finalCode}`);
       
-      // Store code in localStorage for session
-      localStorage.setItem("beneficiary_code", finalCode);
-      
-      // Navigate to dashboard
-      navigate(`/bene/${finalCode}`);
+      // Don't navigate - show pending message
+      setName("");
+      setPhone("");
+      setPassword("");
       
     } catch (error: any) {
       console.error("Registration error:", error);
@@ -117,6 +117,12 @@ const BeneficiaryAuthPage = () => {
 
       if (!beneficiary) {
         toast.error("الكود أو كلمة المرور غير صحيحة");
+        return;
+      }
+
+      // Check if approved first
+      if (!(beneficiary as any).is_approved) {
+        toast.error("طلبك قيد المراجعة، يرجى انتظار موافقة الإدارة");
         return;
       }
 
@@ -286,30 +292,6 @@ const BeneficiaryAuthPage = () => {
           </CardContent>
         </Card>
 
-        {/* Benefits Info */}
-        {!isLogin && (
-          <div className="mt-6 p-4 bg-primary/5 rounded-lg border border-primary/20">
-            <h3 className="font-bold text-primary mb-2 text-center">مميزات البرنامج</h3>
-            <ul className="space-y-2 text-sm text-muted-foreground">
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-primary rounded-full"></span>
-                احصل على رمز QR خاص بك لمشاركته
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-primary rounded-full"></span>
-                عمولة 10% من كل عملية بيع
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-primary rounded-full"></span>
-                خصم 10% لعملائك
-              </li>
-              <li className="flex items-center gap-2">
-                <span className="w-2 h-2 bg-primary rounded-full"></span>
-                تتبع مبيعاتك وأرباحك مباشرة
-              </li>
-            </ul>
-          </div>
-        )}
       </div>
     </div>
   );

@@ -21,7 +21,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
-import { Plus, Pencil, Trash2, Copy, ExternalLink, Eye, QrCode, Download } from "lucide-react";
+import { Plus, Pencil, Trash2, Copy, ExternalLink, Eye, QrCode, Download, Check, X } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
 import { QRCodeSVG } from "qrcode.react";
@@ -30,10 +30,12 @@ interface Beneficiary {
   id: string;
   name: string;
   code: string;
+  phone?: string;
   commission_percentage: number;
   discount_percentage: number;
   sort_order: number;
   is_active: boolean;
+  is_approved: boolean;
   created_at: string;
 }
 
@@ -163,6 +165,24 @@ const AdminBeneficiariesPage = () => {
     },
     onError: () => {
       toast.error("حدث خطأ أثناء الحذف");
+    },
+  });
+
+  // Approve/Reject mutation
+  const approveMutation = useMutation({
+    mutationFn: async ({ id, approved }: { id: string; approved: boolean }) => {
+      const { error } = await supabase
+        .from("beneficiaries")
+        .update({ is_approved: approved, is_active: approved })
+        .eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: (_, { approved }) => {
+      queryClient.invalidateQueries({ queryKey: ["beneficiaries"] });
+      toast.success(approved ? "تم قبول المستفيد بنجاح" : "تم رفض المستفيد");
+    },
+    onError: () => {
+      toast.error("حدث خطأ");
     },
   });
 
@@ -484,8 +504,10 @@ const AdminBeneficiariesPage = () => {
               <TableHead className="w-12">#</TableHead>
               <TableHead>الاسم</TableHead>
               <TableHead>الكود</TableHead>
+              <TableHead>الجوال</TableHead>
               <TableHead>نسبة العمولة</TableHead>
               <TableHead>نسبة الخصم</TableHead>
+              <TableHead>الموافقة</TableHead>
               <TableHead>الحالة</TableHead>
               <TableHead>تاريخ الإضافة</TableHead>
               <TableHead className="text-left">الإجراءات</TableHead>
@@ -494,7 +516,7 @@ const AdminBeneficiariesPage = () => {
           <TableBody>
             {beneficiaries.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={10} className="text-center py-8 text-muted-foreground">
                   لا يوجد مستفيدين بعد
                 </TableCell>
               </TableRow>
@@ -526,8 +548,44 @@ const AdminBeneficiariesPage = () => {
                   <TableCell>
                     <code className="bg-muted px-2 py-1 rounded text-sm">{beneficiary.code}</code>
                   </TableCell>
+                  <TableCell>{beneficiary.phone || "-"}</TableCell>
                   <TableCell>{beneficiary.commission_percentage}%</TableCell>
                   <TableCell>{beneficiary.discount_percentage}%</TableCell>
+                  <TableCell>
+                    {beneficiary.is_approved ? (
+                      <span className="px-2 py-1 rounded-full text-xs bg-green-100 text-green-800">
+                        مقبول
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        <span className="px-2 py-1 rounded-full text-xs bg-yellow-100 text-yellow-800">
+                          قيد المراجعة
+                        </span>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-green-600 hover:text-green-700 hover:bg-green-50"
+                          onClick={() => approveMutation.mutate({ id: beneficiary.id, approved: true })}
+                          title="قبول"
+                        >
+                          <Check className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-6 w-6 text-red-600 hover:text-red-700 hover:bg-red-50"
+                          onClick={() => {
+                            if (confirm("هل أنت متأكد من رفض هذا المستفيد؟")) {
+                              deleteMutation.mutate(beneficiary.id);
+                            }
+                          }}
+                          title="رفض وحذف"
+                        >
+                          <X className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    )}
+                  </TableCell>
                   <TableCell>
                     <span className={`px-2 py-1 rounded-full text-xs ${
                       beneficiary.is_active 

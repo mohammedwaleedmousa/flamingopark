@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { toast } from "sonner";
 import Logo from "@/components/Logo";
-import { User, Phone, Mail, Lock, ArrowRight, UserPlus, LogIn } from "lucide-react";
+import { User, Phone, Lock, ArrowRight, UserPlus, LogIn } from "lucide-react";
 
 const BeneficiaryAuthPage = () => {
   const navigate = useNavigate();
@@ -17,7 +17,6 @@ const BeneficiaryAuthPage = () => {
   // Registration form
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
-  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   
   // Login form
@@ -65,7 +64,6 @@ const BeneficiaryAuthPage = () => {
           name: name.trim(),
           code: finalCode,
           phone: phone.trim(),
-          email: email.trim() || null,
           password_hash: password, // In production, should use proper hashing
           commission_percentage: 10, // Default commission
           discount_percentage: 10, // Default discount
@@ -74,7 +72,7 @@ const BeneficiaryAuthPage = () => {
 
       if (error) {
         if (error.code === "23505") {
-          toast.error("البريد الإلكتروني مستخدم بالفعل");
+          toast.error("رقم الجوال مستخدم بالفعل");
         } else {
           throw error;
         }
@@ -250,21 +248,6 @@ const BeneficiaryAuthPage = () => {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="email">البريد الإلكتروني (اختياري)</Label>
-                  <div className="relative">
-                    <Mail className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      id="email"
-                      type="email"
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      placeholder="example@email.com"
-                      className="pr-10"
-                      dir="ltr"
-                    />
-                  </div>
-                </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="password">كلمة المرور *</Label>

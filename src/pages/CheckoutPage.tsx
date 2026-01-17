@@ -88,6 +88,21 @@ const CheckoutPage = () => {
   const subtotal = getCartTotal();
   const currency = country === "SA" ? "ريال" : "ريال";
 
+  // Calculate total cost price (for discount calculations)
+  const getCostPriceTotal = () => {
+    return cart.reduce((total, item) => {
+      // Use costPrice if available, otherwise use price
+      const costPrice = item.product.costPrice || item.product.price;
+      // Note: Accessories don't have cost price, so we use their full price
+      const accessoriesTotal = item.selectedAccessories
+        ? item.selectedAccessories.reduce((sum, acc) => sum + acc.price * acc.quantity, 0)
+        : 0;
+      return total + (costPrice + accessoriesTotal) * item.quantity;
+    }, 0);
+  };
+
+  const costPriceTotal = getCostPriceTotal();
+
   // Check for beneficiary referral code
   useEffect(() => {
     const checkBeneficiaryCode = async () => {
@@ -104,8 +119,8 @@ const CheckoutPage = () => {
         
         if (data && !error) {
           setActiveBeneficiary(data as Beneficiary);
-          // Auto-apply beneficiary discount
-          const discount = (subtotal * data.discount_percentage) / 100;
+          // Auto-apply beneficiary discount - ONLY on cost price
+          const discount = (costPriceTotal * data.discount_percentage) / 100;
           setBeneficiaryDiscount(discount);
         }
       } catch (err) {
@@ -114,7 +129,7 @@ const CheckoutPage = () => {
     };
     
     checkBeneficiaryCode();
-  }, [subtotal]);
+  }, [costPriceTotal]);
 
   // Clear beneficiary
   const clearBeneficiary = () => {
@@ -152,10 +167,12 @@ const CheckoutPage = () => {
         const coupon = couponData as { type: "percentage" | "fixed"; value: number };
         let discount = 0;
         if (coupon.type === "percentage") {
-          discount = (subtotal * coupon.value) / 100;
+          // Apply percentage discount ONLY on cost price
+          discount = (costPriceTotal * coupon.value) / 100;
         } else {
           discount = coupon.value;
         }
+        // Don't let discount exceed the subtotal
         discount = Math.min(discount, subtotal);
         setDiscountAmount(discount);
         toast({
@@ -179,24 +196,24 @@ const CheckoutPage = () => {
         // Check if offer has specific products
         const offerProductIds = offerData.product_ids as string[] | null;
         
-        let applicableSubtotal = subtotal;
+        // Calculate applicable cost price total for offer products
+        let applicableCostPriceTotal = costPriceTotal;
         
         if (offerProductIds && offerProductIds.length > 0) {
-          // Only apply discount to products in the offer
-          applicableSubtotal = cart.reduce((sum, item) => {
+          // Only apply discount to cost price of products in the offer
+          applicableCostPriceTotal = cart.reduce((sum, item) => {
             if (offerProductIds.includes(item.product.id)) {
-              const basePrice = item.product.discount
-                ? item.product.price * (1 - item.product.discount / 100)
-                : item.product.price;
+              // Use costPrice if available, otherwise use price
+              const costPrice = item.product.costPrice || item.product.price;
               const accessoriesTotal = item.selectedAccessories
                 ? item.selectedAccessories.reduce((accSum, acc) => accSum + acc.price * acc.quantity, 0)
                 : 0;
-              return sum + (basePrice + accessoriesTotal) * item.quantity;
+              return sum + (costPrice + accessoriesTotal) * item.quantity;
             }
             return sum;
           }, 0);
           
-          if (applicableSubtotal === 0) {
+          if (applicableCostPriceTotal === 0) {
             setDiscountAmount(0);
             toast({
               title: "غير قابل للتطبيق",
@@ -207,7 +224,8 @@ const CheckoutPage = () => {
           }
         }
         
-        const discount = Math.min((applicableSubtotal * offerData.discount_percentage) / 100, applicableSubtotal);
+        // Apply discount on cost price only
+        const discount = Math.min((applicableCostPriceTotal * offerData.discount_percentage) / 100, subtotal);
         setDiscountAmount(discount);
         toast({
           title: "تم التطبيق",

@@ -16,6 +16,7 @@ export interface Product {
   nameAr: string;
   slug: string;
   price: number;
+  costPrice?: number;
   originalPrice?: number;
   discount?: number;
   description: string;

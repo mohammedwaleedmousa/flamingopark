@@ -685,29 +685,19 @@ const CheckoutPage = () => {
               transition={{ delay: 0.3 }}
               className="space-y-6"
             >
-              {/* Beneficiary Badge */}
+              {/* Beneficiary Badge - Only shows when customer entered via referral link */}
               {activeBeneficiary && (
                 <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/30 rounded-lg p-4">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                        <Gift className="w-5 h-5 text-primary" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-sm text-foreground">كود الإحالة: {activeBeneficiary.code}</p>
-                        <p className="text-xs text-muted-foreground">
-                          خصم {activeBeneficiary.discount_percentage}% • المستفيد: {activeBeneficiary.name}
-                        </p>
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                      <Gift className="w-5 h-5 text-primary" />
                     </div>
-                    <button
-                      type="button"
-                      onClick={clearBeneficiary}
-                      className="p-1.5 hover:bg-destructive/10 rounded-full transition-colors"
-                      title="إزالة كود الإحالة"
-                    >
-                      <X className="w-4 h-4 text-muted-foreground hover:text-destructive" />
-                    </button>
+                    <div>
+                      <p className="font-medium text-sm text-foreground">خصم حصري عبر رابط الإحالة</p>
+                      <p className="text-xs text-muted-foreground">
+                        خصم {activeBeneficiary.discount_percentage}% مطبق تلقائياً
+                      </p>
+                    </div>
                   </div>
                   <div className="mt-3 pt-3 border-t border-primary/20">
                     <div className="flex justify-between text-sm">

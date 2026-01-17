@@ -154,10 +154,6 @@ const BeneficiaryDashboard = () => {
     toast.success("تم تسجيل الخروج بنجاح");
   };
 
-  const handleCopyCode = () => {
-    navigator.clipboard.writeText(beneficiary?.code || "");
-    toast.success("تم نسخ الكود!");
-  };
 
   const handleCopyLink = () => {
     const link = `${window.location.origin}?ref=${beneficiary?.code}`;
@@ -170,8 +166,8 @@ const BeneficiaryDashboard = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: "إرم للذهب - كود خصم",
-          text: `استخدم كود الخصم ${beneficiary?.code} للحصول على ${beneficiary?.discount_percentage}% خصم!`,
+          title: "إرم للذهب - رابط خصم حصري",
+          text: `ادخل من هذا الرابط للحصول على خصم ${beneficiary?.discount_percentage}%!`,
           url: link,
         });
       } catch (error) {
@@ -254,15 +250,12 @@ const BeneficiaryDashboard = () => {
               
               {/* Info and Actions */}
               <div className="flex-1 text-center md:text-right">
-                <h2 className="text-xl font-bold mb-2">كود الخصم الخاص بك</h2>
-                <div className="flex items-center justify-center md:justify-start gap-2 mb-4">
-                  <span className="text-3xl font-bold text-primary font-mono">{beneficiary.code}</span>
-                  <Button variant="ghost" size="icon" onClick={handleCopyCode}>
-                    <Copy className="h-5 w-5" />
-                  </Button>
-                </div>
+                <h2 className="text-xl font-bold mb-2">رابط الخصم الخاص بك</h2>
                 <p className="text-muted-foreground mb-4">
-                  شارك هذا الكود مع عملائك ليحصلوا على خصم {beneficiary.discount_percentage}%
+                  شارك هذا الرابط أو الباركود مع عملائك ليحصلوا على خصم {beneficiary.discount_percentage}%
+                </p>
+                <p className="text-xs text-amber-600 mb-4">
+                  ملاحظة: الخصم يطبق تلقائياً فقط عند دخول العميل من الرابط أو الباركود
                 </p>
                 <div className="flex flex-wrap justify-center md:justify-start gap-2">
                   <Button onClick={handleCopyLink} variant="outline">

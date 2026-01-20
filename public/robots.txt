@@ -12,3 +12,10 @@ Allow: /
 
 User-agent: *
 Allow: /
+
+# Sitemap
+Sitemap: https://ermgold.lovable.app/sitemap.xml
+
+# Host
+Host: https://ermgold.lovable.app
+Allow: /

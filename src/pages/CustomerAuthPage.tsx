@@ -158,53 +158,84 @@ const CustomerAuthPage = () => {
   const handleSkipLogin = async () => {
     setIsDetectingLocation(true);
     
+    // Helper function to try multiple geolocation APIs
+    const detectCountryFromIP = async (): Promise<Country> => {
+      // List of APIs to try in order
+      const apis = [
+        {
+          url: 'https://ipwho.is/',
+          getCountry: (data: any) => data.country_code
+        },
+        {
+          url: 'https://ip-api.com/json/?fields=countryCode',
+          getCountry: (data: any) => data.countryCode
+        },
+        {
+          url: 'https://ipapi.co/json/',
+          getCountry: (data: any) => data.country_code
+        }
+      ];
+      
+      for (const api of apis) {
+        try {
+          const response = await fetch(api.url, { 
+            signal: AbortSignal.timeout(3000)
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            const countryCode = api.getCountry(data);
+            console.log(`Country detected from ${api.url}:`, countryCode);
+            
+            if (countryCode === 'SA') return 'SA';
+            if (countryCode === 'YE') return 'YE';
+          }
+        } catch (error) {
+          console.log(`API ${api.url} failed, trying next...`);
+        }
+      }
+      
+      // Default fallback
+      return 'SA';
+    };
+    
     try {
-      // Try to detect country using IP geolocation
-      const response = await fetch('https://ipapi.co/json/', { 
-        signal: AbortSignal.timeout(3000) // 3 second timeout
+      const detectedCountry = await detectCountryFromIP();
+      
+      setCustomer({
+        id: "guest",
+        name: "ضيف",
+        phone: "",
+        country: detectedCountry,
+      });
+      setCountry(detectedCountry);
+      
+      toast({
+        title: "مرحباً بك",
+        description: `تم تحديد موقعك: ${detectedCountry === 'SA' ? 'السعودية 🇸🇦' : 'اليمن 🇾🇪'}`,
       });
       
-      if (response.ok) {
-        const data = await response.json();
-        const detectedCountry: Country = data.country_code === 'SA' ? 'SA' : 
-                                          data.country_code === 'YE' ? 'YE' : 'SA';
-        
-        setCustomer({
-          id: "guest",
-          name: "ضيف",
-          phone: "",
-          country: detectedCountry,
-        });
-        setCountry(detectedCountry);
-        
-        toast({
-          title: "مرحباً بك",
-          description: `تم تحديد موقعك: ${detectedCountry === 'SA' ? 'السعودية 🇸🇦' : 'اليمن 🇾🇪'}`,
-        });
-        
-        navigate("/home");
-        return;
-      }
+      navigate("/home");
     } catch (error) {
-      console.log('Geolocation failed, using default');
+      console.log('All geolocation APIs failed, using default');
+      
+      setCustomer({
+        id: "guest",
+        name: "ضيف",
+        phone: "",
+        country: "SA",
+      });
+      setCountry("SA");
+      
+      toast({
+        title: "مرحباً بك",
+        description: "ستحتاج لإدخال بياناتك عند إتمام الطلب",
+      });
+      
+      navigate("/home");
+    } finally {
+      setIsDetectingLocation(false);
     }
-    
-    // Fallback to Saudi Arabia
-    setCustomer({
-      id: "guest",
-      name: "ضيف",
-      phone: "",
-      country: "SA",
-    });
-    setCountry("SA");
-    
-    toast({
-      title: "مرحباً بك",
-      description: "ستحتاج لإدخال بياناتك عند إتمام الطلب",
-    });
-    
-    setIsDetectingLocation(false);
-    navigate("/home");
   };
 
   return (

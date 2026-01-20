@@ -1,14 +1,12 @@
 import { useState, useEffect } from "react";
-import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useStore, detectCountryFromPhone, Country } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Loader2, UserX, MapPin, Gift } from "lucide-react";
+import { Loader2, UserX, Gift } from "lucide-react";
 import Logo from "@/components/Logo";
-
 const CustomerAuthPage = () => {
   const [searchParams] = useSearchParams();
   
@@ -240,12 +238,7 @@ const CustomerAuthPage = () => {
 
   return (
     <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ duration: 0.4 }}
-        className="w-full max-w-sm"
-      >
+      <div className="w-full max-w-sm animate-fade-in">
         <div className="backdrop-blur-sm bg-card/80 rounded-2xl shadow-2xl shadow-primary/10 p-8 space-y-8 border border-primary/40">
           {/* Logo */}
           <div className="flex justify-center">
@@ -326,7 +319,7 @@ const CustomerAuthPage = () => {
             </div>
           )}
         </div>
-      </motion.div>
+      </div>
     </div>
   );
 };

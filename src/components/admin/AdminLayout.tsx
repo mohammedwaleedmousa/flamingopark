@@ -48,17 +48,25 @@ const AdminLayout = () => {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-sidebar flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center space-y-4">
           <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />
-          <p className="text-sidebar-foreground/60 font-body">جاري التحميل...</p>
+          <p className="text-muted-foreground font-body">جاري التحميل...</p>
         </div>
       </div>
     );
   }
 
   if (!isAdmin) {
-    return null;
+    // Show loading briefly while redirecting
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
+          <Loader2 className="w-10 h-10 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground font-body">جاري التحقق...</p>
+        </div>
+      </div>
+    );
   }
 
   return (

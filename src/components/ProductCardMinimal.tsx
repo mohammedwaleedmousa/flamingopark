@@ -5,7 +5,6 @@ import { Product } from "@/store/useStore";
 import { useStore } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
 import { toast } from "@/hooks/use-toast";
-import { getOptimizedImageUrl } from "@/lib/images";
 
 interface ProductCardMinimalProps {
   product: Product;
@@ -57,8 +56,11 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
           <div className="w-full flex-1 overflow-hidden relative">
             {product.images[0] ? (
               <img
-                src={getOptimizedImageUrl(product.images[0], { width: 700, quality: 80 })}
+                src={product.images[0].includes('unsplash.com') 
+                  ? product.images[0].replace(/w=\d+/, 'w=400').replace(/&q=\d+/, '&q=75') + (product.images[0].includes('?') ? '' : '?w=400&q=75')
+                  : product.images[0]}
                 alt={product.nameAr}
+                loading="lazy"
                 decoding="async"
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />

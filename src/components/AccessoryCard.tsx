@@ -37,6 +37,8 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
             <img
               src={accessory.image_url}
               alt={accessory.name_ar}
+              loading="lazy"
+              decoding="async"
               className="w-full h-full object-cover"
             />
           ) : (
@@ -130,6 +132,8 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
                   <img
                     src={accessory.image_url}
                     alt={accessory.name_ar}
+                    loading="lazy"
+                    decoding="async"
                     className="w-full h-full object-cover"
                   />
                 ) : (

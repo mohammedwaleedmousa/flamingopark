@@ -78,8 +78,12 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
           <div className="relative overflow-hidden h-48 md:h-56 lg:h-64 bg-cream flex-shrink-0">
             {product.images[0] ? (
               <img
-                src={product.images[0]}
+                src={product.images[0].includes('unsplash.com') 
+                  ? product.images[0].replace(/w=\d+/, 'w=400').replace(/&q=\d+/, '&q=75') + (product.images[0].includes('?') ? '' : '?w=400&q=75')
+                  : product.images[0]}
                 alt={product.nameAr}
+                loading="lazy"
+                decoding="async"
                 className="w-full h-full object-cover transition-all duration-700 ease-out group-hover:scale-105"
               />
             ) : (

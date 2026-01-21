@@ -171,8 +171,13 @@ const HeroSlider = () => {
               {/* Background Image */}
               <div className="absolute inset-0">
                 <img
-                  src={banner.image_url}
+                  src={banner.image_url.includes('unsplash.com') 
+                    ? banner.image_url.replace(/w=\d+/, 'w=1200').replace(/&q=\d+/, '&q=80') + (banner.image_url.includes('?') ? '' : '?w=1200&q=80')
+                    : banner.image_url}
                   alt={banner.title_ar}
+                  loading={index === 0 ? 'eager' : 'lazy'}
+                  decoding="async"
+                  fetchPriority={index === 0 ? 'high' : 'auto'}
                   onLoad={() => index === currentIndex && setImageLoaded(true)}
                   className="w-full h-full object-cover"
                   style={{

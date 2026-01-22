@@ -14,8 +14,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://ermgold.lovable.app/sitemap.xml
+Sitemap: https://ermgold.store/sitemap.xml
 
 # Host
-Host: https://ermgold.lovable.app
-Allow: /
+Host: https://ermgold.store

@@ -135,7 +135,7 @@ const AdminCouponsPage = () => {
         const { error } = await supabase
           .from('coupons')
           .update({
-            code: formData.code.toUpperCase(),
+            code: formData.code.trim().toUpperCase(),
             type: formData.type,
             value: formData.value,
             is_active: formData.is_active,
@@ -148,7 +148,7 @@ const AdminCouponsPage = () => {
         const { error } = await supabase
           .from('coupons')
           .insert({
-            code: formData.code.toUpperCase(),
+            code: formData.code.trim().toUpperCase(),
             type: formData.type,
             value: formData.value,
             is_active: formData.is_active,

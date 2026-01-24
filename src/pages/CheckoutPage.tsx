@@ -155,18 +155,21 @@ const CheckoutPage = () => {
     }
 
     try {
-      // First check coupons table
+      // First check coupons table - trim spaces from code for comparison
       const { data: couponData } = await supabase
         .from("coupons")
-        .select("type, value")
-        .eq("code", normalized)
+        .select("code, type, value, countries")
         .eq("is_active", true)
-        .contains("countries", [effectiveCountry])
-        .limit(1)
-        .maybeSingle();
+        .limit(100);
+        
+      // Find matching coupon manually (handles trimming issues)
+      const matchingCoupon = couponData?.find(c => 
+        c.code?.trim().toUpperCase() === normalized &&
+        (c.countries as string[])?.includes(effectiveCountry)
+      );
 
-      if (couponData) {
-        const coupon = couponData as { type: "percentage" | "fixed"; value: number };
+      if (matchingCoupon) {
+        const coupon = matchingCoupon as { type: "percentage" | "fixed"; value: number };
         let discount = 0;
         if (coupon.type === "percentage") {
           // Apply percentage discount ONLY on cost price

@@ -11,7 +11,6 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
 import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle, Gift, X } from "lucide-react";
 
 interface Beneficiary {
@@ -77,8 +76,6 @@ const CheckoutPage = () => {
   const [formData, setFormData] = useState({
     name: customer?.name || "",
     phone: customer?.phone || "",
-    address: "",
-    notes: "",
   });
   const [couponCode, setCouponCode] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -359,8 +356,8 @@ const CheckoutPage = () => {
       return toast({ title: "خطأ", description: "يرجى إدخال الاسم ورقم الهاتف", variant: "destructive" });
     }
     
-    if (!formData.address || !selectedDelivery)
-      return toast({ title: "خطأ", description: "يرجى ملء جميع الحقول المطلوبة", variant: "destructive" });
+    if (!selectedDelivery)
+      return toast({ title: "خطأ", description: "يرجى اختيار شركة التوصيل", variant: "destructive" });
     if (paymentMethod === "cod" && codRegions.length > 0 && !selectedRegion)
       return toast({ title: "خطأ", description: "يرجى اختيار منطقة الاستلام", variant: "destructive" });
     
@@ -409,8 +406,8 @@ const CheckoutPage = () => {
         order_number: orderNumber,
         customer_name: customer?.name || formData.name || "عميل",
         customer_phone: customer?.phone || formData.phone || "",
-        customer_address: formData.address,
-        customer_notes: formData.notes || null,
+        customer_address: "-",
+        customer_notes: null,
         country: country || "SA",
         items: orderItems,
         subtotal,
@@ -463,12 +460,19 @@ const CheckoutPage = () => {
       }
       
       const selectedRegionData = codRegions.find((r) => r.id === selectedRegion);
+      
+      // Determine WhatsApp number based on customer's country
+      const customerCountry = country || "SA";
+      const correctWhatsappNumber = customerCountry === "YE" 
+        ? "967782676054" 
+        : "966557302919";
+      
       const orderData = {
         orderNumber,
         customerName: customer?.name || formData.name || "عميل",
         customerPhone: customer?.phone || formData.phone || "",
-        customerAddress: formData.address,
-        customerNotes: formData.notes,
+        customerAddress: "-",
+        customerNotes: "",
         items: orderItems,
         subtotal,
         deliveryFee,
@@ -478,8 +482,8 @@ const CheckoutPage = () => {
         paymentMethod,
         deliveryCompany: selectedCompany?.name || "",
         selectedRegion: paymentMethod === "cod" && selectedRegionData ? selectedRegionData.region_name_ar : null,
-        country: country || "SA",
-        whatsappNumber: whatsappNumber || (country === "SA" ? "966123456789" : "967123456789"),
+        country: customerCountry,
+        whatsappNumber: correctWhatsappNumber,
         createdAt: new Date().toISOString(),
       };
       clearCart();
@@ -589,28 +593,6 @@ const CheckoutPage = () => {
                         dir="ltr"
                       />
                     )}
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-body text-muted-foreground mb-2">العنوان *</label>
-                    <Textarea
-                      value={formData.address}
-                      onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                      className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
-                      rows={3}
-                      dir="rtl"
-                      placeholder="مثال: شارع الملك فهد، حي النزهة، مبنى رقم 15"
-                    />
-                  </div>
-                  <div className="md:col-span-2">
-                    <label className="block text-sm font-body text-muted-foreground mb-2">ملاحظات (اختياري)</label>
-                    <Textarea
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
-                      rows={2}
-                      dir="rtl"
-                      placeholder="مثال: الرجاء التواصل قبل التوصيل"
-                    />
                   </div>
                 </div>
               </motion.div>

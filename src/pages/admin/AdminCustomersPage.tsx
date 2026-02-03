@@ -48,15 +48,11 @@ const AdminCustomersPage = () => {
   };
 
   const openWhatsApp = (customer: Customer) => {
-    // أرقام التواصل حسب البلد
-    const storePhones = {
-      YE: '967782676054',
-      SA: '966557302919'
-    };
-    const toPhone = customer.phone.replace(/\D/g, '');
+    // رقم المتجر حسب بلد العميل
+    const storePhone = customer.country === 'YE' ? '967782676054' : '966557302919';
     const message = `مرحباً ${customer.name}`;
-    // فتح واتساب
-    window.open(`https://wa.me/${toPhone}?text=${encodeURIComponent(message)}`, '_blank');
+    // فتح واتساب برقم المتجر المناسب
+    window.open(`https://wa.me/${storePhone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const deleteCustomer = async (id: string) => {

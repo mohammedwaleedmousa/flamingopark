@@ -48,11 +48,19 @@ const AdminCustomersPage = () => {
   };
 
   const openWhatsApp = (customer: Customer) => {
-    // رقم المتجر حسب بلد العميل
-    const storePhone = customer.country === 'YE' ? '967782676054' : '966557302919';
+    // تنظيف رقم العميل من أي رموز
+    let customerPhone = customer.phone.replace(/\D/g, '');
+    
+    // إضافة رمز البلد إذا لم يكن موجوداً
+    if (customer.country === 'YE' && !customerPhone.startsWith('967')) {
+      customerPhone = '967' + customerPhone;
+    } else if (customer.country === 'SA' && !customerPhone.startsWith('966')) {
+      customerPhone = '966' + customerPhone;
+    }
+    
     const message = `مرحباً ${customer.name}`;
-    // فتح واتساب برقم المتجر المناسب
-    window.open(`https://wa.me/${storePhone}?text=${encodeURIComponent(message)}`, '_blank');
+    // فتح واتساب برقم العميل
+    window.open(`https://wa.me/${customerPhone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 
   const deleteCustomer = async (id: string) => {

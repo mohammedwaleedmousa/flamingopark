@@ -52,10 +52,22 @@ const AdminCustomersPage = () => {
     let customerPhone = customer.phone.replace(/\D/g, '');
     
     // إضافة رمز البلد إذا لم يكن موجوداً
-    if (customer.country === 'YE' && !customerPhone.startsWith('967')) {
-      customerPhone = '967' + customerPhone;
-    } else if (customer.country === 'SA' && !customerPhone.startsWith('966')) {
-      customerPhone = '966' + customerPhone;
+    if (customer.country === 'YE') {
+      // إزالة الصفر البادئ إن وجد
+      if (customerPhone.startsWith('0')) {
+        customerPhone = customerPhone.substring(1);
+      }
+      if (!customerPhone.startsWith('967')) {
+        customerPhone = '967' + customerPhone;
+      }
+    } else if (customer.country === 'SA') {
+      // إزالة الصفر البادئ إن وجد (مثل 0557302919 → 557302919)
+      if (customerPhone.startsWith('0')) {
+        customerPhone = customerPhone.substring(1);
+      }
+      if (!customerPhone.startsWith('966')) {
+        customerPhone = '966' + customerPhone;
+      }
     }
     
     const message = `مرحباً ${customer.name}`;

@@ -128,11 +128,16 @@ const AdminCustomersPage = () => {
                   <td className="p-4">
                     <div className="flex items-center gap-1">
                       <Button
-                        size="icon"
+                        size="sm"
                         variant="ghost"
                         onClick={() => openWhatsApp(customer)}
+                        className="gap-1 text-xs"
+                        title={customer.country === 'SA' ? 'مراسلة من الرقم السعودي 0557302919' : 'مراسلة من الرقم اليمني 782676054'}
                       >
                         <MessageCircle className="w-4 h-4" />
+                        <span className="hidden sm:inline text-muted-foreground">
+                          {customer.country === 'SA' ? '🇸🇦' : '🇾🇪'}
+                        </span>
                       </Button>
                       <AlertDialog>
                         <AlertDialogTrigger asChild>

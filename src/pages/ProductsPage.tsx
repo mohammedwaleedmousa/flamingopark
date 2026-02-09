@@ -5,7 +5,7 @@ import { useSearchParams } from "react-router-dom";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
-import ProductCardMinimal from "@/components/ProductCardMinimal";
+import ProductCard from "@/components/ProductCard";
 import { useStore, Product } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { Search, SlidersHorizontal, Loader2 } from "lucide-react";
@@ -261,7 +261,7 @@ const ProductsPage = () => {
               ) : (
                 <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4">
                   {searchResults.map((product, index) => (
-                    <ProductCardMinimal key={product.id} product={product} index={index} />
+                    <ProductCard key={product.id} product={product} index={index} />
                   ))}
                 </div>
               )}

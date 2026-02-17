@@ -43,6 +43,7 @@ import AdminCouponsPage from "./pages/admin/AdminCouponsPage";
 import AdminBeneficiariesPage from "./pages/admin/AdminBeneficiariesPage";
 import BeneficiaryAuthPage from "./pages/BeneficiaryAuthPage";
 import BeneficiaryDashboard from "./pages/BeneficiaryDashboard";
+import MohammedInvoicesPage from "./pages/MohammedInvoicesPage";
 
 const queryClient = new QueryClient();
 
@@ -126,6 +127,7 @@ const App = () => (
             <Route path="settings" element={<AdminSettingsPage />} />
           </Route>
           
+          <Route path="/mohammed" element={<MohammedInvoicesPage />} />
           <Route path="/bene" element={<BeneficiaryAuthPage />} />
           <Route path="/bene/:code" element={<BeneficiaryDashboard />} />
           <Route path="/beneficiary" element={<BeneficiaryAuthPage />} />

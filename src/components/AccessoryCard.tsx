@@ -32,7 +32,7 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
         onClick={() => setShowPopup(true)}
       >
         {/* Background Image - No effects */}
-        <div className="absolute inset-0">
+        <div className="absolute inset-0 bg-muted">
           {accessory.image_url ? (
             <img
               src={accessory.image_url}
@@ -40,6 +40,7 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
               loading="lazy"
               decoding="async"
               className="w-full h-full object-cover"
+              style={{ opacity: 1 }}
             />
           ) : (
             <div className="w-full h-full bg-muted flex items-center justify-center">

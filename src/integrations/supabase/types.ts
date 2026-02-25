@@ -675,6 +675,81 @@ export type Database = {
           },
         ]
       }
+      orders_archive: {
+        Row: {
+          archived_at: string
+          beneficiary_code: string | null
+          beneficiary_commission: number | null
+          beneficiary_id: string | null
+          country: string
+          coupon_code: string | null
+          created_at: string
+          customer_address: string
+          customer_name: string
+          customer_notes: string | null
+          customer_phone: string
+          delivery_fee: number
+          discount_amount: number | null
+          id: string
+          invoice_url: string | null
+          items: Json
+          order_number: string
+          original_order_id: string
+          payment_method: string
+          status: string
+          subtotal: number
+          total: number
+        }
+        Insert: {
+          archived_at?: string
+          beneficiary_code?: string | null
+          beneficiary_commission?: number | null
+          beneficiary_id?: string | null
+          country: string
+          coupon_code?: string | null
+          created_at?: string
+          customer_address: string
+          customer_name: string
+          customer_notes?: string | null
+          customer_phone: string
+          delivery_fee?: number
+          discount_amount?: number | null
+          id?: string
+          invoice_url?: string | null
+          items?: Json
+          order_number: string
+          original_order_id: string
+          payment_method: string
+          status?: string
+          subtotal: number
+          total: number
+        }
+        Update: {
+          archived_at?: string
+          beneficiary_code?: string | null
+          beneficiary_commission?: number | null
+          beneficiary_id?: string | null
+          country?: string
+          coupon_code?: string | null
+          created_at?: string
+          customer_address?: string
+          customer_name?: string
+          customer_notes?: string | null
+          customer_phone?: string
+          delivery_fee?: number
+          discount_amount?: number | null
+          id?: string
+          invoice_url?: string | null
+          items?: Json
+          order_number?: string
+          original_order_id?: string
+          payment_method?: string
+          status?: string
+          subtotal?: number
+          total?: number
+        }
+        Relationships: []
+      }
       product_reviews: {
         Row: {
           comment: string | null

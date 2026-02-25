@@ -17,7 +17,7 @@ const ProductsPage = () => {
   // Use the country from store
   const selectedCountry = storeCountry || "SA";
 
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(searchParams.get("search") || "");
   const [selectedCategory, setSelectedCategory] = useState(searchParams.get("category") || "all");
   const [selectedBrand, setSelectedBrand] = useState(searchParams.get("brand") || "all");
   const [showFilters, setShowFilters] = useState(false);
@@ -26,8 +26,10 @@ const ProductsPage = () => {
   useEffect(() => {
     const categoryParam = searchParams.get("category");
     const brandParam = searchParams.get("brand");
+    const searchParam = searchParams.get("search");
     if (categoryParam) setSelectedCategory(categoryParam);
     if (brandParam) setSelectedBrand(brandParam);
+    if (searchParam) setSearchQuery(searchParam);
   }, [searchParams]);
 
   // Fetch categories
@@ -95,7 +97,13 @@ const ProductsPage = () => {
 
     return products.filter((product) => {
       const matchesSearch =
-        !query || product.nameAr.toLowerCase().includes(query) || product.name.toLowerCase().includes(query);
+        !query ||
+        product.nameAr.toLowerCase().includes(query) ||
+        product.name.toLowerCase().includes(query) ||
+        product.descriptionAr.toLowerCase().includes(query) ||
+        product.description.toLowerCase().includes(query) ||
+        product.brand.toLowerCase().includes(query) ||
+        product.category.toLowerCase().includes(query);
 
       const selectedCatSlug = selectedCategory;
       const selectedCatData = categories.find((cat) => cat.slug === selectedCatSlug);

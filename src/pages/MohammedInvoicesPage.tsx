@@ -87,7 +87,7 @@ const MohammedInvoicesPage = () => {
     setLoading(true);
     try {
       const { data, error } = await supabase
-        .from('orders')
+        .from('orders_archive')
         .select('*')
         .order('created_at', { ascending: false });
 

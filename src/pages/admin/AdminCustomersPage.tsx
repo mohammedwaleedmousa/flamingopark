@@ -51,9 +51,15 @@ const AdminCustomersPage = () => {
     // تنظيف رقم العميل من أي رموز
     let customerPhone = customer.phone.replace(/\D/g, '');
     
+    // أرقام المتجر حسب بلد العميل
+    const storePhones: Record<string, string> = {
+      YE: '967782676054',
+      SA: '966557302919'
+    };
+    const storePhone = customer.country === 'YE' ? storePhones.YE : storePhones.SA;
+    
     // إضافة رمز البلد إذا لم يكن موجوداً
     if (customer.country === 'YE') {
-      // إزالة الصفر البادئ إن وجد
       if (customerPhone.startsWith('0')) {
         customerPhone = customerPhone.substring(1);
       }
@@ -61,7 +67,6 @@ const AdminCustomersPage = () => {
         customerPhone = '967' + customerPhone;
       }
     } else if (customer.country === 'SA') {
-      // إزالة الصفر البادئ إن وجد (مثل 0557302919 → 557302919)
       if (customerPhone.startsWith('0')) {
         customerPhone = customerPhone.substring(1);
       }
@@ -71,7 +76,9 @@ const AdminCustomersPage = () => {
     }
     
     const message = `مرحباً ${customer.name}`;
-    // فتح واتساب برقم العميل
+    // فتح واتساب برقم العميل - يجب على الأدمن فتحه من الرقم المناسب
+    const countryLabel = customer.country === 'YE' ? '🇾🇪 اليمن' : '🇸🇦 السعودية';
+    alert(`⚠️ أرسل من رقمك ${countryLabel}: ${storePhone}\n\nسيتم فتح محادثة مع العميل الآن`);
     window.open(`https://wa.me/${customerPhone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 

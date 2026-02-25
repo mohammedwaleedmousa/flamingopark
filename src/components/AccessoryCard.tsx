@@ -143,8 +143,6 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
                   </div>
                 )}
                 
-                {/* Gradient Overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-card via-transparent to-transparent" />
                 
                 {/* Selected Indicator */}
                 {quantity > 0 && (

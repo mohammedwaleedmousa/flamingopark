@@ -88,15 +88,24 @@ const AdminOrdersPage = () => {
 
   const openWhatsApp = (order: Order) => {
     const message = `مرحباً ${order.customer_name}، بخصوص طلبك رقم ${order.order_number}`;
-    // أرقام التواصل حسب البلد
-    const storePhones = {
+    const storePhones: Record<string, string> = {
       YE: '967782676054',
       SA: '966557302919'
     };
-    // استخدام الرقم المناسب حسب بلد العميل
-    const fromPhone = order.country === 'YE' ? storePhones.YE : storePhones.SA;
-    const toPhone = order.customer_phone.replace(/\D/g, '');
-    // فتح واتساب من الرقم المناسب
+    const storePhone = order.country === 'YE' ? storePhones.YE : storePhones.SA;
+    let toPhone = order.customer_phone.replace(/\D/g, '');
+    
+    // إضافة رمز البلد
+    if (order.country === 'YE') {
+      if (toPhone.startsWith('0')) toPhone = toPhone.substring(1);
+      if (!toPhone.startsWith('967')) toPhone = '967' + toPhone;
+    } else {
+      if (toPhone.startsWith('0')) toPhone = toPhone.substring(1);
+      if (!toPhone.startsWith('966')) toPhone = '966' + toPhone;
+    }
+    
+    const countryLabel = order.country === 'YE' ? '🇾🇪 اليمن' : '🇸🇦 السعودية';
+    alert(`⚠️ أرسل من رقمك ${countryLabel}: ${storePhone}\n\nسيتم فتح محادثة مع العميل الآن`);
     window.open(`https://wa.me/${toPhone}?text=${encodeURIComponent(message)}`, '_blank');
   };
 

@@ -93,6 +93,7 @@ const App = () => (
           <Route path="/index" element={<AuthRedirect />} />
           <Route path="/index.html" element={<AuthRedirect />} />
           <Route path="/auth" element={<AuthRedirect />} />
+          <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
           <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
           <Route path="/product/:slug" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
           <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />

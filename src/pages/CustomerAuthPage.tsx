@@ -73,19 +73,29 @@ const CustomerAuthPage = () => {
   
   const refCode = searchParams.get('ref');
   const navigate = useNavigate();
-  const { customer, setCustomer, setCountry } = useStore();
+  const { customer, setCustomer, setCountry, country } = useStore();
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
   });
 
-  // Redirect if already logged in
+  // Redirect if already logged in and country is available
   useEffect(() => {
-    if (customer) {
+    if (!customer) return;
+
+    const fallbackCountry = customer.country === "SA" || customer.country === "YE" ? customer.country : null;
+
+    if (!country && fallbackCountry) {
+      setCountry(fallbackCountry);
+      navigate("/home", { replace: true });
+      return;
+    }
+
+    if (country) {
       navigate("/home", { replace: true });
     }
-  }, [customer, navigate]);
+  }, [customer, country, setCountry, navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

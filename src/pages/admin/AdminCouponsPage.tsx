@@ -245,7 +245,7 @@ const AdminCouponsPage = () => {
                   <tr key={stat.code} className="border-b border-border/50 hover:bg-muted/30">
                     <td className="p-2 font-mono text-primary">{stat.code}</td>
                     <td className="p-2">{stat.usageCount} مرة</td>
-                    <td className="p-2 text-green-600">{stat.totalDiscount.toFixed(0)} ر.س</td>
+                    <td className="p-2 text-green-600">{stat.totalDiscount.toFixed(0)} ر.س/ر.ي</td>
                   </tr>
                 ))}
               </tbody>

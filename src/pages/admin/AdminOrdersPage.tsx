@@ -544,7 +544,7 @@ const AdminOrdersPage = () => {
                           </span>
                         )}
                       </span>
-                      <span>-{parseFloat(String(selectedOrder.discount_amount)).toFixed(0)} ر.س</span>
+                      <span>-{parseFloat(String(selectedOrder.discount_amount)).toFixed(0)} {selectedOrder.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-heading text-lg pt-3 border-t border-border">

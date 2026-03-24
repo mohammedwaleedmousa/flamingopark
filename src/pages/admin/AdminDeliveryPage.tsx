@@ -271,7 +271,7 @@ const AdminDeliveryPage = () => {
                 <DollarSign className="w-4 h-4 text-primary" />
                 <div>
                   <p className="text-xs text-muted-foreground">الرسوم</p>
-                  <p className="font-heading text-sm">{company.base_fee} ر.س</p>
+                  <p className="font-heading text-sm">{company.base_fee} {company.country === 'SA' ? 'ر.س' : 'ر.ي'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">

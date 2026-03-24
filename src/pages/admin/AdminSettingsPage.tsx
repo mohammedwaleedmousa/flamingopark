@@ -121,6 +121,8 @@ const AdminSettingsPage = () => {
         updateSetting("bank_accounts_sa", bankAccounts.sa),
         updateSetting("bank_accounts_ye", bankAccounts.ye),
         updateSetting("certification_pdf_url", certPdfUrl),
+        updateSetting("social_whatsapp", socialLinks.whatsapp),
+        updateSetting("social_instagram", socialLinks.instagram),
       ]);
 
       toast({ title: "تم", description: "تم حفظ الإعدادات بنجاح" });

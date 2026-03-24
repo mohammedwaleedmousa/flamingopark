@@ -489,7 +489,7 @@ const AdminOrdersPage = () => {
                             )}
                           </div>
                           <span className="font-heading text-primary shrink-0">
-                            {(item.quantity * item.price).toFixed(0)} ر.س
+                            {(item.quantity * item.price).toFixed(0)} {selectedOrder?.country === 'SA' ? 'ر.س' : 'ر.ي'}
                           </span>
                         </div>
                         {/* Accessories with images */}

@@ -311,6 +311,31 @@ const AdminSettingsPage = () => {
         </div>
       </div>
 
+      {/* Social Links */}
+      <div className="bg-card border border-border rounded p-6 space-y-4">
+        <h2 className="font-heading text-lg text-foreground">روابط التواصل الاجتماعي (الفوتر)</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">رابط واتساب</label>
+            <Input
+              value={socialLinks.whatsapp}
+              onChange={(e) => setSocialLinks({ ...socialLinks, whatsapp: e.target.value })}
+              placeholder="https://wa.me/966..."
+              dir="ltr"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">رابط انستجرام</label>
+            <Input
+              value={socialLinks.instagram}
+              onChange={(e) => setSocialLinks({ ...socialLinks, instagram: e.target.value })}
+              placeholder="https://instagram.com/..."
+              dir="ltr"
+            />
+          </div>
+        </div>
+      </div>
+
       {/* Bank Accounts SA */}
       <div className="bg-card border border-border rounded p-6 space-y-4">
         <div className="flex items-center justify-between">

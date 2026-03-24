@@ -222,7 +222,7 @@ const AdminOrdersPage = () => {
               <span className="text-muted-foreground">
                 {order.country === 'SA' ? '🇸🇦' : '🇾🇪'} • {order.payment_method === 'cod' ? 'عند الاستلام' : 'بنكي'}
               </span>
-              <span className="font-heading text-primary text-lg">{parseFloat(String(order.total)).toFixed(0)} ر.س</span>
+              <span className="font-heading text-primary text-lg">{parseFloat(String(order.total)).toFixed(0)} {order.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
             </div>
 
             <div className="text-xs text-muted-foreground mb-4">
@@ -310,7 +310,7 @@ const AdminOrdersPage = () => {
                     <p className="text-xs text-muted-foreground" dir="ltr">{order.customer_phone}</p>
                   </td>
                   <td className="p-4 text-lg">{order.country === 'SA' ? '🇸🇦' : '🇾🇪'}</td>
-                  <td className="p-4 font-heading text-primary">{parseFloat(String(order.total)).toFixed(0)} ر.س</td>
+                  <td className="p-4 font-heading text-primary">{parseFloat(String(order.total)).toFixed(0)} {order.country === 'SA' ? 'ر.س' : 'ر.ي'}</td>
                   <td className="p-4 text-sm">{order.payment_method === 'cod' ? 'عند الاستلام' : 'بنكي'}</td>
                   <td className="p-4">
                     <Select
@@ -483,13 +483,13 @@ const AdminOrdersPage = () => {
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="font-heading text-sm truncate">{item.name || item.product_name}</p>
-                            <p className="text-xs text-muted-foreground">{item.quantity} × {item.price} ر.س</p>
+                            <p className="text-xs text-muted-foreground">{item.quantity} × {item.price} {selectedOrder?.country === 'SA' ? 'ر.س' : 'ر.ي'}</p>
                             {item.selected_size && (
                               <p className="text-xs text-muted-foreground">الحجم: {item.selected_size}</p>
                             )}
                           </div>
                           <span className="font-heading text-primary shrink-0">
-                            {(item.quantity * item.price).toFixed(0)} ر.س
+                            {(item.quantity * item.price).toFixed(0)} {selectedOrder?.country === 'SA' ? 'ر.س' : 'ر.ي'}
                           </span>
                         </div>
                         {/* Accessories with images */}
@@ -528,11 +528,11 @@ const AdminOrdersPage = () => {
                 <div className="border-t border-border pt-4 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">المجموع الفرعي</span>
-                    <span>{parseFloat(String(selectedOrder.subtotal)).toFixed(0)} ر.س</span>
+                    <span>{parseFloat(String(selectedOrder.subtotal)).toFixed(0)} {selectedOrder.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">التوصيل</span>
-                    <span>{parseFloat(String(selectedOrder.delivery_fee)).toFixed(0)} ر.س</span>
+                    <span>{parseFloat(String(selectedOrder.delivery_fee)).toFixed(0)} {selectedOrder.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
                   </div>
                   {selectedOrder.discount_amount && selectedOrder.discount_amount > 0 && (
                     <div className="flex justify-between text-sm text-green-600">
@@ -544,12 +544,12 @@ const AdminOrdersPage = () => {
                           </span>
                         )}
                       </span>
-                      <span>-{parseFloat(String(selectedOrder.discount_amount)).toFixed(0)} ر.س</span>
+                      <span>-{parseFloat(String(selectedOrder.discount_amount)).toFixed(0)} {selectedOrder.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
                     </div>
                   )}
                   <div className="flex justify-between font-heading text-lg pt-3 border-t border-border">
                     <span>الإجمالي</span>
-                    <span className="text-primary">{parseFloat(String(selectedOrder.total)).toFixed(0)} ر.س</span>
+                    <span className="text-primary">{parseFloat(String(selectedOrder.total)).toFixed(0)} {selectedOrder.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm text-muted-foreground pt-2">
                     <span>طريقة الدفع</span>

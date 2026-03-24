@@ -84,7 +84,7 @@ const CheckoutPage = () => {
   const [beneficiaryDiscount, setBeneficiaryDiscount] = useState(0);
 
   const subtotal = getCartTotal();
-  const currency = country === "SA" ? "ريال" : "ريال";
+  const currency = country === "SA" ? "ر.س" : "ر.ي";
 
   // Calculate total cost price (for discount calculations)
   const getCostPriceTotal = () => {

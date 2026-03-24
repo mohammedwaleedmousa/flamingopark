@@ -271,7 +271,7 @@ const AdminDeliveryPage = () => {
                 <DollarSign className="w-4 h-4 text-primary" />
                 <div>
                   <p className="text-xs text-muted-foreground">الرسوم</p>
-                  <p className="font-heading text-sm">{company.base_fee} ر.س</p>
+                  <p className="font-heading text-sm">{company.base_fee} {company.country === 'SA' ? 'ر.س' : 'ر.ي'}</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
@@ -355,7 +355,7 @@ const AdminDeliveryPage = () => {
                   </span>
                 </td>
                 <td className="p-4">
-                  <span className="font-heading text-primary">{company.base_fee} ر.س</span>
+                  <span className="font-heading text-primary">{company.base_fee} {company.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
                 </td>
                 <td className="p-4 text-muted-foreground">
                   {company.delivery_days || '-'}

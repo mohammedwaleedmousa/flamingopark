@@ -112,7 +112,7 @@ const SortableProductCard = ({
             </span>
           </div>
           <div className="flex items-center gap-2 mt-2">
-            <span className="font-heading text-primary">{product.price} ر.س</span>
+            <span className="font-heading text-primary">{product.price} {product.countries?.includes('YE') && !product.countries?.includes('SA') ? 'ر.ي' : 'ر.س'}</span>
             {product.discount > 0 && (
               <span className="text-xs text-destructive bg-destructive/10 px-1.5 py-0.5 rounded">
                 -{product.discount}%
@@ -220,7 +220,7 @@ const SortableTableRow = ({
         <p className="text-xs text-muted-foreground">{product.slug}</p>
       </td>
       <td className="p-4">
-        <span className="font-heading text-primary">{product.price} ر.س</span>
+        <span className="font-heading text-primary">{product.price} {product.countries?.includes('YE') && !product.countries?.includes('SA') ? 'ر.ي' : 'ر.س'}</span>
         {product.discount > 0 && (
           <span className="text-xs text-destructive mr-2 bg-destructive/10 px-1.5 py-0.5 rounded">
             -{product.discount}%

@@ -17,6 +17,11 @@ const AdminSettingsPage = () => {
     phone_ye: "",
   });
 
+  const [socialLinks, setSocialLinks] = useState({
+    whatsapp: "",
+    instagram: "",
+  });
+
   const [whatsapp, setWhatsapp] = useState({
     sa: "",
     ye: "",
@@ -73,6 +78,12 @@ const AdminSettingsPage = () => {
             case "certification_pdf_url":
               setCertPdfUrl(typeof value === "string" ? value : "");
               break;
+            case "social_whatsapp":
+              setSocialLinks((prev) => ({ ...prev, whatsapp: typeof value === "string" ? value : "" }));
+              break;
+            case "social_instagram":
+              setSocialLinks((prev) => ({ ...prev, instagram: typeof value === "string" ? value : "" }));
+              break;
           }
         });
       }
@@ -110,6 +121,8 @@ const AdminSettingsPage = () => {
         updateSetting("bank_accounts_sa", bankAccounts.sa),
         updateSetting("bank_accounts_ye", bankAccounts.ye),
         updateSetting("certification_pdf_url", certPdfUrl),
+        updateSetting("social_whatsapp", socialLinks.whatsapp),
+        updateSetting("social_instagram", socialLinks.instagram),
       ]);
 
       toast({ title: "تم", description: "تم حفظ الإعدادات بنجاح" });
@@ -292,6 +305,31 @@ const AdminSettingsPage = () => {
               value={whatsapp.ye}
               onChange={(e) => setWhatsapp({ ...whatsapp, ye: e.target.value })}
               placeholder="+967123456789"
+              dir="ltr"
+            />
+          </div>
+        </div>
+      </div>
+
+      {/* Social Links */}
+      <div className="bg-card border border-border rounded p-6 space-y-4">
+        <h2 className="font-heading text-lg text-foreground">روابط التواصل الاجتماعي (الفوتر)</h2>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">رابط واتساب</label>
+            <Input
+              value={socialLinks.whatsapp}
+              onChange={(e) => setSocialLinks({ ...socialLinks, whatsapp: e.target.value })}
+              placeholder="https://wa.me/966..."
+              dir="ltr"
+            />
+          </div>
+          <div>
+            <label className="block text-sm text-muted-foreground mb-2">رابط انستجرام</label>
+            <Input
+              value={socialLinks.instagram}
+              onChange={(e) => setSocialLinks({ ...socialLinks, instagram: e.target.value })}
+              placeholder="https://instagram.com/..."
               dir="ltr"
             />
           </div>

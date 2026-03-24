@@ -8,7 +8,7 @@ const CartDrawer = () => {
   const { cart, isCartOpen, closeCart, removeFromCart, updateQuantity, getCartTotal, clearCart, country } = useStore();
   const navigate = useNavigate();
   const total = getCartTotal();
-  const currency = country === 'SA' ? 'ريال' : 'ريال';
+  const currency = country === 'SA' ? 'ر.س' : 'ر.ي';
 
   const handleCheckout = () => {
     closeCart();

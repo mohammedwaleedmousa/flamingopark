@@ -74,7 +74,7 @@ const AdminDashboard = () => {
     { title: 'المنتجات', value: stats.products, icon: Package, color: 'from-blue-500/20 to-blue-600/10', iconColor: 'text-blue-500', borderColor: 'border-blue-500/20' },
     { title: 'الطلبات', value: stats.orders, icon: ShoppingCart, color: 'from-green-500/20 to-green-600/10', iconColor: 'text-green-500', borderColor: 'border-green-500/20' },
     { title: 'العملاء', value: stats.customers, icon: Users, color: 'from-purple-500/20 to-purple-600/10', iconColor: 'text-purple-500', borderColor: 'border-purple-500/20' },
-    { title: 'الإيرادات', value: `${stats.revenue.toFixed(0)} ر.س`, icon: DollarSign, color: 'from-primary/20 to-primary/10', iconColor: 'text-primary', borderColor: 'border-primary/20' },
+    { title: 'الإيرادات', value: `${stats.revenue.toFixed(0)} ر.س/ر.ي`, icon: DollarSign, color: 'from-primary/20 to-primary/10', iconColor: 'text-primary', borderColor: 'border-primary/20' },
   ];
 
   const quickActions = [

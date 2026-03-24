@@ -528,7 +528,7 @@ const AdminOrdersPage = () => {
                 <div className="border-t border-border pt-4 space-y-3">
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">المجموع الفرعي</span>
-                    <span>{parseFloat(String(selectedOrder.subtotal)).toFixed(0)} ر.س</span>
+                    <span>{parseFloat(String(selectedOrder.subtotal)).toFixed(0)} {selectedOrder.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">التوصيل</span>

@@ -483,7 +483,7 @@ const AdminOrdersPage = () => {
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="font-heading text-sm truncate">{item.name || item.product_name}</p>
-                            <p className="text-xs text-muted-foreground">{item.quantity} × {item.price} ر.س</p>
+                            <p className="text-xs text-muted-foreground">{item.quantity} × {item.price} {selectedOrder?.country === 'SA' ? 'ر.س' : 'ر.ي'}</p>
                             {item.selected_size && (
                               <p className="text-xs text-muted-foreground">الحجم: {item.selected_size}</p>
                             )}

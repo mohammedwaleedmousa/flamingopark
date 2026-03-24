@@ -310,7 +310,7 @@ const AdminOrdersPage = () => {
                     <p className="text-xs text-muted-foreground" dir="ltr">{order.customer_phone}</p>
                   </td>
                   <td className="p-4 text-lg">{order.country === 'SA' ? '🇸🇦' : '🇾🇪'}</td>
-                  <td className="p-4 font-heading text-primary">{parseFloat(String(order.total)).toFixed(0)} ر.س</td>
+                  <td className="p-4 font-heading text-primary">{parseFloat(String(order.total)).toFixed(0)} {order.country === 'SA' ? 'ر.س' : 'ر.ي'}</td>
                   <td className="p-4 text-sm">{order.payment_method === 'cod' ? 'عند الاستلام' : 'بنكي'}</td>
                   <td className="p-4">
                     <Select

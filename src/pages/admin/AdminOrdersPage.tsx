@@ -532,7 +532,7 @@ const AdminOrdersPage = () => {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">التوصيل</span>
-                    <span>{parseFloat(String(selectedOrder.delivery_fee)).toFixed(0)} ر.س</span>
+                    <span>{parseFloat(String(selectedOrder.delivery_fee)).toFixed(0)} {selectedOrder.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
                   </div>
                   {selectedOrder.discount_amount && selectedOrder.discount_amount > 0 && (
                     <div className="flex justify-between text-sm text-green-600">

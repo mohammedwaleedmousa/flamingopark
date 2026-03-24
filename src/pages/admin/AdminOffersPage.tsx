@@ -814,7 +814,7 @@ const AdminOffersPage = () => {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{product.name_ar}</p>
                             <p className="text-xs text-muted-foreground">
-                              {product.price} {product.countries?.includes('YE') && !product.countries?.includes('SA') ? 'ر.ي' : 'ر.س'}
+                              {product.price} ر.س
                               {product.discount && product.discount > 0 && (
                                 <span className="text-destructive mr-2">(-{product.discount}%)</span>
                               )}

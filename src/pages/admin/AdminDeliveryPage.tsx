@@ -355,7 +355,7 @@ const AdminDeliveryPage = () => {
                   </span>
                 </td>
                 <td className="p-4">
-                  <span className="font-heading text-primary">{company.base_fee} ر.س</span>
+                  <span className="font-heading text-primary">{company.base_fee} {company.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
                 </td>
                 <td className="p-4 text-muted-foreground">
                   {company.delivery_days || '-'}

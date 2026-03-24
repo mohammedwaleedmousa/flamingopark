@@ -549,7 +549,7 @@ const AdminOrdersPage = () => {
                   )}
                   <div className="flex justify-between font-heading text-lg pt-3 border-t border-border">
                     <span>الإجمالي</span>
-                    <span className="text-primary">{parseFloat(String(selectedOrder.total)).toFixed(0)} ر.س</span>
+                    <span className="text-primary">{parseFloat(String(selectedOrder.total)).toFixed(0)} {selectedOrder.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
                   </div>
                   <div className="flex items-center justify-between text-sm text-muted-foreground pt-2">
                     <span>طريقة الدفع</span>

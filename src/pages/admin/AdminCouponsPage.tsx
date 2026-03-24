@@ -253,7 +253,7 @@ const AdminCouponsPage = () => {
                 <tr className="bg-muted/50 font-heading">
                   <td className="p-2">الإجمالي</td>
                   <td className="p-2">{couponStats.reduce((sum, s) => sum + s.usageCount, 0)} مرة</td>
-                  <td className="p-2 text-green-600">{couponStats.reduce((sum, s) => sum + s.totalDiscount, 0).toFixed(0)} ر.س</td>
+                  <td className="p-2 text-green-600">{couponStats.reduce((sum, s) => sum + s.totalDiscount, 0).toFixed(0)} ر.س/ر.ي</td>
                 </tr>
               </tfoot>
             </table>

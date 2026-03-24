@@ -222,7 +222,7 @@ const AdminOrdersPage = () => {
               <span className="text-muted-foreground">
                 {order.country === 'SA' ? '🇸🇦' : '🇾🇪'} • {order.payment_method === 'cod' ? 'عند الاستلام' : 'بنكي'}
               </span>
-              <span className="font-heading text-primary text-lg">{parseFloat(String(order.total)).toFixed(0)} ر.س</span>
+              <span className="font-heading text-primary text-lg">{parseFloat(String(order.total)).toFixed(0)} {order.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
             </div>
 
             <div className="text-xs text-muted-foreground mb-4">

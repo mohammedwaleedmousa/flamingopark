@@ -17,6 +17,11 @@ const AdminSettingsPage = () => {
     phone_ye: "",
   });
 
+  const [socialLinks, setSocialLinks] = useState({
+    whatsapp: "",
+    instagram: "",
+  });
+
   const [whatsapp, setWhatsapp] = useState({
     sa: "",
     ye: "",

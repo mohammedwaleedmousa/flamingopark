@@ -78,6 +78,12 @@ const AdminSettingsPage = () => {
             case "certification_pdf_url":
               setCertPdfUrl(typeof value === "string" ? value : "");
               break;
+            case "social_whatsapp":
+              setSocialLinks((prev) => ({ ...prev, whatsapp: typeof value === "string" ? value : "" }));
+              break;
+            case "social_instagram":
+              setSocialLinks((prev) => ({ ...prev, instagram: typeof value === "string" ? value : "" }));
+              break;
           }
         });
       }

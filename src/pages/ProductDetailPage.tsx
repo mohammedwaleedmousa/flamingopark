@@ -413,7 +413,7 @@ const ProductDetailPage = () => {
                 {/* Like Button */}
                 <button
                   onClick={handleLike}
-                  className={`absolute top-4 left-4 z-10 p-3 rounded-full backdrop-blur-sm transition-all duration-300 ${
+                  className={`absolute top-4 left-4 z-10 p-3 rounded-full transition-all duration-300 ${
                     isLiked 
                       ? 'bg-gold text-secondary shadow-lg' 
                       : 'bg-background/80 text-foreground hover:bg-background'
@@ -701,7 +701,7 @@ const ProductDetailPage = () => {
       </main>
 
       {/* Fixed Action Buttons */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 bg-background/95 backdrop-blur-md border-t border-border/50 p-4 shadow-lg">
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border/50 p-4 shadow-lg">
         <div className="container mx-auto max-w-lg">
           <div className="flex gap-3">
             <Button

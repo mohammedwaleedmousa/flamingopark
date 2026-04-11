@@ -75,7 +75,7 @@ const AdminLayout = () => {
         <AdminSidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
-          <header className="flex items-center justify-between gap-3 px-4 py-3 md:px-6 md:py-4 border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-40">
+          <header className="flex items-center justify-between gap-3 px-4 py-3 md:px-6 md:py-4 border-b border-border bg-card sticky top-0 z-40">
             <div className="flex items-center gap-3">
               <SidebarTrigger className="text-foreground hover:text-primary hover:bg-muted p-2 rounded-lg transition-colors">
                 <Menu className="w-5 h-5" />

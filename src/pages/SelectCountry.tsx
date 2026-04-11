@@ -74,7 +74,7 @@ const SelectCountry = () => {
             <motion.button
               key={country.code}
               onClick={() => handleSelect(country.code)}
-              className="group relative p-8 border border-gold/30 bg-secondary/50 backdrop-blur-sm transition-all duration-500 hover:border-gold hover:bg-gold/5"
+              className="group relative p-8 border border-gold/30 bg-secondary/50 transition-all duration-500 hover:border-gold hover:bg-gold/5"
               initial={{ opacity: 0, y: 30 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: 0.6 + index * 0.1, duration: 0.5 }}

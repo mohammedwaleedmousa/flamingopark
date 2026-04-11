@@ -123,7 +123,7 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
               {/* Like Button */}
               <button
                 onClick={handleLike}
-                className={`p-2 rounded-full backdrop-blur-sm transition-all duration-300 ${
+                className={`p-2 rounded-full transition-all duration-300 ${
                   isLiked 
                     ? 'bg-gold text-secondary shadow-lg scale-110' 
                     : 'bg-background/70 text-foreground hover:bg-background hover:scale-110'
@@ -146,7 +146,7 @@ const ProductCard = ({ product, index = 0, compact = false }: ProductCardProps) 
                 </button>
                 <button
                   onClick={handleShare}
-                  className="p-2.5 bg-background/90 backdrop-blur-sm text-foreground rounded-lg hover:bg-background transition-all duration-300 shadow-lg"
+                  className="p-2.5 bg-background/90 text-foreground rounded-lg hover:bg-background transition-all duration-300 shadow-lg"
                 >
                   <Share2 className="w-4 h-4" />
                 </button>

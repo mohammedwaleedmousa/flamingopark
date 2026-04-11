@@ -382,7 +382,7 @@ const AdminOrdersPage = () => {
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-secondary/80 backdrop-blur-sm"
+            className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-secondary/90"
             onClick={() => setSelectedOrder(null)}
           >
             <motion.div
@@ -394,7 +394,7 @@ const AdminOrdersPage = () => {
               onClick={(e) => e.stopPropagation()}
             >
               {/* Modal Header */}
-              <div className="sticky top-0 bg-background/95 backdrop-blur-sm p-4 md:p-6 border-b border-border flex items-center justify-between z-10">
+              <div className="sticky top-0 bg-background p-4 md:p-6 border-b border-border flex items-center justify-between z-10">
                 <div>
                   <h2 className="font-heading text-lg md:text-xl">تفاصيل الطلب</h2>
                   <p className="text-sm text-primary font-mono">#{selectedOrder.order_number}</p>

@@ -234,7 +234,7 @@ const HeroSlider = () => {
                           initial={{ opacity: 0, y: 20 }}
                           animate={{ opacity: 1, y: 0 }}
                           transition={{ delay: 0.3 }}
-                          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gold/10 backdrop-blur-sm rounded-full mb-4 border border-gold/20"
+                          className="inline-flex items-center gap-2 px-5 py-2.5 bg-gold/15 rounded-full mb-4 border border-gold/20"
                         >
                           <Sparkles className="w-4 h-4 text-gold" />
                           <span className="text-gold font-body text-sm tracking-[0.2em] uppercase">
@@ -290,7 +290,7 @@ const HeroSlider = () => {
                         {/* Secondary Link */}
                         <Link
                           to="/about"
-                          className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-gold/10 backdrop-blur-sm border border-gold/30 text-gold font-heading tracking-wider text-sm uppercase hover:bg-gold/20 transition-all duration-300 rounded-lg min-w-[180px]"
+                          className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-gold/15 border border-gold/30 text-gold font-heading tracking-wider text-sm uppercase hover:bg-gold/20 transition-all duration-300 rounded-lg min-w-[180px]"
                         >
                           اعرف المزيد
                           <ChevronLeft className="w-4 h-4" />

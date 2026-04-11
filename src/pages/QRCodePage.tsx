@@ -72,7 +72,7 @@ const QRCodePage = () => {
         transition={{ duration: 0.4 }}
         className="w-full max-w-md"
       >
-        <div className="backdrop-blur-sm bg-card/80 rounded-2xl shadow-2xl shadow-primary/10 p-8 space-y-6 border border-primary/40">
+        <div className="bg-card rounded-2xl shadow-2xl shadow-primary/10 p-8 space-y-6 border border-primary/40">
           {/* QR Code Container */}
           <div
             ref={qrRef}

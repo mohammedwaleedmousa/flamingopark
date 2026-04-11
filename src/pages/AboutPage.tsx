@@ -236,7 +236,7 @@ const AboutPage = () => {
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gold/20 backdrop-blur-md rounded-full mb-6 border border-gold/30"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gold/20 rounded-full mb-6 border border-gold/30"
             >
               <Gem className="w-4 h-4 text-gold" />
               <span className="font-body text-sm text-gold-light">منذ 2020</span>
@@ -285,7 +285,7 @@ const AboutPage = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.4 + index * 0.1 }}
                   whileHover={{ scale: 1.05, y: -5 }}
-                  className="bg-black/40 backdrop-blur-md border border-gold/30 rounded-xl p-4 hover:border-gold/60 transition-all duration-300"
+                  className="bg-black/60 border border-gold/30 rounded-xl p-4 hover:border-gold/60 transition-all duration-300"
                 >
                   <stat.icon className="w-5 h-5 text-gold mx-auto mb-2" />
                   <div className="font-heading text-xl md:text-2xl text-gold">{stat.value}</div>
@@ -431,7 +431,7 @@ const AboutPage = () => {
                   className="group relative"
                 >
                   <div className={`absolute inset-0 bg-gradient-to-b ${value.color} rounded-2xl transition-opacity group-hover:opacity-100 opacity-50`} />
-                  <div className="relative bg-card/80 backdrop-blur-sm border border-border/30 p-8 rounded-2xl text-center transition-all duration-300 group-hover:border-gold/30 group-hover:-translate-y-2">
+                  <div className="relative bg-card border border-border/30 p-8 rounded-2xl text-center transition-all duration-300 group-hover:border-gold/30 group-hover:-translate-y-2">
                     <div className="w-20 h-20 mx-auto mb-6 flex items-center justify-center bg-gradient-to-br from-gold/20 to-gold/5 rounded-2xl group-hover:scale-110 transition-transform duration-300">
                       <value.icon className="w-10 h-10 text-gold" />
                     </div>
@@ -569,7 +569,7 @@ const AboutPage = () => {
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-secondary/90 backdrop-blur-md"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-secondary/95"
         >
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}

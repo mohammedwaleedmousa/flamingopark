@@ -171,7 +171,7 @@ const MohammedInvoicesPage = () => {
   return (
     <div className="min-h-screen bg-muted/30" dir="rtl">
       {/* Header */}
-      <header className="bg-card border-b border-border sticky top-0 z-40 backdrop-blur-sm">
+      <header className="bg-card border-b border-border sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <Logo size="sm" />

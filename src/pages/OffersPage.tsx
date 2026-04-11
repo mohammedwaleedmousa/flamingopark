@@ -291,7 +291,7 @@ const OffersPage = () => {
               <motion.div
                 initial={{ opacity: 0, y: -20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-gold/20 to-gold/10 backdrop-blur-sm rounded-full mb-8 border border-gold/30"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-gold/20 to-gold/10 rounded-full mb-8 border border-gold/30"
               >
                 <Flame className="w-4 h-4 text-orange-400 animate-pulse" />
                 <span className="font-body text-sm text-gold">عروض محدودة المدة</span>

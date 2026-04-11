@@ -236,7 +236,7 @@ const AboutPage = () => {
             <motion.div
               initial={{ opacity: 0, y: -20 }}
               animate={{ opacity: 1, y: 0 }}
-              className="inline-flex items-center gap-2 px-4 py-2 bg-gold/20 backdrop-blur-md rounded-full mb-6 border border-gold/30"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-gold/20 rounded-full mb-6 border border-gold/30"
             >
               <Gem className="w-4 h-4 text-gold" />
               <span className="font-body text-sm text-gold-light">منذ 2020</span>

@@ -107,7 +107,7 @@ const AdminLoginPage = () => {
         transition={{ duration: 0.4 }}
         className="w-full max-w-sm"
       >
-        <div className="backdrop-blur-sm bg-card/80 rounded-2xl shadow-2xl shadow-primary/10 p-8 space-y-8 border border-primary/40">
+        <div className="bg-card rounded-2xl shadow-2xl shadow-primary/10 p-8 space-y-8 border border-primary/40">
           {/* Logo */}
           <div className="flex justify-center">
             <Logo size="lg" />

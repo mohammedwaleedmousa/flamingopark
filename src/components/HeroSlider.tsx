@@ -290,7 +290,7 @@ const HeroSlider = () => {
                         {/* Secondary Link */}
                         <Link
                           to="/about"
-                          className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-gold/10 backdrop-blur-sm border border-gold/30 text-gold font-heading tracking-wider text-sm uppercase hover:bg-gold/20 transition-all duration-300 rounded-lg min-w-[180px]"
+                          className="inline-flex items-center justify-center gap-2 px-8 py-3 bg-gold/15 border border-gold/30 text-gold font-heading tracking-wider text-sm uppercase hover:bg-gold/20 transition-all duration-300 rounded-lg min-w-[180px]"
                         >
                           اعرف المزيد
                           <ChevronLeft className="w-4 h-4" />

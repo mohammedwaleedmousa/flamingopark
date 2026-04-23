@@ -277,9 +277,22 @@ const ProductDetailPage = () => {
       const newQty = Math.max(0, current + delta);
       return { ...prev, [accessoryName]: newQty };
     });
+    setAccessoryChoiceMade(true);
   };
 
+  const hasAccessories = !!(product.accessories && product.accessories.length > 0);
+
   const handleAddToCart = () => {
+    // If product has accessories and user hasn't decided yet, scroll to accessories first
+    if (hasAccessories && !accessoryChoiceMade) {
+      accessoriesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      toast({
+        title: 'اختر الملحقات أولاً',
+        description: 'يرجى اختيار الملحقات أو الضغط على "بدون ملحقات" للمتابعة',
+      });
+      return;
+    }
+
     // Prepare selected accessories with quantities
     const selectedAccs = product.accessories
       ? product.accessories

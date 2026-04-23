@@ -39,6 +39,8 @@ const ProductDetailPage = () => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [accessoryQuantities, setAccessoryQuantities] = useState<Record<string, number>>({});
+  const [accessoryChoiceMade, setAccessoryChoiceMade] = useState(false);
+  const accessoriesSectionRef = useRef<HTMLDivElement>(null);
   
   // Touch swipe state
   const [touchStart, setTouchStart] = useState<number | null>(null);

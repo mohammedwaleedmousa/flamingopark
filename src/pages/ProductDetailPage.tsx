@@ -39,6 +39,8 @@ const ProductDetailPage = () => {
   const [imageLoaded, setImageLoaded] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [accessoryQuantities, setAccessoryQuantities] = useState<Record<string, number>>({});
+  const [accessoryChoiceMade, setAccessoryChoiceMade] = useState(false);
+  const accessoriesSectionRef = useRef<HTMLDivElement>(null);
   
   // Touch swipe state
   const [touchStart, setTouchStart] = useState<number | null>(null);
@@ -275,9 +277,22 @@ const ProductDetailPage = () => {
       const newQty = Math.max(0, current + delta);
       return { ...prev, [accessoryName]: newQty };
     });
+    setAccessoryChoiceMade(true);
   };
 
+  const hasAccessories = !!(product.accessories && product.accessories.length > 0);
+
   const handleAddToCart = () => {
+    // If product has accessories and user hasn't decided yet, scroll to accessories first
+    if (hasAccessories && !accessoryChoiceMade) {
+      accessoriesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      toast({
+        title: 'اختر الملحقات أولاً',
+        description: 'يرجى اختيار الملحقات أو الضغط على "بدون ملحقات" للمتابعة',
+      });
+      return;
+    }
+
     // Prepare selected accessories with quantities
     const selectedAccs = product.accessories
       ? product.accessories
@@ -585,8 +600,22 @@ const ProductDetailPage = () => {
 
               {/* 4- Accessories - SMALLER WITHOUT EFFECTS */}
               {product.accessories && product.accessories.length > 0 && (
-                <div className="space-y-3">
-                  <span className="font-heading text-lg text-foreground">الملحقات الإضافية</span>
+                <div ref={accessoriesSectionRef} className="space-y-3 scroll-mt-24">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="font-heading text-lg text-foreground">الملحقات الإضافية</span>
+                    <button
+                      onClick={() => setAccessoryChoiceMade(true)}
+                      className={`text-xs font-body px-3 py-1.5 rounded-full border transition-all ${
+                        accessoryChoiceMade && Object.values(accessoryQuantities).every(q => !q)
+                          ? 'bg-gold text-secondary border-gold'
+                          : 'border-border text-muted-foreground hover:border-gold hover:text-gold'
+                      }`}
+                    >
+                      {accessoryChoiceMade && Object.values(accessoryQuantities).every(q => !q)
+                        ? '✓ بدون ملحقات'
+                        : 'بدون ملحقات'}
+                    </button>
+                  </div>
                   <div className="grid grid-cols-1 gap-2">
                     {product.accessories.map((acc) => (
                       <AccessoryCard

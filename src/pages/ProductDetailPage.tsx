@@ -254,10 +254,10 @@ const ProductDetailPage = () => {
     );
   }
 
-  // Calculate total with accessories
+  // Calculate total with accessories (key by index to avoid duplicate name collisions)
   const accessoriesTotal = product.accessories
-    ? product.accessories.reduce((sum, acc) => {
-        const qty = accessoryQuantities[acc.name_ar] || 0;
+    ? product.accessories.reduce((sum, acc, idx) => {
+        const qty = accessoryQuantities[`${idx}-${acc.name_ar}`] || 0;
         return sum + (acc.price * qty);
       }, 0)
     : 0;
@@ -271,11 +271,11 @@ const ProductDetailPage = () => {
 
   const currency = country === 'SA' ? 'ر.س' : 'ر.ي';
 
-  const updateAccessoryQuantity = (accessoryName: string, delta: number) => {
+  const updateAccessoryQuantity = (accessoryKey: string, delta: number) => {
     setAccessoryQuantities(prev => {
-      const current = prev[accessoryName] || 0;
+      const current = prev[accessoryKey] || 0;
       const newQty = Math.max(0, current + delta);
-      return { ...prev, [accessoryName]: newQty };
+      return { ...prev, [accessoryKey]: newQty };
     });
     setAccessoryChoiceMade(true);
   };
@@ -296,15 +296,17 @@ const ProductDetailPage = () => {
     // Prepare selected accessories with quantities
     const selectedAccs = product.accessories
       ? product.accessories
-          .filter(acc => (accessoryQuantities[acc.name_ar] || 0) > 0)
-          .map(acc => ({
+          .map((acc, idx) => ({ acc, qty: accessoryQuantities[`${idx}-${acc.name_ar}`] || 0 }))
+          .filter(({ qty }) => qty > 0)
+          .map(({ acc, qty }) => ({
             name: acc.name,
             name_ar: acc.name_ar,
             price: acc.price,
-            quantity: accessoryQuantities[acc.name_ar],
+            quantity: qty,
             image_url: acc.image_url,
           }))
       : [];
+
 
     addToCart(
       product, 
@@ -617,15 +619,19 @@ const ProductDetailPage = () => {
                     </button>
                   </div>
                   <div className="grid grid-cols-1 gap-2">
-                    {product.accessories.map((acc) => (
-                      <AccessoryCard
-                        key={acc.name_ar}
-                        accessory={acc}
-                        quantity={accessoryQuantities[acc.name_ar] || 0}
-                        currency={currency}
-                        onQuantityChange={(delta) => updateAccessoryQuantity(acc.name_ar, delta)}
-                      />
-                    ))}
+                    {product.accessories.map((acc, idx) => {
+                      const key = `${idx}-${acc.name_ar}`;
+                      return (
+                        <AccessoryCard
+                          key={key}
+                          accessory={acc}
+                          quantity={accessoryQuantities[key] || 0}
+                          currency={currency}
+                          onQuantityChange={(delta) => updateAccessoryQuantity(key, delta)}
+                        />
+                      );
+                    })}
+
                   </div>
                 </div>
               )}

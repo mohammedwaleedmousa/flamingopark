@@ -116,9 +116,10 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 50 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-lg md:w-full z-[60] flex flex-col max-h-[90vh] rounded-2xl overflow-hidden bg-card border border-border shadow-2xl"
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] md:max-w-lg z-[60] flex flex-col max-h-[90vh] rounded-2xl overflow-hidden bg-card border border-border shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
+
               {/* Close Button */}
               <button
                 onClick={() => setShowPopup(false)}
@@ -154,30 +155,32 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
               </div>
 
               {/* Content Section */}
-              <div className="flex-1 p-6 space-y-4 overflow-y-auto">
+              <div className="p-4 space-y-2 overflow-y-auto">
                 {/* Title and Price Row */}
                 <div className="flex items-start justify-between gap-4">
-                  <h3 className="font-heading text-xl text-foreground flex-1">{accessory.name_ar}</h3>
-                  <div className="text-right">
-                    <span className="font-heading text-xl text-gold">+{accessory.price}</span>
+                  <h3 className="font-heading text-lg text-foreground flex-1">{accessory.name_ar}</h3>
+                  <div className="text-right whitespace-nowrap">
+                    <span className="font-heading text-lg text-gold">+{accessory.price}</span>
                     <span className="text-sm text-gold mr-1">{currency}</span>
                   </div>
                 </div>
 
-                {/* Decorative Line */}
-                <div className="w-16 h-0.5 bg-gradient-to-r from-gold to-gold/30" />
-
                 {/* Description */}
                 {accessory.description_ar && (
-                  <p className="text-muted-foreground leading-relaxed text-sm">
-                    {accessory.description_ar}
-                  </p>
+                  <>
+                    <div className="w-16 h-0.5 bg-gradient-to-r from-gold to-gold/30" />
+                    <p className="text-muted-foreground leading-relaxed text-sm">
+                      {accessory.description_ar}
+                    </p>
+                  </>
                 )}
               </div>
 
+
               {/* Footer Actions */}
-              <div className="p-6 pt-0 border-t border-border/50 bg-card">
-                <div className="flex items-center justify-between pt-4">
+              <div className="p-4 border-t border-border/50 bg-card">
+                <div className="flex items-center justify-between">
+
                   {/* Quantity Controls */}
                   <div className="flex items-center gap-3 bg-muted rounded-xl p-1">
                     <button

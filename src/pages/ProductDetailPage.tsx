@@ -619,15 +619,19 @@ const ProductDetailPage = () => {
                     </button>
                   </div>
                   <div className="grid grid-cols-1 gap-2">
-                    {product.accessories.map((acc) => (
-                      <AccessoryCard
-                        key={acc.name_ar}
-                        accessory={acc}
-                        quantity={accessoryQuantities[acc.name_ar] || 0}
-                        currency={currency}
-                        onQuantityChange={(delta) => updateAccessoryQuantity(acc.name_ar, delta)}
-                      />
-                    ))}
+                    {product.accessories.map((acc, idx) => {
+                      const key = `${idx}-${acc.name_ar}`;
+                      return (
+                        <AccessoryCard
+                          key={key}
+                          accessory={acc}
+                          quantity={accessoryQuantities[key] || 0}
+                          currency={currency}
+                          onQuantityChange={(delta) => updateAccessoryQuantity(key, delta)}
+                        />
+                      );
+                    })}
+
                   </div>
                 </div>
               )}

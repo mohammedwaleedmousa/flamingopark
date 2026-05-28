@@ -179,8 +179,8 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
 
               {/* Footer Actions */}
               <div className="p-4 border-t border-border/50 bg-card">
+                <div className="flex items-center justify-between">
 
-                <div className="flex items-center justify-between pt-4">
                   {/* Quantity Controls */}
                   <div className="flex items-center gap-3 bg-muted rounded-xl p-1">
                     <button

@@ -116,9 +116,10 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 50 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed inset-4 md:inset-auto md:left-1/2 md:top-1/2 md:-translate-x-1/2 md:-translate-y-1/2 md:max-w-lg md:w-full z-[60] flex flex-col max-h-[90vh] rounded-2xl overflow-hidden bg-card border border-border shadow-2xl"
+              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] md:max-w-lg z-[60] flex flex-col max-h-[90vh] rounded-2xl overflow-hidden bg-card border border-border shadow-2xl"
               onClick={(e) => e.stopPropagation()}
             >
+
               {/* Close Button */}
               <button
                 onClick={() => setShowPopup(false)}

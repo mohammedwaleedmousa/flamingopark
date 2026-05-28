@@ -116,7 +116,9 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 50 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] md:max-w-lg z-[60] flex flex-col max-h-[90vh] rounded-2xl overflow-hidden bg-card border border-border shadow-2xl"
+              className="fixed inset-0 z-[60] flex items-center justify-center p-4 pointer-events-none"
+              style={{ direction: 'ltr' }}
+
               onClick={(e) => e.stopPropagation()}
             >
 

@@ -110,15 +110,21 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
               onClick={() => setShowPopup(false)}
             />
             
-            {/* Modal Container */}
+            {/* Modal Container - centered wrapper */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 50 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 50 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="fixed left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 w-[92vw] md:max-w-lg z-[60] flex flex-col max-h-[90vh] rounded-2xl overflow-hidden bg-card border border-border shadow-2xl"
-              onClick={(e) => e.stopPropagation()}
+              className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+              onClick={() => setShowPopup(false)}
             >
+              <div
+                dir="rtl"
+                className="relative w-full max-w-lg max-h-[90vh] flex flex-col rounded-2xl overflow-hidden bg-card border border-border shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+              >
+
 
               {/* Close Button */}
               <button
@@ -216,8 +222,10 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
                     )}
                   </Button>
                 </div>
+                </div>
               </div>
             </motion.div>
+
           </>
         )}
       </AnimatePresence>

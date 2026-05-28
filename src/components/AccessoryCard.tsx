@@ -222,8 +222,10 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
                     )}
                   </Button>
                 </div>
+                </div>
               </div>
             </motion.div>
+
           </>
         )}
       </AnimatePresence>

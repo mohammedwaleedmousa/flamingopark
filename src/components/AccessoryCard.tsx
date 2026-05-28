@@ -155,26 +155,27 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
               </div>
 
               {/* Content Section */}
-              <div className="flex-1 p-6 space-y-4 overflow-y-auto">
+              <div className="p-4 space-y-2 overflow-y-auto">
                 {/* Title and Price Row */}
                 <div className="flex items-start justify-between gap-4">
-                  <h3 className="font-heading text-xl text-foreground flex-1">{accessory.name_ar}</h3>
-                  <div className="text-right">
-                    <span className="font-heading text-xl text-gold">+{accessory.price}</span>
+                  <h3 className="font-heading text-lg text-foreground flex-1">{accessory.name_ar}</h3>
+                  <div className="text-right whitespace-nowrap">
+                    <span className="font-heading text-lg text-gold">+{accessory.price}</span>
                     <span className="text-sm text-gold mr-1">{currency}</span>
                   </div>
                 </div>
 
-                {/* Decorative Line */}
-                <div className="w-16 h-0.5 bg-gradient-to-r from-gold to-gold/30" />
-
                 {/* Description */}
                 {accessory.description_ar && (
-                  <p className="text-muted-foreground leading-relaxed text-sm">
-                    {accessory.description_ar}
-                  </p>
+                  <>
+                    <div className="w-16 h-0.5 bg-gradient-to-r from-gold to-gold/30" />
+                    <p className="text-muted-foreground leading-relaxed text-sm">
+                      {accessory.description_ar}
+                    </p>
+                  </>
                 )}
               </div>
+
 
               {/* Footer Actions */}
               <div className="p-6 pt-0 border-t border-border/50 bg-card">

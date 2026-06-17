@@ -1,6 +1,3 @@
-import logoFinal from "@/assets/ermgold-logo-final.jpeg";
-import logoNew from "@/assets/ermgold-logo-new.jpeg";
-
 interface LogoProps {
   size?: "sm" | "md" | "lg" | "xl";
   variant?: "auth" | "invoice" | "nav" | "footer";
@@ -9,26 +6,22 @@ interface LogoProps {
 }
 
 const sizeClasses = {
-  sm: "h-14 w-auto",
-  md: "h-24 w-auto",
-  lg: "h-32 w-auto",
-  xl: "h-44 w-auto",
-};
-
-const logos = {
-  auth: logoNew,
-  invoice: logoNew,
-  nav: logoFinal,
-  footer: logoFinal,
+  sm: "text-2xl",
+  md: "text-3xl",
+  lg: "text-4xl",
+  xl: "text-5xl",
 };
 
 const Logo = ({ size = "md", variant = "nav", className = "", invert = false }: LogoProps) => {
   return (
-    <img
-      src={logos[variant]}
-      alt={`ERMGOLD Logo - ${variant}`}
-      className={`object-contain ${sizeClasses[size]} ${className} ${invert ? "brightness-0 invert" : ""}`}
-    />
+    <span
+      aria-label={`Flamingo - ${variant}`}
+      className={`logo-flamingo inline-block leading-none ${sizeClasses[size]} ${
+        invert ? "text-white" : "text-primary"
+      } ${className}`}
+    >
+      Flamingo
+    </span>
   );
 };
 

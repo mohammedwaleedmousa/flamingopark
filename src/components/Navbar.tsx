@@ -135,15 +135,3 @@ const Navbar = () => {
 };
 
 export default Navbar;
-                  تسجيل خروج
-                </button>
-              </div>
-            </nav>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </header>
-  );
-};
-
-export default Navbar;

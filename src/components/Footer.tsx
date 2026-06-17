@@ -1,124 +1,101 @@
 import { Link } from "react-router-dom";
-import { Mail, Phone, MapPin } from "lucide-react";
-import { useStore } from "@/store/useStore";
-import Logo from "@/components/Logo";
+import { Mail, Phone, MapPin, Instagram } from "lucide-react";
 import { useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 const WhatsAppIcon = ({ className }: { className?: string }) => (
   <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+    <path d="M20.52 3.48A11.86 11.86 0 0012.06 0C5.55 0 .26 5.29.26 11.8c0 2.08.55 4.11 1.59 5.9L0 24l6.45-1.69a11.78 11.78 0 005.61 1.43h.01c6.51 0 11.8-5.29 11.8-11.8 0-3.15-1.23-6.11-3.35-8.46zM12.07 21.7h-.01a9.9 9.9 0 01-5.05-1.38l-.36-.21-3.83 1 1.02-3.73-.23-.38a9.9 9.9 0 0115.32-12.5 9.84 9.84 0 012.9 7c0 5.46-4.44 9.9-9.76 9.9zm5.42-7.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15s-.77.97-.94 1.17-.35.22-.65.07c-.3-.15-1.26-.46-2.4-1.47-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51l-.57-.01c-.2 0-.52.07-.79.37s-1.04 1.02-1.04 2.48 1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.62.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2.01-1.41.25-.69.25-1.28.17-1.41-.07-.12-.27-.2-.57-.35z"/>
   </svg>
 );
-
-const InstagramIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zM12 0C8.741 0 8.333.014 7.053.072 2.695.272.273 2.69.073 7.052.014 8.333 0 8.741 0 12c0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98C8.333 23.986 8.741 24 12 24c3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98C15.668.014 15.259 0 12 0zm0 5.838a6.162 6.162 0 100 12.324 6.162 6.162 0 000-12.324zM12 16a4 4 0 110-8 4 4 0 010 8zm6.406-11.845a1.44 1.44 0 100 2.881 1.44 1.44 0 000-2.881z"/>
-  </svg>
-);
-
-interface SocialLinks {
-  whatsapp: string;
-  instagram: string;
-}
 
 const Footer = () => {
-  const { country } = useStore();
-  const [socialLinks, setSocialLinks] = useState<SocialLinks>({ whatsapp: "", instagram: "" });
-
-  const location = country === "YE" ? "عدن، اليمن" : "جدة، المملكة العربية السعودية";
-  const phoneNumber = country === "YE" ? "+967 782676054" : "+966 557302919";
+  const [socials, setSocials] = useState({ whatsapp: "", instagram: "" });
 
   useEffect(() => {
-    const fetchSocialLinks = async () => {
-      const { data } = await supabase
-        .from("site_settings")
-        .select("key, value")
-        .in("key", ["social_whatsapp", "social_instagram"]);
-
-      if (data) {
+    supabase
+      .from("site_settings")
+      .select("key, value")
+      .in("key", ["social_whatsapp", "social_instagram"])
+      .then(({ data }) => {
+        if (!data) return;
+        const next = { whatsapp: "", instagram: "" };
         data.forEach((s) => {
-          let val = s.value;
+          let val = s.value as unknown;
           if (typeof val === "string") {
-            try { val = JSON.parse(val); } catch {}
+            try { val = JSON.parse(val); } catch { /* keep string */ }
           }
-          if (s.key === "social_whatsapp") setSocialLinks((p) => ({ ...p, whatsapp: typeof val === "string" ? val : "" }));
-          if (s.key === "social_instagram") setSocialLinks((p) => ({ ...p, instagram: typeof val === "string" ? val : "" }));
+          if (s.key === "social_whatsapp" && typeof val === "string") next.whatsapp = val;
+          if (s.key === "social_instagram" && typeof val === "string") next.instagram = val;
         });
-      }
-    };
-    fetchSocialLinks();
+        setSocials(next);
+      });
   }, []);
 
   return (
-    <footer className="bg-black text-gold-light/80">
-      <div className="container mx-auto px-4 py-16">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-12">
-          {/* Brand */}
-          <div className="md:col-span-1">
-            <Logo size="sm" className="mb-4" />
-            <p className="font-body text-sm leading-relaxed opacity-70">مجوهرات فاخرة بأعلى معايير الجودة والأناقة</p>
-            <div className="flex items-center gap-4 mt-6">
-              {socialLinks.whatsapp && (
-                <a href={socialLinks.whatsapp} target="_blank" rel="noopener noreferrer" className="text-gold-light/60 hover:text-gold transition-colors">
-                  <WhatsAppIcon className="w-5 h-5" />
-                </a>
-              )}
-              {socialLinks.instagram && (
-                <a href={socialLinks.instagram} target="_blank" rel="noopener noreferrer" className="text-gold-light/60 hover:text-gold transition-colors">
-                  <InstagramIcon className="w-5 h-5" />
-                </a>
-              )}
-            </div>
+    <footer className="bg-background border-t border-border">
+      <div className="container mx-auto px-4 py-14">
+        <div className="text-center mb-10">
+          <h2 className="logo-flamingo text-4xl text-primary mb-3">Flamingo</h2>
+          <p className="font-body text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
+            وجهتك للأناقة العصرية. تشكيلة منتقاة من الملابس والإكسسوارات الفاخرة لتجربة تسوق استثنائية.
+          </p>
+          <div className="flex items-center justify-center gap-3 mt-5">
+            {socials.whatsapp && (
+              <a
+                href={socials.whatsapp}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="WhatsApp"
+                className="w-10 h-10 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground text-foreground flex items-center justify-center transition-all"
+              >
+                <WhatsAppIcon className="w-4 h-4" />
+              </a>
+            )}
+            {socials.instagram && (
+              <a
+                href={socials.instagram}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Instagram"
+                className="w-10 h-10 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground text-foreground flex items-center justify-center transition-all"
+              >
+                <Instagram className="w-4 h-4" />
+              </a>
+            )}
+            <a
+              href="mailto:hello@flamingo.store"
+              aria-label="Email"
+              className="w-10 h-10 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground text-foreground flex items-center justify-center transition-all"
+            >
+              <Mail className="w-4 h-4" />
+            </a>
           </div>
+        </div>
 
-          {/* Quick Links */}
+        <div className="grid grid-cols-2 gap-8 max-w-md mx-auto">
           <div>
-            <h3 className="font-heading text-lg text-gold mb-6">روابط سريعة</h3>
-            <ul className="space-y-3 font-body text-sm">
-              <li><Link to="/products" className="hover:text-gold transition-colors">المنتجات</Link></li>
-              <li><Link to="/offers" className="hover:text-gold transition-colors">العروض</Link></li>
-              <li><Link to="/about" className="hover:text-gold transition-colors">من نحن</Link></li>
+            <h3 className="font-heading text-primary text-base mb-3">المتجر</h3>
+            <ul className="space-y-2 font-body text-sm text-secondary">
+              <li><Link to="/products" className="hover:text-primary transition-colors">جميع المنتجات</Link></li>
+              <li><Link to="/products?filter=featured" className="hover:text-primary transition-colors">وافد حديثاً</Link></li>
+              <li><Link to="/products?filter=bestseller" className="hover:text-primary transition-colors">الأكثر مبيعاً</Link></li>
+              <li><Link to="/offers" className="hover:text-primary transition-colors">العروض</Link></li>
             </ul>
           </div>
-
-          {/* Categories */}
           <div>
-            <h3 className="font-heading text-lg text-gold mb-6">التصنيفات</h3>
-            <ul className="space-y-3 font-body text-sm">
-              <li><Link to="/products?category=necklaces" className="hover:text-gold transition-colors">القلائد</Link></li>
-              <li><Link to="/products?category=rings" className="hover:text-gold transition-colors">الخواتم</Link></li>
-              <li><Link to="/products?category=bracelets" className="hover:text-gold transition-colors">الأساور</Link></li>
-              <li><Link to="/products?category=earrings" className="hover:text-gold transition-colors">الأقراط</Link></li>
-            </ul>
-          </div>
-
-          {/* Contact */}
-          <div>
-            <h3 className="font-heading text-lg text-gold mb-6">تواصل معنا</h3>
-            <ul className="space-y-4 font-body text-sm">
-              <li className="flex items-center gap-3">
-                <Phone className="w-4 h-4 text-gold" />
-                <span dir="ltr">{phoneNumber}</span>
-              </li>
-              <li className="flex items-center gap-3">
-                <Mail className="w-4 h-4 text-gold" />
-                <span>ermgold0.com</span>
-              </li>
-              <li className="flex items-start gap-3">
-                <MapPin className="w-4 h-4 text-gold mt-1" />
-                <span>{location}</span>
-              </li>
+            <h3 className="font-heading text-primary text-base mb-3">المساعدة</h3>
+            <ul className="space-y-2 font-body text-sm text-secondary">
+              <li><Link to="/about" className="hover:text-primary transition-colors">من نحن</Link></li>
+              <li><Link to="/reviews" className="hover:text-primary transition-colors">آراء العملاء</Link></li>
+              <li><Link to="/favorites" className="hover:text-primary transition-colors">المفضلة</Link></li>
+              <li><Link to="/checkout" className="hover:text-primary transition-colors">سياسة الشحن</Link></li>
             </ul>
           </div>
         </div>
 
-        <div className="mt-16 pt-8 border-t border-gold/20 flex flex-col md:flex-row items-center justify-between gap-4">
-          <p className="font-body text-xs opacity-60">© 2025 ERMGOLD. جميع الحقوق محفوظة</p>
-          <div className="flex items-center gap-6 font-body text-xs opacity-60">
-            <Link to="/privacy" className="hover:text-gold transition-colors">سياسة الخصوصية</Link>
-            <Link to="/terms" className="hover:text-gold transition-colors">الشروط والأحكام</Link>
-          </div>
+        <div className="mt-12 pt-6 border-t border-border text-center">
+          <p className="font-body text-xs text-muted-foreground">© 2026 Flamingo. جميع الحقوق محفوظة.</p>
         </div>
       </div>
     </footer>

@@ -72,7 +72,7 @@ interface StoreState {
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
-      country: null,
+      country: "YE",
       customer: null,
       cart: [],
       isCartOpen: false,
@@ -155,7 +155,7 @@ export const useStore = create<StoreState>()(
       logout: () => set({ customer: null, cart: [] }),
     }),
     {
-      name: "ermgold-store",
+      name: "flamingo-store",
       partialize: (state) => ({
         country: state.country,
         customer: state.customer,

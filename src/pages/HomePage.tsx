@@ -1,223 +1,241 @@
-import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
-import HeroSlider from "@/components/HeroSlider";
-import BrandsStrip from "@/components/BrandsStrip";
-import ReviewsSection from "@/components/ReviewsSection";
+import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
-import DynamicSection from "@/components/DynamicSection";
-import { useStore } from "@/store/useStore";
+import HeroSlider from "@/components/HeroSlider";
+import ProductCard from "@/components/ProductCard";
 import { supabase } from "@/integrations/supabase/client";
-import { Gem, Shield, Truck, Star, ArrowLeft, Loader2 } from "lucide-react";
-import { Link } from "react-router-dom";
+import type { Product } from "@/store/useStore";
 
-interface HomepageSection {
+interface DbProduct {
   id: string;
-  title: string;
-  title_ar: string;
-  section_type: string;
-  filter_type: string;
+  name: string;
+  name_ar: string;
+  slug: string;
+  price: number;
+  original_price: number | null;
+  discount: number | null;
+  description: string;
+  description_ar: string;
+  images: string[];
+  category: string;
+  brand: string;
+  in_stock: boolean;
   countries: string[];
-  is_active: boolean;
-  sort_order: number;
-  max_products: number;
-  show_view_all: boolean;
-  view_all_link: string | null;
+  is_featured: boolean;
+  is_best_seller: boolean;
 }
 
+const toProduct = (p: DbProduct): Product => ({
+  id: p.id,
+  name: p.name,
+  nameAr: p.name_ar,
+  slug: p.slug,
+  price: Number(p.price),
+  originalPrice: p.original_price ? Number(p.original_price) : undefined,
+  discount: p.discount ?? undefined,
+  description: p.description,
+  descriptionAr: p.description_ar,
+  images: p.images || [],
+  category: p.category,
+  brand: p.brand,
+  inStock: p.in_stock,
+  countries: (p.countries || ["YE"]) as Product["countries"],
+  isFeatured: p.is_featured,
+  isBestSeller: p.is_best_seller,
+});
+
+const collections = [
+  {
+    title: "طريق الحرير",
+    subtitle: "انسيابية لا تُقاوم لسهرات الجالا",
+    image: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=900&q=80",
+    link: "/products?category=clothing",
+  },
+  {
+    title: "الإطلالة الحضرية",
+    subtitle: "قطع عصرية ليومك المثالي",
+    image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=900&q=80",
+    link: "/products?category=accessories",
+  },
+  {
+    title: "ليلة الجالا",
+    subtitle: "إكسسوارات تكمل أناقتك",
+    image: "https://images.unsplash.com/photo-1535632787350-4e68ef0ac584?w=900&q=80",
+    link: "/products?category=watches",
+  },
+];
+
 const HomePage = () => {
-  const { country } = useStore();
-
-  // Fetch homepage sections
-  const { data: sections = [] } = useQuery({
-    queryKey: ["homepage-sections", country],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("homepage_sections")
-        .select("*")
-        .eq("is_active", true)
-        .contains("countries", [country])
-        .order("sort_order", { ascending: true });
-      if (error) throw error;
-      return data as HomepageSection[];
-    },
-    enabled: !!country,
-  });
-
-  // Fetch categories for the current country
-  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ["categories", country],
+  const { data: categories = [] } = useQuery({
+    queryKey: ["home-categories"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("categories")
         .select("*")
         .eq("is_active", true)
-        .contains("countries", [country])
-        .order("sort_order", { ascending: true });
+        .order("sort_order");
       if (error) throw error;
       return data;
     },
-    enabled: !!country,
   });
 
-  if (!country) return null;
+  const { data: bestSellers = [] } = useQuery({
+    queryKey: ["home-best-sellers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .eq("is_best_seller", true)
+        .order("sort_order")
+        .limit(8);
+      if (error) throw error;
+      return (data as DbProduct[]).map(toProduct);
+    },
+  });
+
+  const { data: newArrivals = [] } = useQuery({
+    queryKey: ["home-new-arrivals"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .eq("is_featured", true)
+        .order("sort_order")
+        .limit(8);
+      if (error) throw error;
+      return (data as DbProduct[]).map(toProduct);
+    },
+  });
 
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
       <CartDrawer />
 
-      <main className="pt-16 md:pt-18">
-        {/* Hero Slider */}
+      <main className="pt-16 md:pt-20">
         <HeroSlider />
 
-        {/* Brands Strip */}
-        <BrandsStrip />
-
-        {/* Categories Section */}
-        {categoriesLoading ? (
-          <div className="text-center py-12 text-muted-foreground">
-            <Loader2 className="w-8 h-8 animate-spin mx-auto mb-2" />
-            <p>جاري تحميل الماركات...</p>
-          </div>
-        ) : categories.length > 0 ? (
-          <section className="py-10 md:py-14 bg-gradient-to-b from-muted/30 to-background overflow-hidden">
-            <div className="container mx-auto px-4 mb-8">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                className="text-center"
-              >
-                <span className="text-gold font-body text-sm tracking-widest uppercase">تصفح</span>
-                <h2 className="font-heading text-3xl md:text-4xl text-foreground mt-2">
-                  الماركات <span className="text-gold">الرئيسية</span>
-                </h2>
-              </motion.div>
-            </div>
-
-            <div
-              className="relative overflow-x-auto px-4 scrollbar-hide cursor-grab active:cursor-grabbing"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-            >
-              <div className="flex items-start gap-4 md:gap-6 pb-2">
-                {categories.map((category, index) => (
-                  <div key={`${category.name}-${index}`} className="flex flex-col items-center">
-                    <Link
-                      to={`/products?category=${category.slug}`}
-                      className="group flex-shrink-0 bg-card rounded-xl border-2 border-gold/30 hover:border-gold transition-all duration-300 hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.4)] w-24 h-24 md:w-28 md:h-28 overflow-hidden"
-                    >
-                      {category.image_url ? (
-                        <img
-                          src={category.image_url}
-                          alt={category.name_ar}
-                          loading="lazy"
-                          decoding="async"
-                          className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
-                        />
+        {/* Categories strip */}
+        {categories.length > 0 && (
+          <section className="py-10 bg-muted/40">
+            <div className="container mx-auto px-4">
+              <div className="flex items-center gap-4 md:gap-8 overflow-x-auto scrollbar-hide justify-start md:justify-center">
+                {categories.map((c) => (
+                  <Link
+                    key={c.id}
+                    to={`/products?category=${c.slug}`}
+                    className="group flex flex-col items-center gap-2 flex-shrink-0"
+                  >
+                    <div className="w-20 h-20 md:w-24 md:h-24 rounded-full overflow-hidden border border-border bg-card group-hover:border-primary transition-all">
+                      {c.image_url ? (
+                        <img src={c.image_url} alt={c.name_ar} loading="lazy" className="w-full h-full object-cover" />
                       ) : (
-                        <div className="w-full h-full bg-muted flex items-center justify-center text-2xl md:text-3xl">
-                          ✨
-                        </div>
+                        <div className="w-full h-full bg-muted" />
                       )}
-                    </Link>
-
-                    <h3 className="font-heading text-xs md:text-sm text-foreground group-hover:text-gold mt-2 text-center">
-                      {category.name_ar}
-                    </h3>
-                  </div>
+                    </div>
+                    <span className="font-heading text-sm text-foreground group-hover:text-primary transition-colors">
+                      {c.name_ar}
+                    </span>
+                  </Link>
                 ))}
               </div>
             </div>
           </section>
-        ) : null}
+        )}
 
-        {/* Dynamic Product Sections */}
-        {sections.map((section, index) => (
-          <DynamicSection key={section.id} section={section} country={country} index={index} />
-        ))}
-
-        {/* CTA Banner */}
-        <section className="py-20 md:py-28 bg-secondary text-gold-light relative overflow-hidden">
-          <div className="absolute inset-0">
-            {[...Array(15)].map((_, i) => (
-              <motion.div
-                key={i}
-                className="absolute w-1 h-1 bg-gold rounded-full"
-                initial={{ x: `${Math.random() * 100}%`, y: `${Math.random() * 100}%`, opacity: 0 }}
-                animate={{ y: [null, "-50%"], opacity: [0, 0.5, 0] }}
-                transition={{ duration: 4 + Math.random() * 2, repeat: Infinity, delay: Math.random() * 2 }}
-              />
-            ))}
-
-            <div
-              className="absolute inset-0 opacity-5"
-              style={{
-                backgroundImage: `radial-gradient(circle at 50% 50%, hsl(var(--gold)) 1px, transparent 1px)`,
-                backgroundSize: "40px 40px",
-              }}
-            />
-            <div className="absolute top-0 left-1/4 w-96 h-96 bg-gold/10 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 right-1/4 w-64 h-64 bg-gold/5 rounded-full blur-3xl" />
-          </div>
-
-          <div className="container mx-auto px-4 text-center relative z-10">
-            <motion.div initial={{ opacity: 0, y: 30 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }}>
-              <motion.div
-                initial={{ scale: 0 }}
-                whileInView={{ scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: 0.2, type: "spring" }}
-                className="w-20 h-20 mx-auto mb-8 rounded-full bg-gold/10 flex items-center justify-center"
-              >
-                <Gem className="w-10 h-10 text-gold" />
-              </motion.div>
-
-              <h2 className="font-heading text-4xl md:text-5xl lg:text-6xl mb-6">
-                <span className="text-secondary-foreground">انضم إلى عائلة</span>
-                <br />
-                <span className="text-gold-gradient">ERMGOLD</span>
-              </h2>
-
-              <p className="font-body text-lg md:text-xl text-gold-light/70 mb-10 max-w-xl mx-auto">
-                احصل على آخر العروض والمنتجات الحصرية واستمتع بتجربة تسوق فريدة
-              </p>
-
-              <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
-                <Link
-                  to="/products"
-                  className="inline-flex items-center gap-3 px-10 py-4 bg-gold text-secondary font-heading tracking-wider text-sm uppercase hover:bg-gold-light transition-all duration-300 rounded-lg hover:shadow-[0_10px_30px_-10px_hsl(var(--gold)/0.5)]"
-                >
-                  تسوق الآن
-                  <ArrowLeft className="w-4 h-4" />
-                </Link>
-                <Link
-                  to="/about"
-                  className="inline-flex items-center gap-3 px-10 py-4 border border-gold/30 text-gold font-heading tracking-wider text-sm uppercase hover:bg-gold/10 transition-all duration-300 rounded-lg"
-                >
-                  اعرف المزيد
-                </Link>
+        {/* Featured Collections */}
+        <section className="py-14">
+          <div className="container mx-auto px-4">
+            <div className="flex items-end justify-between mb-6">
+              <div>
+                <h2 className="font-heading text-3xl md:text-4xl text-foreground leading-tight">
+                  المجموعات المختارة
+                </h2>
+                <p className="font-body text-sm text-muted-foreground mt-1">منتقاة بعناية من فريق التحرير</p>
               </div>
+              <Link to="/products" className="font-body text-sm text-primary hover:underline flex items-center gap-1">
+                عرض الكل <ArrowLeft className="w-3 h-3" />
+              </Link>
+            </div>
 
-              <div className="flex items-center justify-center gap-6 md:gap-10 mt-12 pt-12 border-t border-gold/10">
-                {[
-                  { icon: Shield, text: "دفع آمن" },
-                  { icon: Truck, text: "شحن مضمون وسريع" },
-                  { icon: Star, text: "عملاء مميزون" },
-                ].map((item, index) => (
-                  <div key={index} className="flex items-center gap-2 text-gold-light/60">
-                    <item.icon className="w-4 h-4 text-gold" />
-                    <span className="text-xs font-body">{item.text}</span>
+            <div className="flex gap-4 overflow-x-auto pb-3 scrollbar-hide snap-x">
+              {collections.map((c) => (
+                <Link
+                  key={c.title}
+                  to={c.link}
+                  className="relative flex-shrink-0 w-[80%] md:w-[45%] lg:w-[32%] aspect-[4/5] rounded-2xl overflow-hidden snap-start group"
+                >
+                  <img src={c.image} alt={c.title} loading="lazy" className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-foreground/80 via-foreground/20 to-transparent" />
+                  <div className="absolute bottom-5 right-5 left-5 text-right">
+                    <h3 className="font-heading text-2xl text-background mb-1">{c.title}</h3>
+                    <p className="font-body text-xs text-background/85">{c.subtitle}</p>
                   </div>
-                ))}
-              </div>
-            </motion.div>
+                </Link>
+              ))}
+            </div>
           </div>
         </section>
 
-        {/* Reviews Section */}
-        <ReviewsSection />
+        {/* Best Sellers */}
+        <section className="py-14 bg-muted/40">
+          <div className="container mx-auto px-4">
+            <div className="text-center mb-8">
+              <span className="inline-block bg-primary-container/40 text-primary text-[10px] tracking-[0.25em] font-bold px-3 py-1 rounded-full">
+                الأكثر طلباً
+              </span>
+              <h2 className="font-heading text-3xl md:text-4xl text-foreground mt-3">الأكثر مبيعاً</h2>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {bestSellers.map((p) => (
+                <ProductCard key={p.id} product={p} badge="BEST SELLER" />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* New Arrivals */}
+        <section className="py-14">
+          <div className="container mx-auto px-4">
+            <div className="flex items-end justify-between mb-6">
+              <h2 className="font-heading text-3xl md:text-4xl text-foreground">وافد حديثاً</h2>
+              <Link to="/products?filter=featured" className="font-body text-sm text-primary hover:underline flex items-center gap-1">
+                عرض الكل <ArrowLeft className="w-3 h-3" />
+              </Link>
+            </div>
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {newArrivals.map((p) => (
+                <ProductCard key={p.id} product={p} badge="NEW IN" />
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Quote */}
+        <section className="py-16 bg-primary-container/20">
+          <div className="container mx-auto px-4 text-center max-w-2xl">
+            <p className="font-heading italic text-2xl md:text-3xl text-foreground leading-relaxed">
+              «الأناقة ليست أن تُلاحَظ، بل أن تُتذكَّر.»
+            </p>
+            <div className="w-12 h-px bg-primary mx-auto my-5" />
+            <p className="font-body text-sm text-secondary">Flamingo Maison</p>
+          </div>
+        </section>
+
+        {/* About */}
+        <section className="py-16">
+          <div className="container mx-auto px-4 text-center max-w-xl">
+            <h2 className="logo-flamingo text-4xl text-primary mb-4">Flamingo</h2>
+            <p className="font-body text-sm md:text-base text-secondary leading-relaxed">
+              نحن نرتقي بأسلوب حياتك من خلال قطع منتقاة بعناية تجمع بين الحرفية والتصميم العصري. تجربة حصرية في كل تفصيلة.
+            </p>
+          </div>
+        </section>
       </main>
 
       <Footer />

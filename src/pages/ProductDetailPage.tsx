@@ -727,7 +727,7 @@ const ProductDetailPage = () => {
               </div>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
                 {relatedProducts.map((p, index) => (
-                  <ProductCard key={p.id} product={p} index={index} compact />
+                  <ProductCard key={p.id} product={p} index={index} />
                 ))}
               </div>
             </motion.section>

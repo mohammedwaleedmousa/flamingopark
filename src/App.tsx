@@ -63,15 +63,10 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 // Redirect logged in customers to home
 // Also handles referral code from URL
 const AuthRedirect = () => {
-  const { customer } = useStore();
-  const location = window.location;
-
-  const searchParams = new URLSearchParams(location.search);
+  const searchParams = new URLSearchParams(window.location.search);
   const refCode = searchParams.get("ref");
-
-  if (customer && !refCode) {
-    return <Navigate to="/home" replace />;
-  }
+  // Single unified platform: go straight to home (auth only required at checkout).
+  if (!refCode) return <Navigate to="/home" replace />;
   return <CustomerAuthPage />;
 };
 

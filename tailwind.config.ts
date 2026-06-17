@@ -14,8 +14,8 @@ export default {
     },
     extend: {
       fontFamily: {
-        heading: ["Cinzel", "serif"],
-        body: ["Poppins", "sans-serif"],
+        heading: ["Cormorant Garamond", "Playfair Display", "serif"],
+        body: ["Inter", "system-ui", "sans-serif"],
         brand: ["Cormorant Garamond", "Playfair Display", "serif"],
       },
       colors: {
@@ -39,6 +39,7 @@ export default {
         primary: {
           DEFAULT: "hsl(var(--primary))",
           foreground: "hsl(var(--primary-foreground))",
+          container: "hsl(var(--primary-container))",
         },
         secondary: {
           DEFAULT: "hsl(var(--secondary))",

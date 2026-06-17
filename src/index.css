@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700&family=Poppins:wght@300;400;500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -6,121 +6,119 @@
 
 @layer base {
   :root {
-    /* ERMGOLD Luxury Palette - Black/Gold/Cream/Marble inspired */
-    --background: 0 0% 98%;
-    --foreground: 0 0% 8%;
+    /* Flamingo Luxury Pink Palette */
+    --background: 340 40% 98%;        /* blush white */
+    --foreground: 335 22% 13%;        /* #24181D primary text */
 
-    --card: 40 20% 97%;
-    --card-foreground: 0 0% 8%;
+    --card: 0 0% 100%;
+    --card-foreground: 335 22% 13%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 0 0% 8%;
+    --popover-foreground: 335 22% 13%;
 
-    /* Rich Gold - Softer/Lighter */
-    --primary: 42 55% 58%;
-    --primary-foreground: 0 0% 10%;
+    /* Primary pink #AC2471 */
+    --primary: 326 67% 41%;
+    --primary-foreground: 0 0% 100%;
 
-    /* Deep Black */
-    --secondary: 0 0% 5%;
-    --secondary-foreground: 40 30% 95%;
+    /* Soft pink container #FF69B4 */
+    --primary-container: 330 100% 71%;
 
-    /* Warm Cream */
-    --muted: 40 30% 94%;
-    --muted-foreground: 0 0% 40%;
+    /* Secondary supporting text #564149 */
+    --secondary: 336 14% 30%;
+    --secondary-foreground: 0 0% 100%;
 
-    /* Gold Accent - Lighter */
-    --accent: 42 60% 55%;
-    --accent-foreground: 0 0% 10%;
+    /* Soft surfaces */
+    --muted: 340 35% 95%;
+    --muted-foreground: 335 8% 45%;   /* #7A6B71 */
 
-    --destructive: 0 84% 60%;
+    /* Electric blue accent #1E90FF (use sparingly) */
+    --accent: 210 100% 56%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 78% 55%;
     --destructive-foreground: 0 0% 100%;
 
-    --border: 40 15% 90%;
-    --input: 40 15% 90%;
-    --ring: 42 55% 58%;
+    --success: 145 55% 42%;
+    --warning: 38 92% 50%;
 
-    --radius: 0.25rem;
+    --border: 340 30% 80%;            /* #DCBFC9 */
+    --input: 340 30% 88%;
+    --ring: 326 67% 41%;
 
-    /* Custom ERMGOLD tokens - Softer gold */
-    --gold: 42 55% 58%;
-    --gold-light: 42 50% 70%;
-    --gold-dark: 42 50% 48%;
-    --beige: 40 30% 94%;
-    --beige-dark: 40 25% 88%;
-    --cream: 40 40% 97%;
-    --charcoal: 0 0% 12%;
-    --marble: 210 10% 95%;
-    --icon-light: 45 25% 92%;
+    --radius: 0.75rem;
+
+    /* Brand tokens — keep `gold` aliases pointing to brand pink to avoid breaking
+       legacy class usage (text-gold, border-gold, bg-gold-gradient, etc.). */
+    --gold: 326 67% 41%;
+    --gold-light: 330 100% 71%;
+    --gold-dark: 326 67% 32%;
+    --beige: 340 35% 95%;
+    --beige-dark: 340 30% 90%;
+    --cream: 340 40% 98%;
+    --charcoal: 335 22% 13%;
+    --marble: 340 35% 96%;
+    --icon-light: 335 22% 25%;
 
     /* Gradients */
-    --gradient-gold: linear-gradient(135deg, hsl(42 50% 68%) 0%, hsl(42 55% 55%) 50%, hsl(42 50% 68%) 100%);
-    --gradient-gold-shine: linear-gradient(90deg, transparent 0%, hsl(42 60% 80% / 0.6) 50%, transparent 100%);
-    --gradient-beige: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(40 30% 94%) 100%);
-    --gradient-dark: linear-gradient(180deg, hsl(0 0% 5%) 0%, hsl(0 0% 12%) 100%);
-    --gradient-marble: linear-gradient(135deg, hsl(0 0% 98%) 0%, hsl(210 10% 95%) 50%, hsl(0 0% 98%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(330 100% 71%) 0%, hsl(326 67% 41%) 100%);
+    --gradient-gold-shine: linear-gradient(90deg, transparent 0%, hsl(330 100% 85% / 0.6) 50%, transparent 100%);
+    --gradient-beige: linear-gradient(180deg, hsl(0 0% 100%) 0%, hsl(340 35% 95%) 100%);
+    --gradient-dark: linear-gradient(180deg, hsl(335 22% 13%) 0%, hsl(336 14% 30%) 100%);
+    --gradient-marble: linear-gradient(135deg, hsl(340 40% 98%) 0%, hsl(340 35% 95%) 50%, hsl(340 40% 98%) 100%);
 
     /* Shadows */
-    --shadow-gold: 0 4px 20px -4px hsl(42 55% 58% / 0.30);
-    --shadow-elegant: 0 10px 40px -10px hsl(0 0% 0% / 0.12);
-    --shadow-card: 0 2px 12px -2px hsl(0 0% 0% / 0.06);
-    --shadow-hover: 0 20px 50px -15px hsl(0 0% 0% / 0.18);
+    --shadow-gold: 0 4px 20px -4px hsl(326 67% 41% / 0.25);
+    --shadow-elegant: 0 10px 40px -10px hsl(326 67% 41% / 0.15);
+    --shadow-card: 0 2px 12px -2px hsl(326 67% 41% / 0.08);
+    --shadow-hover: 0 20px 50px -15px hsl(326 67% 41% / 0.18);
 
     /* Sidebar */
-    --sidebar-background: 0 0% 5%;
-    --sidebar-foreground: 40 30% 95%;
-    --sidebar-primary: 42 55% 58%;
-    --sidebar-primary-foreground: 0 0% 10%;
-    --sidebar-accent: 0 0% 12%;
-    --sidebar-accent-foreground: 40 30% 95%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 42 55% 58%;
+    --sidebar-background: 335 22% 13%;
+    --sidebar-foreground: 340 35% 95%;
+    --sidebar-primary: 326 67% 41%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 336 14% 22%;
+    --sidebar-accent-foreground: 340 35% 95%;
+    --sidebar-border: 336 14% 25%;
+    --sidebar-ring: 326 67% 41%;
   }
 
   .dark {
-    --background: 0 0% 5%;
-    --foreground: 40 25% 95%;
-
-    --card: 0 0% 8%;
-    --card-foreground: 40 25% 95%;
-
-    --popover: 0 0% 6%;
-    --popover-foreground: 40 25% 95%;
-
-    --primary: 42 70% 55%;
-    --primary-foreground: 0 0% 5%;
-
-    --secondary: 40 20% 12%;
-    --secondary-foreground: 40 25% 95%;
-
-    --muted: 0 0% 12%;
-    --muted-foreground: 40 15% 65%;
-
-    --accent: 42 70% 50%;
-    --accent-foreground: 0 0% 5%;
-
-    --destructive: 0 62% 50%;
+    --background: 335 22% 8%;
+    --foreground: 340 35% 95%;
+    --card: 335 22% 12%;
+    --card-foreground: 340 35% 95%;
+    --popover: 335 22% 10%;
+    --popover-foreground: 340 35% 95%;
+    --primary: 330 90% 60%;
+    --primary-foreground: 0 0% 100%;
+    --primary-container: 330 100% 71%;
+    --secondary: 336 14% 22%;
+    --secondary-foreground: 340 35% 95%;
+    --muted: 335 18% 18%;
+    --muted-foreground: 340 15% 65%;
+    --accent: 210 100% 60%;
+    --accent-foreground: 0 0% 100%;
+    --destructive: 0 70% 50%;
     --destructive-foreground: 0 0% 100%;
-
-    --border: 0 0% 15%;
-    --input: 0 0% 15%;
-    --ring: 42 70% 55%;
-
-    --gold: 42 70% 55%;
-    --gold-light: 42 75% 65%;
-    --gold-dark: 42 65% 42%;
-    --beige: 0 0% 10%;
-    --beige-dark: 0 0% 6%;
-    --cream: 0 0% 5%;
-    --charcoal: 40 25% 95%;
-
-    --sidebar-background: 0 0% 4%;
-    --sidebar-foreground: 40 25% 95%;
-    --sidebar-primary: 42 70% 55%;
-    --sidebar-primary-foreground: 0 0% 5%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 40 25% 95%;
-    --sidebar-border: 0 0% 15%;
-    --sidebar-ring: 42 70% 55%;
+    --border: 335 18% 22%;
+    --input: 335 18% 22%;
+    --ring: 330 90% 60%;
+    --gold: 330 90% 60%;
+    --gold-light: 330 100% 75%;
+    --gold-dark: 326 67% 40%;
+    --beige: 335 18% 18%;
+    --beige-dark: 335 18% 12%;
+    --cream: 335 22% 8%;
+    --charcoal: 340 35% 95%;
+    --sidebar-background: 335 22% 6%;
+    --sidebar-foreground: 340 35% 95%;
+    --sidebar-primary: 330 90% 60%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 335 18% 15%;
+    --sidebar-accent-foreground: 340 35% 95%;
+    --sidebar-border: 335 18% 20%;
+    --sidebar-ring: 330 90% 60%;
   }
 }
 
@@ -225,13 +223,13 @@
     left: 100%;
   }
 
-  /* ERMGOLD Logo styling */
-  .logo-ermgold {
-    font-family: 'Cinzel', serif;
+  /* Flamingo Logo styling */
+  .logo-ermgold,
+  .logo-flamingo {
+    font-family: 'Cormorant Garamond', serif;
     font-weight: 600;
-    letter-spacing: 0.15em;
-    color: hsl(var(--gold));
-    text-shadow: 1px 1px 2px hsl(0 0% 0% / 0.1);
+    letter-spacing: 0.08em;
+    color: hsl(var(--primary));
   }
 }
 

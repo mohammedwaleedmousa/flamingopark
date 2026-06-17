@@ -56,24 +56,20 @@ const RouteFallback = () => (
 );
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  const { customer, country } = useStore();
-  if (!customer || !country) {
-    return <Navigate to="/auth" replace />;
-  }
+  // Unified single-platform: no country/customer gate for browsing.
   return <>{children}</>;
 };
 
 // Redirect logged in customers to home
 // Also handles referral code from URL
 const AuthRedirect = () => {
-  const { customer, country } = useStore();
+  const { customer } = useStore();
   const location = window.location;
 
-  // Check if there's a referral code in the URL
   const searchParams = new URLSearchParams(location.search);
   const refCode = searchParams.get("ref");
 
-  if (customer && country && !refCode) {
+  if (customer && !refCode) {
     return <Navigate to="/home" replace />;
   }
   return <CustomerAuthPage />;

@@ -1,13 +1,13 @@
 import { Link } from "react-router-dom";
-import { Heart, Star } from "lucide-react";
-import { Product, useStore } from "@/store/useStore";
+import { Heart } from "lucide-react";
+import { Product } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
 import { toast } from "@/hooks/use-toast";
 
 interface ProductCardProps {
   product: Product;
   index?: number;
-  badge?: "NEW IN" | "LIMITED" | "BEST SELLER" | null;
+  badge?: "NEW IN" | "LIMITED" | "BEST SELLER" | "HOT" | null;
 }
 
 const ProductCard = ({ product, badge }: ProductCardProps) => {
@@ -35,21 +35,21 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
 
   return (
     <Link to={`/product/${product.slug}`} className="group block">
-      <div className="relative aspect-square overflow-hidden rounded-2xl bg-muted">
+      <div className="relative aspect-[3/4] overflow-hidden bg-muted">
         {product.images?.[0] ? (
           <img
             src={product.images[0]}
             alt={product.nameAr}
             loading="lazy"
             decoding="async"
-            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+            className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.04]"
           />
         ) : (
           <div className="w-full h-full bg-muted" />
         )}
 
         {computedBadge && (
-          <span className="absolute top-3 right-3 bg-primary-container text-primary text-[10px] font-bold tracking-widest px-2.5 py-1 rounded-full">
+          <span className="absolute top-4 right-4 bg-background text-foreground text-[10px] font-medium tracking-[0.25em] uppercase px-3 py-1.5">
             {computedBadge}
           </span>
         )}
@@ -57,10 +57,10 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
         <button
           onClick={handleLike}
           aria-label="favorite"
-          className={`absolute top-3 left-3 w-9 h-9 rounded-full flex items-center justify-center transition-all ${
+          className={`absolute top-4 left-4 w-9 h-9 flex items-center justify-center transition-all ${
             isLiked
-              ? "bg-primary text-primary-foreground"
-              : "bg-card/90 text-foreground hover:bg-card"
+              ? "bg-foreground text-background"
+              : "bg-background/90 text-foreground hover:bg-background"
           }`}
         >
           <Heart className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`} />
@@ -68,36 +68,29 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
 
         {!product.inStock && (
           <div className="absolute inset-0 bg-background/60 flex items-center justify-center">
-            <span className="bg-foreground text-background text-xs font-bold px-3 py-1.5 rounded-full">
+            <span className="bg-foreground text-background text-[10px] tracking-[0.3em] uppercase px-4 py-2">
               نفد المخزون
             </span>
           </div>
         )}
       </div>
 
-      <div className="mt-3 px-1">
-        <p className="text-[11px] uppercase tracking-widest text-muted-foreground mb-1">
+      <div className="mt-5 px-1 text-center">
+        <p className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground mb-2">
           {product.category}
         </p>
-        <h3 className="font-heading text-base text-foreground line-clamp-2 leading-snug group-hover:text-primary transition-colors">
+        <h3 className="font-heading text-base md:text-lg text-foreground line-clamp-2 leading-snug">
           {product.nameAr}
         </h3>
-        <div className="flex items-center justify-between mt-2">
-          <div className="flex items-baseline gap-1">
-            <span className="font-heading text-primary text-base font-semibold">
-              {finalPrice.toFixed(0)}
+        <div className="flex items-baseline justify-center gap-2 mt-3">
+          <span className="font-body text-sm text-foreground">
+            {finalPrice.toFixed(0)} {currency}
+          </span>
+          {product.originalPrice && (
+            <span className="text-[11px] text-muted-foreground line-through">
+              {product.originalPrice.toFixed(0)}
             </span>
-            <span className="text-[10px] text-muted-foreground">{currency}</span>
-            {product.originalPrice && (
-              <span className="text-[11px] text-muted-foreground line-through mr-1">
-                {product.originalPrice.toFixed(0)}
-              </span>
-            )}
-          </div>
-          <div className="flex items-center gap-1 text-accent">
-            <Star className="w-3 h-3 fill-current" />
-            <span className="text-[11px] font-medium">4.8</span>
-          </div>
+          )}
         </div>
       </div>
     </Link>

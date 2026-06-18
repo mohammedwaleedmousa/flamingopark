@@ -8,8 +8,6 @@ import HeroSlider from "@/components/HeroSlider";
 import ProductCard from "@/components/ProductCard";
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/store/useStore";
-import { motion } from "framer-motion";
-import { useState } from "react";
 
 interface DbProduct {
   id: string;
@@ -49,24 +47,32 @@ const toProduct = (p: DbProduct): Product => ({
   isBestSeller: p.is_best_seller,
 });
 
-const collections = [
+const featuredCategories = [
+  { title: "Women", subtitle: "نسائي", image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=900&q=85", link: "/products?category=women" },
+  { title: "Men", subtitle: "رجالي", image: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=900&q=85", link: "/products?category=men" },
+  { title: "Bags", subtitle: "حقائب", image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=900&q=85", link: "/products?category=bags" },
+  { title: "Shoes", subtitle: "أحذية", image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=900&q=85", link: "/products?category=shoes" },
+  { title: "Beauty", subtitle: "جمال", image: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=900&q=85", link: "/products?category=beauty" },
+];
+
+const editorial = [
   {
-    title: "طريق الحرير",
-    subtitle: "انسيابية لا تُقاوم لسهرات الجالا",
-    image: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=900&q=80",
-    link: "/products?category=clothing",
+    eyebrow: "The Autumn Edit",
+    title: "حِرفةٌ تتجاوز الموسم",
+    body: "قطعٌ صُممت لتُروى، حيث يلتقي القماش الفاخر بخطوط الكوتور الكلاسيكية لتشكّل لغة الأناقة الجديدة.",
+    cta: "Discover the Edit",
+    href: "/products?filter=featured",
+    image: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=1400&q=90",
+    reverse: false,
   },
   {
-    title: "الإطلالة الحضرية",
-    subtitle: "قطع عصرية ليومك المثالي",
-    image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=900&q=80",
-    link: "/products?category=accessories",
-  },
-  {
-    title: "ليلة الجالا",
-    subtitle: "إكسسوارات تكمل أناقتك",
-    image: "https://images.unsplash.com/photo-1535632787350-4e68ef0ac584?w=900&q=80",
-    link: "/products?category=watches",
+    eyebrow: "Maison Heritage",
+    title: "الميزون فلامنجو",
+    body: "منذ التأسيس، تواصل دار فلامنجو رحلتها في صياغة قطعٍ تجمع بين الإرث الكلاسيكي والرؤية المعاصرة.",
+    cta: "Explore the House",
+    href: "/about",
+    image: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1400&q=90",
+    reverse: true,
   },
 ];
 
@@ -80,11 +86,7 @@ const HomePage = () => {
         .eq("is_active", true)
         .order("sort_order")
         .limit(20);
-
       if (error) throw error;
-
-      console.log("PRODUCTS:", data); // 👈 مهم للتشخيص
-
       return (data || []).map(toProduct);
     },
   });
@@ -118,95 +120,35 @@ const HomePage = () => {
       return (data as DbProduct[]).map(toProduct);
     },
   });
-  const [showAllProducts, setShowAllProducts] = useState(false);
-  const { data: categories = [] } = useQuery({
-    queryKey: ["categories"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("*");
-
-      if (error) throw error;
-      return data || [];
-    },
-  });
   return (
-    <div className="min-h-screen relative">
+    <div className="min-h-screen relative bg-background">
       <Navbar />
-      <HeroSlider />
       <CartDrawer />
 
-      <main className="pt-16 md:pt-20">
-        {/* Categories strip */}
-        {categories.length > 0 && (
-          <section className="py-10 bg-muted/30">
-            <div className="container mx-auto px-4">
-              {/* 🔥 Hide scrollbar completely */}
-              <div className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory pb-2 hide-scrollbar">
-                {categories.map((c) => (
-                  <Link key={c.id} to={`/category/${c.slug}`} className="flex-shrink-0 w-40 snap-center group">
-                    <div className="relative rounded-2xl overflow-hidden border border-border bg-card shadow-sm hover:shadow-md transition">
-                      <div className="aspect-square overflow-hidden">
-                        {c.image_url ? (
-                          <img
-                            src={c.image_url}
-                            alt={c.name_ar}
-                            className="w-full h-full object-cover group-hover:scale-110 transition duration-500"
-                          />
-                        ) : (
-                          <div className="w-full h-full bg-muted" />
-                        )}
-                      </div>
+      <main>
+        {/* Hero — sits behind the navbar */}
+        <HeroSlider />
 
-                      <div className="p-2 text-center">
-                        <span className="text-sm font-medium text-foreground group-hover:text-primary">
-                          {c.name_ar}
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                ))}
-              </div>
+        {/* Featured Categories — Dior-style large editorial cards */}
+        <section className="py-20 md:py-28">
+          <div className="container mx-auto px-6">
+            <div className="text-center mb-14">
+              <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">Shop by</p>
+              <h2 className="font-heading text-3xl md:text-5xl text-foreground">Featured Categories</h2>
             </div>
-          </section>
-        )}
-
-        {/* Featured Collections */}
-        <section className="py-12">
-          <div className="container mx-auto px-4">
-            {/* HEADER */}
-            <div className="flex items-end justify-between mb-5">
-              <div>
-                <h2 className="font-heading text-2xl md:text-3xl text-foreground">المجموعات المختارة</h2>
-                <p className="font-body text-xs md:text-sm text-muted-foreground mt-1">تصاميم منتقاة بعناية</p>
-              </div>
-
-              <Link to="/products" className="text-sm text-primary hover:opacity-70 transition flex items-center gap-1">
-                عرض الكل <ArrowLeft className="w-3 h-3" />
-              </Link>
-            </div>
-
-            {/* CAROUSEL */}
-            <div className="flex gap-4 overflow-x-auto scroll-smooth snap-x snap-mandatory hide-scrollbar pb-2">
-              {collections.map((c) => (
-                <Link
-                  key={c.title}
-                  to={c.link}
-                  className="relative flex-shrink-0 w-[70%] sm:w-[55%] md:w-[38%] lg:w-[28%] aspect-[3/4] rounded-2xl overflow-hidden snap-center group shadow-sm hover:shadow-lg transition"
-                >
-                  {/* IMAGE */}
+            <div className="grid grid-cols-2 md:grid-cols-5 gap-1 md:gap-2">
+              {featuredCategories.map((c) => (
+                <Link key={c.title} to={c.link} className="group relative aspect-[3/4] overflow-hidden bg-muted">
                   <img
                     src={c.image}
                     alt={c.title}
                     loading="lazy"
-                    className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
+                    className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-105"
                   />
-
-                  {/* OVERLAY */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-
-                  {/* TEXT */}
-                  <div className="absolute bottom-4 right-4 left-4 text-right">
-                    <h3 className="font-heading text-lg md:text-xl text-white mb-1">{c.title}</h3>
-                    <p className="font-body text-[11px] md:text-xs text-white/80">{c.subtitle}</p>
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 p-5 text-center text-white">
+                    <p className="text-[10px] tracking-[0.4em] uppercase opacity-80">{c.subtitle}</p>
+                    <h3 className="font-heading text-xl md:text-2xl mt-1">{c.title}</h3>
                   </div>
                 </Link>
               ))}
@@ -214,220 +156,121 @@ const HomePage = () => {
           </div>
         </section>
 
+        {/* Editorial split — image left, text right (alternating) */}
+        {editorial.map((e) => (
+          <section key={e.title} className="bg-background">
+            <div className={`grid md:grid-cols-2 ${e.reverse ? "" : ""}`}>
+              <div className={`relative aspect-[4/5] md:aspect-auto md:h-[640px] overflow-hidden ${e.reverse ? "md:order-2" : ""}`}>
+                <img src={e.image} alt={e.title} loading="lazy" className="w-full h-full object-cover" />
+              </div>
+              <div className={`flex items-center justify-center px-8 md:px-20 py-16 md:py-0 ${e.reverse ? "md:order-1" : ""}`}>
+                <div className="max-w-md text-center md:text-right">
+                  <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-5">{e.eyebrow}</p>
+                  <h3 className="font-heading text-3xl md:text-5xl leading-tight text-foreground mb-6">{e.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-10">{e.body}</p>
+                  <Link
+                    to={e.href}
+                    className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-foreground pb-2 hover:opacity-60 transition-opacity"
+                  >
+                    {e.cta} <ArrowLeft className="w-3 h-3" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+        ))}
+
         {/* Best Sellers */}
-        <section className="py-14 bg-muted/40">
-          <div className="container mx-auto px-4">
-            <div className="text-center mb-8">
-              <span className="inline-block bg-primary-container/40 text-primary text-[10px] tracking-[0.25em] font-bold px-3 py-1 rounded-full">
-                الأكثر طلباً
-              </span>
-              <h2 className="font-heading text-3xl md:text-4xl text-foreground mt-3">الأكثر مبيعاً</h2>
+        {bestSellers.length > 0 && (
+          <section className="py-20 md:py-28 bg-muted">
+            <div className="container mx-auto px-6">
+              <div className="text-center mb-14">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">Most Loved</p>
+                <h2 className="font-heading text-3xl md:text-5xl text-foreground">Best Sellers</h2>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+                {bestSellers.slice(0, 8).map((p) => (
+                  <ProductCard key={p.id} product={p} badge="BEST SELLER" />
+                ))}
+              </div>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {bestSellers.map((p) => (
-                <ProductCard key={p.id} product={p} badge="BEST SELLER" />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        <section className="relative py-24 overflow-hidden bg-background">
-          {/* خلفية فخمة متحركة */}
-          <div className="absolute inset-0">
-            <div className="absolute w-[600px] h-[600px] bg-pink-500/10 blur-[180px] rounded-full top-[-200px] right-[-200px]" />
-            <div className="absolute w-[500px] h-[500px] bg-primary/10 blur-[180px] rounded-full bottom-[-200px] left-[-200px]" />
-          </div>
-
-          {/* خطوط موضة خفيفة */}
-          <div className="absolute inset-0 opacity-10">
-            <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0%,rgba(255,255,255,0.15)_50%,transparent_100%)] animate-pulse" />
-          </div>
-
-          <div className="container mx-auto px-4 relative z-10 text-center">
-            {/* عنوان موضوي قوي */}
-            <motion.h2
-              initial={{ opacity: 0, y: 40, filter: "blur(10px)" }}
-              whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{ duration: 1 }}
-              className="text-3xl md:text-6xl font-heading tracking-wide text-foreground"
-            >
-              الموضة ليست ما تلبسه…
-            </motion.h2>
-
-            <motion.h2
-              initial={{ opacity: 0, y: 40, filter: "blur(10px)" }}
-              whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-              transition={{ duration: 1, delay: 0.2 }}
-              className="text-2xl md:text-5xl font-heading mt-3 text-primary"
-            >
-              بل ما يسبق حضورك بخطوة
-            </motion.h2>
-
-            {/* وصف مجلات أزياء */}
-            <motion.p
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 1, delay: 0.4 }}
-              className="max-w-2xl mx-auto mt-8 text-sm md:text-base text-muted-foreground leading-relaxed"
-            >
-              في فلامنجو لا نعرض منتجات… نحن نصنع لغة بصرية للأناقة، حيث تتحول القطعة إلى بيان، والستايل إلى هوية لا
-              تُنسى.
-            </motion.p>
-
-            {/* كلمات موضة متحركة */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              whileInView={{ opacity: 1 }}
-              transition={{ delay: 0.6 }}
-              className="mt-14 flex flex-wrap justify-center gap-3"
-            >
-              {["أناقة", "تألق", "جرأة", "تميز", "فخامة", "إبداع", "رقي", "تفرّد", "سحر", "جاذبية"].map((word, i) => (
-                <motion.span
-                  key={i}
-                  initial={{ opacity: 0, scale: 0.8 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  transition={{ delay: i * 0.1 }}
-                  whileHover={{ scale: 1.1 }}
-                  className="px-4 py-2 text-xs tracking-[0.3em] border border-border rounded-full bg-card/40 backdrop-blur-xl text-foreground"
-                >
-                  {word}
-                </motion.span>
-              ))}
-            </motion.div>
-
-            {/* خط فخم */}
-            <motion.div
-              initial={{ width: 0 }}
-              whileInView={{ width: 160 }}
-              transition={{ duration: 1 }}
-              className="h-[2px] bg-primary mx-auto mt-14 rounded-full"
-            />
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* New Arrivals */}
-        <section className="py-14">
-          <div className="container mx-auto px-4">
-            <div className="flex items-end justify-between mb-6">
-              <h2 className="font-heading text-3xl md:text-4xl text-foreground">وصل حديثاً</h2>
-              <Link
-                to="/products?filter=featured"
-                className="font-body text-sm text-primary hover:underline flex items-center gap-1"
-              >
-                عرض الكل <ArrowLeft className="w-3 h-3" />
-              </Link>
-            </div>
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-              {newArrivals.map((p) => (
-                <ProductCard key={p.id} product={p} badge="NEW IN" />
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* Quote */}
-
-        <section className="relative py-28 overflow-hidden bg-gradient-to-b from-primary-container/10 via-background to-primary-container/5">
-          {/*  moving light aura */}
-          <motion.div
-            className="absolute inset-0"
-            animate={{
-              backgroundPosition: ["0% 50%", "100% 50%", "0% 50%"],
-            }}
-            transition={{
-              duration: 10,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-            style={{
-              background:
-                "radial-gradient(circle at center, rgba(0,0,0,0) 0%, rgba(0,0,0,0) 40%, rgba(255,0,100,0.08) 60%, rgba(0,0,0,0) 80%)",
-            }}
-          />
-
-          {/* glow blob */}
-          <motion.div
-            className="absolute top-1/2 left-1/2 w-[650px] h-[650px] -translate-x-1/2 -translate-y-1/2 bg-primary/20 blur-[150px] rounded-full"
-            animate={{ scale: [1, 1.15, 1], opacity: [0.4, 0.7, 0.4] }}
-            transition={{ duration: 6, repeat: Infinity }}
-          />
-
-          <div className="relative container mx-auto px-4 text-center">
-            {/* top line reveal */}
-            <motion.div
-              initial={{ width: 0, opacity: 0 }}
-              whileInView={{ width: 80, opacity: 1 }}
-              transition={{ duration: 1 }}
-              className="h-[2px] bg-primary mx-auto mb-12 rounded-full"
-            />
-
-            {/* MAIN TEXT (type + glow feel) */}
-            <motion.p
-              initial={{ opacity: 0, letterSpacing: "0.6em", filter: "blur(10px)" }}
-              whileInView={{ opacity: 1, letterSpacing: "0.02em", filter: "blur(0px)" }}
-              transition={{ duration: 1.2 }}
-              className="font-heading text-2xl md:text-5xl text-foreground leading-snug tracking-wide"
-            >
-              الأناقة ليست ما ترتديه… بل ما يترك أثراً لا يُنسى
-            </motion.p>
-
-            {/* underline sweep */}
-            <motion.div
-              initial={{ width: 0 }}
-              whileInView={{ width: 140 }}
-              transition={{ duration: 1, delay: 0.4 }}
-              className="h-[2px] bg-primary mx-auto mt-10 rounded-full"
-            />
-
-            {/* brand reveal */}
-            <motion.div
-              initial={{ opacity: 0, y: 20, letterSpacing: "0.5em" }}
-              whileInView={{ opacity: 1, y: 0, letterSpacing: "0.3em" }}
-              transition={{ duration: 1, delay: 0.6 }}
-              className="mt-10 text-xs uppercase text-muted-foreground tracking-[0.3em]"
-            >
-              Flamingo Park
-            </motion.div>
-          </div>
-        </section>
-        {/* Products Section (Luxury Preview) */}
-        <section className="py-16 bg-background">
-          <div className="container mx-auto px-4">
-            {/* HEADER */}
-            <div className="flex items-end justify-between mb-8">
-              <div>
-                <h2 className="font-heading text-3xl md:text-4xl text-foreground">منتجات مختارة</h2>
-                <p className="text-sm text-muted-foreground mt-1">تجربة تسوق سريعة لأفضل ما لدينا</p>
-              </div>
-
-              <Link to="/products" className="text-sm text-primary hover:opacity-70 transition">
-                عرض جميع المنتجات →
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
-              {products?.length > 0 ? (
-                products
-                  .slice(0, showAllProducts ? products.length : 8)
-                  .map((p) => <ProductCard key={p.id} product={p} badge="HOT" />)
-              ) : (
-                <p className="text-center col-span-full text-gray-500">لا توجد منتجات</p>
-              )}
-            </div>
-
-            {/* SHOW MORE BUTTON */}
-            {products.length > 8 && (
-              <div className="flex justify-center mt-10">
-                <button
-                  onClick={() => setShowAllProducts(!showAllProducts)}
-                  className="px-6 py-3 rounded-full bg-primary text-white hover:opacity-90 transition"
+        {newArrivals.length > 0 && (
+          <section className="py-20 md:py-28">
+            <div className="container mx-auto px-6">
+              <div className="flex items-end justify-between mb-12">
+                <div>
+                  <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">Just In</p>
+                  <h2 className="font-heading text-3xl md:text-5xl text-foreground">New Arrivals</h2>
+                </div>
+                <Link
+                  to="/products?filter=featured"
+                  className="text-[11px] tracking-[0.35em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
                 >
-                  {showAllProducts ? "إظهار أقل" : "عرض المزيد"}
-                </button>
+                  View All <ArrowLeft className="w-3 h-3" />
+                </Link>
               </div>
-            )}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+                {newArrivals.slice(0, 8).map((p) => (
+                  <ProductCard key={p.id} product={p} badge="NEW IN" />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Full-width campaign banner */}
+        <section className="relative h-[60vh] min-h-[420px] overflow-hidden">
+          <img
+            src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1800&q=90"
+            alt="Flamingo campaign"
+            loading="lazy"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/30" />
+          <div className="relative h-full flex items-center justify-center text-center px-6">
+            <div className="text-white max-w-2xl">
+              <p className="text-[10px] tracking-[0.4em] uppercase opacity-80 mb-4">Campaign 2026</p>
+              <h2 className="font-heading text-4xl md:text-6xl leading-tight mb-8">
+                Crafted to be Remembered
+              </h2>
+              <Link
+                to="/products"
+                className="inline-flex items-center justify-center bg-white text-black text-[11px] tracking-[0.35em] uppercase px-10 py-4 hover:bg-white/90 transition-colors"
+              >
+                Discover Now
+              </Link>
+            </div>
           </div>
         </section>
+
+        {/* All products preview */}
+        {products.length > 0 && (
+          <section className="py-20 md:py-28">
+            <div className="container mx-auto px-6">
+              <div className="text-center mb-14">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">The Selection</p>
+                <h2 className="font-heading text-3xl md:text-5xl text-foreground">Curated Pieces</h2>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+                {products.slice(0, 8).map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+              </div>
+              <div className="text-center mt-14">
+                <Link
+                  to="/products"
+                  className="inline-flex items-center justify-center border border-foreground text-foreground text-[11px] tracking-[0.35em] uppercase px-10 py-4 hover:bg-foreground hover:text-background transition-colors"
+                >
+                  View All Products
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
       </main>
 
       <Footer />

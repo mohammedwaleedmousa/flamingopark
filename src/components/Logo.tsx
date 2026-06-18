@@ -6,10 +6,10 @@ interface LogoProps {
 }
 
 const sizeClasses = {
-  sm: "text-2xl",
-  md: "text-3xl",
-  lg: "text-4xl",
-  xl: "text-5xl",
+  sm: "text-lg",
+  md: "text-xl",
+  lg: "text-2xl",
+  xl: "text-4xl",
 };
 
 const Logo = ({ size = "md", variant = "nav", className = "", invert = false }: LogoProps) => {
@@ -17,10 +17,10 @@ const Logo = ({ size = "md", variant = "nav", className = "", invert = false }: 
     <span
       aria-label={`Flamingo - ${variant}`}
       className={`logo-flamingo inline-block leading-none ${sizeClasses[size]} ${
-        invert ? "text-white" : "text-primary"
+        invert ? "text-white" : "text-foreground"
       } ${className}`}
     >
-      Flamingo
+      FLAMINGO
     </span>
   );
 };

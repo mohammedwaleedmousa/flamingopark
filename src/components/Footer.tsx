@@ -1,101 +1,109 @@
 import { Link } from "react-router-dom";
-import { Mail, Phone, MapPin, Instagram } from "lucide-react";
-import { useEffect, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
-
-const WhatsAppIcon = ({ className }: { className?: string }) => (
-  <svg className={className} viewBox="0 0 24 24" fill="currentColor">
-    <path d="M20.52 3.48A11.86 11.86 0 0012.06 0C5.55 0 .26 5.29.26 11.8c0 2.08.55 4.11 1.59 5.9L0 24l6.45-1.69a11.78 11.78 0 005.61 1.43h.01c6.51 0 11.8-5.29 11.8-11.8 0-3.15-1.23-6.11-3.35-8.46zM12.07 21.7h-.01a9.9 9.9 0 01-5.05-1.38l-.36-.21-3.83 1 1.02-3.73-.23-.38a9.9 9.9 0 0115.32-12.5 9.84 9.84 0 012.9 7c0 5.46-4.44 9.9-9.76 9.9zm5.42-7.4c-.3-.15-1.76-.87-2.03-.97-.27-.1-.47-.15-.67.15s-.77.97-.94 1.17-.35.22-.65.07c-.3-.15-1.26-.46-2.4-1.47-.88-.79-1.48-1.76-1.65-2.06-.17-.3-.02-.46.13-.61.13-.13.3-.35.45-.52.15-.17.2-.3.3-.5.1-.2.05-.37-.03-.52-.07-.15-.67-1.61-.92-2.21-.24-.58-.49-.5-.67-.51l-.57-.01c-.2 0-.52.07-.79.37s-1.04 1.02-1.04 2.48 1.07 2.88 1.22 3.08c.15.2 2.1 3.2 5.08 4.49.71.31 1.26.49 1.69.62.71.23 1.36.2 1.87.12.57-.08 1.76-.72 2.01-1.41.25-.69.25-1.28.17-1.41-.07-.12-.27-.2-.57-.35z"/>
-  </svg>
-);
+import { Instagram, Mail, ArrowUp, Phone, MapPin } from "lucide-react";
+import { motion } from "framer-motion";
 
 const Footer = () => {
-  const [socials, setSocials] = useState({ whatsapp: "", instagram: "" });
-
-  useEffect(() => {
-    supabase
-      .from("site_settings")
-      .select("key, value")
-      .in("key", ["social_whatsapp", "social_instagram"])
-      .then(({ data }) => {
-        if (!data) return;
-        const next = { whatsapp: "", instagram: "" };
-        data.forEach((s) => {
-          let val = s.value as unknown;
-          if (typeof val === "string") {
-            try { val = JSON.parse(val); } catch { /* keep string */ }
-          }
-          if (s.key === "social_whatsapp" && typeof val === "string") next.whatsapp = val;
-          if (s.key === "social_instagram" && typeof val === "string") next.instagram = val;
-        });
-        setSocials(next);
-      });
-  }, []);
-
   return (
-    <footer className="bg-background border-t border-border">
-      <div className="container mx-auto px-4 py-14">
-        <div className="text-center mb-10">
-          <h2 className="logo-flamingo text-4xl text-primary mb-3">Flamingo</h2>
-          <p className="font-body text-sm text-muted-foreground max-w-md mx-auto leading-relaxed">
-            وجهتك للأناقة العصرية. تشكيلة منتقاة من الملابس والإكسسوارات الفاخرة لتجربة تسوق استثنائية.
+    <footer className="bg-white text-black relative overflow-hidden">
+      {/* خلفية خفيفة فخمة */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(0,0,0,0.03),transparent_70%)]" />
+
+      <div className="container mx-auto px-6 py-32 relative">
+        {/* ================= الهوية ================= */}
+        <div className="text-center max-w-3xl mx-auto">
+          <motion.h2
+            initial={{ opacity: 0, y: 40 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 1 }}
+            className="text-5xl md:text-7xl"
+            style={{ fontFamily: "serif" }}
+          >
+            Flamingo Park
+          </motion.h2>
+
+          <div className="w-24 h-[1px] bg-black mx-auto my-10" />
+
+          <p className="text-sm md:text-base text-black/70 leading-loose">
+            تجربة تسوق فاخرة تجمع بين الذوق العصري والتفاصيل الراقية لنقدم لك أسلوب حياة يعكس هويتك بكل بساطة وأناقة.
           </p>
-          <div className="flex items-center justify-center gap-3 mt-5">
-            {socials.whatsapp && (
-              <a
-                href={socials.whatsapp}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="WhatsApp"
-                className="w-10 h-10 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground text-foreground flex items-center justify-center transition-all"
-              >
-                <WhatsAppIcon className="w-4 h-4" />
-              </a>
-            )}
-            {socials.instagram && (
-              <a
-                href={socials.instagram}
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Instagram"
-                className="w-10 h-10 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground text-foreground flex items-center justify-center transition-all"
-              >
-                <Instagram className="w-4 h-4" />
-              </a>
-            )}
-            <a
-              href="mailto:hello@flamingo.store"
-              aria-label="Email"
-              className="w-10 h-10 rounded-full bg-muted hover:bg-primary hover:text-primary-foreground text-foreground flex items-center justify-center transition-all"
-            >
+        </div>
+
+        {/* ================= معلومات رئيسية ================= */}
+        <div className="mt-24 grid grid-cols-1 md:grid-cols-3 gap-14 text-center">
+          <div>
+            <h3 className="text-xs tracking-[0.3em] uppercase mb-4 text-black/60">الموقع</h3>
+            <div className="flex items-center justify-center gap-2 text-black/70">
+              <MapPin className="w-4 h-4" />
+              اليمن - متجر إلكتروني
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xs tracking-[0.3em] uppercase mb-4 text-black/60">الهاتف</h3>
+            <div className="flex items-center justify-center gap-2 text-black/70">
+              <Phone className="w-4 h-4" />
+              +967 777 777 777
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-xs tracking-[0.3em] uppercase mb-4 text-black/60">البريد الإلكتروني</h3>
+            <div className="flex items-center justify-center gap-2 text-black/70">
               <Mail className="w-4 h-4" />
-            </a>
+              support@flamingo.com
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-8 max-w-md mx-auto">
-          <div>
-            <h3 className="font-heading text-primary text-base mb-3">المتجر</h3>
-            <ul className="space-y-2 font-body text-sm text-secondary">
-              <li><Link to="/products" className="hover:text-primary transition-colors">جميع المنتجات</Link></li>
-              <li><Link to="/products?filter=featured" className="hover:text-primary transition-colors">وافد حديثاً</Link></li>
-              <li><Link to="/products?filter=bestseller" className="hover:text-primary transition-colors">الأكثر مبيعاً</Link></li>
-              <li><Link to="/offers" className="hover:text-primary transition-colors">العروض</Link></li>
-            </ul>
-          </div>
-          <div>
-            <h3 className="font-heading text-primary text-base mb-3">المساعدة</h3>
-            <ul className="space-y-2 font-body text-sm text-secondary">
-              <li><Link to="/about" className="hover:text-primary transition-colors">من نحن</Link></li>
-              <li><Link to="/reviews" className="hover:text-primary transition-colors">آراء العملاء</Link></li>
-              <li><Link to="/favorites" className="hover:text-primary transition-colors">المفضلة</Link></li>
-              <li><Link to="/checkout" className="hover:text-primary transition-colors">سياسة الشحن</Link></li>
-            </ul>
-          </div>
+        {/* ================= الروابط ================= */}
+        <div className="mt-28 flex flex-wrap justify-center gap-10 text-sm">
+          {[
+            { label: "الرئيسية", href: "/home" },
+            { label: "المنتجات", href: "/products" },
+            { label: "العروض", href: "/offers" },
+            { label: "المفضلة", href: "/favorites" },
+            { label: "من نحن", href: "/about" },
+            { label: "التقييمات", href: "/reviews" },
+            { label: "تواصل معنا", href: "/contact" },
+          ].map((item, i) => (
+            <motion.div key={i} whileHover={{ y: -4 }}>
+              <Link to={item.href} className="text-black/60 hover:text-black transition">
+                {item.label}
+              </Link>
+            </motion.div>
+          ))}
         </div>
 
-        <div className="mt-12 pt-6 border-t border-border text-center">
-          <p className="font-body text-xs text-muted-foreground">© 2026 Flamingo. جميع الحقوق محفوظة.</p>
+        {/* ================= السوشيال ================= */}
+        <div className="mt-28 flex justify-center gap-6">
+          <motion.a
+            whileHover={{ scale: 1.2 }}
+            href="#"
+            className="w-12 h-12 border border-black/10 rounded-full flex items-center justify-center hover:border-black transition"
+          >
+            <Instagram className="w-5 h-5" />
+          </motion.a>
+
+          <motion.a
+            whileHover={{ scale: 1.2 }}
+            href="mailto:support@flamingo.com"
+            className="w-12 h-12 border border-black/10 rounded-full flex items-center justify-center hover:border-black transition"
+          >
+            <Mail className="w-5 h-5" />
+          </motion.a>
+        </div>
+
+        {/* ================= النهاية ================= */}
+        <div className="mt-32 border-t border-black/10 pt-6 flex flex-col md:flex-row justify-between items-center text-xs text-black/50">
+          <p>© 2026 Flamingo Park — جميع الحقوق محفوظة</p>
+
+          <button
+            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+            className="flex items-center gap-1 hover:text-black transition mt-4 md:mt-0"
+          >
+            العودة للأعلى
+            <ArrowUp className="w-3 h-3" />
+          </button>
         </div>
       </div>
     </footer>

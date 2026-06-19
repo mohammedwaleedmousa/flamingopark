@@ -299,4 +299,17 @@
   .text-balance {
     text-wrap: balance;
   }
+
+  /* Splash animations */
+  @keyframes splashRise {
+    from { transform: translateY(110%); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+  }
+  .animate-splash-rise { animation: splashRise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; }
+
+  @keyframes splashLine {
+    from { width: 0%; }
+    to { width: 100%; }
+  }
+  .animate-splash-line { animation: splashLine 1.6s ease-out both; }
 }

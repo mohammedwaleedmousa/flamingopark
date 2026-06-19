@@ -1,13 +1,15 @@
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, useState, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
-import { Loader2 } from "lucide-react";
 import { useStore } from "@/store/useStore";
+import SplashScreen from "@/components/SplashScreen";
+import LoadingScreen from "@/components/LoadingScreen";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
+const AuthPage = lazy(() => import("./pages/AuthPage"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
 const ProductsPage = lazy(() => import("./pages/ProductsPage"));
@@ -49,11 +51,7 @@ const MohammedInvoicesPage = lazy(() => import("./pages/MohammedInvoicesPage"));
 
 const queryClient = new QueryClient();
 
-const RouteFallback = () => (
-  <div className="min-h-screen bg-background flex items-center justify-center">
-    <Loader2 className="w-8 h-8 animate-spin text-primary" />
-  </div>
-);
+const RouteFallback = () => <LoadingScreen />;
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   // Unified single-platform: no country/customer gate for browsing.
@@ -80,11 +78,20 @@ const ScrollToTop = () => {
   return null;
 };
 
-const App = () => (
+const App = () => {
+  const [showSplash, setShowSplash] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !sessionStorage.getItem("flamingo-splash-seen");
+  });
+
+  return (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      {showSplash && (
+        <SplashScreen onDone={() => { sessionStorage.setItem("flamingo-splash-seen", "1"); setShowSplash(false); }} />
+      )}
       <BrowserRouter>
         <ScrollToTop />
         <Suspense fallback={<RouteFallback />}>
@@ -92,7 +99,10 @@ const App = () => (
             <Route path="/" element={<AuthRedirect />} />
             <Route path="/index" element={<AuthRedirect />} />
             <Route path="/index.html" element={<AuthRedirect />} />
-            <Route path="/auth" element={<AuthRedirect />} />
+            <Route path="/auth" element={<AuthPage />} />
+            <Route path="/signin" element={<AuthPage />} />
+            <Route path="/signup" element={<AuthPage />} />
+            <Route path="/legacy-auth" element={<CustomerAuthPage />} />
             <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
             <Route path="/product/:slug" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
@@ -141,5 +151,6 @@ const App = () => (
     </TooltipProvider>
   </QueryClientProvider>
 );
+};
 
 export default App;

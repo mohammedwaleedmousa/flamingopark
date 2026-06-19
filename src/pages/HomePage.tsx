@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { useState } from "react";
+import { ArrowLeft, Search } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
@@ -48,11 +49,12 @@ const toProduct = (p: DbProduct): Product => ({
 });
 
 const featuredCategories = [
-  { title: "Women", subtitle: "نسائي", image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=900&q=85", link: "/products?category=women" },
-  { title: "Men", subtitle: "رجالي", image: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=900&q=85", link: "/products?category=men" },
-  { title: "Bags", subtitle: "حقائب", image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=900&q=85", link: "/products?category=bags" },
-  { title: "Shoes", subtitle: "أحذية", image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=900&q=85", link: "/products?category=shoes" },
-  { title: "Beauty", subtitle: "جمال", image: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=900&q=85", link: "/products?category=beauty" },
+  { title: "نسائي", subtitle: "Women", image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=900&q=85", link: "/products?category=women" },
+  { title: "رجالي", subtitle: "Men", image: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=900&q=85", link: "/products?category=men" },
+  { title: "أطفال", subtitle: "Kids", image: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=900&q=85", link: "/products?category=kids" },
+  { title: "حقائب", subtitle: "Bags", image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=900&q=85", link: "/products?category=bags" },
+  { title: "أحذية", subtitle: "Shoes", image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=900&q=85", link: "/products?category=shoes" },
+  { title: "تجميل", subtitle: "Beauty", image: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=900&q=85", link: "/products?category=beauty" },
 ];
 
 const editorial = [
@@ -77,6 +79,15 @@ const editorial = [
 ];
 
 const HomePage = () => {
+  const navigate = useNavigate();
+  const [searchTerm, setSearchTerm] = useState("");
+
+  const onSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!searchTerm.trim()) return;
+    navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
+  };
+
   const { data: products = [] } = useQuery({
     queryKey: ["home-products"],
     queryFn: async () => {
@@ -121,7 +132,7 @@ const HomePage = () => {
     },
   });
   return (
-    <div className="min-h-screen relative bg-background">
+    <div className="min-h-screen relative bg-background" dir="rtl">
       <Navbar />
       <CartDrawer />
 
@@ -129,14 +140,32 @@ const HomePage = () => {
         {/* Hero — sits behind the navbar */}
         <HeroSlider />
 
+        {/* Search bar */}
+        <section className="border-y border-border bg-muted/40 py-6">
+          <div className="container mx-auto px-6">
+            <form onSubmit={onSearch} className="max-w-2xl mx-auto relative">
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+              <input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="ابحث عن منتجك المفضل..."
+                className="w-full pr-12 pl-32 py-4 bg-background border border-border focus:border-foreground outline-none text-sm transition"
+              />
+              <button type="submit" className="absolute left-2 top-1/2 -translate-y-1/2 bg-foreground text-background px-6 py-2.5 text-[10px] tracking-[0.35em] uppercase">
+                بحث
+              </button>
+            </form>
+          </div>
+        </section>
+
         {/* Featured Categories — Dior-style large editorial cards */}
         <section className="py-20 md:py-28">
           <div className="container mx-auto px-6">
             <div className="text-center mb-14">
-              <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">Shop by</p>
-              <h2 className="font-heading text-3xl md:text-5xl text-foreground">Featured Categories</h2>
+              <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">تسوّق حسب</p>
+              <h2 className="font-heading text-3xl md:text-5xl text-foreground">الأقسام الرئيسية</h2>
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-5 gap-1 md:gap-2">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-1 md:gap-2">
               {featuredCategories.map((c) => (
                 <Link key={c.title} to={c.link} className="group relative aspect-[3/4] overflow-hidden bg-muted">
                   <img
@@ -145,7 +174,7 @@ const HomePage = () => {
                     loading="lazy"
                     className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-105"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/0 to-transparent" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
                   <div className="absolute inset-x-0 bottom-0 p-5 text-center text-white">
                     <p className="text-[10px] tracking-[0.4em] uppercase opacity-80">{c.subtitle}</p>
                     <h3 className="font-heading text-xl md:text-2xl mt-1">{c.title}</h3>
@@ -185,8 +214,8 @@ const HomePage = () => {
           <section className="py-20 md:py-28 bg-muted">
             <div className="container mx-auto px-6">
               <div className="text-center mb-14">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">Most Loved</p>
-                <h2 className="font-heading text-3xl md:text-5xl text-foreground">Best Sellers</h2>
+                <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">الأكثر طلباً</p>
+                <h2 className="font-heading text-3xl md:text-5xl text-foreground">الأكثر مبيعاً</h2>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
                 {bestSellers.slice(0, 8).map((p) => (
@@ -203,14 +232,14 @@ const HomePage = () => {
             <div className="container mx-auto px-6">
               <div className="flex items-end justify-between mb-12">
                 <div>
-                  <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">Just In</p>
-                  <h2 className="font-heading text-3xl md:text-5xl text-foreground">New Arrivals</h2>
+                  <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">وصل حديثاً</p>
+                  <h2 className="font-heading text-3xl md:text-5xl text-foreground">جديد الموسم</h2>
                 </div>
                 <Link
                   to="/products?filter=featured"
                   className="text-[11px] tracking-[0.35em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
                 >
-                  View All <ArrowLeft className="w-3 h-3" />
+                  عرض الكل <ArrowLeft className="w-3 h-3" />
                 </Link>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
@@ -233,15 +262,15 @@ const HomePage = () => {
           <div className="absolute inset-0 bg-black/30" />
           <div className="relative h-full flex items-center justify-center text-center px-6">
             <div className="text-white max-w-2xl">
-              <p className="text-[10px] tracking-[0.4em] uppercase opacity-80 mb-4">Campaign 2026</p>
+              <p className="text-[10px] tracking-[0.4em] uppercase opacity-80 mb-4">حملة 2026</p>
               <h2 className="font-heading text-4xl md:text-6xl leading-tight mb-8">
-                Crafted to be Remembered
+                صُممت لتُروى
               </h2>
               <Link
                 to="/products"
                 className="inline-flex items-center justify-center bg-white text-black text-[11px] tracking-[0.35em] uppercase px-10 py-4 hover:bg-white/90 transition-colors"
               >
-                Discover Now
+                اكتشف الآن
               </Link>
             </div>
           </div>
@@ -252,8 +281,8 @@ const HomePage = () => {
           <section className="py-20 md:py-28">
             <div className="container mx-auto px-6">
               <div className="text-center mb-14">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">The Selection</p>
-                <h2 className="font-heading text-3xl md:text-5xl text-foreground">Curated Pieces</h2>
+                <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">المختارات</p>
+                <h2 className="font-heading text-3xl md:text-5xl text-foreground">قطع مختارة بعناية</h2>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
                 {products.slice(0, 8).map((p) => (
@@ -265,7 +294,7 @@ const HomePage = () => {
                   to="/products"
                   className="inline-flex items-center justify-center border border-foreground text-foreground text-[11px] tracking-[0.35em] uppercase px-10 py-4 hover:bg-foreground hover:text-background transition-colors"
                 >
-                  View All Products
+                  عرض جميع المنتجات
                 </Link>
               </div>
             </div>

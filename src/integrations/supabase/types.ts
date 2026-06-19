@@ -252,37 +252,51 @@ export type Database = {
         Row: {
           countries: string[] | null
           created_at: string
+          description_ar: string | null
           id: string
           image_url: string | null
           is_active: boolean | null
           name: string
           name_ar: string
+          parent_id: string | null
           slug: string
           sort_order: number | null
         }
         Insert: {
           countries?: string[] | null
           created_at?: string
+          description_ar?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
           name: string
           name_ar: string
+          parent_id?: string | null
           slug: string
           sort_order?: number | null
         }
         Update: {
           countries?: string[] | null
           created_at?: string
+          description_ar?: string | null
           id?: string
           image_url?: string | null
           is_active?: boolean | null
           name?: string
           name_ar?: string
+          parent_id?: string | null
           slug?: string
           sort_order?: number | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "categories_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       certification_images: {
         Row: {
@@ -866,6 +880,33 @@ export type Database = {
           sizes?: string[] | null
           slug?: string
           sort_order?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          avatar_url: string | null
+          created_at: string
+          full_name: string | null
+          id: string
+          phone: string | null
+          updated_at: string
+        }
+        Insert: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id: string
+          phone?: string | null
+          updated_at?: string
+        }
+        Update: {
+          avatar_url?: string | null
+          created_at?: string
+          full_name?: string | null
+          id?: string
+          phone?: string | null
           updated_at?: string
         }
         Relationships: []

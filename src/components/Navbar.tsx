@@ -13,6 +13,20 @@ import { supabase } from "@/integrations/supabase/client";
 import type { User as SupaUser } from "@supabase/supabase-js";
 import { toast } from "@/hooks/use-toast";
 
+const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="py-2">
+    <p className="px-6 py-2 text-[10px] tracking-[0.4em] uppercase text-muted-foreground">{label}</p>
+    <div>{children}</div>
+  </div>
+);
+
+const NavItem = ({ icon: Icon, label, onClick }: { to?: string; icon: any; label: string; onClick: () => void }) => (
+  <button onClick={onClick} className="w-full flex items-center gap-3 px-6 py-3 hover:bg-muted transition text-right">
+    <Icon className="w-4 h-4 text-muted-foreground" />
+    <span className="text-sm">{label}</span>
+  </button>
+);
+
 const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");

@@ -85,11 +85,9 @@ const Navbar = () => {
                 </button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[88vw] sm:w-[400px] p-0 bg-background border-l" dir="rtl">
-                <div className="flex flex-col h-full">
+                <div className="flex flex-col h-full pt-5 pr-5 pl-5">
                   {/* User header */}
-                  <div className="px-6 pt-10 pb-6 bg-gradient-to-b from-foreground to-foreground/95 text-background">
-                    <p className="logo-flamingo text-2xl mb-1">FLAMINGO</p>
-                    <p className="text-[10px] tracking-[0.4em] uppercase opacity-60">Maison de Luxe</p>
+                  <div className="rounded-3xl px-6 pt-3 pb-6 bg-neutral-950 from-foreground to-foreground/95 text-background">
                     <div className="mt-6 flex items-center gap-3">
                       <div className="w-11 h-11 rounded-full bg-background/10 flex items-center justify-center">
                         <User className="w-5 h-5" />
@@ -172,11 +170,6 @@ const Navbar = () => {
                     </Section>
                   </nav>
 
-                  {user && (
-                    <button onClick={handleLogout} className="border-t border-border p-5 flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition">
-                      <LogOut className="w-4 h-4" /> تسجيل الخروج
-                    </button>
-                  )}
                 </div>
               </SheetContent>
             </Sheet>

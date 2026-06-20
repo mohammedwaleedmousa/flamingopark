@@ -21,6 +21,12 @@ const OffersPage = lazy(() => import("./pages/OffersPage"));
 const ReviewsPage = lazy(() => import("./pages/ReviewsPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const QRCodePage = lazy(() => import("./pages/QRCodePage"));
+const CategoriesPage = lazy(() => import("./pages/CategoriesPage"));
+const BestSellersPage = lazy(() => import("./pages/BestSellersPage"));
+const NewArrivalsPage = lazy(() => import("./pages/NewArrivalsPage"));
+const CartPage = lazy(() => import("./pages/CartPage"));
+const AccountPage = lazy(() => import("./pages/AccountPage"));
+const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 
 // Admin pages
 const AdminLoginPage = lazy(() => import("./pages/admin/AdminLoginPage"));
@@ -105,6 +111,12 @@ const App = () => {
             <Route path="/legacy-auth" element={<CustomerAuthPage />} />
             <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
+            <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
+            <Route path="/best-sellers" element={<ProtectedRoute><BestSellersPage /></ProtectedRoute>} />
+            <Route path="/new-arrivals" element={<ProtectedRoute><NewArrivalsPage /></ProtectedRoute>} />
+            <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
+            <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
+            <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/product/:slug" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
             <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
             <Route path="/order-confirmation" element={<ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>} />

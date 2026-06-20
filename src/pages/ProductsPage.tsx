@@ -8,7 +8,9 @@ import ProductCard from "@/components/ProductCard";
 import LoadingScreen from "@/components/LoadingScreen";
 import { Product } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, SlidersHorizontal, X } from "lucide-react";
+import { ChevronLeft, SlidersHorizontal, X, RotateCcw } from "lucide-react";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
 
 interface Category {
   id: string;
@@ -35,6 +37,10 @@ const ProductsPage = () => {
   const searchQuery = searchParams.get("search") || "";
   const brandFilter = searchParams.get("brand") || "all";
   const sortBy = searchParams.get("sort") || "new";
+  const saleOnly = searchParams.get("sale") === "1";
+  const inStockOnly = searchParams.get("stock") === "1";
+  const minPriceParam = Number(searchParams.get("min") || 0);
+  const maxPriceParam = Number(searchParams.get("max") || 0);
   const [filtersOpen, setFiltersOpen] = useState(false);
 
   const { data: categories = [] } = useQuery({
@@ -98,6 +104,15 @@ const ProductsPage = () => {
     return Array.from(set);
   }, [products]);
 
+  const priceBounds = useMemo(() => {
+    if (products.length === 0) return { min: 0, max: 1000 };
+    const prices = products.map((p) => (p.discount ? p.price * (1 - p.discount / 100) : p.price));
+    return { min: Math.floor(Math.min(...prices)), max: Math.ceil(Math.max(...prices)) };
+  }, [products]);
+
+  const effectiveMin = minPriceParam || priceBounds.min;
+  const effectiveMax = maxPriceParam || priceBounds.max;
+
   const visibleProducts = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     let arr = products.filter((p) => {
@@ -108,12 +123,18 @@ const ProductsPage = () => {
         p.brand.toLowerCase().includes(q) ||
         p.descriptionAr.toLowerCase().includes(q);
       const okBrand = brandFilter === "all" || p.brand?.trim() === brandFilter;
-      return okSearch && okBrand;
+      const finalPrice = p.discount ? p.price * (1 - p.discount / 100) : p.price;
+      const okPrice = finalPrice >= effectiveMin && finalPrice <= effectiveMax;
+      const okSale = !saleOnly || !!p.discount;
+      const okStock = !inStockOnly || p.inStock;
+      return okSearch && okBrand && okPrice && okSale && okStock;
     });
     if (sortBy === "price-asc") arr = [...arr].sort((a, b) => a.price - b.price);
     if (sortBy === "price-desc") arr = [...arr].sort((a, b) => b.price - a.price);
+    if (sortBy === "best") arr = [...arr].sort((a, b) => Number(!!b.isBestSeller) - Number(!!a.isBestSeller));
+    if (sortBy === "featured") arr = [...arr].sort((a, b) => Number(!!b.isFeatured) - Number(!!a.isFeatured));
     return arr;
-  }, [products, searchQuery, brandFilter, sortBy]);
+  }, [products, searchQuery, brandFilter, sortBy, saleOnly, inStockOnly, effectiveMin, effectiveMax]);
 
   const setParam = (k: string, v: string | null) => {
     const next = new URLSearchParams(searchParams);
@@ -121,6 +142,12 @@ const ProductsPage = () => {
     else next.set(k, v);
     setSearchParams(next);
   };
+
+  const activeFilterCount =
+    (brandFilter !== "all" ? 1 : 0) +
+    (saleOnly ? 1 : 0) +
+    (inStockOnly ? 1 : 0) +
+    (minPriceParam || maxPriceParam ? 1 : 0);
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -187,9 +214,12 @@ const ProductsPage = () => {
             <div className="flex items-center justify-between border-b border-border pb-4 mb-8">
               <button
                 onClick={() => setFiltersOpen(true)}
-                className="flex items-center gap-2 text-[11px] tracking-[0.3em] uppercase"
+                className="flex items-center gap-2 text-[11px] tracking-[0.3em] uppercase relative"
               >
                 <SlidersHorizontal className="w-4 h-4" /> فلاتر
+                {activeFilterCount > 0 && (
+                  <span className="bg-foreground text-background text-[9px] px-1.5 py-0.5 ml-1">{activeFilterCount}</span>
+                )}
               </button>
               <p className="text-sm text-muted-foreground">{visibleProducts.length} منتج</p>
               <select
@@ -198,6 +228,8 @@ const ProductsPage = () => {
                 className="bg-transparent text-[11px] tracking-[0.3em] uppercase border-b border-border focus:border-foreground outline-none py-1 px-2"
               >
                 <option value="new">الأحدث</option>
+                <option value="best">الأكثر مبيعاً</option>
+                <option value="featured">الأعلى تقييماً</option>
                 <option value="price-asc">السعر: تصاعدي</option>
                 <option value="price-desc">السعر: تنازلي</option>
               </select>
@@ -231,9 +263,43 @@ const ProductsPage = () => {
               <button onClick={() => setFiltersOpen(false)}><X className="w-5 h-5" /></button>
             </div>
             <div className="p-5 space-y-8">
+              {/* Price range */}
+              <div>
+                <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-4">نطاق السعر</p>
+                <Slider
+                  min={priceBounds.min}
+                  max={priceBounds.max}
+                  step={Math.max(1, Math.floor((priceBounds.max - priceBounds.min) / 50))}
+                  value={[effectiveMin, effectiveMax]}
+                  onValueChange={(v) => {
+                    const next = new URLSearchParams(searchParams);
+                    if (v[0] !== priceBounds.min) next.set("min", String(v[0])); else next.delete("min");
+                    if (v[1] !== priceBounds.max) next.set("max", String(v[1])); else next.delete("max");
+                    setSearchParams(next);
+                  }}
+                  className="my-4"
+                />
+                <div className="flex items-center justify-between text-xs text-muted-foreground">
+                  <span>{effectiveMin}</span>
+                  <span>{effectiveMax}</span>
+                </div>
+              </div>
+
+              {/* Toggles */}
+              <div className="space-y-4">
+                <label className="flex items-center justify-between">
+                  <span className="text-sm">العروض فقط</span>
+                  <Switch checked={saleOnly} onCheckedChange={(v) => setParam("sale", v ? "1" : null)} />
+                </label>
+                <label className="flex items-center justify-between">
+                  <span className="text-sm">المتوفر فقط</span>
+                  <Switch checked={inStockOnly} onCheckedChange={(v) => setParam("stock", v ? "1" : null)} />
+                </label>
+              </div>
+
               <div>
                 <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-4">الماركة</p>
-                <div className="space-y-2">
+                <div className="space-y-2 max-h-60 overflow-y-auto">
                   <label className="flex items-center gap-3 cursor-pointer">
                     <input type="radio" name="brand" checked={brandFilter === "all"} onChange={() => setParam("brand", null)} />
                     <span className="text-sm">جميع الماركات</span>
@@ -246,9 +312,22 @@ const ProductsPage = () => {
                   ))}
                 </div>
               </div>
-              <button onClick={() => { setSearchParams({}); setFiltersOpen(false); }} className="w-full py-3 border border-foreground text-[11px] tracking-[0.4em] uppercase hover:bg-foreground hover:text-background transition">
-                إعادة تعيين
-              </button>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    const next = new URLSearchParams();
+                    if (categorySlug) next.set("category", categorySlug);
+                    if (searchQuery) next.set("search", searchQuery);
+                    setSearchParams(next);
+                  }}
+                  className="flex-1 py-3 border border-foreground text-[11px] tracking-[0.4em] uppercase hover:bg-foreground hover:text-background transition flex items-center justify-center gap-2"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" /> إعادة تعيين
+                </button>
+                <button onClick={() => setFiltersOpen(false)} className="flex-1 py-3 bg-foreground text-background text-[11px] tracking-[0.4em] uppercase">
+                  تطبيق
+                </button>
+              </div>
             </div>
           </aside>
         </div>

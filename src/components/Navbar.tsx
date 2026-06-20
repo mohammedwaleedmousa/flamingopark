@@ -1,12 +1,31 @@
 import { Link, useNavigate } from "react-router-dom";
-import { ShoppingBag, Search, Menu, Heart, User, X, LogOut, Home, Tag, Sparkles, Info } from "lucide-react";
+import {
+  ShoppingBag, Search, Menu, Heart, User, X, LogOut, Home, Tag, Sparkles, Info,
+  ChevronDown, Grid3x3, TrendingUp, Star, Package, HelpCircle, Phone, MessageCircle
+} from "lucide-react";
 import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useStore } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import type { User as SupaUser } from "@supabase/supabase-js";
 import { toast } from "@/hooks/use-toast";
+
+const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
+  <div className="py-2">
+    <p className="px-6 py-2 text-[10px] tracking-[0.4em] uppercase text-muted-foreground">{label}</p>
+    <div>{children}</div>
+  </div>
+);
+
+const NavItem = ({ icon: Icon, label, onClick }: { to?: string; icon: any; label: string; onClick: () => void }) => (
+  <button onClick={onClick} className="w-full flex items-center gap-3 px-6 py-3 hover:bg-muted transition text-right">
+    <Icon className="w-4 h-4 text-muted-foreground" />
+    <span className="text-sm">{label}</span>
+  </button>
+);
 
 const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -24,15 +43,18 @@ const Navbar = () => {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const topLinks = [
-    { href: "/products?category=women", label: "نسائي" },
-    { href: "/products?category=men", label: "رجالي" },
-    { href: "/products?category=kids", label: "أطفال" },
-    { href: "/products?category=bags", label: "حقائب" },
-    { href: "/products?category=shoes", label: "أحذية" },
-    { href: "/products?category=beauty", label: "تجميل" },
-    { href: "/offers", label: "العروض" },
-  ];
+  const { data: categories = [] } = useQuery({
+    queryKey: ["nav-categories"],
+    queryFn: async () => {
+      const { data } = await supabase.from("categories").select("*").eq("is_active", true).order("sort_order");
+      return (data || []) as any[];
+    },
+  });
+
+  const parents = categories.filter((c) => !c.parent_id);
+  const subsOf = (id: string) => categories.filter((c) => c.parent_id === id);
+
+  const topLinks = parents.slice(0, 6).map((c) => ({ href: `/products?category=${c.slug}`, label: c.name_ar }));
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -48,6 +70,8 @@ const Navbar = () => {
     toast({ title: "تم تسجيل الخروج" });
   };
 
+  const goTo = (href: string) => { setMenuOpen(false); navigate(href); };
+
   return (
     <header className="fixed top-0 inset-x-0 z-50 bg-background/95 backdrop-blur border-b border-border" dir="rtl">
       <div className="container mx-auto px-4 md:px-8">
@@ -60,60 +84,92 @@ const Navbar = () => {
                   <Menu className="w-5 h-5" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[85vw] sm:w-[380px] p-0 bg-background" dir="rtl">
+              <SheetContent side="right" className="w-[88vw] sm:w-[400px] p-0 bg-background border-l" dir="rtl">
                 <div className="flex flex-col h-full">
-                  <div className="px-6 pt-8 pb-6 border-b border-border bg-foreground text-background">
+                  {/* User header */}
+                  <div className="px-6 pt-10 pb-6 bg-gradient-to-b from-foreground to-foreground/95 text-background">
                     <p className="logo-flamingo text-2xl mb-1">FLAMINGO</p>
-                    <p className="text-[10px] tracking-[0.4em] uppercase opacity-70">Maison de Luxe</p>
-                    {user ? (
-                      <div className="mt-6 flex items-center gap-3">
-                        <div className="w-10 h-10 rounded-full bg-background/10 flex items-center justify-center">
-                          <User className="w-5 h-5" />
-                        </div>
-                        <div className="text-sm">
-                          <p className="font-medium truncate max-w-[200px]">{user.email}</p>
-                          <button onClick={handleLogout} className="text-[11px] underline opacity-70">تسجيل الخروج</button>
-                        </div>
+                    <p className="text-[10px] tracking-[0.4em] uppercase opacity-60">Maison de Luxe</p>
+                    <div className="mt-6 flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-full bg-background/10 flex items-center justify-center">
+                        <User className="w-5 h-5" />
                       </div>
-                    ) : (
-                      <button
-                        onClick={() => { setMenuOpen(false); navigate("/auth"); }}
-                        className="mt-6 w-full bg-background text-foreground py-3 text-[11px] tracking-[0.35em] uppercase"
-                      >
-                        تسجيل الدخول
-                      </button>
-                    )}
+                      <div className="text-sm flex-1 min-w-0">
+                        {user ? (
+                          <>
+                            <p className="font-medium truncate">{user.user_metadata?.full_name || user.email}</p>
+                            <button onClick={() => goTo("/account")} className="text-[11px] underline opacity-70">حسابي</button>
+                          </>
+                        ) : (
+                          <>
+                            <p className="font-medium">مرحباً بك</p>
+                            <button onClick={() => goTo("/auth")} className="text-[11px] underline opacity-70">تسجيل الدخول / إنشاء حساب</button>
+                          </>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  <nav className="flex-1 overflow-y-auto px-6 py-6">
-                    <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-4">التنقل</p>
-                    <ul className="space-y-1 mb-8">
-                      {[
-                        { href: "/home", label: "الرئيسية", icon: Home },
-                        { href: "/products", label: "كل المنتجات", icon: Tag },
-                        { href: "/offers", label: "العروض", icon: Sparkles },
-                        { href: "/favorites", label: "المفضلة", icon: Heart },
-                        { href: "/about", label: "عن الدار", icon: Info },
-                      ].map((l) => (
-                        <li key={l.href}>
-                          <Link to={l.href} onClick={() => setMenuOpen(false)} className="flex items-center gap-3 py-3 text-foreground hover:text-foreground/60 transition">
-                            <l.icon className="w-4 h-4" />
-                            <span className="text-base">{l.label}</span>
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
+                  <nav className="flex-1 overflow-y-auto">
+                    {/* Shopping */}
+                    <Section label="التسوق">
+                      <NavItem to="/home" icon={Home} label="الرئيسية" onClick={() => goTo("/home")} />
+                      <NavItem to="/categories" icon={Grid3x3} label="جميع الأقسام" onClick={() => goTo("/categories")} />
+                      <NavItem to="/products" icon={Tag} label="جميع المنتجات" onClick={() => goTo("/products")} />
+                      <NavItem to="/new-arrivals" icon={Sparkles} label="وصل حديثاً" onClick={() => goTo("/new-arrivals")} />
+                      <NavItem to="/best-sellers" icon={TrendingUp} label="الأكثر مبيعاً" onClick={() => goTo("/best-sellers")} />
+                      <NavItem to="/offers" icon={Star} label="العروض" onClick={() => goTo("/offers")} />
+                    </Section>
 
-                    <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-4">الأقسام</p>
-                    <ul className="space-y-1">
-                      {topLinks.map((l) => (
-                        <li key={l.href}>
-                          <Link to={l.href} onClick={() => setMenuOpen(false)} className="block py-2.5 font-heading text-lg hover:opacity-60 transition">
-                            {l.label}
-                          </Link>
-                        </li>
-                      ))}
-                    </ul>
+                    {/* Categories (multi-level) */}
+                    <Section label="الأقسام">
+                      {parents.map((c) => {
+                        const subs = subsOf(c.id);
+                        if (subs.length === 0) {
+                          return (
+                            <button
+                              key={c.id}
+                              onClick={() => goTo(`/products?category=${c.slug}`)}
+                              className="w-full flex items-center justify-between px-6 py-3.5 text-right hover:bg-muted transition"
+                            >
+                              <span className="font-heading text-base">{c.name_ar}</span>
+                              <span className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground">{c.name}</span>
+                            </button>
+                          );
+                        }
+                        return (
+                          <Collapsible key={c.id}>
+                            <CollapsibleTrigger className="w-full flex items-center justify-between px-6 py-3.5 hover:bg-muted transition group">
+                              <span className="font-heading text-base">{c.name_ar}</span>
+                              <ChevronDown className="w-4 h-4 transition-transform group-data-[state=open]:rotate-180" />
+                            </CollapsibleTrigger>
+                            <CollapsibleContent className="bg-muted/40">
+                              <button onClick={() => goTo(`/products?category=${c.slug}`)} className="w-full text-right px-10 py-2.5 text-sm text-muted-foreground hover:text-foreground transition">
+                                — عرض الكل
+                              </button>
+                              {subs.map((s) => (
+                                <button key={s.id} onClick={() => goTo(`/products?category=${s.slug}`)} className="w-full text-right px-10 py-2.5 text-sm hover:text-foreground/60 transition">
+                                  {s.name_ar}
+                                </button>
+                              ))}
+                            </CollapsibleContent>
+                          </Collapsible>
+                        );
+                      })}
+                    </Section>
+
+                    {/* Account */}
+                    <Section label="حسابي">
+                      <NavItem to="/account" icon={User} label="حسابي" onClick={() => goTo("/account")} />
+                      <NavItem to="/favorites" icon={Heart} label={`المفضلة${favorites.length ? ` (${favorites.length})` : ""}`} onClick={() => goTo("/favorites")} />
+                      <NavItem to="/cart" icon={ShoppingBag} label={`الحقيبة${cartCount ? ` (${cartCount})` : ""}`} onClick={() => goTo("/cart")} />
+                    </Section>
+
+                    {/* Help */}
+                    <Section label="المساعدة">
+                      <NavItem to="/about" icon={Info} label="عن الدار" onClick={() => goTo("/about")} />
+                      <NavItem to="/reviews" icon={MessageCircle} label="آراء العملاء" onClick={() => goTo("/reviews")} />
+                    </Section>
                   </nav>
 
                   {user && (
@@ -136,7 +192,7 @@ const Navbar = () => {
 
           {/* Left (RTL): account, wishlist, bag */}
           <div className="flex items-center gap-1 z-10">
-            <Link to={user ? "/favorites" : "/auth"} className="p-2 hover:opacity-60 transition hidden md:inline-flex" aria-label="حساب">
+            <Link to={user ? "/account" : "/auth"} className="p-2 hover:opacity-60 transition hidden md:inline-flex" aria-label="حساب">
               <User className="w-5 h-5" />
             </Link>
             <Link to="/favorites" className="relative p-2 hover:opacity-60 transition" aria-label="مفضلة">

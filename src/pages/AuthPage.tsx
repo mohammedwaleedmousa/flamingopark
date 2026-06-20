@@ -7,6 +7,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, Mail, Lock, User as UserIcon, ArrowLeft } from "lucide-react";
 
+const translateAuthError = (msg: string): string => {
+  const m = msg.toLowerCase();
+  if (m.includes("invalid login") || m.includes("invalid credentials")) return "البريد الإلكتروني أو كلمة المرور غير صحيحة";
+  if (m.includes("email not confirmed")) return "يرجى تأكيد البريد الإلكتروني أولاً";
+  if (m.includes("user already registered") || m.includes("already exists")) return "هذا البريد مسجّل مسبقاً، حاول تسجيل الدخول";
+  if (m.includes("password should be") || m.includes("weak password")) return "كلمة المرور ضعيفة، استخدم 6 أحرف على الأقل";
+  if (m.includes("rate limit")) return "محاولات كثيرة، حاول بعد قليل";
+  if (m.includes("network")) return "تحقق من اتصالك بالإنترنت";
+  return msg || "حدث خطأ غير متوقع";
+};
+
 const AuthPage = () => {
   const navigate = useNavigate();
   const [mode, setMode] = useState<"signin" | "signup">("signin");
@@ -14,6 +25,8 @@ const AuthPage = () => {
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
   const [loading, setLoading] = useState(false);
+  const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState("");
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -46,7 +59,7 @@ const AuthPage = () => {
         toast({ title: "مرحباً بعودتك" });
       }
     } catch (err: any) {
-      toast({ title: "خطأ", description: err.message || "فشل تسجيل الدخول", variant: "destructive" });
+      toast({ title: "خطأ", description: translateAuthError(err.message || ""), variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -58,9 +71,22 @@ const AuthPage = () => {
       const res = await lovable.auth.signInWithOAuth("google", { redirect_uri: `${window.location.origin}/home` });
       if (res.error) throw res.error;
     } catch (err: any) {
-      toast({ title: "خطأ", description: err.message || "فشل تسجيل الدخول بـ Google", variant: "destructive" });
+      toast({ title: "خطأ", description: translateAuthError(err.message || ""), variant: "destructive" });
       setLoading(false);
     }
+  };
+
+  const handleForgot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) return;
+    setLoading(true);
+    const { error } = await supabase.auth.resetPasswordForEmail(forgotEmail.trim(), {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    setLoading(false);
+    if (error) return toast({ title: "خطأ", description: translateAuthError(error.message), variant: "destructive" });
+    toast({ title: "تم الإرسال", description: "تحقق من بريدك لإعادة تعيين كلمة المرور" });
+    setForgotOpen(false);
   };
 
   return (
@@ -88,14 +114,31 @@ const AuthPage = () => {
           </Link>
 
           <div>
-            <h1 className="font-heading text-4xl text-foreground mb-2">
-              {mode === "signin" ? "تسجيل الدخول" : "إنشاء حساب"}
+            <div className="grid grid-cols-2 border-b border-border mb-6">
+              <button onClick={() => setMode("signin")} className={`pb-3 text-[11px] tracking-[0.4em] uppercase transition ${mode === "signin" ? "text-foreground border-b-2 border-foreground -mb-px" : "text-muted-foreground"}`}>دخول</button>
+              <button onClick={() => setMode("signup")} className={`pb-3 text-[11px] tracking-[0.4em] uppercase transition ${mode === "signup" ? "text-foreground border-b-2 border-foreground -mb-px" : "text-muted-foreground"}`}>إنشاء حساب</button>
+            </div>
+            <h1 className="font-heading text-3xl text-foreground mb-1">
+              {forgotOpen ? "نسيت كلمة المرور" : mode === "signin" ? "تسجيل الدخول" : "إنشاء حساب"}
             </h1>
             <p className="text-sm text-muted-foreground">
-              {mode === "signin" ? "أهلاً بعودتك إلى فلامنجو" : "ابدأ رحلتك مع أفخم القطع"}
+              {forgotOpen ? "سنرسل لك رابط إعادة تعيين عبر البريد" : mode === "signin" ? "أهلاً بعودتك إلى فلامنجو" : "ابدأ رحلتك مع أفخم القطع"}
             </p>
           </div>
 
+          {forgotOpen ? (
+            <form onSubmit={handleForgot} className="space-y-4">
+              <div className="relative">
+                <Mail className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input type="email" value={forgotEmail} onChange={(e) => setForgotEmail(e.target.value)} placeholder="البريد الإلكتروني" required className="h-12 pr-10" dir="ltr" />
+              </div>
+              <Button type="submit" disabled={loading} className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 text-[11px] tracking-[0.4em] uppercase">
+                {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "إرسال الرابط"}
+              </Button>
+              <button type="button" onClick={() => setForgotOpen(false)} className="w-full text-sm text-muted-foreground hover:text-foreground">العودة لتسجيل الدخول</button>
+            </form>
+          ) : (
+          <>
           <button
             onClick={handleGoogle}
             disabled={loading}
@@ -135,6 +178,12 @@ const AuthPage = () => {
             <Button type="submit" disabled={loading} className="w-full h-12 bg-foreground text-background hover:bg-foreground/90 text-[11px] tracking-[0.4em] uppercase">
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : mode === "signin" ? "دخول" : "إنشاء حساب"}
             </Button>
+
+            {mode === "signin" && (
+              <button type="button" onClick={() => setForgotOpen(true)} className="w-full text-center text-sm text-muted-foreground hover:text-foreground">
+                نسيت كلمة المرور؟
+              </button>
+            )}
           </form>
 
           <p className="text-center text-sm text-muted-foreground">
@@ -143,6 +192,7 @@ const AuthPage = () => {
               {mode === "signin" ? "أنشئ حساب" : "تسجيل الدخول"}
             </button>
           </p>
+          </>)}
         </div>
       </div>
     </div>

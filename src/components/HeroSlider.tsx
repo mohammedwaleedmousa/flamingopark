@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 const HeroSlider = () => {
   return (
-    <section className="relative w-full h-[100vh] min-h-[600px] overflow-hidden bg-background">
+    <section className="relative w-full h-[92vh] min-h-[600px] overflow-hidden bg-background">
       <img
         src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1800&q=90"
         alt="Flamingo — The New Collection"
@@ -30,13 +30,13 @@ const HeroSlider = () => {
               to="/products"
               className="inline-flex items-center justify-center bg-white text-black font-body text-xs tracking-[0.3em] uppercase px-10 py-4 hover:bg-white/90 transition-colors"
             >
-              Shop Now
+              تسوق الان
             </Link>
             <Link
               to="/products?filter=featured"
               className="inline-flex items-center justify-center border border-white/80 text-white font-body text-xs tracking-[0.3em] uppercase px-10 py-4 hover:bg-white hover:text-black transition-colors"
             >
-              Explore Campaign
+              اكتشف الحملة
             </Link>
           </div>
         </div>

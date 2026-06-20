@@ -39,10 +39,10 @@ const Footer = () => {
         <div className="container mx-auto px-6 py-20 md:py-28 text-center max-w-2xl">
           <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-5">Newsletter</p>
           <h2 className="font-heading text-3xl md:text-5xl leading-tight mb-6">
-            انضمي إلى عالم فلامنجو
+            انضم/ي إلى عالم فلامنجو
           </h2>
           <p className="text-sm text-muted-foreground mb-10 leading-relaxed">
-            احصلي على آخر إصداراتنا وقصص الموضة الحصرية مباشرةً في بريدك.
+            احصل/ي على آخر إصداراتنا وقصص الموضة الحصرية مباشرةً في بريدك.
           </p>
           <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
             <input
@@ -55,7 +55,7 @@ const Footer = () => {
               type="button"
               className="bg-foreground text-background text-[11px] tracking-[0.3em] uppercase px-8 py-3 hover:bg-foreground/90 transition-colors"
             >
-              Subscribe
+              إشتراك
             </button>
           </form>
         </div>
@@ -96,7 +96,8 @@ const Footer = () => {
         </div>
 
         <div className="mt-16 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center text-[11px] text-muted-foreground gap-4">
-          <p>© 2026 FLAMINGO — All rights reserved.</p>
+          <p>© 2026 FLAMINGO PARK— All rights reserved.</p>
+          <p>created with Eng/ Mohammed Waleed +967 77 333 5065</p>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             className="flex items-center gap-2 hover:text-foreground transition-colors"

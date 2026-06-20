@@ -89,23 +89,25 @@ const featuredCategories = [
 
 const editorial = [
   {
-    eyebrow: "The Autumn Edit",
-    title: "حِرفةٌ تتجاوز الموسم",
-    body: "قطعٌ صُممت لتُروى، حيث يلتقي القماش الفاخر بخطوط الكوتور الكلاسيكية لتشكّل لغة الأناقة الجديدة.",
-    cta: "Discover the Edit",
+    eyebrow: "Featured Collection",
+    title: "أناقة تدوم",
+    body: "اكتشف مجموعة مختارة بعناية من القطع العصرية المصممة لتمنحك إطلالة متجددة تجمع بين الجودة والتفاصيل الراقية.",
+    cta: "اكتشف اختياراتنا المميزة",
     href: "/products?filter=featured",
     image: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=1400&q=90",
     reverse: false,
   },
+
   {
-    eyebrow: "Maison Heritage",
-    title: "الميزون فلامنجو",
-    body: "منذ التأسيس، تواصل دار فلامنجو رحلتها في صياغة قطعٍ تجمع بين الإرث الكلاسيكي والرؤية المعاصرة.",
-    cta: "Explore the House",
+    eyebrow: "Flamingo Collection",
+    title: "متجر فلامنجو",
+    body: "نقدم مجموعة مختارة من الأزياء والإكسسوارات التي تجمع بين الأناقة العصرية والجودة العالية لتمنحك تجربة تسوق مميزة في كل موسم.",
+    cta: "استكشف المتجر",
     href: "/about",
     image: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1400&q=90",
     reverse: true,
-  },
+  }
+
 ];
 
 const HomePage = () => {
@@ -174,7 +176,7 @@ const HomePage = () => {
         <section className="py-20 md:py-28">
           <div className="container mx-auto px-6">
             <div className="text-center mb-14">
-              <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">تسوّق حسب</p>
+              <p className="text-[20px] tracking-[0.4em] uppercase text-muted-foreground mb-3">تسوّق حسب</p>
               <h2 className="font-heading text-3xl md:text-5xl text-foreground">الأقسام الرئيسية</h2>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-6 gap-1 md:gap-2">

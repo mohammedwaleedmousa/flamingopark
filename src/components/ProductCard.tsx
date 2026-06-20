@@ -51,7 +51,7 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
             alt={product.nameAr}
             loading="lazy"
             decoding="async"
-            className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.06]"
+            className="w-full h-full object-cover transition-transform duration-3200 ease-out group-hover:scale-[1.06]"
           />
         ) : (
           <div className="w-full h-full bg-muted" />

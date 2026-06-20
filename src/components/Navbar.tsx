@@ -1,31 +1,13 @@
 import { Link, useNavigate } from "react-router-dom";
-import {
-  ShoppingBag, Search, Menu, Heart, User, X, LogOut, Home, Tag, Sparkles, Info,
-  ChevronDown, Grid3x3, TrendingUp, Star, Package, HelpCircle, Phone, MessageCircle
-} from "lucide-react";
+import { ShoppingBag, Search, Menu, Heart, User, X, LogOut, Home, Tag, Sparkles, Info } from "lucide-react";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useStore } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import type { User as SupaUser } from "@supabase/supabase-js";
 import { toast } from "@/hooks/use-toast";
-
-const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="py-2">
-    <p className="px-6 py-2 text-[10px] tracking-[0.4em] uppercase text-muted-foreground">{label}</p>
-    <div>{children}</div>
-  </div>
-);
-
-const NavItem = ({ icon: Icon, label, onClick }: { to?: string; icon: any; label: string; onClick: () => void }) => (
-  <button onClick={onClick} className="w-full flex items-center gap-3 px-6 py-3 hover:bg-muted transition text-right">
-    <Icon className="w-4 h-4 text-muted-foreground" />
-    <span className="text-sm">{label}</span>
-  </button>
-);
+import { motion, AnimatePresence } from "framer-motion";
 
 const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -36,26 +18,65 @@ const Navbar = () => {
   const { favorites } = useFavorites();
   const cartCount = getCartCount();
   const navigate = useNavigate();
-
+  const [stack, setStack] = useState<string[]>(["main"]);
+  const currentPage = stack[stack.length - 1];
+  const goTo = (page: string) => setStack((s) => [...s, page]);
+  const goBack = () => setStack((s) => s.slice(0, -1));
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
     const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null));
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const { data: categories = [] } = useQuery({
-    queryKey: ["nav-categories"],
-    queryFn: async () => {
-      const { data } = await supabase.from("categories").select("*").eq("is_active", true).order("sort_order");
-      return (data || []) as any[];
-    },
-  });
+  const topLinks = [
+    { href: "/products?category=women", label: "نسائي" },
+    { href: "/products?category=men", label: "رجالي" },
+    { href: "/products?category=kids", label: "أطفال" },
+    { href: "/products?category=bags", label: "حقائب" },
+    { href: "/products?category=shoes", label: "أحذية" },
+    { href: "/products?category=beauty", label: "تجميل" },
+    { href: "/offers", label: "العروض" },
+  ];
+  const menuTree = {
+      main: [
+        { label: "الأقسام", go: "categories" },
+        { label: "العروض", href: "/offers" },
+        { label: "كل المنتجات", href: "/products" },
+        { label: "وصل حديثاً", href: "/products?sort=new" },
+        { label: "الأكثر مبيعاً", href: "/products?sort=popular" },
+        { label: "المفضلة", href: "/favorites" },
+        { label: "سلة التسوق", href: "/cart" },
+        { label: "عن الدار", href: "/about" },
+      ],
 
-  const parents = categories.filter((c) => !c.parent_id);
-  const subsOf = (id: string) => categories.filter((c) => c.parent_id === id);
+      categories: [
+        { label: "رجالي", go: "men" },
+        { label: "نسائي", go: "women" },
+        { label: "أطفال", href: "/products?category=kids" },
+        { label: "حقائب", href: "/products?category=bags" },
+        { label: "أحذية", href: "/products?category=shoes" },
+        { label: "تجميل", href: "/products?category=beauty" },
+        { label: "عطور", href: "/products?category=perfume" },
+      ],
 
-  const topLinks = parents.slice(0, 6).map((c) => ({ href: `/products?category=${c.slug}`, label: c.name_ar }));
+      men: [
+        { label: "قمصان", href: "/products?category=men&t=shirts" },
+        { label: "بناطيل", href: "/products?category=men&t=pants" },
+        { label: "جواكت", href: "/products?category=men&t=jackets" },
+        { label: "أحذية", href: "/products?category=men&t=shoes" },
+        { label: "ملابس رياضية", href: "/products?category=men&t=sport" },
+      ],
 
+      women: [
+        { label: "فساتين", href: "/products?category=women&t=dresses" },
+        { label: "عبايات", href: "/products?category=women&t=abayas" },
+        { label: "حقائب", href: "/products?category=women&t=bags" },
+        { label: "أحذية", href: "/products?category=women&t=shoes" },
+        { label: "عطور", href: "/products?category=women&t=perfume" },
+        { label: "مكياج", href: "/products?category=women&t=makeup" },
+      ],
+    };
+  const pageItems = menuTree[currentPage as keyof typeof menuTree] || [];
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!searchTerm.trim()) return;
@@ -70,8 +91,6 @@ const Navbar = () => {
     toast({ title: "تم تسجيل الخروج" });
   };
 
-  const goTo = (href: string) => { setMenuOpen(false); navigate(href); };
-
   return (
     <header className="fixed top-0 inset-x-0 z-50 bg-background/95 backdrop-blur border-b border-border" dir="rtl">
       <div className="container mx-auto px-4 md:px-8">
@@ -84,99 +103,232 @@ const Navbar = () => {
                   <Menu className="w-5 h-5" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[88vw] sm:w-[400px] p-0 bg-background border-l" dir="rtl">
+              <SheetContent side="right" className="w-[85vw] sm:w-[380px] p-0 bg-background" dir="rtl">
                 <div className="flex flex-col h-full">
-                  {/* User header */}
-                  <div className="px-6 pt-10 pb-6 bg-gradient-to-b from-foreground to-foreground/95 text-background">
-                    <p className="logo-flamingo text-2xl mb-1">FLAMINGO</p>
-                    <p className="text-[10px] tracking-[0.4em] uppercase opacity-60">Maison de Luxe</p>
-                    <div className="mt-6 flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-full bg-background/10 flex items-center justify-center">
-                        <User className="w-5 h-5" />
-                      </div>
-                      <div className="text-sm flex-1 min-w-0">
-                        {user ? (
-                          <>
-                            <p className="font-medium truncate">{user.user_metadata?.full_name || user.email}</p>
-                            <button onClick={() => goTo("/account")} className="text-[11px] underline opacity-70">حسابي</button>
-                          </>
-                        ) : (
-                          <>
-                            <p className="font-medium">مرحباً بك</p>
-                            <button onClick={() => goTo("/auth")} className="text-[11px] underline opacity-70">تسجيل الدخول / إنشاء حساب</button>
-                          </>
-                        )}
-                      </div>
-                    </div>
+                  <div className="px-6 pt-6 pb-5 border-b border-border bg-background">
+
+                  {/* title */}
+                  <div className="mb-4">
+                    <p className="text-lg font-semibold text-foreground">فلامنغو</p>
+                    <p className="text-xs text-muted-foreground">الحساب والإعدادات</p>
                   </div>
 
-                  <nav className="flex-1 overflow-y-auto">
-                    {/* Shopping */}
-                    <Section label="التسوق">
-                      <NavItem to="/home" icon={Home} label="الرئيسية" onClick={() => goTo("/home")} />
-                      <NavItem to="/categories" icon={Grid3x3} label="جميع الأقسام" onClick={() => goTo("/categories")} />
-                      <NavItem to="/products" icon={Tag} label="جميع المنتجات" onClick={() => goTo("/products")} />
-                      <NavItem to="/new-arrivals" icon={Sparkles} label="وصل حديثاً" onClick={() => goTo("/new-arrivals")} />
-                      <NavItem to="/best-sellers" icon={TrendingUp} label="الأكثر مبيعاً" onClick={() => goTo("/best-sellers")} />
-                      <NavItem to="/offers" icon={Star} label="العروض" onClick={() => goTo("/offers")} />
-                    </Section>
+                  {/* card */}
+                  {user ? (
+                    <div className="rounded-2xl border border-border bg-muted/40 overflow-hidden">
 
-                    {/* Categories (multi-level) */}
-                    <Section label="الأقسام">
-                      {parents.map((c) => {
-                        const subs = subsOf(c.id);
-                        if (subs.length === 0) {
-                          return (
-                            <button
-                              key={c.id}
-                              onClick={() => goTo(`/products?category=${c.slug}`)}
-                              className="w-full flex items-center justify-between px-6 py-3.5 text-right hover:bg-muted transition"
-                            >
-                              <span className="font-heading text-base">{c.name_ar}</span>
-                              <span className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground">{c.name}</span>
-                            </button>
-                          );
-                        }
-                        return (
-                          <Collapsible key={c.id}>
-                            <CollapsibleTrigger className="w-full flex items-center justify-between px-6 py-3.5 hover:bg-muted transition group">
-                              <span className="font-heading text-base">{c.name_ar}</span>
-                              <ChevronDown className="w-4 h-4 transition-transform group-data-[state=open]:rotate-180" />
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="bg-muted/40">
-                              <button onClick={() => goTo(`/products?category=${c.slug}`)} className="w-full text-right px-10 py-2.5 text-sm text-muted-foreground hover:text-foreground transition">
-                                — عرض الكل
-                              </button>
-                              {subs.map((s) => (
-                                <button key={s.id} onClick={() => goTo(`/products?category=${s.slug}`)} className="w-full text-right px-10 py-2.5 text-sm hover:text-foreground/60 transition">
-                                  {s.name_ar}
-                                </button>
-                              ))}
-                            </CollapsibleContent>
-                          </Collapsible>
-                        );
-                      })}
-                    </Section>
+                      <div className="flex items-center gap-3 p-4">
 
-                    {/* Account */}
-                    <Section label="حسابي">
-                      <NavItem to="/account" icon={User} label="حسابي" onClick={() => goTo("/account")} />
-                      <NavItem to="/favorites" icon={Heart} label={`المفضلة${favorites.length ? ` (${favorites.length})` : ""}`} onClick={() => goTo("/favorites")} />
-                      <NavItem to="/cart" icon={ShoppingBag} label={`الحقيبة${cartCount ? ` (${cartCount})` : ""}`} onClick={() => goTo("/cart")} />
-                    </Section>
+                        <div className="w-11 h-11 rounded-full bg-background flex items-center justify-center border">
+                          <User className="w-5 h-5 text-muted-foreground" />
+                        </div>
 
-                    {/* Help */}
-                    <Section label="المساعدة">
-                      <NavItem to="/about" icon={Info} label="عن الدار" onClick={() => goTo("/about")} />
-                      <NavItem to="/reviews" icon={MessageCircle} label="آراء العملاء" onClick={() => goTo("/reviews")} />
-                    </Section>
-                  </nav>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-foreground truncate">
+                            {user.email}
+                          </p>
 
-                  {user && (
-                    <button onClick={handleLogout} className="border-t border-border p-5 flex items-center justify-center gap-2 text-sm text-muted-foreground hover:text-foreground transition">
-                      <LogOut className="w-4 h-4" /> تسجيل الخروج
+                          <button
+                            onClick={handleLogout}
+                            className="text-xs text-red-500 mt-1 hover:opacity-70"
+                          >
+                            تسجيل الخروج
+                          </button>
+                        </div>
+
+                      </div>
+
+                    </div>
+                  ) : (
+                    <button
+                      onClick={() => {
+                        setMenuOpen(false);
+                        navigate("/auth");
+                      }}
+                      className="w-full py-3 rounded-2xl bg-foreground text-background text-sm font-medium"
+                    >
+                      تسجيل الدخول
                     </button>
                   )}
+
+                </div>
+
+                  <nav className="flex-1 overflow-hidden relative px-6 py-6">
+  <AnimatePresence mode="popLayout">
+    <motion.div
+      key={currentPage}
+      initial={{ x: 40, opacity: 0, scale: 0.98 }}
+      animate={{ x: 0, opacity: 1, scale: 1 }}
+      exit={{ x: -40, opacity: 0, scale: 1.02 }}
+      transition={{ duration: 0.28, ease: [0.22, 1, 0.36, 1] }}
+      className="absolute inset-0 px-6 py-2 flex flex-col"
+    >
+
+      {/* BACK BUTTON */}
+      {currentPage !== "main" && (
+        <button
+          onClick={goBack}
+          className="flex items-center gap-2 text-sm mb-5 text-muted-foreground hover:text-foreground transition"
+        >
+          ← رجوع
+        </button>
+      )}
+
+      {/* MAIN */}
+      {currentPage === "main" && (
+        <div className="space-y-2">
+
+          {pageItems.map((item, i) =>
+            item.go ? (
+              <button
+                key={i}
+                onClick={() => goTo(item.go)}
+                className="w-full flex justify-between items-center
+                           px-4 py-3 rounded-2xl
+                           bg-muted/40 hover:bg-muted
+                           transition active:scale-[0.98]
+                           shadow-sm"
+              >
+                <span className="text-sm font-medium">{item.label}</span>
+                <span className="text-muted-foreground">›</span>
+              </button>
+            ) : (
+              <Link
+                key={i}
+                to={item.href!}
+                onClick={() => setMenuOpen(false)}
+                className="w-full flex justify-between items-center
+                           px-4 py-3 rounded-2xl
+                           bg-muted/40 hover:bg-muted
+                           transition active:scale-[0.98]
+                           shadow-sm"
+              >
+                <span className="text-sm font-medium">{item.label}</span>
+                <span className="text-muted-foreground">↗</span>
+              </Link>
+            )
+          )}
+
+        </div>
+      )}
+
+      {/* CATEGORIES */}
+      {currentPage === "categories" && (
+        <div className="space-y-2">
+
+          {pageItems.map((item, i) =>
+            item.go ? (
+              <button
+                key={i}
+                onClick={() => goTo(item.go)}
+                className="w-full flex justify-between items-center
+                           px-4 py-3 rounded-2xl
+                           bg-muted/40 hover:bg-muted
+                           transition active:scale-[0.98]
+                           shadow-sm"
+              >
+                <span className="text-sm font-medium">{item.label}</span>
+                <span className="text-muted-foreground">›</span>
+              </button>
+            ) : (
+              <Link
+                key={i}
+                to={item.href!}
+                onClick={() => setMenuOpen(false)}
+                className="w-full flex justify-between items-center
+                           px-4 py-3 rounded-2xl
+                           bg-muted/40 hover:bg-muted
+                           transition active:scale-[0.98]
+                           shadow-sm"
+              >
+                <span className="text-sm font-medium">{item.label}</span>
+                <span className="text-muted-foreground">↗</span>
+              </Link>
+            )
+          )}
+
+        </div>
+      )}
+
+      {/* MEN */}
+      {currentPage === "men" && (
+        <div className="space-y-2">
+
+          {pageItems.map((item, i) =>
+            item.go ? (
+              <button
+                key={i}
+                onClick={() => goTo(item.go)}
+                className="w-full flex justify-between items-center
+                           px-4 py-3 rounded-2xl
+                           bg-muted/40 hover:bg-muted
+                           transition active:scale-[0.98]
+                           shadow-sm"
+              >
+                <span className="text-sm font-medium">{item.label}</span>
+                <span className="text-muted-foreground">›</span>
+              </button>
+            ) : (
+              <Link
+                key={i}
+                to={item.href!}
+                onClick={() => setMenuOpen(false)}
+                className="w-full flex justify-between items-center
+                           px-4 py-3 rounded-2xl
+                           bg-muted/40 hover:bg-muted
+                           transition active:scale-[0.98]
+                           shadow-sm"
+              >
+                <span className="text-sm font-medium">{item.label}</span>
+                <span className="text-muted-foreground">↗</span>
+              </Link>
+            )
+          )}
+
+        </div>
+      )}
+
+      {/* WOMEN */}
+      {currentPage === "women" && (
+        <div className="space-y-2">
+
+          {pageItems.map((item, i) =>
+            item.go ? (
+              <button
+                key={i}
+                onClick={() => goTo(item.go)}
+                className="w-full flex justify-between items-center
+                           px-4 py-3 rounded-2xl
+                           bg-muted/40 hover:bg-muted
+                           transition active:scale-[0.98]
+                           shadow-sm"
+              >
+                <span className="text-sm font-medium">{item.label}</span>
+                <span className="text-muted-foreground">›</span>
+              </button>
+            ) : (
+              <Link
+                key={i}
+                to={item.href!}
+                onClick={() => setMenuOpen(false)}
+                className="w-full flex justify-between items-center
+                           px-4 py-3 rounded-2xl
+                           bg-muted/40 hover:bg-muted
+                           transition active:scale-[0.98]
+                           shadow-sm"
+              >
+                <span className="text-sm font-medium">{item.label}</span>
+                <span className="text-muted-foreground">↗</span>
+              </Link>
+            )
+          )}
+
+        </div>
+      )}
+
+    </motion.div>
+  </AnimatePresence>
+</nav>
                 </div>
               </SheetContent>
             </Sheet>
@@ -192,7 +344,7 @@ const Navbar = () => {
 
           {/* Left (RTL): account, wishlist, bag */}
           <div className="flex items-center gap-1 z-10">
-            <Link to={user ? "/account" : "/auth"} className="p-2 hover:opacity-60 transition hidden md:inline-flex" aria-label="حساب">
+            <Link to={user ? "/favorites" : "/auth"} className="p-2 hover:opacity-60 transition hidden md:inline-flex" aria-label="حساب">
               <User className="w-5 h-5" />
             </Link>
             <Link to="/favorites" className="relative p-2 hover:opacity-60 transition" aria-label="مفضلة">

@@ -1,14 +1,25 @@
-const LoadingScreen = ({ label = "جاري التحميل" }: { label?: string }) => (
-  <div className="min-h-screen bg-background flex items-center justify-center" dir="rtl">
-    <div className="flex flex-col items-center gap-5">
-      <div className="relative w-14 h-14">
-        <div className="absolute inset-0 rounded-full border border-foreground/10" />
-        <div className="absolute inset-0 rounded-full border-t border-foreground animate-spin" />
-        <div className="absolute inset-2 rounded-full border-b border-foreground/40 animate-spin [animation-direction:reverse] [animation-duration:1.4s]" />
+const LoadingScreen = () => {
+  return (
+    <div className="fixed inset-0 bg-white flex items-center justify-center z-[9999]">
+      <div className="text-center">
+
+        {/* اسم المتجر */}
+        <h1 className="text-4xl md:text-5xl font-light tracking-[0.6em] uppercase text-black">
+          Flamingo
+        </h1>
+
+        <p className="text-xs tracking-[0.8em] text-neutral-500 mt-2 uppercase">
+          Park
+        </p>
+
+        {/* الخط المتحرك */}
+        <div className="mt-4 w-52 h-[1px] bg-neutral-200 overflow-hidden mx-auto">
+          <div className="h-full bg-black animate-line" />
+        </div>
+
       </div>
-      <p className="text-[10px] tracking-[0.5em] uppercase text-muted-foreground">{label}</p>
     </div>
-  </div>
-);
+  );
+};
 
 export default LoadingScreen;

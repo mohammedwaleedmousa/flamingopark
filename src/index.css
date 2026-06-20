@@ -312,4 +312,44 @@
     to { width: 100%; }
   }
   .animate-splash-line { animation: splashLine 1.6s ease-out both; }
+  @keyframes luxury-loader {
+  0% {
+    width: 0%;
+    margin-left: 0;
+  }
+
+  50% {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  100% {
+    width: 0%;
+    margin-left: 100%;
+  }
+}
+@keyframes line {
+  0% {
+    width: 0%;
+    transform: translateX(0);
+  }
+
+  50% {
+    width: 100%;
+    transform: translateX(0);
+  }
+
+  100% {
+    width: 0%;
+    transform: translateX(100%);
+  }
+}
+
+.animate-line {
+  animation: line 1.6s ease-in-out infinite;
+}
+.animate-luxury-loader {
+  animation: luxury-loader 1.8s ease-in-out infinite;
+}
+
 }

@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 const HeroSlider = () => {
   return (
-    <section className="relative w-full h-[92vh] min-h-[600px] overflow-hidden bg-background">
+    <section className="relative w-full h-[96vh] min-h-[600px] overflow-hidden bg-background">
       <img
         src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1800&q=90"
         alt="Flamingo — The New Collection"
@@ -18,7 +18,9 @@ const HeroSlider = () => {
             The New Collection — Autumn 2026
           </span>
           <h1 className="font-heading font-medium text-white text-5xl md:text-7xl lg:text-8xl leading-[1.05] mb-6 tracking-tight">
-            مجموعة الخريف<br />الجديدة
+            مجموعة الخريف
+            <br />
+            الجديدة
           </h1>
           <p className="font-body text-white/80 text-sm md:text-base max-w-md leading-relaxed mb-10">
             قطعٌ نادرة، صياغةٌ حِرفية، وحضورٌ يسبق الكلمات.

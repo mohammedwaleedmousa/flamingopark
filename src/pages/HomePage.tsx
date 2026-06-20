@@ -49,12 +49,42 @@ const toProduct = (p: DbProduct): Product => ({
 });
 
 const featuredCategories = [
-  { title: "نسائي", subtitle: "Women", image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=900&q=85", link: "/products?category=women" },
-  { title: "رجالي", subtitle: "Men", image: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=900&q=85", link: "/products?category=men" },
-  { title: "أطفال", subtitle: "Kids", image: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=900&q=85", link: "/products?category=kids" },
-  { title: "حقائب", subtitle: "Bags", image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=900&q=85", link: "/products?category=bags" },
-  { title: "أحذية", subtitle: "Shoes", image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=900&q=85", link: "/products?category=shoes" },
-  { title: "تجميل", subtitle: "Beauty", image: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=900&q=85", link: "/products?category=beauty" },
+  {
+    title: "نسائي",
+    subtitle: "Women",
+    image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=900&q=85",
+    link: "/products?category=women",
+  },
+  {
+    title: "رجالي",
+    subtitle: "Men",
+    image: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=900&q=85",
+    link: "/products?category=men",
+  },
+  {
+    title: "أطفال",
+    subtitle: "Kids",
+    image: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=900&q=85",
+    link: "/products?category=kids",
+  },
+  {
+    title: "حقائب",
+    subtitle: "Bags",
+    image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=900&q=85",
+    link: "/products?category=bags",
+  },
+  {
+    title: "أحذية",
+    subtitle: "Shoes",
+    image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=900&q=85",
+    link: "/products?category=shoes",
+  },
+  {
+    title: "تجميل",
+    subtitle: "Beauty",
+    image: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=900&q=85",
+    link: "/products?category=beauty",
+  },
 ];
 
 const editorial = [
@@ -140,24 +170,6 @@ const HomePage = () => {
         {/* Hero — sits behind the navbar */}
         <HeroSlider />
 
-        {/* Search bar */}
-        <section className="border-y border-border bg-muted/40 py-6">
-          <div className="container mx-auto px-6">
-            <form onSubmit={onSearch} className="max-w-2xl mx-auto relative">
-              <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <input
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="ابحث عن منتجك المفضل..."
-                className="w-full pr-12 pl-32 py-4 bg-background border border-border focus:border-foreground outline-none text-sm transition"
-              />
-              <button type="submit" className="absolute left-2 top-1/2 -translate-y-1/2 bg-foreground text-background px-6 py-2.5 text-[10px] tracking-[0.35em] uppercase">
-                بحث
-              </button>
-            </form>
-          </div>
-        </section>
-
         {/* Featured Categories — Dior-style large editorial cards */}
         <section className="py-20 md:py-28">
           <div className="container mx-auto px-6">
@@ -189,10 +201,14 @@ const HomePage = () => {
         {editorial.map((e) => (
           <section key={e.title} className="bg-background">
             <div className={`grid md:grid-cols-2 ${e.reverse ? "" : ""}`}>
-              <div className={`relative aspect-[4/5] md:aspect-auto md:h-[640px] overflow-hidden ${e.reverse ? "md:order-2" : ""}`}>
+              <div
+                className={`relative aspect-[4/5] md:aspect-auto md:h-[640px] overflow-hidden ${e.reverse ? "md:order-2" : ""}`}
+              >
                 <img src={e.image} alt={e.title} loading="lazy" className="w-full h-full object-cover" />
               </div>
-              <div className={`flex items-center justify-center px-8 md:px-20 py-16 md:py-0 ${e.reverse ? "md:order-1" : ""}`}>
+              <div
+                className={`flex items-center justify-center px-8 md:px-20 py-16 md:py-0 ${e.reverse ? "md:order-1" : ""}`}
+              >
                 <div className="max-w-md text-center md:text-right">
                   <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-5">{e.eyebrow}</p>
                   <h3 className="font-heading text-3xl md:text-5xl leading-tight text-foreground mb-6">{e.title}</h3>
@@ -263,9 +279,7 @@ const HomePage = () => {
           <div className="relative h-full flex items-center justify-center text-center px-6">
             <div className="text-white max-w-2xl">
               <p className="text-[10px] tracking-[0.4em] uppercase opacity-80 mb-4">حملة 2026</p>
-              <h2 className="font-heading text-4xl md:text-6xl leading-tight mb-8">
-                صُممت لتُروى
-              </h2>
+              <h2 className="font-heading text-4xl md:text-6xl leading-tight mb-8">صُممت لتُروى</h2>
               <Link
                 to="/products"
                 className="inline-flex items-center justify-center bg-white text-black text-[11px] tracking-[0.35em] uppercase px-10 py-4 hover:bg-white/90 transition-colors"

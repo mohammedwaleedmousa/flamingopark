@@ -2,7 +2,7 @@ import { Link } from "react-router-dom";
 
 const HeroSlider = () => {
   return (
-    <section className="relative w-full h-[96vh] min-h-[600px] overflow-hidden bg-background">
+    <section className="relative w-full h-[98vh] min-h-[600px] overflow-hidden bg-background">
       <img
         src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=1800&q=90"
         alt="Flamingo — The New Collection"

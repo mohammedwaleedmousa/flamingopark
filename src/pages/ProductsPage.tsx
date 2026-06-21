@@ -1,16 +1,22 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import ProductCard from "@/components/ProductCard";
-import LoadingScreen from "@/components/LoadingScreen";
+import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 import { Product } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, SlidersHorizontal, X, RotateCcw } from "lucide-react";
+import { ChevronLeft, SlidersHorizontal, X, RotateCcw, Search, ArrowUpDown, Check } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 interface Category {
   id: string;
@@ -31,6 +37,15 @@ const FALLBACK_IMG: Record<string, string> = {
   beauty: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=900&q=85",
 };
 
+const Chip = ({ label, onClear }: { label: string; onClear: () => void }) => (
+  <span className="inline-flex items-center gap-2 bg-foreground text-background text-[10px] tracking-[0.25em] uppercase px-3 py-1.5">
+    {label}
+    <button onClick={onClear} aria-label="clear" className="hover:opacity-70">
+      <X className="w-3 h-3" />
+    </button>
+  </span>
+);
+
 const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const categorySlug = searchParams.get("category") || "";
@@ -42,6 +57,26 @@ const ProductsPage = () => {
   const minPriceParam = Number(searchParams.get("min") || 0);
   const maxPriceParam = Number(searchParams.get("max") || 0);
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [searchInput, setSearchInput] = useState(searchQuery);
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 12;
+
+  // Debounced search → URL
+  useEffect(() => {
+    const t = setTimeout(() => {
+      const next = new URLSearchParams(searchParams);
+      if (searchInput.trim()) next.set("search", searchInput.trim());
+      else next.delete("search");
+      setSearchParams(next, { replace: true });
+    }, 350);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
+
+  // Reset page when filters change
+  useEffect(() => {
+    setPage(1);
+  }, [categorySlug, searchQuery, brandFilter, sortBy, saleOnly, inStockOnly, minPriceParam, maxPriceParam]);
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories-all"],
@@ -149,6 +184,18 @@ const ProductsPage = () => {
     (inStockOnly ? 1 : 0) +
     (minPriceParam || maxPriceParam ? 1 : 0);
 
+  const sortOptions: { value: string; label: string }[] = [
+    { value: "new", label: "الأحدث" },
+    { value: "best", label: "الأكثر مبيعاً" },
+    { value: "featured", label: "الأعلى تقييماً" },
+    { value: "price-asc", label: "السعر: من الأقل" },
+    { value: "price-desc", label: "السعر: من الأعلى" },
+  ];
+  const currentSortLabel = sortOptions.find((s) => s.value === sortBy)?.label || "الأحدث";
+
+  const paginatedProducts = visibleProducts.slice(0, page * PAGE_SIZE);
+  const hasMore = paginatedProducts.length < visibleProducts.length;
+
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <Navbar />
@@ -210,44 +257,113 @@ const ProductsPage = () => {
         {/* Product listing (leaf or search) */}
         {(!isParent || searchQuery) && (
           <section className="container mx-auto px-6 py-8">
+            {/* Search bar */}
+            <div className="relative mb-6 max-w-xl mx-auto">
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <input
+                type="text"
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="ابحث عن منتج، ماركة، فئة…"
+                className="w-full pr-11 pl-10 py-3 bg-muted/50 border border-border focus:border-foreground outline-none text-sm transition-colors"
+              />
+              {searchInput && (
+                <button
+                  onClick={() => setSearchInput("")}
+                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              )}
+            </div>
+
             {/* Toolbar */}
             <div className="flex items-center justify-between border-b border-border pb-4 mb-8">
               <button
                 onClick={() => setFiltersOpen(true)}
-                className="flex items-center gap-2 text-[11px] tracking-[0.3em] uppercase relative"
+                className="flex items-center gap-2 text-[11px] tracking-[0.3em] uppercase relative hover:opacity-70 transition-opacity"
               >
                 <SlidersHorizontal className="w-4 h-4" /> فلاتر
                 {activeFilterCount > 0 && (
-                  <span className="bg-foreground text-background text-[9px] px-1.5 py-0.5 ml-1">{activeFilterCount}</span>
+                  <span className="bg-foreground text-background text-[9px] px-1.5 py-0.5 ml-1 animate-scale-in">{activeFilterCount}</span>
                 )}
               </button>
-              <p className="text-sm text-muted-foreground">{visibleProducts.length} منتج</p>
-              <select
-                value={sortBy}
-                onChange={(e) => setParam("sort", e.target.value)}
-                className="bg-transparent text-[11px] tracking-[0.3em] uppercase border-b border-border focus:border-foreground outline-none py-1 px-2"
-              >
-                <option value="new">الأحدث</option>
-                <option value="best">الأكثر مبيعاً</option>
-                <option value="featured">الأعلى تقييماً</option>
-                <option value="price-asc">السعر: تصاعدي</option>
-                <option value="price-desc">السعر: تنازلي</option>
-              </select>
+              <p className="text-xs md:text-sm text-muted-foreground tracking-wide hidden sm:block">{visibleProducts.length} منتج</p>
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-2 text-[11px] tracking-[0.3em] uppercase border border-border hover:border-foreground transition-colors py-2 px-4 outline-none">
+                  <ArrowUpDown className="w-3.5 h-3.5" />
+                  <span>{currentSortLabel}</span>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="rounded-none border-border min-w-[200px]">
+                  {sortOptions.map((opt) => (
+                    <DropdownMenuItem
+                      key={opt.value}
+                      onClick={() => setParam("sort", opt.value)}
+                      className="text-xs tracking-wider cursor-pointer flex items-center justify-between"
+                    >
+                      <span>{opt.label}</span>
+                      {sortBy === opt.value && <Check className="w-3.5 h-3.5" />}
+                    </DropdownMenuItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
+            {/* Active filter chips */}
+            {activeFilterCount > 0 && (
+              <div className="flex flex-wrap gap-2 mb-6 animate-fade-in">
+                {brandFilter !== "all" && (
+                  <Chip label={brandFilter} onClear={() => setParam("brand", null)} />
+                )}
+                {saleOnly && <Chip label="عروض فقط" onClear={() => setParam("sale", null)} />}
+                {inStockOnly && <Chip label="متوفر فقط" onClear={() => setParam("stock", null)} />}
+                {(minPriceParam || maxPriceParam) && (
+                  <Chip
+                    label={`${effectiveMin} – ${effectiveMax}`}
+                    onClear={() => {
+                      const next = new URLSearchParams(searchParams);
+                      next.delete("min");
+                      next.delete("max");
+                      setSearchParams(next);
+                    }}
+                  />
+                )}
+              </div>
+            )}
+
             {isLoading ? (
-              <LoadingScreen label="جاري التحميل" />
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
+                {Array.from({ length: 8 }).map((_, i) => (
+                  <ProductCardSkeleton key={i} />
+                ))}
+              </div>
             ) : visibleProducts.length === 0 ? (
               <div className="text-center py-24">
                 <p className="font-heading text-2xl mb-2">لا توجد منتجات</p>
                 <p className="text-sm text-muted-foreground">جرّب فلتراً مختلفاً أو استكشف أقساماً أخرى</p>
               </div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
-                {visibleProducts.map((p) => (
-                  <ProductCard key={p.id} product={p} />
-                ))}
-              </div>
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8">
+                  {paginatedProducts.map((p) => (
+                    <ProductCard key={p.id} product={p} />
+                  ))}
+                </div>
+
+                {hasMore && (
+                  <div className="flex flex-col items-center gap-3 mt-12">
+                    <p className="text-xs text-muted-foreground tracking-wider">
+                      عرض {paginatedProducts.length} من {visibleProducts.length}
+                    </p>
+                    <button
+                      onClick={() => setPage((p) => p + 1)}
+                      className="border border-foreground px-10 py-3 text-[11px] tracking-[0.4em] uppercase hover:bg-foreground hover:text-background transition-all active:scale-[0.98]"
+                    >
+                      عرض المزيد
+                    </button>
+                  </div>
+                )}
+              </>
             )}
           </section>
         )}

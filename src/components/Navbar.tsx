@@ -113,23 +113,24 @@ const Navbar = () => {
                   <Menu className="w-5 h-5" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[92vw] sm:w-[420px] p-0 bg-background border-l overflow-hidden" dir="rtl">
-                <div className="flex flex-col h-full">
+              <SheetContent side="right" className="w-[92vw] sm:w-[420px] p-0 bg-background border-l overflow-hidden " dir="rtl">
+                <div className="flex flex-col h-full p-3">
                   {/* Hero header */}
-                  <div className="relative px-6 pt-8 pb-6 bg-foreground text-background overflow-hidden">
+                  <div className="rounded-3xl relative px-6 pt-8 pb-6 bg-foreground text-background overflow-hidden">
                     <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
                       style={{ backgroundImage: "radial-gradient(circle at 20% 20%, white 1px, transparent 1px), radial-gradient(circle at 80% 70%, white 1px, transparent 1px)", backgroundSize: "24px 24px" }}
                     />
                     <div className="relative">
-                      <div className="flex items-center justify-between mb-6">
+                      <div className="z-50 flex items-center justify-between -mb-10">
                         <span className="logo-flamingo text-lg tracking-[0.35em]">FLAMINGO</span>
                         <button onClick={() => setMenuOpen(false)} className="w-8 h-8 rounded-full bg-background/10 hover:bg-background/20 flex items-center justify-center transition">
                           <X className="w-4 h-4" />
                         </button>
                       </div>
 
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-full bg-background/10 ring-1 ring-background/20 flex items-center justify-center">
+                      <div className=" flex items-center gap-3">
+                        <div onClick={() => user && goTo("/account")}
+                          className="w-12 h-12 rounded-full bg-background/10 ring-1 ring-background/20 flex items-center justify-center cursor-pointer hover:bg-background/20 transition">
                           {user ? (
                             <span className="text-sm font-medium">
                               {(user.user_metadata?.full_name?.[0] || user.email?.[0] || "?").toUpperCase()}
@@ -146,18 +147,13 @@ const Navbar = () => {
                             </>
                           ) : (
                             <>
-                              <p className="text-[11px] tracking-[0.25em] uppercase opacity-60">ضيف</p>
+                              <p className=" text-[11px] tracking-[0.25em] uppercase opacity-60">ضيف</p>
                               <button onClick={() => goTo("/auth")} className="text-sm font-medium underline underline-offset-4">
                                 تسجيل الدخول · إنشاء حساب
                               </button>
                             </>
                           )}
                         </div>
-                        {user && (
-                          <button onClick={() => goTo("/account")} className="text-[10px] tracking-[0.25em] uppercase px-3 py-1.5 rounded-full bg-background/10 hover:bg-background/20 transition">
-                            حسابي
-                          </button>
-                        )}
                       </div>
 
                       {/* Search */}

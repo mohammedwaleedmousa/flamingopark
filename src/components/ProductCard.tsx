@@ -1,5 +1,6 @@
 import { Link } from "react-router-dom";
-import { Heart, ShoppingBag, Eye } from "lucide-react";
+import { useState } from "react";
+import { Heart, ShoppingBag } from "lucide-react";
 import { Product, useStore } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
 import { toast } from "@/hooks/use-toast";
@@ -15,11 +16,15 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
   const { addToCart, openCart } = useStore();
   const isLiked = isFavorite(product.id);
   const currency = "ر.ي";
+  const [heartBeat, setHeartBeat] = useState(false);
+  const [bagPop, setBagPop] = useState(false);
 
   const handleLike = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const nowLiked = toggleFavorite(product);
+    setHeartBeat(true);
+    setTimeout(() => setHeartBeat(false), 350);
     toast({
       title: nowLiked ? "تمت الإضافة للمفضلة" : "تمت الإزالة من المفضلة",
     });
@@ -38,6 +43,8 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
     e.preventDefault();
     e.stopPropagation();
     addToCart(product, 1);
+    setBagPop(true);
+    setTimeout(() => setBagPop(false), 400);
     toast({ title: "تمت الإضافة إلى السلة" });
     openCart();
   };
@@ -75,13 +82,13 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
         <button
           onClick={handleLike}
           aria-label="favorite"
-          className={`absolute top-3 left-3 w-9 h-9 flex items-center justify-center transition-all ${
+          className={`absolute top-3 left-3 w-9 h-9 flex items-center justify-center transition-all active:scale-90 ${
             isLiked
               ? "bg-foreground text-background"
               : "bg-background/90 text-foreground hover:bg-foreground hover:text-background"
           }`}
         >
-          <Heart className={`w-4 h-4 ${isLiked ? "fill-current" : ""}`} />
+          <Heart className={`w-4 h-4 ${isLiked ? "fill-current" : ""} ${heartBeat ? "animate-[heart-beat_0.4s_ease-out]" : ""}`} />
         </button>
 
         {/* Quick add bar — slides up on hover */}
@@ -89,9 +96,9 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
           <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
             <button
               onClick={handleAdd}
-              className="w-full flex items-center justify-center gap-2 bg-foreground text-background py-3 text-[10px] tracking-[0.35em] uppercase"
+              className="w-full flex items-center justify-center gap-2 bg-foreground text-background py-3 text-[10px] tracking-[0.35em] uppercase active:scale-[0.98] transition-transform"
             >
-              <ShoppingBag className="w-3.5 h-3.5" /> إضافة سريعة
+              <ShoppingBag className={`w-3.5 h-3.5 ${bagPop ? "animate-[heart-beat_0.4s_ease-out]" : ""}`} /> إضافة سريعة
             </button>
           </div>
         )}

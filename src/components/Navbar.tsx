@@ -1,7 +1,8 @@
 import { Link, useNavigate } from "react-router-dom";
 import {
   ShoppingBag, Search, Menu, Heart, User, X, LogOut, Home, Tag, Sparkles, Info,
-  ChevronDown, Grid3x3, TrendingUp, Star, Package, HelpCircle, Phone, MessageCircle
+  ChevronDown, Grid3x3, TrendingUp, Star, Package, HelpCircle, Phone, MessageCircle,
+  ChevronLeft, Crown, Gift, Bell, Globe
 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -14,22 +15,43 @@ import type { User as SupaUser } from "@supabase/supabase-js";
 import { toast } from "@/hooks/use-toast";
 
 const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="py-2">
-    <p className="px-6 py-2 text-[10px] tracking-[0.4em] uppercase text-muted-foreground">{label}</p>
+  <div className="pt-5 pb-1">
+    <div className="flex items-center gap-3 px-6 mb-2">
+      <span className="h-px flex-1 bg-border" />
+      <p className="text-[10px] tracking-[0.45em] uppercase text-muted-foreground font-medium">{label}</p>
+      <span className="h-px w-6 bg-border" />
+    </div>
     <div>{children}</div>
   </div>
 );
 
-const NavItem = ({ icon: Icon, label, onClick }: { to?: string; icon: any; label: string; onClick: () => void }) => (
-  <button onClick={onClick} className="w-full flex items-center gap-3 px-6 py-3 hover:bg-muted transition text-right">
-    <Icon className="w-4 h-4 text-muted-foreground" />
-    <span className="text-sm">{label}</span>
+const NavItem = ({
+  icon: Icon, label, onClick, badge, highlight,
+}: { to?: string; icon: any; label: string; onClick: () => void; badge?: number | string; highlight?: boolean }) => (
+  <button
+    onClick={onClick}
+    className={`group w-full flex items-center gap-3 px-6 py-3 text-right transition-all duration-200 relative
+      ${highlight ? "text-foreground" : "text-foreground/80 hover:text-foreground"}
+      hover:bg-muted/60`}
+  >
+    <span className="absolute right-0 top-1/2 -translate-y-1/2 h-0 w-[2px] bg-foreground transition-all duration-300 group-hover:h-6" />
+    <span className="w-8 h-8 rounded-full bg-muted/60 flex items-center justify-center group-hover:bg-foreground group-hover:text-background transition-colors">
+      <Icon className="w-4 h-4" />
+    </span>
+    <span className="text-[13px] flex-1 font-medium">{label}</span>
+    {badge !== undefined && badge !== 0 && (
+      <span className="text-[10px] min-w-[20px] h-5 px-1.5 rounded-full bg-foreground text-background flex items-center justify-center font-medium">
+        {badge}
+      </span>
+    )}
+    <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-foreground group-hover:-translate-x-1 transition-all" />
   </button>
 );
 
 const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [sideSearch, setSideSearch] = useState("");
   const [user, setUser] = useState<SupaUser | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
   const { openCart, getCartCount } = useStore();
@@ -72,6 +94,13 @@ const Navbar = () => {
 
   const goTo = (href: string) => { setMenuOpen(false); navigate(href); };
 
+  const sideSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!sideSearch.trim()) return;
+    goTo(`/products?search=${encodeURIComponent(sideSearch.trim())}`);
+    setSideSearch("");
+  };
+
   return (
     <header className="fixed top-0 inset-x-0 z-50 bg-background/95 backdrop-blur border-b border-border" dir="rtl">
       <div className="container mx-auto px-4 md:px-8">
@@ -84,31 +113,87 @@ const Navbar = () => {
                   <Menu className="w-5 h-5" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[88vw] sm:w-[400px] p-0 bg-background border-l" dir="rtl">
-                <div className="flex flex-col h-full pt-5 pr-5 pl-5">
-                  {/* User header */}
-                  <div className="rounded-3xl px-6 pt-3 pb-6 bg-neutral-950 from-foreground to-foreground/95 text-background">
-                    <div className="mt-6 flex items-center gap-3">
-                      <div className="w-11 h-11 rounded-full bg-background/10 flex items-center justify-center">
-                        <User className="w-5 h-5" />
+              <SheetContent side="right" className="w-[92vw] sm:w-[420px] p-0 bg-background border-l overflow-hidden" dir="rtl">
+                <div className="flex flex-col h-full">
+                  {/* Hero header */}
+                  <div className="relative px-6 pt-8 pb-6 bg-foreground text-background overflow-hidden">
+                    <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
+                      style={{ backgroundImage: "radial-gradient(circle at 20% 20%, white 1px, transparent 1px), radial-gradient(circle at 80% 70%, white 1px, transparent 1px)", backgroundSize: "24px 24px" }}
+                    />
+                    <div className="relative">
+                      <div className="flex items-center justify-between mb-6">
+                        <span className="logo-flamingo text-lg tracking-[0.35em]">FLAMINGO</span>
+                        <button onClick={() => setMenuOpen(false)} className="w-8 h-8 rounded-full bg-background/10 hover:bg-background/20 flex items-center justify-center transition">
+                          <X className="w-4 h-4" />
+                        </button>
                       </div>
-                      <div className="text-sm flex-1 min-w-0">
-                        {user ? (
-                          <>
-                            <p className="font-medium truncate">{user.user_metadata?.full_name || user.email}</p>
-                            <button onClick={() => goTo("/account")} className="text-[11px] underline opacity-70">حسابي</button>
-                          </>
-                        ) : (
-                          <>
-                            <p className="font-medium">مرحباً بك</p>
-                            <button onClick={() => goTo("/auth")} className="text-[11px] underline opacity-70">تسجيل الدخول / إنشاء حساب</button>
-                          </>
+
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-full bg-background/10 ring-1 ring-background/20 flex items-center justify-center">
+                          {user ? (
+                            <span className="text-sm font-medium">
+                              {(user.user_metadata?.full_name?.[0] || user.email?.[0] || "?").toUpperCase()}
+                            </span>
+                          ) : (
+                            <User className="w-5 h-5" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          {user ? (
+                            <>
+                              <p className="text-[11px] tracking-[0.25em] uppercase opacity-60">مرحباً</p>
+                              <p className="text-sm font-medium truncate">{user.user_metadata?.full_name || user.email}</p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-[11px] tracking-[0.25em] uppercase opacity-60">ضيف</p>
+                              <button onClick={() => goTo("/auth")} className="text-sm font-medium underline underline-offset-4">
+                                تسجيل الدخول · إنشاء حساب
+                              </button>
+                            </>
+                          )}
+                        </div>
+                        {user && (
+                          <button onClick={() => goTo("/account")} className="text-[10px] tracking-[0.25em] uppercase px-3 py-1.5 rounded-full bg-background/10 hover:bg-background/20 transition">
+                            حسابي
+                          </button>
                         )}
+                      </div>
+
+                      {/* Search */}
+                      <form onSubmit={sideSubmit} className="relative mt-6">
+                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-60" />
+                        <input
+                          value={sideSearch}
+                          onChange={(e) => setSideSearch(e.target.value)}
+                          placeholder="ابحث في FLAMINGO..."
+                          className="w-full pr-10 pl-4 py-3 text-sm bg-background/10 border border-background/20 rounded-full placeholder:text-background/50 focus:outline-none focus:border-background/60 transition"
+                          dir="rtl"
+                        />
+                      </form>
+
+                      {/* Quick stats */}
+                      <div className="grid grid-cols-3 gap-2 mt-5">
+                        <button onClick={() => goTo("/cart")} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-background/5 hover:bg-background/10 transition">
+                          <ShoppingBag className="w-4 h-4" />
+                          <span className="text-[10px] opacity-70">الحقيبة</span>
+                          <span className="text-xs font-medium">{cartCount}</span>
+                        </button>
+                        <button onClick={() => goTo("/favorites")} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-background/5 hover:bg-background/10 transition">
+                          <Heart className="w-4 h-4" />
+                          <span className="text-[10px] opacity-70">مفضلة</span>
+                          <span className="text-xs font-medium">{favorites.length}</span>
+                        </button>
+                        <button onClick={() => goTo("/offers")} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-background/5 hover:bg-background/10 transition">
+                          <Gift className="w-4 h-4" />
+                          <span className="text-[10px] opacity-70">عروض</span>
+                          <span className="text-xs font-medium">●</span>
+                        </button>
                       </div>
                     </div>
                   </div>
 
-                  <nav className="flex-1 overflow-y-auto">
+                  <nav className="flex-1 overflow-y-auto pb-4">
                     {/* Shopping */}
                     <Section label="التسوق">
                       <NavItem to="/home" icon={Home} label="الرئيسية" onClick={() => goTo("/home")} />
@@ -116,7 +201,7 @@ const Navbar = () => {
                       <NavItem to="/products" icon={Tag} label="جميع المنتجات" onClick={() => goTo("/products")} />
                       <NavItem to="/new-arrivals" icon={Sparkles} label="وصل حديثاً" onClick={() => goTo("/new-arrivals")} />
                       <NavItem to="/best-sellers" icon={TrendingUp} label="الأكثر مبيعاً" onClick={() => goTo("/best-sellers")} />
-                      <NavItem to="/offers" icon={Star} label="العروض" onClick={() => goTo("/offers")} />
+                      <NavItem to="/offers" icon={Crown} label="العروض الحصرية" onClick={() => goTo("/offers")} highlight />
                     </Section>
 
                     {/* Categories (multi-level) */}
@@ -128,25 +213,29 @@ const Navbar = () => {
                             <button
                               key={c.id}
                               onClick={() => goTo(`/products?category=${c.slug}`)}
-                              className="w-full flex items-center justify-between px-6 py-3.5 text-right hover:bg-muted transition"
+                              className="group w-full flex items-center justify-between px-6 py-3.5 text-right hover:bg-muted/60 transition relative"
                             >
-                              <span className="font-heading text-base">{c.name_ar}</span>
+                              <span className="absolute right-0 top-1/2 -translate-y-1/2 h-0 w-[2px] bg-foreground transition-all duration-300 group-hover:h-6" />
+                              <span className="font-heading text-base pr-3">{c.name_ar}</span>
                               <span className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground">{c.name}</span>
                             </button>
                           );
                         }
                         return (
                           <Collapsible key={c.id}>
-                            <CollapsibleTrigger className="w-full flex items-center justify-between px-6 py-3.5 hover:bg-muted transition group">
-                              <span className="font-heading text-base">{c.name_ar}</span>
+                            <CollapsibleTrigger className="w-full flex items-center justify-between px-6 py-3.5 hover:bg-muted/60 transition group relative">
+                              <span className="absolute right-0 top-1/2 -translate-y-1/2 h-0 w-[2px] bg-foreground transition-all duration-300 group-hover:h-6 group-data-[state=open]:h-6" />
+                              <span className="font-heading text-base pr-3">{c.name_ar}</span>
                               <ChevronDown className="w-4 h-4 transition-transform group-data-[state=open]:rotate-180" />
                             </CollapsibleTrigger>
-                            <CollapsibleContent className="bg-muted/40">
-                              <button onClick={() => goTo(`/products?category=${c.slug}`)} className="w-full text-right px-10 py-2.5 text-sm text-muted-foreground hover:text-foreground transition">
-                                — عرض الكل
+                            <CollapsibleContent className="bg-muted/30 overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
+                              <button onClick={() => goTo(`/products?category=${c.slug}`)} className="w-full text-right px-12 py-2.5 text-[13px] text-foreground hover:bg-muted transition flex items-center gap-2">
+                                <span className="w-1 h-1 rounded-full bg-foreground" />
+                                عرض الكل
                               </button>
                               {subs.map((s) => (
-                                <button key={s.id} onClick={() => goTo(`/products?category=${s.slug}`)} className="w-full text-right px-10 py-2.5 text-sm hover:text-foreground/60 transition">
+                                <button key={s.id} onClick={() => goTo(`/products?category=${s.slug}`)} className="w-full text-right px-12 py-2.5 text-[13px] text-muted-foreground hover:text-foreground hover:bg-muted transition flex items-center gap-2">
+                                  <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
                                   {s.name_ar}
                                 </button>
                               ))}
@@ -159,8 +248,8 @@ const Navbar = () => {
                     {/* Account */}
                     <Section label="حسابي">
                       <NavItem to="/account" icon={User} label="حسابي" onClick={() => goTo("/account")} />
-                      <NavItem to="/favorites" icon={Heart} label={`المفضلة${favorites.length ? ` (${favorites.length})` : ""}`} onClick={() => goTo("/favorites")} />
-                      <NavItem to="/cart" icon={ShoppingBag} label={`الحقيبة${cartCount ? ` (${cartCount})` : ""}`} onClick={() => goTo("/cart")} />
+                      <NavItem to="/favorites" icon={Heart} label="المفضلة" badge={favorites.length || undefined} onClick={() => goTo("/favorites")} />
+                      <NavItem to="/cart" icon={ShoppingBag} label="الحقيبة" badge={cartCount || undefined} onClick={() => goTo("/cart")} />
                     </Section>
 
                     {/* Help */}
@@ -168,8 +257,27 @@ const Navbar = () => {
                       <NavItem to="/about" icon={Info} label="عن الدار" onClick={() => goTo("/about")} />
                       <NavItem to="/reviews" icon={MessageCircle} label="آراء العملاء" onClick={() => goTo("/reviews")} />
                     </Section>
+
+                    {user && (
+                      <div className="px-6 pt-6">
+                        <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-3 rounded-full border border-border text-sm hover:bg-foreground hover:text-background hover:border-foreground transition">
+                          <LogOut className="w-4 h-4" />
+                          تسجيل الخروج
+                        </button>
+                      </div>
+                    )}
                   </nav>
 
+                  {/* Footer */}
+                  <div className="border-t border-border px-6 py-4 bg-muted/30">
+                    <div className="flex items-center justify-between text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
+                      <span>FLAMINGO © 2026</span>
+                      <div className="flex items-center gap-1">
+                        <Globe className="w-3 h-3" />
+                        <span>عربي</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </SheetContent>
             </Sheet>

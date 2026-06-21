@@ -37,6 +37,15 @@ const FALLBACK_IMG: Record<string, string> = {
   beauty: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=900&q=85",
 };
 
+const Chip = ({ label, onClear }: { label: string; onClear: () => void }) => (
+  <span className="inline-flex items-center gap-2 bg-foreground text-background text-[10px] tracking-[0.25em] uppercase px-3 py-1.5">
+    {label}
+    <button onClick={onClear} aria-label="clear" className="hover:opacity-70">
+      <X className="w-3 h-3" />
+    </button>
+  </span>
+);
+
 const ProductsPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const categorySlug = searchParams.get("category") || "";

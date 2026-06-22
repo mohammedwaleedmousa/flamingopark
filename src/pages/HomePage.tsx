@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { ArrowLeft, Search } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
@@ -111,15 +110,6 @@ const editorial = [
 ];
 
 const HomePage = () => {
-  const navigate = useNavigate();
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const onSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!searchTerm.trim()) return;
-    navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
-  };
-
   const { data: products = [] } = useQuery({
     queryKey: ["home-products"],
     queryFn: async () => {

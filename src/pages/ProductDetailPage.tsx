@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -8,6 +8,9 @@ import CartDrawer from '@/components/CartDrawer';
 import ProductCard from '@/components/ProductCard';
 import ProductReviews from '@/components/ProductReviews';
 import AccessoryCard from '@/components/AccessoryCard';
+import FrequentlyBoughtTogether from '@/components/FrequentlyBoughtTogether';
+import ProductDetailSkeleton from '@/components/ProductDetailSkeleton';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useStore, Product } from '@/store/useStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,6 +37,7 @@ const ProductDetailPage = () => {
   const navigate = useNavigate();
   const { country, addToCart } = useStore();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { items: recentItems, add: addRecent } = useRecentlyViewed();
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -227,14 +231,7 @@ const ProductDetailPage = () => {
   }, [scale, touchStart, touchEnd, product]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 animate-spin text-gold mx-auto" />
-          <p className="text-muted-foreground font-body">جاري تحميل المنتج...</p>
-        </div>
-      </div>
-    );
+    return <ProductDetailSkeleton />;
   }
 
   if (!product) {

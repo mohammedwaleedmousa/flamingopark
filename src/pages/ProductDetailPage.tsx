@@ -137,6 +137,14 @@ const ProductDetailPage = () => {
     enabled: !!product && !!country,
   });
 
+  // Track recently viewed (persisted in localStorage)
+  useEffect(() => {
+    if (product) {
+      addRecent(product as Product);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id]);
+
   // Touch handlers for zoom and pan
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2) {
@@ -708,6 +716,15 @@ const ProductDetailPage = () => {
           {/* Product Reviews Section */}
           <ProductReviews productId={product.id} productName={product.nameAr} />
 
+          {/* Frequently Bought Together */}
+          {relatedProducts.length >= 2 && (
+            <FrequentlyBoughtTogether
+              current={product as Product}
+              related={relatedProducts}
+              currency={currency}
+            />
+          )}
+
           {/* Related Products */}
           {relatedProducts.length > 0 && (
             <motion.section 
@@ -728,6 +745,28 @@ const ProductDetailPage = () => {
                 ))}
               </div>
             </motion.section>
+          )}
+
+          {/* Recently Viewed */}
+          {recentItems.filter((p) => p.id !== product.id).length > 0 && (
+            <section className="mt-20 pt-12 border-t border-border animate-fade-in" dir="rtl">
+              <div className="text-center mb-10">
+                <p className="text-[10px] tracking-[0.5em] uppercase text-muted-foreground mb-3">
+                  Recently Viewed
+                </p>
+                <h2 className="font-heading text-2xl md:text-3xl text-foreground">
+                  شاهدت مؤخراً
+                </h2>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                {recentItems
+                  .filter((p) => p.id !== product.id)
+                  .slice(0, 8)
+                  .map((p) => (
+                    <ProductCard key={p.id} product={p} />
+                  ))}
+              </div>
+            </section>
           )}
         </div>
       </main>

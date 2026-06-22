@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useCallback, useRef } from 'react';
+import { useState, useCallback, useRef, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -8,6 +8,9 @@ import CartDrawer from '@/components/CartDrawer';
 import ProductCard from '@/components/ProductCard';
 import ProductReviews from '@/components/ProductReviews';
 import AccessoryCard from '@/components/AccessoryCard';
+import FrequentlyBoughtTogether from '@/components/FrequentlyBoughtTogether';
+import ProductDetailSkeleton from '@/components/ProductDetailSkeleton';
+import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useStore, Product } from '@/store/useStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import { supabase } from '@/integrations/supabase/client';
@@ -34,6 +37,7 @@ const ProductDetailPage = () => {
   const navigate = useNavigate();
   const { country, addToCart } = useStore();
   const { isFavorite, toggleFavorite } = useFavorites();
+  const { items: recentItems, add: addRecent } = useRecentlyViewed();
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
@@ -133,6 +137,14 @@ const ProductDetailPage = () => {
     enabled: !!product && !!country,
   });
 
+  // Track recently viewed (persisted in localStorage)
+  useEffect(() => {
+    if (product) {
+      addRecent(product as Product);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product?.id]);
+
   // Touch handlers for zoom and pan
   const handleTouchStart = useCallback((e: React.TouchEvent) => {
     if (e.touches.length === 2) {
@@ -227,14 +239,7 @@ const ProductDetailPage = () => {
   }, [scale, touchStart, touchEnd, product]);
 
   if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4">
-          <Loader2 className="w-12 h-12 animate-spin text-gold mx-auto" />
-          <p className="text-muted-foreground font-body">جاري تحميل المنتج...</p>
-        </div>
-      </div>
-    );
+    return <ProductDetailSkeleton />;
   }
 
   if (!product) {
@@ -711,6 +716,15 @@ const ProductDetailPage = () => {
           {/* Product Reviews Section */}
           <ProductReviews productId={product.id} productName={product.nameAr} />
 
+          {/* Frequently Bought Together */}
+          {relatedProducts.length >= 2 && (
+            <FrequentlyBoughtTogether
+              current={product as Product}
+              related={relatedProducts}
+              currency={currency}
+            />
+          )}
+
           {/* Related Products */}
           {relatedProducts.length > 0 && (
             <motion.section 
@@ -731,6 +745,28 @@ const ProductDetailPage = () => {
                 ))}
               </div>
             </motion.section>
+          )}
+
+          {/* Recently Viewed */}
+          {recentItems.filter((p) => p.id !== product.id).length > 0 && (
+            <section className="mt-20 pt-12 border-t border-border animate-fade-in" dir="rtl">
+              <div className="text-center mb-10">
+                <p className="text-[10px] tracking-[0.5em] uppercase text-muted-foreground mb-3">
+                  Recently Viewed
+                </p>
+                <h2 className="font-heading text-2xl md:text-3xl text-foreground">
+                  شاهدت مؤخراً
+                </h2>
+              </div>
+              <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                {recentItems
+                  .filter((p) => p.id !== product.id)
+                  .slice(0, 8)
+                  .map((p) => (
+                    <ProductCard key={p.id} product={p} />
+                  ))}
+              </div>
+            </section>
           )}
         </div>
       </main>

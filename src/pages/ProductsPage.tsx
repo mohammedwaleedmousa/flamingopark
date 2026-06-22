@@ -8,7 +8,7 @@ import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 import { Product } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
-import { ChevronLeft, SlidersHorizontal, X, RotateCcw, Search, ArrowUpDown, Check } from "lucide-react";
+import { ChevronLeft, SlidersHorizontal, X, RotateCcw, ArrowUpDown, Check } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { Switch } from "@/components/ui/switch";
 import {
@@ -57,21 +57,8 @@ const ProductsPage = () => {
   const minPriceParam = Number(searchParams.get("min") || 0);
   const maxPriceParam = Number(searchParams.get("max") || 0);
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [searchInput, setSearchInput] = useState(searchQuery);
   const [page, setPage] = useState(1);
   const PAGE_SIZE = 12;
-
-  // Debounced search → URL
-  useEffect(() => {
-    const t = setTimeout(() => {
-      const next = new URLSearchParams(searchParams);
-      if (searchInput.trim()) next.set("search", searchInput.trim());
-      else next.delete("search");
-      setSearchParams(next, { replace: true });
-    }, 350);
-    return () => clearTimeout(t);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchInput]);
 
   // Reset page when filters change
   useEffect(() => {
@@ -257,26 +244,6 @@ const ProductsPage = () => {
         {/* Product listing (leaf or search) */}
         {(!isParent || searchQuery) && (
           <section className="container mx-auto px-6 py-8">
-            {/* Search bar */}
-            <div className="relative mb-6 max-w-xl mx-auto">
-              <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <input
-                type="text"
-                value={searchInput}
-                onChange={(e) => setSearchInput(e.target.value)}
-                placeholder="ابحث عن منتج، ماركة، فئة…"
-                className="w-full pr-11 pl-10 py-3 bg-muted/50 border border-border focus:border-foreground outline-none text-sm transition-colors"
-              />
-              {searchInput && (
-                <button
-                  onClick={() => setSearchInput("")}
-                  className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              )}
-            </div>
-
             {/* Toolbar */}
             <div className="flex items-center justify-between border-b border-border pb-4 mb-8">
               <button

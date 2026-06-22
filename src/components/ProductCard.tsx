@@ -18,6 +18,7 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
   const currency = "ر.ي";
   const [heartBeat, setHeartBeat] = useState(false);
   const [bagPop, setBagPop] = useState(false);
+  const hasSecondImage = (product.images?.length ?? 0) > 1;
 
   const handleLike = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -53,13 +54,24 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
     <Link to={`/product/${product.slug}`} className="group block" dir="rtl">
       <div className="relative aspect-[3/4] overflow-hidden bg-muted">
         {product.images?.[0] ? (
-          <img
-            src={product.images[0]}
-            alt={product.nameAr}
-            loading="lazy"
-            decoding="async"
-            className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.06]"
-          />
+          <>
+            <img
+              src={product.images[0]}
+              alt={product.nameAr}
+              loading="lazy"
+              decoding="async"
+              className={`w-full h-full object-cover transition-all duration-[900ms] ease-out group-hover:scale-[1.06] ${hasSecondImage ? "group-hover:opacity-0" : ""}`}
+            />
+            {hasSecondImage && (
+              <img
+                src={product.images[1]}
+                alt={product.nameAr}
+                loading="lazy"
+                decoding="async"
+                className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[900ms] ease-out group-hover:opacity-100"
+              />
+            )}
+          </>
         ) : (
           <div className="w-full h-full bg-muted" />
         )}
@@ -67,17 +79,24 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
         {/* Hover overlay */}
         <div className="absolute inset-0 bg-foreground/0 group-hover:bg-foreground/10 transition-colors" />
 
-        {computedBadge && (
-          <span className="absolute top-3 right-3 bg-background text-foreground text-[9px] font-medium tracking-[0.25em] uppercase px-2.5 py-1">
-            {computedBadge}
-          </span>
-        )}
-
-        {product.discount && (
-          <span className="absolute top-3 right-3 bg-foreground text-background text-[10px] font-medium px-2 py-1 mt-7">
-            -{product.discount}%
-          </span>
-        )}
+        {/* Badges stack — top right */}
+        <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end z-10">
+          {computedBadge && (
+            <span className="bg-background text-foreground text-[9px] font-medium tracking-[0.25em] uppercase px-2.5 py-1 shadow-sm">
+              {computedBadge}
+            </span>
+          )}
+          {product.discount ? (
+            <span className="bg-foreground text-background text-[10px] font-medium px-2 py-1">
+              -{product.discount}%
+            </span>
+          ) : null}
+          {product.isBestSeller && (
+            <span className="bg-background text-foreground text-[9px] font-medium tracking-[0.25em] uppercase px-2.5 py-1 shadow-sm border border-border">
+              BEST
+            </span>
+          )}
+        </div>
 
         <button
           onClick={handleLike}

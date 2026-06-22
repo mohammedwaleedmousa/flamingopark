@@ -125,14 +125,42 @@
 
   html {
     scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
   }
 
   body {
     @apply bg-background text-foreground font-body antialiased;
+    font-family: 'Inter', 'DM Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Arabic', 'Geeza Pro', 'Segoe UI', 'Tahoma', sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    text-rendering: optimizeLegibility;
+    font-feature-settings: "kern", "liga", "calt";
+    font-synthesis: none;
   }
 
   h1, h2, h3, h4, h5, h6 {
     @apply font-heading;
+    font-family: 'Playfair Display', 'Cormorant Garamond', 'SF Arabic', 'Geeza Pro', Georgia, serif;
+    -webkit-font-smoothing: antialiased;
+    letter-spacing: 0.005em;
+  }
+
+  /* Arabic-specific tuning — iOS/Safari render Arabic too tightly without it */
+  [dir="rtl"] {
+    font-family: 'Inter', 'SF Arabic', 'Geeza Pro', 'Tahoma', 'Arial', sans-serif;
+  }
+  [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4, [dir="rtl"] h5, [dir="rtl"] h6 {
+    font-family: 'Playfair Display', 'SF Arabic', 'Geeza Pro', Georgia, serif;
+    line-height: 1.4;
+  }
+  [dir="rtl"] p, [dir="rtl"] span, [dir="rtl"] button, [dir="rtl"] a, [dir="rtl"] li {
+    line-height: 1.7;
+  }
+
+  /* Prevent iOS auto-zoom on input focus */
+  input, textarea, select {
+    font-size: 16px;
   }
 }
 

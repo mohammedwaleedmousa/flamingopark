@@ -7,7 +7,6 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { useStore } from "@/store/useStore";
 import SplashScreen from "@/components/SplashScreen";
 import LoadingScreen from "@/components/LoadingScreen";
-import AnnouncementBar from "@/components/AnnouncementBar";
 import BackToTop from "@/components/BackToTop";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
@@ -93,7 +92,6 @@ const StorefrontChrome = () => {
   if (!isStorefrontPath(pathname)) return null;
   return (
     <>
-      <AnnouncementBar />
       <BackToTop />
     </>
   );

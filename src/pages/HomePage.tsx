@@ -6,6 +6,9 @@ import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import HeroSlider from "@/components/HeroSlider";
 import ProductCard from "@/components/ProductCard";
+import CategoryIconsRow from "@/components/CategoryIconsRow";
+import FlashSaleSection from "@/components/FlashSaleSection";
+import TrustBar from "@/components/TrustBar";
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/store/useStore";
 
@@ -162,7 +165,30 @@ const HomePage = () => {
         {/* Hero — sits behind the navbar */}
         <HeroSlider />
 
-        {/* Featured Categories — Dior-style large editorial cards */}
+        {/* 1. Circular Category Strip — SHEIN style */}
+        <CategoryIconsRow />
+
+        {/* 2. Flash Sale */}
+        <FlashSaleSection />
+
+        {/* 3. Best Sellers (moved up) */}
+        {bestSellers.length > 0 && (
+          <section className="py-16 md:py-24 bg-muted">
+            <div className="container mx-auto px-6">
+              <div className="text-center mb-10">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">الأكثر طلباً</p>
+                <h2 className="font-heading text-3xl md:text-5xl text-foreground">الأكثر مبيعاً</h2>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+                {bestSellers.slice(0, 8).map((p, i) => (
+                  <ProductCard key={p.id} product={p} index={i} badge="BEST SELLER" />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* 4. Featured Categories — Dior-style large editorial cards */}
         <section className="py-20 md:py-28">
           <div className="container mx-auto px-6">
             <div className="text-center mb-14">
@@ -189,7 +215,7 @@ const HomePage = () => {
           </div>
         </section>
 
-        {/* Editorial split — image left, text right (alternating) */}
+        {/* 5. Editorial split */}
         {editorial.map((e) => (
           <section key={e.title} className="bg-background">
             <div className={`grid md:grid-cols-2 ${e.reverse ? "" : ""}`}>
@@ -217,24 +243,7 @@ const HomePage = () => {
           </section>
         ))}
 
-        {/* Best Sellers */}
-        {bestSellers.length > 0 && (
-          <section className="py-20 md:py-28 bg-muted">
-            <div className="container mx-auto px-6">
-              <div className="text-center mb-14">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">الأكثر طلباً</p>
-                <h2 className="font-heading text-3xl md:text-5xl text-foreground">الأكثر مبيعاً</h2>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
-                {bestSellers.slice(0, 8).map((p) => (
-                  <ProductCard key={p.id} product={p} badge="BEST SELLER" />
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-
-        {/* New Arrivals */}
+        {/* 6. New Arrivals */}
         {newArrivals.length > 0 && (
           <section className="py-20 md:py-28">
             <div className="container mx-auto px-6">
@@ -251,15 +260,15 @@ const HomePage = () => {
                 </Link>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
-                {newArrivals.slice(0, 8).map((p) => (
-                  <ProductCard key={p.id} product={p} badge="NEW IN" />
+                {newArrivals.slice(0, 8).map((p, i) => (
+                  <ProductCard key={p.id} product={p} index={i} badge="NEW IN" />
                 ))}
               </div>
             </div>
           </section>
         )}
 
-        {/* Full-width campaign banner */}
+        {/* 7. Full-width campaign banner */}
         <section className="relative h-[60vh] min-h-[420px] overflow-hidden">
           <img
             src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1800&q=90"
@@ -282,7 +291,7 @@ const HomePage = () => {
           </div>
         </section>
 
-        {/* All products preview */}
+        {/* 8. All products preview */}
         {products.length > 0 && (
           <section className="py-20 md:py-28">
             <div className="container mx-auto px-6">
@@ -291,8 +300,8 @@ const HomePage = () => {
                 <h2 className="font-heading text-3xl md:text-5xl text-foreground">قطع مختارة بعناية</h2>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
-                {products.slice(0, 8).map((p) => (
-                  <ProductCard key={p.id} product={p} />
+                {products.slice(0, 8).map((p, i) => (
+                  <ProductCard key={p.id} product={p} index={i} />
                 ))}
               </div>
               <div className="text-center mt-14">
@@ -306,6 +315,9 @@ const HomePage = () => {
             </div>
           </section>
         )}
+
+        {/* 9. Trust Bar */}
+        <TrustBar />
       </main>
 
       <Footer />

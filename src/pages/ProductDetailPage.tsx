@@ -804,8 +804,7 @@ const ProductDetailPage = () => {
             </Tabs>
           </section>
 
-          {/* Inline Reviews (kept for SEO) */}
-          <ProductReviews productId={product.id} productName={product.nameAr} />
+          {/* (Reviews are shown in the Tabs above) */}
 
           {/* Frequently Bought Together */}
           {relatedProducts.length >= 2 && (

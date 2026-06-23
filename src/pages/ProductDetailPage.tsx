@@ -604,6 +604,20 @@ const ProductDetailPage = () => {
                 )}
               </div>
 
+              {/* Live activity row */}
+              {product.inStock && (
+                <div className="flex items-center gap-3 flex-wrap text-xs">
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-foreground/5 text-foreground/80">
+                    <Eye className="w-3.5 h-3.5" />
+                    {liveViewers} شخص يشاهد الآن
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-orange-500/10 text-orange-600">
+                    <Flame className="w-3.5 h-3.5" />
+                    طلب شائع هذا الأسبوع
+                  </span>
+                </div>
+              )}
+
               {/* 3- Description */}
               <div className="space-y-3">
                 <h3 className="font-heading text-lg text-foreground">الوصف</h3>

@@ -34,7 +34,7 @@ const AnnouncementBar = () => {
   return (
     <div className="w-full bg-foreground text-background overflow-hidden" dir="rtl">
       <div className="relative">
-        <div className="flex whitespace-nowrap animate-marquee-rtl py-2">
+        <div className="flex whitespace-nowrap animate-marquee-rtl py-1.5">
           {items.map((m, i) => (
             <span
               key={i}

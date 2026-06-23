@@ -31,6 +31,8 @@ import {
   ChevronRight
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/components/ui/tabs';
+import { Eye, Flame } from 'lucide-react';
 
 const ProductDetailPage = () => {
   const { slug } = useParams();
@@ -361,6 +363,14 @@ const ProductDetailPage = () => {
   const features = product.features && product.features.length > 0 
     ? product.features 
     : defaultFeatures;
+
+  // Stable "live viewers" counter (8 - 32 based on slug)
+  const liveViewers = (() => {
+    if (!product?.slug) return 0;
+    let h = 0;
+    for (const ch of product.slug) h = (h * 31 + ch.charCodeAt(0)) & 0xffff;
+    return 8 + (h % 25);
+  })();
 
   const getFeatureIcon = (iconName: string) => {
     switch (iconName) {

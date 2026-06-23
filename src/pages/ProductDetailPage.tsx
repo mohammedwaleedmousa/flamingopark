@@ -737,7 +737,74 @@ const ProductDetailPage = () => {
             </motion.div>
           </div>
 
-          {/* Product Reviews Section */}
+          {/* Detailed Tabs */}
+          <section className="mt-16 max-w-4xl mx-auto" dir="rtl">
+            <Tabs defaultValue="description" className="w-full">
+              <TabsList className="w-full justify-start bg-muted/40 p-1 rounded-xl overflow-x-auto flex gap-1">
+                <TabsTrigger value="description" className="text-xs md:text-sm">الوصف</TabsTrigger>
+                <TabsTrigger value="specs" className="text-xs md:text-sm">المواصفات</TabsTrigger>
+                <TabsTrigger value="shipping" className="text-xs md:text-sm">الشحن والإرجاع</TabsTrigger>
+                <TabsTrigger value="reviews" className="text-xs md:text-sm">التقييمات</TabsTrigger>
+              </TabsList>
+              <TabsContent value="description" className="pt-6">
+                <div className="prose prose-sm max-w-none">
+                  <p className="text-foreground/80 leading-loose whitespace-pre-line">
+                    {product.descriptionAr || 'منتج فاخر من FLAMINGO بجودة عالية وتصميم أنيق يناسب جميع المناسبات.'}
+                  </p>
+                </div>
+              </TabsContent>
+              <TabsContent value="specs" className="pt-6">
+                <div className="divide-y divide-border border border-border rounded-xl overflow-hidden">
+                  {[
+                    ['الماركة', product.brand],
+                    ['التصنيف', product.category],
+                    ['المخزون', product.inStock ? 'متوفر' : 'غير متوفر'],
+                    ...(product.hasSizes && product.sizes ? [['المقاسات المتاحة', (product.sizes || []).join(' • ')] as [string, string]] : []),
+                    ['الدول المتاحة', (product.countries || []).join(' / ')],
+                  ].map(([k, v]) => (
+                    <div key={k} className="grid grid-cols-2 gap-4 px-4 py-3 text-sm bg-card">
+                      <span className="text-muted-foreground">{k}</span>
+                      <span className="text-foreground font-medium">{v}</span>
+                    </div>
+                  ))}
+                </div>
+              </TabsContent>
+              <TabsContent value="shipping" className="pt-6 space-y-4">
+                <div className="p-5 rounded-xl border border-border bg-card">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Truck className="w-5 h-5 text-foreground" />
+                    <h4 className="font-heading text-base">الشحن</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    التوصيل خلال 2-5 أيام عمل. شحن مجاني للطلبات فوق 300 ر.س داخل المدن الرئيسية.
+                  </p>
+                </div>
+                <div className="p-5 rounded-xl border border-border bg-card">
+                  <div className="flex items-center gap-3 mb-2">
+                    <RotateCcw className="w-5 h-5 text-foreground" />
+                    <h4 className="font-heading text-base">الإرجاع</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    يمكنك إرجاع المنتج خلال 14 يوم من استلامه، بشرط أن يكون بحالته الأصلية.
+                  </p>
+                </div>
+                <div className="p-5 rounded-xl border border-border bg-card">
+                  <div className="flex items-center gap-3 mb-2">
+                    <Shield className="w-5 h-5 text-foreground" />
+                    <h4 className="font-heading text-base">الضمان</h4>
+                  </div>
+                  <p className="text-sm text-muted-foreground leading-relaxed">
+                    جميع منتجاتنا أصلية 100% مع ضمان الجودة الكاملة.
+                  </p>
+                </div>
+              </TabsContent>
+              <TabsContent value="reviews" className="pt-6">
+                <ProductReviews productId={product.id} productName={product.nameAr} />
+              </TabsContent>
+            </Tabs>
+          </section>
+
+          {/* Inline Reviews (kept for SEO) */}
           <ProductReviews productId={product.id} productName={product.nameAr} />
 
           {/* Frequently Bought Together */}

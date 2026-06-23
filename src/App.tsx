@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { useStore } from "@/store/useStore";
 import SplashScreen from "@/components/SplashScreen";
 import LoadingScreen from "@/components/LoadingScreen";
+import BackToTop from "@/components/BackToTop";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
@@ -84,6 +85,18 @@ const ScrollToTop = () => {
   return null;
 };
 
+const isStorefrontPath = (path: string) => !path.startsWith("/admin") && !path.startsWith("/bene") && path !== "/qr-code";
+
+const StorefrontChrome = () => {
+  const { pathname } = useLocation();
+  if (!isStorefrontPath(pathname)) return null;
+  return (
+    <>
+      <BackToTop />
+    </>
+  );
+};
+
 const App = () => {
   const [showSplash, setShowSplash] = useState(() => {
     if (typeof window === "undefined") return false;
@@ -100,6 +113,7 @@ const App = () => {
       )}
       <BrowserRouter>
         <ScrollToTop />
+        <StorefrontChrome />
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<AuthRedirect />} />

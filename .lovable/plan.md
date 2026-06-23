@@ -1,112 +1,112 @@
+# خطة التحسينات الشاملة (9 نقاط)
 
-# خطة الترقية إلى متجر فاخر بمستوى Dior / Apple
-
-النطاق ضخم جدًا (سايدبار، تايبوغرافي iOS، بحث موحّد، بطاقة منتج، تحميل، صفحة تفاصيل كاملة، Checkout متعدد الخطوات، ميزات Enterprise). تنفيذه دفعة واحدة سيكسر الموقع. سأقسّمه إلى **3 مراحل قابلة للتسليم**، كل مرحلة تُبنى وتُختبر قبل الانتقال للتالية.
-
----
-
-## المرحلة 1 — الأساس البصري وتجربة التصفّح (الأكثر تأثيرًا)
-
-**الهدف:** الإحساس الفوري بأن الموقع "فاخر ومتماسك".
-
-1. **إصلاح التايبوغرافي على iPhone/Safari**
-   - إضافة `-webkit-font-smoothing: antialiased`, `text-rendering: optimizeLegibility`, `font-feature-settings`.
-   - Fallback عربي: `"SF Arabic", "Geeza Pro", "Tahoma"` للنصوص العربية.
-   - ضبط `line-height` و`letter-spacing` لـ Playfair + Inter على الشاشات الصغيرة.
-   - تثبيت `font-display: swap` ومنع FOUT.
-
-2. **إعادة تصميم Sidebar بالكامل** (Dior-inspired)
-   - استخدام shadcn `Sheet` بانتقالات أنعم (cubic-bezier).
-   - هيدر داكن + شعار FLAMINGO + كرت حساب المستخدم (Avatar + حالة الدخول).
-   - أقسام واضحة: Shop / Categories (Collapsible متعدّد المستويات) / Account / Help.
-   - مؤشر عمودي للحالة النشطة، Hover ناعم، أيقونات دائرية.
-   - Footer داخل الـ Sheet: اللغة + الحقوق.
-   - أداء: lazy mount للمحتوى، scroll-area داخلية.
-
-3. **توحيد البحث في الـ Navbar فقط**
-   - حذف أي زر/أيقونة/سكشن بحث من بقية الصفحات (HomePage, ProductsPage hero, الفوتر…).
-   - زر بحث واحد في الـ Navbar يفتح Command Palette (`cmd+k` على ديسكتوب) باقتراحات ذكية: المنتجات، الفئات، الماركات، آخر عمليات بحث، الترند.
-   - Debounce + Highlight + اختصارات لوحة المفاتيح.
-
-4. **بطاقة المنتج (ProductCard) — Redesign كامل**
-   - نسبة `aspect-[3/4]`، صورة ثانية تظهر عند الـ Hover.
-   - Badges احترافية (NEW / SALE -X% / BEST SELLER) في زوايا ثابتة.
-   - أزرار Quick Add / Wishlist مع Optimistic UI (موجود جزئيًا — سيُحسّن).
-   - عرض التقييم (نجوم + عدد المراجعات).
-   - أسعار: السعر النهائي بارز + السعر الأصلي مشطوب + نسبة الخصم.
-   - Skeleton + Shimmer.
-
-5. **تجربة التحميل**
-   - `LoadingScreen` بشريط تقدّم علوي + Fade ناعم بين الصفحات.
-   - `ProductCardSkeleton` يُستخدم في كل الشبكات.
-   - Image shimmer placeholder (blur-up).
+سأنفّذها على دفعة واحدة، مرتّبة من الأهم للأقل. كل التغييرات Frontend فقط (لا تعديل على قاعدة البيانات أو الأدمن الحالي).
 
 ---
 
-## المرحلة 2 — صفحة تفاصيل المنتج + الـ Checkout
+## 1. إصلاح الخط على iPhone (الأهم — يحل المظهر المتقطع)
+- إضافة `font-display: swap` لخطوط Google.
+- زيادة `font-weight` الافتراضي للعربي على iOS (Safari يعرض الرفيع متقطّعاً).
+- استخدام `'SF Arabic', 'Geeza Pro'` كأولوية أولى للنصوص العربية بدلاً من Inter.
+- إضافة `-webkit-font-smoothing: subpixel-antialiased` للعربية تحديداً.
+- ضبط `line-height: 1.8` للفقرات العربية.
 
-1. **Product Details Page**
-   - Gallery: صور متعددة + Thumbnails جانبية + Zoom (hover على ديسكتوب، pinch على موبايل).
-   - تبويبات: الوصف / المواصفات / المواد / الشحن والإرجاع.
-   - اختيار المقاس واللون مع عرض المخزون لكل متغيّر.
-   - حالة المخزون + معلومات التوصيل التقديرية.
-   - تقييمات العملاء + توزيع النجوم (5/4/3/2/1).
-   - أقسام: Related Products / Recently Viewed (localStorage) / Frequently Bought Together.
-   - أزرار: مشاركة (WhatsApp/Copy)، المفضلة، إضافة للسلة، شراء فوري.
+## 2. Sidebar — Redesign فاخر
+- خلفية متدرّجة سوداء عميقة + Pattern خفيف.
+- صورة بروفايل دائرية أكبر + Badge نقاط/مستوى العميل.
+- تجميع أنيق: Quick Actions (سلة/مفضلة/عروض) ببطاقات أكبر مع أرقام بارزة.
+- الأقسام بـ Collapsible مع animation أنعم + أيقونات ملوّنة دائرية.
+- Footer به: تبديل اللغة، الدولة (SA/YE)، روابط سوشيال.
+- Scroll smooth + sticky header داخل الـ Sheet.
 
-2. **Checkout متعدّد الخطوات**
-   - Stepper: العنوان → التوصيل → الدفع → المراجعة → التأكيد.
-   - ملخّص الطلب ثابت على الجانب (Sticky) في الديسكتوب، Bottom sheet على الموبايل.
-   - دعم الكوبون، طرق التوصيل، طرق الدفع، مؤشّرات الأمان والثقة.
-   - شاشة تأكيد احترافية مع رقم الطلب + تتبّع + زر تنزيل الفاتورة.
+## 3. ProductCard — عصري + أنميشن
+- إضافة **Quick View** (يفتح Modal).
+- Badge "تخفيض" بأنميشن نبض.
+- نجوم تقييم تحت السعر.
+- Hover: Slide-up شريط (إضافة + قلب + نظرة) بدلاً من زر واحد.
+- Skeleton مع shimmer متحرّك (موجة ضوء).
+- Fade-in تدريجي عند التحميل (stagger).
+
+## 4. Loading عكسي + Double Skeleton
+- LoadingScreen: الحروف تظهر من اليمين لليسار (عكس) لتطابق RTL.
+- ProductCardSkeleton: عرض شبكة من 8 بطاقات بـ shimmer متموّج.
+- إضافة "skeleton wave" — موجة ضوئية تمرّ بشكل متتالي على البطاقات.
+- بين الصفحات: top-bar progress + fade-out للصفحة القديمة + fade-in للجديدة.
+
+## 5. ProductDetailPage — معلومات أكثر
+- Tabs: الوصف / المواصفات / الشحن والإرجاع / التقييمات.
+- شارة "مخزون منخفض" إذا قلّ.
+- عدّاد "X شخص يشاهد هذا الآن" (وهمي محلي).
+- معلومات الشحن (مدة + تكلفة تقديرية) أعلى زر الشراء.
+- "تم بيع X قطعة هذا الأسبوع" (محلي).
+- مشاركة لـ WhatsApp/Twitter/Copy.
+- Sticky bottom CTA على الموبايل مع السعر.
+
+## 6. CheckoutPage — تجربة محسّنة
+- **Stepper علوي**: المعلومات → التوصيل → الدفع → التأكيد (مع progress).
+- ملخّص الطلب Sticky على الديسكتوب، Drawer سفلي على الموبايل.
+- بطاقات اختيار الدفع/التوصيل أكبر مع أيقونات وأنميشن tick.
+- "Trust badges": دفع آمن، إرجاع، توصيل سريع.
+- Animated success state بعد الإرسال.
+
+## 7. ترتيب الأقسام بأسلوب SHEIN
+ترتيب جديد لـ HomePage:
+```
+1. Hero Slider
+2. شريط Categories أيقونية دائرية أفقي (Scroll)  ← جديد
+3. Flash Sale / عروض اليوم (بعدّاد زمني)  ← جديد
+4. الأكثر مبيعاً
+5. Featured Categories (Editorial كبير)
+6. وصل حديثاً
+7. Banner كامل
+8. تصنيفات شائعة (شبكة 6)  ← جديد
+9. جميع المنتجات
+10. شريط ثقة (شحن/دفع/إرجاع)  ← جديد
+```
+
+## 8. أنميشن عام للمتجر
+- Stagger fade-in للأقسام عند التمرير (IntersectionObserver).
+- Hover effects على كل البطاقات (scale خفيف + shadow).
+- Page transitions بـ fade.
+- زر "العودة للأعلى" مع animation.
+- Marquee شريط إعلاني علوي رفيع متحرّك.
+
+## 9. ربط الأدمن (لا تعديل على Backend)
+- التأكد أن كل صفحة Frontend تقرأ من Supabase (categories, products, banners, offers, site_content).
+- إضافة شريط إعلان علوي يقرأ من `site_settings` → key `announcement_bar`.
+- التأكد من قراءة WhatsApp/Banks/COD من DB.
+- **عدم لمس** بيانات المنتجات الحالية.
 
 ---
 
-## المرحلة 3 — ميزات Enterprise للسلم الكبير (10K منتج / 10K عميل)
+## ملفات ستُعدّل/تُنشأ
+**جديدة:**
+- `src/components/FlashSaleSection.tsx`
+- `src/components/CategoryIconsRow.tsx`
+- `src/components/TrustBar.tsx`
+- `src/components/AnnouncementBar.tsx`
+- `src/components/QuickViewModal.tsx`
+- `src/components/BackToTop.tsx`
+- `src/components/CheckoutStepper.tsx`
+- `src/hooks/useInView.ts`
 
-1. **اكتشاف وبحث**
-   - Search history + Trending (مخزّنة محليًا + جدول `search_logs` خفيف).
-   - Typo tolerance عبر `ilike` متعدّد الكلمات أو ترقية لاحقة لـ Postgres FTS.
-
-2. **التصفح والأداء**
-   - Pagination حقيقية بـ `.range()` على Supabase (موجودة جزئيًا في ProductsPage — ستعمم).
-   - Lazy loading للصور + `fetchpriority="high"` لصور LCP.
-   - Code splitting (موجود) + Prefetch للروابط الشائعة.
-
-3. **حساب العميل**
-   - عناوين محفوظة (جدول `customer_addresses`).
-   - Recently viewed (localStorage فقط، بلا DB).
-   - توصيات أساسية بناءً على آخر فئة شاهدها العميل.
-
-4. **ثقة وتسويق**
-   - صفحات ثابتة: سياسة الإرجاع، الشحن، الأسئلة الشائعة (محتوى من `site_content`).
-   - شارة "مشترٍ موثّق" على المراجعات المرتبطة بطلب فعلي.
-   - Newsletter (جدول `newsletter_subscribers`).
-
-5. **موبايل**
-   - Bottom Navigation Bar للموبايل (الرئيسية / الفئات / البحث / السلة / الحساب).
-   - انتقالات أنعم بين الصفحات.
+**ستُعدَّل:**
+- `src/index.css` (خطوط + animations)
+- `src/components/Navbar.tsx` (Sidebar)
+- `src/components/ProductCard.tsx`
+- `src/components/ProductCardSkeleton.tsx`
+- `src/components/LoadingScreen.tsx`
+- `src/pages/HomePage.tsx` (الترتيب الجديد)
+- `src/pages/ProductDetailPage.tsx` (Tabs + Sticky CTA)
+- `src/pages/CheckoutPage.tsx` (Stepper)
+- `src/App.tsx` (BackToTop + AnnouncementBar)
 
 ---
 
-## ما يتغيّر في قاعدة البيانات (المرحلة 3 فقط)
-- `customer_addresses` — عناوين محفوظة لكل مستخدم (RLS: المالك فقط).
-- `newsletter_subscribers` — اشتراكات النشرة (insert عام، read للأدمن).
-- `search_logs` (اختياري) — لتغذية Trending searches.
+## ما لن أفعله
+- لا تغيير على schema قاعدة البيانات.
+- لا حذف منتجات أو بيانات.
+- لا تعديل على صفحات الأدمن.
+- لا تغيير منطق الفواتير/العمولات/الكوبونات.
 
-لا تغييرات على الجداول الموجودة.
-
----
-
-## ما لن أفعله (لتجنّب كسر النظام)
-- لن أغيّر منطق الفواتير، المستفيدين، العمولات، أو حساب الأرباح.
-- لن أمسّ الـ Admin إلا تحسينات بصرية بسيطة.
-- لن أبدّل مزوّد البحث إلى Algolia في هذه الجولة (يبقى ضمن Supabase). يمكن ترقيته لاحقًا إذا تجاوز الكتالوج 50K منتج.
-
----
-
-## التسليم
-أنفّذ **المرحلة 1 كاملة** في الجولة القادمة (هي 70% من الإحساس "العالمي" الذي تطلبه).
-بعد موافقتك على نتيجة المرحلة 1، أنتقل إلى المرحلة 2 ثم 3.
-
-هل أبدأ بالمرحلة 1؟
+هل أبدأ التنفيذ؟

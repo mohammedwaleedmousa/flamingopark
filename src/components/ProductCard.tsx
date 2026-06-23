@@ -11,7 +11,7 @@ interface ProductCardProps {
   badge?: "NEW IN" | "LIMITED" | "BEST SELLER" | "HOT" | null;
 }
 
-const ProductCard = ({ product, badge }: ProductCardProps) => {
+const ProductCard = ({ product, badge, index = 0 }: ProductCardProps) => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { addToCart, openCart } = useStore();
   const isLiked = isFavorite(product.id);
@@ -51,7 +51,12 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
   };
 
   return (
-    <Link to={`/product/${product.slug}`} className="group block" dir="rtl">
+    <Link
+      to={`/product/${product.slug}`}
+      className="group block animate-card-rise"
+      style={{ animationDelay: `${Math.min(index, 8) * 50}ms` }}
+      dir="rtl"
+    >
       <div className="relative aspect-[3/4] overflow-hidden bg-muted">
         {product.images?.[0] ? (
           <>
@@ -87,7 +92,7 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
             </span>
           )}
           {product.discount ? (
-            <span className="bg-foreground text-background text-[10px] font-medium px-2 py-1">
+            <span className="bg-foreground text-background text-[10px] font-medium px-2 py-1 animate-badge-pulse">
               -{product.discount}%
             </span>
           ) : null}
@@ -138,6 +143,15 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
         <h3 className="font-heading text-sm md:text-base text-foreground line-clamp-2 leading-snug min-h-[2.5em]">
           {product.nameAr}
         </h3>
+        {/* Mini star row */}
+        <div className="flex items-center justify-center gap-0.5 mt-1.5 text-foreground/80">
+          {Array.from({ length: 5 }).map((_, i) => (
+            <svg key={i} viewBox="0 0 20 20" className="w-3 h-3 fill-current opacity-90">
+              <path d="M10 1.5l2.6 5.3 5.9.9-4.3 4.2 1 5.9L10 14.9 4.8 17.8l1-5.9L1.5 7.7l5.9-.9z" />
+            </svg>
+          ))}
+          <span className="text-[10px] text-muted-foreground mr-1">(4.9)</span>
+        </div>
         <div className="flex items-baseline justify-center gap-2 mt-2">
           <span className="font-body text-sm text-foreground font-medium">
             {finalPrice.toFixed(0)} {currency}

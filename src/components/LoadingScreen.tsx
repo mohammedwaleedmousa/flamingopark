@@ -6,13 +6,12 @@ const LoadingScreen = ({ label = "FLAMINGO" }: { label?: string }) => (
     </div>
 
     <div className="flex flex-col items-center gap-6">
-      {/* RTL letter reveal — right to left */}
-      <div className="flex items-center gap-[2px]" dir="ltr">
-        {label.split("").map((ch, i, arr) => (
+      <div className="flex items-center gap-[2px]">
+        {"FLAMINGO".split("").map((ch, i) => (
           <span
             key={i}
-            className="logo-flamingo text-2xl tracking-[0.3em] text-foreground animate-[letter-fade_1.6s_ease-in-out_infinite]"
-            style={{ animationDelay: `${(arr.length - i) * 90}ms` }}
+            className="font-heading text-2xl tracking-[0.3em] text-foreground animate-[letter-fade_1.6s_ease-in-out_infinite]"
+            style={{ animationDelay: `${i * 90}ms` }}
           >
             {ch}
           </span>
@@ -22,17 +21,6 @@ const LoadingScreen = ({ label = "FLAMINGO" }: { label?: string }) => (
         <div className="h-full w-1/2 bg-foreground animate-[loading-bar_1.2s_ease-in-out_infinite]" />
       </div>
       <p className="text-[9px] tracking-[0.6em] uppercase text-muted-foreground">جاري التحميل</p>
-
-      {/* Double skeleton hint: old then new */}
-      <div className="flex gap-3 mt-6 opacity-60" dir="rtl">
-        {Array.from({ length: 4 }).map((_, i) => (
-          <div
-            key={i}
-            className="w-10 h-14 skeleton-wave rounded"
-            style={{ animationDelay: `${i * 120}ms` }}
-          />
-        ))}
-      </div>
     </div>
 
     <style>{`

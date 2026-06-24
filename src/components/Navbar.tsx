@@ -13,7 +13,6 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import type { User as SupaUser } from "@supabase/supabase-js";
 import { toast } from "@/hooks/use-toast";
-import AnnouncementBar from "@/components/AnnouncementBar";
 
 const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div className="pt-5 pb-1">
@@ -104,7 +103,6 @@ const Navbar = () => {
 
   return (
     <header className="fixed top-0 inset-x-0 z-50 bg-background/95 backdrop-blur border-b border-border" dir="rtl">
-      <AnnouncementBar />
       <div className="container mx-auto px-4 md:px-8">
         <div className="relative flex items-center justify-between h-16 md:h-20">
           {/* Right (in RTL): menu + search */}

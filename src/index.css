@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@400;500;600;700&family=DM+Sans:wght@400;500;600;700&family=Tajawal:wght@400;500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -131,7 +131,7 @@
 
   body {
     @apply bg-background text-foreground font-body antialiased;
-    font-family: 'SF Arabic', 'Geeza Pro', 'Tajawal', 'Inter', 'DM Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', 'Tahoma', sans-serif;
+    font-family: 'Inter', 'DM Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Arabic', 'Geeza Pro', 'Segoe UI', 'Tahoma', sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -146,25 +146,16 @@
     letter-spacing: 0.005em;
   }
 
-  /* iOS/Safari Arabic — must use SF Arabic + a slightly bolder weight to prevent the "broken/thin" look */
+  /* Arabic-specific tuning — iOS/Safari render Arabic too tightly without it */
   [dir="rtl"] {
-    font-family: 'SF Arabic', 'Geeza Pro', 'Tajawal', -apple-system, 'Segoe UI', 'Tahoma', 'Arial', sans-serif;
-    font-weight: 500;
-    letter-spacing: 0;
+    font-family: 'Inter', 'SF Arabic', 'Geeza Pro', 'Tahoma', 'Arial', sans-serif;
   }
   [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4, [dir="rtl"] h5, [dir="rtl"] h6 {
-    font-family: 'SF Arabic', 'Geeza Pro', 'Tajawal', Georgia, serif;
-    font-weight: 700;
-    line-height: 1.55;
-    letter-spacing: 0;
+    font-family: 'Playfair Display', 'SF Arabic', 'Geeza Pro', Georgia, serif;
+    line-height: 1.4;
   }
   [dir="rtl"] p, [dir="rtl"] span, [dir="rtl"] button, [dir="rtl"] a, [dir="rtl"] li {
-    line-height: 1.8;
-  }
-  /* English / Latin pieces inside RTL keep the serif/sans look */
-  [dir="rtl"] .logo-flamingo,
-  [dir="rtl"] .font-heading-en {
-    font-family: 'Playfair Display', 'Cormorant Garamond', Georgia, serif;
+    line-height: 1.7;
   }
 
   /* Prevent iOS auto-zoom on input focus */
@@ -358,59 +349,4 @@
     60% { transform: scale(0.92); }
     100% { transform: scale(1); }
   }
-}
-
-@layer utilities {
-  /* Skeleton wave shimmer */
-  @keyframes skeleton-wave {
-    0% { background-position: -200% 0; }
-    100% { background-position: 200% 0; }
-  }
-  .skeleton-wave {
-    background: linear-gradient(
-      90deg,
-      hsl(var(--muted)) 0%,
-      hsl(var(--muted-foreground) / 0.08) 50%,
-      hsl(var(--muted)) 100%
-    );
-    background-size: 200% 100%;
-    animation: skeleton-wave 1.6s ease-in-out infinite;
-  }
-
-  /* RTL marquee */
-  @keyframes marquee-rtl {
-    0% { transform: translateX(-100%); }
-    100% { transform: translateX(0%); }
-  }
-  .animate-marquee-rtl {
-    animation: marquee-rtl 30s linear infinite;
-  }
-
-  /* Letter pop (RTL — right to left reveal) */
-  @keyframes letter-pop {
-    0% { opacity: 0; transform: translateY(8px) scale(0.9); }
-    60% { opacity: 1; transform: translateY(-2px) scale(1.02); }
-    100% { opacity: 1; transform: translateY(0) scale(1); }
-  }
-
-  /* Stagger fade up for grid cards */
-  @keyframes card-rise {
-    from { opacity: 0; transform: translateY(14px); }
-    to { opacity: 1; transform: translateY(0); }
-  }
-  .animate-card-rise { animation: card-rise 0.55s cubic-bezier(0.22, 1, 0.36, 1) both; }
-
-  /* Soft pulse used for "live" dots */
-  @keyframes soft-pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.6; transform: scale(1.15); }
-  }
-  .animate-soft-pulse { animation: soft-pulse 1.6s ease-in-out infinite; }
-
-  /* Badge pulse */
-  @keyframes badge-pulse {
-    0%, 100% { box-shadow: 0 0 0 0 hsl(var(--foreground) / 0.4); }
-    50% { box-shadow: 0 0 0 6px hsl(var(--foreground) / 0); }
-  }
-  .animate-badge-pulse { animation: badge-pulse 2s ease-in-out infinite; }
 }

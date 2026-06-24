@@ -11,8 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle, Gift, X, ShieldCheck, RotateCcw, Lock } from "lucide-react";
-import CheckoutStepper from "@/components/CheckoutStepper";
+import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle, Gift, X } from "lucide-react";
 
 interface Beneficiary {
   id: string;
@@ -337,20 +336,6 @@ const CheckoutPage = () => {
   const totalDiscount = discountAmount + beneficiaryDiscount;
   const total = subtotal + deliveryFee - totalDiscount;
 
-  const isGuest = customer?.id === "guest";
-  const infoFilled = isGuest
-    ? !!(formData.name.trim() && formData.phone.trim())
-    : !!(customer?.name && customer?.phone);
-  const deliveryFilled = !!selectedDelivery;
-  const paymentFilled = paymentMethod === "bank" || (paymentMethod === "cod" && (codRegions.length === 0 || !!selectedRegion));
-
-  const stepperSteps = [
-    { label: "المعلومات", done: infoFilled, active: !infoFilled },
-    { label: "التوصيل", done: deliveryFilled, active: infoFilled && !deliveryFilled },
-    { label: "الدفع", done: paymentFilled, active: deliveryFilled && !paymentFilled },
-    { label: "التأكيد", done: false, active: paymentFilled },
-  ];
-
   const handleCopyAccount = (account: string) => {
     navigator.clipboard.writeText(account);
     toast({ title: "تم النسخ", description: "تم نسخ رقم الحساب" });
@@ -539,23 +524,7 @@ const CheckoutPage = () => {
           >
             إتمام <span className="text-gold">الطلب</span>
           </motion.h1>
-
-          <CheckoutStepper steps={stepperSteps} />
-
-          {/* Trust badges */}
-          <div className="grid grid-cols-3 gap-2 md:gap-4 max-w-2xl mx-auto mb-8">
-            {[
-              { icon: Lock, t: "دفع آمن" },
-              { icon: RotateCcw, t: "إرجاع 14 يوم" },
-              { icon: ShieldCheck, t: "ضمان الجودة" },
-            ].map((b) => (
-              <div key={b.t} className="flex items-center justify-center gap-2 py-2 px-3 rounded-full bg-muted/60 border border-border/60">
-                <b.icon className="w-4 h-4 text-foreground" />
-                <span className="text-[11px] md:text-xs font-medium text-foreground">{b.t}</span>
-              </div>
-            ))}
-          </div>
-
+          
           {/* Beneficiary Discount Banner */}
           {activeBeneficiary && (
             <motion.div

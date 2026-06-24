@@ -1,12 +1,24 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Input } from '@/components/ui/input';
-import { Eye, MessageCircle, Search, ShoppingCart, X, Phone, MapPin, Package, Trash2 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
-import { cn } from '@/lib/utils';
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
+import {
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Eye, MessageCircle, Search, ShoppingCart, X, Phone, MapPin, Package,
+  Trash2, Loader2, Globe2,
+} from "lucide-react";
+import { cn } from "@/lib/utils";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface Order {
   id: string;
@@ -26,543 +38,361 @@ interface Order {
   discount_amount?: number;
 }
 
+const PAGE_SIZE = 25;
+
 const statusOptions = [
-  { value: 'pending', label: 'قيد الانتظار', color: 'bg-yellow-500/15 text-yellow-600 border-yellow-500/30' },
-  { value: 'confirmed', label: 'مؤكد', color: 'bg-blue-500/15 text-blue-600 border-blue-500/30' },
-  { value: 'processing', label: 'قيد التجهيز', color: 'bg-purple-500/15 text-purple-600 border-purple-500/30' },
-  { value: 'shipped', label: 'تم الشحن', color: 'bg-indigo-500/15 text-indigo-600 border-indigo-500/30' },
-  { value: 'delivered', label: 'تم التوصيل', color: 'bg-green-500/15 text-green-600 border-green-500/30' },
-  { value: 'cancelled', label: 'ملغي', color: 'bg-red-500/15 text-red-600 border-red-500/30' },
+  { value: "pending",    label: "قيد الانتظار", color: "bg-yellow-500/15 text-yellow-600 border-yellow-500/30" },
+  { value: "confirmed",  label: "مؤكد",         color: "bg-blue-500/15 text-blue-600 border-blue-500/30" },
+  { value: "processing", label: "قيد التجهيز",  color: "bg-purple-500/15 text-purple-600 border-purple-500/30" },
+  { value: "shipped",    label: "تم الشحن",     color: "bg-indigo-500/15 text-indigo-600 border-indigo-500/30" },
+  { value: "delivered",  label: "تم التوصيل",   color: "bg-green-500/15 text-green-600 border-green-500/30" },
+  { value: "cancelled",  label: "ملغي",         color: "bg-red-500/15 text-red-600 border-red-500/30" },
 ];
+
+const currencyOf = (c: string) => (c === "SA" ? "ر.س" : c === "YE" ? "ر.ي" : "");
 
 const AdminOrdersPage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
-  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
-  const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
 
-  useEffect(() => {
-    fetchOrders();
-  }, []);
+  const [searchInput, setSearchInput] = useState("");
+  const search = useDebounce(searchInput, 350);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [countryFilter, setCountryFilter] = useState<string>("all");
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{ id?: string; bulk?: boolean } | null>(null);
+  const [bulkStatus, setBulkStatus] = useState<string>("");
+
+  useEffect(() => { setPage(1); }, [search, statusFilter, countryFilter]);
+  useEffect(() => { fetchOrders(); /* eslint-disable-next-line */ }, [search, statusFilter, countryFilter, page]);
 
   const fetchOrders = async () => {
-    const { data, error } = await supabase
-      .from('orders')
-      .select('*')
-      .order('created_at', { ascending: false });
+    setIsLoading(true);
+    setSelected(new Set());
+    let q = supabase.from("orders").select("*", { count: "exact" });
 
-    if (error) {
-      toast({ title: 'خطأ', description: 'فشل في تحميل الطلبات', variant: 'destructive' });
-    } else {
-      setOrders(data || []);
+    if (search.trim()) {
+      const term = `%${search.trim()}%`;
+      q = q.or(`order_number.ilike.${term},customer_name.ilike.${term},customer_phone.ilike.${term}`);
     }
+    if (statusFilter !== "all") q = q.eq("status", statusFilter);
+    if (countryFilter !== "all") q = q.eq("country", countryFilter);
+
+    const from = (page - 1) * PAGE_SIZE;
+    const to = from + PAGE_SIZE - 1;
+    const { data, count, error } = await q.order("created_at", { ascending: false }).range(from, to);
+
+    if (error) toast({ title: "خطأ", description: "فشل تحميل الطلبات", variant: "destructive" });
+    else { setOrders((data || []) as Order[]); setTotal(count || 0); }
     setIsLoading(false);
   };
 
   const updateStatus = async (orderId: string, newStatus: string) => {
-    const { error } = await supabase
-      .from('orders')
-      .update({ status: newStatus })
-      .eq('id', orderId);
+    setOrders(os => os.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
+    if (selectedOrder?.id === orderId) setSelectedOrder({ ...selectedOrder, status: newStatus });
+    const { error } = await supabase.from("orders").update({ status: newStatus }).eq("id", orderId);
+    if (error) { toast({ title: "خطأ", description: "فشل تحديث الحالة", variant: "destructive" }); fetchOrders(); }
+    else toast({ title: "تم", description: "تم تحديث حالة الطلب" });
+  };
 
-    if (error) {
-      toast({ title: 'خطأ', description: 'فشل في تحديث الحالة', variant: 'destructive' });
-    } else {
-      setOrders(orders.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-      if (selectedOrder?.id === orderId) {
-        setSelectedOrder({ ...selectedOrder, status: newStatus });
-      }
-      toast({ title: 'تم', description: 'تم تحديث حالة الطلب' });
+  const deleteOne = async (id: string) => {
+    const { error } = await supabase.from("orders").delete().eq("id", id);
+    if (error) toast({ title: "خطأ", description: "فشل في حذف الطلب", variant: "destructive" });
+    else {
+      toast({ title: "تم", description: "تم حذف الطلب" });
+      if (selectedOrder?.id === id) setSelectedOrder(null);
+      fetchOrders();
     }
   };
 
+  const bulkUpdateStatus = async (s: string) => {
+    if (!s || selected.size === 0) return;
+    setBulkBusy(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from("orders").update({ status: s }).in("id", ids);
+    setBulkBusy(false);
+    setBulkStatus("");
+    if (error) toast({ title: "خطأ", description: "فشل التحديث الجماعي", variant: "destructive" });
+    else { toast({ title: "تم", description: `تم تحديث ${ids.length} طلب` }); fetchOrders(); }
+  };
+
+  const bulkDelete = async () => {
+    if (selected.size === 0) return;
+    setBulkBusy(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from("orders").delete().in("id", ids);
+    setBulkBusy(false);
+    setConfirmDelete(null);
+    if (error) toast({ title: "خطأ", description: "فشل الحذف الجماعي", variant: "destructive" });
+    else { toast({ title: "تم", description: `تم حذف ${ids.length} طلب` }); fetchOrders(); }
+  };
+
+  const toggleSelectAll = () =>
+    setSelected(selected.size === orders.length ? new Set() : new Set(orders.map(o => o.id)));
+  const toggleSelect = (id: string) => {
+    const n = new Set(selected); n.has(id) ? n.delete(id) : n.add(id); setSelected(n);
+  };
+  const allSelected = useMemo(() => orders.length > 0 && selected.size === orders.length, [orders, selected]);
+
   const getStatusBadge = (status: string) => {
-    const statusInfo = statusOptions.find(s => s.value === status);
-    return (
-      <span className={cn("px-2.5 py-1 rounded-full text-xs font-medium border", statusInfo?.color)}>
-        {statusInfo?.label || status}
-      </span>
-    );
+    const info = statusOptions.find(s => s.value === status);
+    return <span className={cn("px-2 py-0.5 rounded-full text-[10px] font-medium border whitespace-nowrap", info?.color)}>{info?.label || status}</span>;
   };
 
   const openWhatsApp = (order: Order) => {
     const message = `مرحباً ${order.customer_name}، بخصوص طلبك رقم ${order.order_number}`;
-    const storePhones: Record<string, string> = {
-      YE: '967782676054',
-      SA: '966557302919'
-    };
-    const storePhone = order.country === 'YE' ? storePhones.YE : storePhones.SA;
-    let toPhone = order.customer_phone.replace(/\D/g, '');
-    
-    // إضافة رمز البلد
-    if (order.country === 'YE') {
-      if (toPhone.startsWith('0')) toPhone = toPhone.substring(1);
-      if (!toPhone.startsWith('967')) toPhone = '967' + toPhone;
-    } else {
-      if (toPhone.startsWith('0')) toPhone = toPhone.substring(1);
-      if (!toPhone.startsWith('966')) toPhone = '966' + toPhone;
-    }
-    
-    const countryLabel = order.country === 'YE' ? '🇾🇪 اليمن' : '🇸🇦 السعودية';
-    alert(`⚠️ أرسل من رقمك ${countryLabel}: ${storePhone}\n\nسيتم فتح محادثة مع العميل الآن`);
-    window.open(`https://wa.me/${toPhone}?text=${encodeURIComponent(message)}`, '_blank');
-  };
-
-  const deleteOrder = async (id: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا الطلب؟')) return;
-
-    const { error } = await supabase.from('orders').delete().eq('id', id);
-
-    if (error) {
-      toast({ title: 'خطأ', description: 'فشل في حذف الطلب', variant: 'destructive' });
-    } else {
-      setOrders(orders.filter(o => o.id !== id));
-      if (selectedOrder?.id === id) setSelectedOrder(null);
-      toast({ title: 'تم', description: 'تم حذف الطلب' });
-    }
-  };
-
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.order_number.includes(search) || 
-                         order.customer_name.includes(search) ||
-                         order.customer_phone.includes(search);
-    const matchesStatus = statusFilter === 'all' || order.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
-
-  const stats = {
-    total: orders.length,
-    pending: orders.filter(o => o.status === 'pending').length,
-    processing: orders.filter(o => ['confirmed', 'processing', 'shipped'].includes(o.status)).length,
-    completed: orders.filter(o => o.status === 'delivered').length,
+    let toPhone = order.customer_phone.replace(/\D/g, "");
+    if (toPhone.startsWith("0")) toPhone = toPhone.substring(1);
+    if (order.country === "YE" && !toPhone.startsWith("967")) toPhone = "967" + toPhone;
+    if (order.country === "SA" && !toPhone.startsWith("966")) toPhone = "966" + toPhone;
+    window.open(`https://wa.me/${toPhone}?text=${encodeURIComponent(message)}`, "_blank");
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <h1 className="font-heading text-2xl md:text-3xl text-foreground">الطلبات</h1>
           <p className="text-muted-foreground text-sm mt-1">
-            {stats.total} طلب • {stats.pending} قيد الانتظار
+            <span className="font-medium text-foreground">{total.toLocaleString("ar-EG")}</span> طلب إجمالاً
           </p>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        {[
-          { label: 'الكل', value: stats.total, filter: 'all', color: 'from-primary/20 to-primary/10 border-primary/20' },
-          { label: 'قيد الانتظار', value: stats.pending, filter: 'pending', color: 'from-yellow-500/20 to-yellow-500/10 border-yellow-500/20' },
-          { label: 'قيد المعالجة', value: stats.processing, filter: 'processing', color: 'from-blue-500/20 to-blue-500/10 border-blue-500/20' },
-          { label: 'مكتملة', value: stats.completed, filter: 'delivered', color: 'from-green-500/20 to-green-500/10 border-green-500/20' },
-        ].map((stat) => (
-          <button
-            key={stat.filter}
-            onClick={() => setStatusFilter(stat.filter === 'processing' ? 'confirmed' : stat.filter)}
-            className={cn(
-              "p-4 rounded-xl text-center transition-all border bg-gradient-to-br",
-              stat.color,
-              statusFilter === stat.filter && 'ring-2 ring-offset-2 ring-primary'
+      {/* Filters */}
+      <div className="bg-card border border-border rounded-2xl p-3 md:p-4 space-y-3">
+        <div className="flex flex-col md:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="ابحث برقم الطلب، اسم العميل، أو رقم الهاتف..."
+              className="pr-9 bg-background"
+              dir="rtl"
+            />
+            {searchInput && (
+              <button onClick={() => setSearchInput("")} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
             )}
-          >
-            <p className="text-2xl font-heading">{stat.value}</p>
-            <p className="text-xs text-muted-foreground">{stat.label}</p>
-          </button>
-        ))}
-      </div>
-
-      {/* Search & Filter */}
-      <div className="flex flex-col sm:flex-row gap-3">
-        <div className="relative flex-1">
-          <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-          <Input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="بحث برقم الطلب أو اسم العميل..."
-            className="pr-10 bg-card"
-            dir="rtl"
-          />
+          </div>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-full md:w-40"><SelectValue placeholder="الحالة" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل الحالات</SelectItem>
+              {statusOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
+            </SelectContent>
+          </Select>
+          <Select value={countryFilter} onValueChange={setCountryFilter}>
+            <SelectTrigger className="w-full md:w-36"><Globe2 className="w-3.5 h-3.5 ml-1" /><SelectValue placeholder="البلد" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل الدول</SelectItem>
+              <SelectItem value="SA">🇸🇦 السعودية</SelectItem>
+              <SelectItem value="YE">🇾🇪 اليمن</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-40 bg-card">
-            <SelectValue placeholder="الحالة" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">كل الحالات</SelectItem>
-            {statusOptions.map((opt) => (
-              <SelectItem key={opt.value} value={opt.value}>
-                {opt.label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-      </div>
 
-      {/* Mobile Cards */}
-      <div className="md:hidden space-y-3">
-        {filteredOrders.map((order, index) => (
-          <motion.div
-            key={order.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="bg-card border border-border rounded-xl p-4"
-          >
-            <div className="flex items-start justify-between gap-3 mb-3">
-              <div>
-                <p className="font-mono text-sm text-primary">{order.order_number}</p>
-                <p className="font-heading text-foreground">{order.customer_name}</p>
-              </div>
-              {getStatusBadge(order.status)}
-            </div>
-            
-            <div className="flex items-center justify-between text-sm mb-3">
-              <span className="text-muted-foreground">
-                {order.country === 'SA' ? '🇸🇦' : '🇾🇪'} • {order.payment_method === 'cod' ? 'عند الاستلام' : 'بنكي'}
-              </span>
-              <span className="font-heading text-primary text-lg">{parseFloat(String(order.total)).toFixed(0)} {order.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
-            </div>
-
-            <div className="text-xs text-muted-foreground mb-4">
-              {new Date(order.created_at).toLocaleDateString('ar-SA', { 
-                year: 'numeric', 
-                month: 'short', 
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
-              })}
-            </div>
-
-            <div className="flex items-center gap-2 pt-3 border-t border-border">
-              <Select
-                value={order.status}
-                onValueChange={(value) => updateStatus(order.id, value)}
-              >
-                <SelectTrigger className="flex-1 h-9 text-xs">
-                  <SelectValue />
-                </SelectTrigger>
+        {selected.size > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-primary/5 border border-primary/20">
+            <p className="text-sm">تم تحديد <span className="font-bold text-primary">{selected.size}</span> طلب</p>
+            <div className="flex gap-2 flex-wrap items-center">
+              <Select value={bulkStatus} onValueChange={(v) => { setBulkStatus(v); bulkUpdateStatus(v); }}>
+                <SelectTrigger className="h-8 w-44"><SelectValue placeholder="تغيير الحالة إلى..." /></SelectTrigger>
                 <SelectContent>
-                  {statusOptions.map((opt) => (
-                    <SelectItem key={opt.value} value={opt.value}>
-                      {opt.label}
-                    </SelectItem>
-                  ))}
+                  {statusOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Button
-                size="icon"
-                variant="outline"
-                onClick={() => setSelectedOrder(order)}
-              >
-                <Eye className="w-4 h-4" />
+              <Button size="sm" variant="destructive" disabled={bulkBusy} onClick={() => setConfirmDelete({ bulk: true })}>
+                <Trash2 className="w-4 h-4 ml-1" /> حذف
               </Button>
-              <Button
-                size="icon"
-                variant="outline"
-                className="text-green-600 border-green-600/30 hover:bg-green-600/10"
-                onClick={() => openWhatsApp(order)}
-              >
-                <MessageCircle className="w-4 h-4" />
-              </Button>
-              <Button
-                size="icon"
-                variant="outline"
-                className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                onClick={() => deleteOrder(order.id)}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>إلغاء</Button>
             </div>
-          </motion.div>
-        ))}
-        {filteredOrders.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            <ShoppingCart className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>{isLoading ? 'جاري التحميل...' : 'لا توجد طلبات'}</p>
           </div>
         )}
       </div>
 
-      {/* Desktop Table */}
-      <div className="hidden md:block bg-card border border-border rounded-xl overflow-hidden">
+      {/* Mobile cards */}
+      <div className="md:hidden space-y-3">
+        {isLoading && orders.length === 0 ? (
+          <div className="text-center py-10"><Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" /></div>
+        ) : orders.length === 0 ? (
+          <div className="text-center py-12 text-muted-foreground bg-card border border-border rounded-xl">
+            <ShoppingCart className="w-10 h-10 mx-auto mb-3 opacity-50" /> لا توجد طلبات
+          </div>
+        ) : orders.map(order => (
+          <div key={order.id} className={cn("bg-card border border-border rounded-xl p-3", selected.has(order.id) && "ring-1 ring-primary")}>
+            <div className="flex items-start gap-3">
+              <Checkbox checked={selected.has(order.id)} onCheckedChange={() => toggleSelect(order.id)} className="mt-1" />
+              <div className="flex-1 min-w-0">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="font-mono text-xs text-primary">{order.order_number}</p>
+                    <p className="font-heading text-sm truncate">{order.customer_name}</p>
+                  </div>
+                  {getStatusBadge(order.status)}
+                </div>
+                <div className="flex items-center justify-between text-xs mt-1">
+                  <span className="text-muted-foreground">{order.country === "SA" ? "🇸🇦" : "🇾🇪"} • {order.payment_method === "cod" ? "عند الاستلام" : "بنكي"}</span>
+                  <span className="font-heading text-primary">{parseFloat(String(order.total)).toFixed(0)} {currencyOf(order.country)}</span>
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1">{new Date(order.created_at).toLocaleString("ar-SA")}</p>
+              </div>
+            </div>
+            <div className="flex gap-2 mt-3 pt-3 border-t border-border">
+              <Select value={order.status} onValueChange={(v) => updateStatus(order.id, v)}>
+                <SelectTrigger className="flex-1 h-8 text-xs"><SelectValue /></SelectTrigger>
+                <SelectContent>{statusOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+              </Select>
+              <Button size="icon" variant="outline" className="h-8 w-8" onClick={() => setSelectedOrder(order)}><Eye className="w-4 h-4" /></Button>
+              <Button size="icon" variant="outline" className="h-8 w-8 text-green-600" onClick={() => openWhatsApp(order)}><MessageCircle className="w-4 h-4" /></Button>
+              <Button size="icon" variant="outline" className="h-8 w-8 text-destructive" onClick={() => setConfirmDelete({ id: order.id })}><Trash2 className="w-4 h-4" /></Button>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Desktop table */}
+      <div className="hidden md:block bg-card border border-border rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="text-right p-4 font-heading text-sm">رقم الطلب</th>
-                <th className="text-right p-4 font-heading text-sm">العميل</th>
-                <th className="text-right p-4 font-heading text-sm">البلد</th>
-                <th className="text-right p-4 font-heading text-sm">المجموع</th>
-                <th className="text-right p-4 font-heading text-sm">الدفع</th>
-                <th className="text-right p-4 font-heading text-sm">الحالة</th>
-                <th className="text-right p-4 font-heading text-sm">التاريخ</th>
-                <th className="text-right p-4 font-heading text-sm">الإجراءات</th>
+            <thead className="bg-muted/40">
+              <tr className="text-xs">
+                <th className="p-3 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} /></th>
+                <th className="text-right p-3 font-heading">رقم الطلب</th>
+                <th className="text-right p-3 font-heading">العميل</th>
+                <th className="text-right p-3 font-heading">البلد</th>
+                <th className="text-right p-3 font-heading">المجموع</th>
+                <th className="text-right p-3 font-heading">الدفع</th>
+                <th className="text-right p-3 font-heading">الحالة</th>
+                <th className="text-right p-3 font-heading">التاريخ</th>
+                <th className="text-right p-3 font-heading">الإجراءات</th>
               </tr>
             </thead>
             <tbody>
-              {filteredOrders.map((order) => (
-                <tr key={order.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-                  <td className="p-4 font-mono text-sm text-primary">{order.order_number}</td>
-                  <td className="p-4">
-                    <p className="font-body">{order.customer_name}</p>
-                    <p className="text-xs text-muted-foreground" dir="ltr">{order.customer_phone}</p>
-                  </td>
-                  <td className="p-4 text-lg">{order.country === 'SA' ? '🇸🇦' : '🇾🇪'}</td>
-                  <td className="p-4 font-heading text-primary">{parseFloat(String(order.total)).toFixed(0)} {order.country === 'SA' ? 'ر.س' : 'ر.ي'}</td>
-                  <td className="p-4 text-sm">{order.payment_method === 'cod' ? 'عند الاستلام' : 'بنكي'}</td>
-                  <td className="p-4">
-                    <Select
-                      value={order.status}
-                      onValueChange={(value) => updateStatus(order.id, value)}
-                    >
-                      <SelectTrigger className="w-32 h-8 text-xs">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {statusOptions.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value}>
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
+              {isLoading && orders.length === 0 ? (
+                <tr><td colSpan={9} className="p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              ) : orders.length === 0 ? (
+                <tr><td colSpan={9} className="p-12 text-center text-muted-foreground"><ShoppingCart className="w-10 h-10 mx-auto mb-3 opacity-50" /> لا توجد طلبات</td></tr>
+              ) : orders.map(order => (
+                <tr key={order.id} className={cn("border-b border-border hover:bg-muted/30 transition-colors", selected.has(order.id) && "bg-primary/5")}>
+                  <td className="p-3"><Checkbox checked={selected.has(order.id)} onCheckedChange={() => toggleSelect(order.id)} /></td>
+                  <td className="p-3 font-mono text-xs text-primary">{order.order_number}</td>
+                  <td className="p-3"><p className="font-body text-sm">{order.customer_name}</p><p className="text-xs text-muted-foreground" dir="ltr">{order.customer_phone}</p></td>
+                  <td className="p-3 text-lg">{order.country === "SA" ? "🇸🇦" : "🇾🇪"}</td>
+                  <td className="p-3 font-heading text-primary text-sm">{parseFloat(String(order.total)).toFixed(0)} {currencyOf(order.country)}</td>
+                  <td className="p-3 text-xs">{order.payment_method === "cod" ? "عند الاستلام" : "بنكي"}</td>
+                  <td className="p-3">
+                    <Select value={order.status} onValueChange={(v) => updateStatus(order.id, v)}>
+                      <SelectTrigger className="w-32 h-8 text-xs"><SelectValue /></SelectTrigger>
+                      <SelectContent>{statusOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                     </Select>
                   </td>
-                  <td className="p-4 text-sm text-muted-foreground">
-                    {new Date(order.created_at).toLocaleDateString('ar-SA')}
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="hover:bg-muted"
-                        onClick={() => setSelectedOrder(order)}
-                      >
-                        <Eye className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-green-600 hover:bg-green-600/10"
-                        onClick={() => openWhatsApp(order)}
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                      </Button>
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="text-destructive hover:bg-destructive/10"
-                        onClick={() => deleteOrder(order.id)}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                  <td className="p-3 text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString("ar-SA")}</td>
+                  <td className="p-3">
+                    <div className="flex gap-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setSelectedOrder(order)}><Eye className="w-4 h-4" /></Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => openWhatsApp(order)}><MessageCircle className="w-4 h-4" /></Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setConfirmDelete({ id: order.id })}><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </td>
                 </tr>
               ))}
-              {filteredOrders.length === 0 && (
-                <tr>
-                  <td colSpan={8} className="p-12 text-center text-muted-foreground">
-                    <ShoppingCart className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                    <p>{isLoading ? 'جاري التحميل...' : 'لا توجد طلبات'}</p>
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
+        <AdminPagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} className="px-4 border-t border-border" />
+      </div>
+
+      <div className="md:hidden bg-card border border-border rounded-2xl px-3">
+        <AdminPagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} />
       </div>
 
       {/* Order Details Modal */}
-      <AnimatePresence>
-        {selectedOrder && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-secondary/90"
-            onClick={() => setSelectedOrder(null)}
-          >
-            <motion.div
-              initial={{ y: '100%' }}
-              animate={{ y: 0 }}
-              exit={{ y: '100%' }}
-              transition={{ type: 'spring', damping: 25 }}
-              className="bg-background border-t md:border border-border rounded-t-2xl md:rounded-xl w-full md:max-w-2xl max-h-[90vh] overflow-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Modal Header */}
-              <div className="sticky top-0 bg-background p-4 md:p-6 border-b border-border flex items-center justify-between z-10">
-                <div>
-                  <h2 className="font-heading text-lg md:text-xl">تفاصيل الطلب</h2>
-                  <p className="text-sm text-primary font-mono">#{selectedOrder.order_number}</p>
-                </div>
-                <Button size="icon" variant="ghost" onClick={() => setSelectedOrder(null)}>
-                  <X className="w-5 h-5" />
-                </Button>
+      {selectedOrder && (
+        <div className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-0 md:p-4 bg-foreground/40 backdrop-blur-sm animate-fade-in" onClick={() => setSelectedOrder(null)}>
+          <div className="bg-background border-t md:border border-border rounded-t-2xl md:rounded-2xl w-full md:max-w-2xl max-h-[90vh] overflow-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="sticky top-0 bg-background p-4 md:p-6 border-b border-border flex items-center justify-between z-10">
+              <div>
+                <h2 className="font-heading text-lg md:text-xl">تفاصيل الطلب</h2>
+                <p className="text-sm text-primary font-mono">#{selectedOrder.order_number}</p>
               </div>
-
-              <div className="p-4 md:p-6 space-y-6">
-                {/* Status */}
-                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl">
-                  <span className="text-sm text-muted-foreground">حالة الطلب</span>
-                  <Select
-                    value={selectedOrder.status}
-                    onValueChange={(value) => updateStatus(selectedOrder.id, value)}
-                  >
-                    <SelectTrigger className="w-40 h-9">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {statusOptions.map((opt) => (
-                        <SelectItem key={opt.value} value={opt.value}>
-                          {opt.label}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              <Button size="icon" variant="ghost" onClick={() => setSelectedOrder(null)}><X className="w-5 h-5" /></Button>
+            </div>
+            <div className="p-4 md:p-6 space-y-6">
+              <div className="flex items-center justify-between p-4 bg-muted/50 rounded-xl">
+                <span className="text-sm text-muted-foreground">حالة الطلب</span>
+                <Select value={selectedOrder.status} onValueChange={(v) => updateStatus(selectedOrder.id, v)}>
+                  <SelectTrigger className="w-40 h-9"><SelectValue /></SelectTrigger>
+                  <SelectContent>{statusOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-3">
+                <div className="flex items-center gap-3 p-3 bg-card border border-border rounded-lg">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center"><span>{selectedOrder.country === "SA" ? "🇸🇦" : "🇾🇪"}</span></div>
+                  <div><p className="font-heading">{selectedOrder.customer_name}</p><p className="text-xs text-muted-foreground">العميل</p></div>
                 </div>
-
-                {/* Customer Info */}
-                <div className="space-y-3">
-                  <h3 className="font-heading text-sm text-muted-foreground">معلومات العميل</h3>
-                  <div className="grid gap-3">
-                    <div className="flex items-center gap-3 p-3 bg-card border border-border rounded-lg">
-                      <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
-                        <span className="text-lg">{selectedOrder.country === 'SA' ? '🇸🇦' : '🇾🇪'}</span>
-                      </div>
-                      <div>
-                        <p className="font-heading">{selectedOrder.customer_name}</p>
-                        <p className="text-xs text-muted-foreground">العميل</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3 p-3 bg-card border border-border rounded-lg">
-                      <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center">
-                        <Phone className="w-5 h-5 text-green-600" />
-                      </div>
-                      <div className="flex-1">
-                        <p dir="ltr" className="font-mono">{selectedOrder.customer_phone}</p>
-                        <p className="text-xs text-muted-foreground">الهاتف</p>
-                      </div>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        className="text-green-600 border-green-600/30"
-                        onClick={() => openWhatsApp(selectedOrder)}
-                      >
-                        <MessageCircle className="w-4 h-4 ml-2" />
-                        واتساب
-                      </Button>
-                    </div>
-                    <div className="flex items-start gap-3 p-3 bg-card border border-border rounded-lg">
-                      <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center shrink-0">
-                        <MapPin className="w-5 h-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm">{selectedOrder.customer_address}</p>
-                        <p className="text-xs text-muted-foreground mt-1">العنوان</p>
-                      </div>
-                    </div>
-                  </div>
+                <div className="flex items-center gap-3 p-3 bg-card border border-border rounded-lg">
+                  <div className="w-10 h-10 bg-green-500/10 rounded-full flex items-center justify-center"><Phone className="w-5 h-5 text-green-600" /></div>
+                  <div className="flex-1"><p dir="ltr" className="font-mono">{selectedOrder.customer_phone}</p><p className="text-xs text-muted-foreground">الهاتف</p></div>
+                  <Button size="sm" variant="outline" className="text-green-600 border-green-600/30" onClick={() => openWhatsApp(selectedOrder)}><MessageCircle className="w-4 h-4 ml-2" />واتساب</Button>
                 </div>
-
-                {/* Products */}
-                <div className="space-y-3">
-                  <h3 className="font-heading text-sm text-muted-foreground flex items-center gap-2">
-                    <Package className="w-4 h-4" />
-                    المنتجات
-                  </h3>
-                  <div className="space-y-2">
-                    {(selectedOrder.items as any[])?.map((item, index) => (
-                      <div key={index} className="p-3 bg-card border border-border rounded-lg">
-                        <div className="flex items-center gap-3">
-                          {(item.image || item.product_image) && (
-                            <img src={item.image || item.product_image} alt="" className="w-14 h-14 object-cover rounded-lg" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="font-heading text-sm truncate">{item.name || item.product_name}</p>
-                            <p className="text-xs text-muted-foreground">{item.quantity} × {item.price} {selectedOrder?.country === 'SA' ? 'ر.س' : 'ر.ي'}</p>
-                            {item.selected_size && (
-                              <p className="text-xs text-muted-foreground">الحجم: {item.selected_size}</p>
-                            )}
-                          </div>
-                          <span className="font-heading text-primary shrink-0">
-                            {(item.quantity * item.price).toFixed(0)} {selectedOrder?.country === 'SA' ? 'ر.س' : 'ر.ي'}
-                          </span>
-                        </div>
-                        {/* Accessories with images */}
-                        {item.selected_accessories && item.selected_accessories.length > 0 && (
-                          <div className="mt-3 pt-3 border-t border-border">
-                            <p className="text-xs text-muted-foreground mb-2">الملحقات:</p>
-                            <div className="flex flex-wrap gap-2">
-                              {item.selected_accessories.map((acc: any, i: number) => (
-                                <div 
-                                  key={i} 
-                                  className="flex items-center gap-2 bg-muted px-2 py-1.5 rounded-lg border border-border"
-                                >
-                                  {acc.image_url && (
-                                    <img 
-                                      src={acc.image_url} 
-                                      alt={acc.name_ar || acc.name} 
-                                      className="w-8 h-8 object-cover rounded"
-                                    />
-                                  )}
-                                  <div className="text-xs">
-                                    <span className="font-medium">{acc.name_ar || acc.name}</span>
-                                    <span className="text-muted-foreground mx-1">×{acc.quantity}</span>
-                                    <span className="text-primary">+{(acc.price * acc.quantity).toFixed(0)}</span>
-                                  </div>
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
+                {selectedOrder.customer_address && (
+                  <div className="flex items-start gap-3 p-3 bg-card border border-border rounded-lg">
+                    <div className="w-10 h-10 bg-blue-500/10 rounded-full flex items-center justify-center shrink-0"><MapPin className="w-5 h-5 text-blue-600" /></div>
+                    <div><p className="text-sm">{selectedOrder.customer_address}</p><p className="text-xs text-muted-foreground mt-1">العنوان</p></div>
+                  </div>
+                )}
+              </div>
+              <div className="space-y-3">
+                <h3 className="font-heading text-sm text-muted-foreground flex items-center gap-2"><Package className="w-4 h-4" /> المنتجات</h3>
+                <div className="space-y-2">
+                  {(selectedOrder.items as any[])?.map((item, i) => (
+                    <div key={i} className="p-3 bg-card border border-border rounded-lg flex items-center gap-3">
+                      {(item.image || item.product_image) && <img src={item.image || item.product_image} alt="" className="w-14 h-14 object-cover rounded-lg" />}
+                      <div className="flex-1 min-w-0">
+                        <p className="font-heading text-sm truncate">{item.name || item.product_name}</p>
+                        <p className="text-xs text-muted-foreground">{item.quantity} × {item.price} {currencyOf(selectedOrder.country)}</p>
                       </div>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Totals */}
-                <div className="border-t border-border pt-4 space-y-3">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">المجموع الفرعي</span>
-                    <span>{parseFloat(String(selectedOrder.subtotal)).toFixed(0)} {selectedOrder.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">التوصيل</span>
-                    <span>{parseFloat(String(selectedOrder.delivery_fee)).toFixed(0)} {selectedOrder.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
-                  </div>
-                  {selectedOrder.discount_amount && selectedOrder.discount_amount > 0 && (
-                    <div className="flex justify-between text-sm text-green-600">
-                      <span className="flex items-center gap-2">
-                        الخصم
-                        {selectedOrder.coupon_code && (
-                          <span className="font-mono bg-green-500/15 px-1.5 py-0.5 rounded text-xs">
-                            {selectedOrder.coupon_code}
-                          </span>
-                        )}
-                      </span>
-                      <span>-{parseFloat(String(selectedOrder.discount_amount)).toFixed(0)} {selectedOrder.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
+                      <span className="font-heading text-primary text-sm">{(item.quantity * item.price).toFixed(0)} {currencyOf(selectedOrder.country)}</span>
                     </div>
-                  )}
-                  <div className="flex justify-between font-heading text-lg pt-3 border-t border-border">
-                    <span>الإجمالي</span>
-                    <span className="text-primary">{parseFloat(String(selectedOrder.total)).toFixed(0)} {selectedOrder.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm text-muted-foreground pt-2">
-                    <span>طريقة الدفع</span>
-                    <span className="bg-muted px-2 py-1 rounded">
-                      {selectedOrder.payment_method === 'cod' ? 'الدفع عند الاستلام' : 'تحويل بنكي'}
-                    </span>
-                  </div>
+                  ))}
                 </div>
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+              <div className="border-t border-border pt-4 space-y-2 text-sm">
+                <div className="flex justify-between"><span className="text-muted-foreground">المجموع الفرعي</span><span>{parseFloat(String(selectedOrder.subtotal)).toFixed(0)} {currencyOf(selectedOrder.country)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">التوصيل</span><span>{parseFloat(String(selectedOrder.delivery_fee)).toFixed(0)} {currencyOf(selectedOrder.country)}</span></div>
+                {!!selectedOrder.discount_amount && selectedOrder.discount_amount > 0 && (
+                  <div className="flex justify-between text-green-600"><span>الخصم {selectedOrder.coupon_code && <Badge variant="outline" className="mr-1 text-[10px]">{selectedOrder.coupon_code}</Badge>}</span><span>-{parseFloat(String(selectedOrder.discount_amount)).toFixed(0)} {currencyOf(selectedOrder.country)}</span></div>
+                )}
+                <div className="flex justify-between font-heading text-lg pt-3 border-t border-border"><span>الإجمالي</span><span className="text-primary">{parseFloat(String(selectedOrder.total)).toFixed(0)} {currencyOf(selectedOrder.country)}</span></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+            <AlertDialogDescription>{confirmDelete?.bulk ? `سيتم حذف ${selected.size} طلب نهائياً.` : "سيتم حذف هذا الطلب نهائياً."}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => {
+              if (confirmDelete?.bulk) bulkDelete();
+              else if (confirmDelete?.id) { deleteOne(confirmDelete.id); setConfirmDelete(null); }
+            }}>حذف</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

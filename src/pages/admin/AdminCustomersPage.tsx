@@ -1,20 +1,20 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from '@/hooks/use-toast';
-import { Input } from '@/components/ui/input';
-import { Search, MessageCircle, Trash2 } from 'lucide-react';
-import { Button } from '@/components/ui/button';
+import { useEffect, useMemo, useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "@/hooks/use-toast";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
+  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
+} from "@/components/ui/select";
+import {
+  AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
+  AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { Search, MessageCircle, Trash2, Users, Loader2, X, Globe2 } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { AdminPagination } from "@/components/admin/AdminPagination";
+import { useDebounce } from "@/hooks/useDebounce";
 
 interface Customer {
   id: string;
@@ -24,167 +24,178 @@ interface Customer {
   created_at: string;
 }
 
+const PAGE_SIZE = 30;
+
 const AdminCustomersPage = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
-  const [search, setSearch] = useState('');
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchCustomers();
-  }, []);
+  const [searchInput, setSearchInput] = useState("");
+  const search = useDebounce(searchInput, 350);
+  const [countryFilter, setCountryFilter] = useState<string>("all");
+
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [bulkBusy, setBulkBusy] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState<{ id?: string; bulk?: boolean } | null>(null);
+
+  useEffect(() => { setPage(1); }, [search, countryFilter]);
+  useEffect(() => { fetchCustomers(); /* eslint-disable-next-line */ }, [search, countryFilter, page]);
 
   const fetchCustomers = async () => {
-    const { data, error } = await supabase
-      .from('customers')
-      .select('*')
-      .order('created_at', { ascending: false });
-
-    if (error) {
-      toast({ title: 'خطأ', description: 'فشل في تحميل العملاء', variant: 'destructive' });
-    } else {
-      setCustomers(data || []);
+    setIsLoading(true);
+    setSelected(new Set());
+    let q = supabase.from("customers").select("*", { count: "exact" });
+    if (search.trim()) {
+      const t = `%${search.trim()}%`;
+      q = q.or(`name.ilike.${t},phone.ilike.${t}`);
     }
+    if (countryFilter !== "all") q = q.eq("country", countryFilter);
+    const from = (page - 1) * PAGE_SIZE;
+    const { data, count, error } = await q.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
+    if (error) toast({ title: "خطأ", description: "فشل تحميل العملاء", variant: "destructive" });
+    else { setCustomers((data || []) as Customer[]); setTotal(count || 0); }
     setIsLoading(false);
   };
 
-  const openWhatsApp = (customer: Customer) => {
-    // تنظيف رقم العميل من أي رموز
-    let customerPhone = customer.phone.replace(/\D/g, '');
-    
-    // أرقام المتجر حسب بلد العميل
-    const storePhones: Record<string, string> = {
-      YE: '967782676054',
-      SA: '966557302919'
-    };
-    const storePhone = customer.country === 'YE' ? storePhones.YE : storePhones.SA;
-    
-    // إضافة رمز البلد إذا لم يكن موجوداً
-    if (customer.country === 'YE') {
-      if (customerPhone.startsWith('0')) {
-        customerPhone = customerPhone.substring(1);
-      }
-      if (!customerPhone.startsWith('967')) {
-        customerPhone = '967' + customerPhone;
-      }
-    } else if (customer.country === 'SA') {
-      if (customerPhone.startsWith('0')) {
-        customerPhone = customerPhone.substring(1);
-      }
-      if (!customerPhone.startsWith('966')) {
-        customerPhone = '966' + customerPhone;
-      }
-    }
-    
-    const message = `مرحباً ${customer.name}`;
-    // فتح واتساب برقم العميل - يجب على الأدمن فتحه من الرقم المناسب
-    const countryLabel = customer.country === 'YE' ? '🇾🇪 اليمن' : '🇸🇦 السعودية';
-    alert(`⚠️ أرسل من رقمك ${countryLabel}: ${storePhone}\n\nسيتم فتح محادثة مع العميل الآن`);
-    window.open(`https://wa.me/${customerPhone}?text=${encodeURIComponent(message)}`, '_blank');
+  const deleteOne = async (id: string) => {
+    const { error } = await supabase.from("customers").delete().eq("id", id);
+    if (error) toast({ title: "خطأ", description: "فشل في الحذف", variant: "destructive" });
+    else { toast({ title: "تم", description: "تم حذف العميل" }); fetchCustomers(); }
   };
 
-  const deleteCustomer = async (id: string) => {
-    const { error } = await supabase.from('customers').delete().eq('id', id);
-    if (error) {
-      toast({ title: 'خطأ', description: 'فشل في حذف العميل', variant: 'destructive' });
-    } else {
-      toast({ title: 'تم الحذف', description: 'تم حذف العميل بنجاح' });
-      setCustomers(customers.filter(c => c.id !== id));
-    }
+  const bulkDelete = async () => {
+    if (selected.size === 0) return;
+    setBulkBusy(true);
+    const ids = Array.from(selected);
+    const { error } = await supabase.from("customers").delete().in("id", ids);
+    setBulkBusy(false);
+    setConfirmDelete(null);
+    if (error) toast({ title: "خطأ", description: "فشل الحذف الجماعي", variant: "destructive" });
+    else { toast({ title: "تم", description: `تم حذف ${ids.length} عميل` }); fetchCustomers(); }
   };
 
-  const filteredCustomers = customers.filter(c =>
-    c.name.includes(search) || c.phone.includes(search)
-  );
+  const openWhatsApp = (c: Customer) => {
+    let p = c.phone.replace(/\D/g, "");
+    if (p.startsWith("0")) p = p.substring(1);
+    if (c.country === "YE" && !p.startsWith("967")) p = "967" + p;
+    if (c.country === "SA" && !p.startsWith("966")) p = "966" + p;
+    window.open(`https://wa.me/${p}?text=${encodeURIComponent(`مرحباً ${c.name}`)}`, "_blank");
+  };
+
+  const toggleSelectAll = () =>
+    setSelected(selected.size === customers.length ? new Set() : new Set(customers.map(c => c.id)));
+  const toggleSelect = (id: string) => {
+    const n = new Set(selected); n.has(id) ? n.delete(id) : n.add(id); setSelected(n);
+  };
+  const allSelected = useMemo(() => customers.length > 0 && selected.size === customers.length, [customers, selected]);
 
   return (
-    <div className="space-y-6">
-      <h1 className="font-heading text-3xl text-foreground">العملاء</h1>
-
-      <div className="relative max-w-md">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="بحث بالاسم أو الهاتف..."
-          className="pr-10"
-          dir="rtl"
-        />
+    <div className="space-y-5">
+      <div className="flex items-end justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-2xl md:text-3xl text-foreground">العملاء</h1>
+          <p className="text-muted-foreground text-sm mt-1">
+            <span className="font-medium text-foreground">{total.toLocaleString("ar-EG")}</span> عميل إجمالاً
+          </p>
+        </div>
       </div>
 
-      <div className="bg-card border border-border rounded overflow-hidden">
+      <div className="bg-card border border-border rounded-2xl p-3 md:p-4 space-y-3">
+        <div className="flex flex-col md:flex-row gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
+              placeholder="ابحث بالاسم أو رقم الهاتف..."
+              className="pr-9 bg-background"
+              dir="rtl"
+            />
+            {searchInput && (
+              <button onClick={() => setSearchInput("")} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+          <Select value={countryFilter} onValueChange={setCountryFilter}>
+            <SelectTrigger className="w-full md:w-40"><Globe2 className="w-3.5 h-3.5 ml-1" /><SelectValue placeholder="البلد" /></SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل الدول</SelectItem>
+              <SelectItem value="SA">🇸🇦 السعودية</SelectItem>
+              <SelectItem value="YE">🇾🇪 اليمن</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        {selected.size > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-primary/5 border border-primary/20">
+            <p className="text-sm">تم تحديد <span className="font-bold text-primary">{selected.size}</span> عميل</p>
+            <div className="flex gap-2">
+              <Button size="sm" variant="destructive" disabled={bulkBusy} onClick={() => setConfirmDelete({ bulk: true })}>
+                <Trash2 className="w-4 h-4 ml-1" /> حذف
+              </Button>
+              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>إلغاء</Button>
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-muted">
-              <tr>
-                <th className="text-right p-4 font-heading text-sm">الاسم</th>
-                <th className="text-right p-4 font-heading text-sm">الهاتف</th>
-                <th className="text-right p-4 font-heading text-sm">البلد</th>
-                <th className="text-right p-4 font-heading text-sm">تاريخ التسجيل</th>
-                <th className="text-right p-4 font-heading text-sm">الإجراءات</th>
+            <thead className="bg-muted/40">
+              <tr className="text-xs">
+                <th className="p-3 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} /></th>
+                <th className="text-right p-3 font-heading">الاسم</th>
+                <th className="text-right p-3 font-heading">الهاتف</th>
+                <th className="text-right p-3 font-heading">البلد</th>
+                <th className="text-right p-3 font-heading">التسجيل</th>
+                <th className="text-right p-3 font-heading">الإجراءات</th>
               </tr>
             </thead>
             <tbody>
-              {filteredCustomers.map((customer) => (
-                <tr key={customer.id} className="border-b border-border hover:bg-muted/50">
-                  <td className="p-4 font-body">{customer.name}</td>
-                  <td className="p-4 font-mono text-sm" dir="ltr">{customer.phone}</td>
-                  <td className="p-4">{customer.country === 'SA' ? '🇸🇦 السعودية' : '🇾🇪 اليمن'}</td>
-                  <td className="p-4 text-sm text-muted-foreground">
-                    {new Date(customer.created_at).toLocaleDateString('ar-SA')}
-                  </td>
-                  <td className="p-4">
-                    <div className="flex items-center gap-1">
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => openWhatsApp(customer)}
-                        className="gap-1 text-xs"
-                        title={customer.country === 'SA' ? 'مراسلة من الرقم السعودي 0557302919' : 'مراسلة من الرقم اليمني 782676054'}
-                      >
-                        <MessageCircle className="w-4 h-4" />
-                        <span className="hidden sm:inline text-muted-foreground">
-                          {customer.country === 'SA' ? '🇸🇦' : '🇾🇪'}
-                        </span>
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="icon" variant="ghost" className="text-destructive hover:text-destructive">
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent dir="rtl">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>حذف العميل</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              هل أنت متأكد من حذف العميل "{customer.name}"؟ لا يمكن التراجع عن هذا الإجراء.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter className="gap-2">
-                            <AlertDialogCancel>إلغاء</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteCustomer(customer.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              حذف
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+              {isLoading && customers.length === 0 ? (
+                <tr><td colSpan={6} className="p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" /></td></tr>
+              ) : customers.length === 0 ? (
+                <tr><td colSpan={6} className="p-12 text-center text-muted-foreground"><Users className="w-10 h-10 mx-auto mb-3 opacity-50" /> لا يوجد عملاء</td></tr>
+              ) : customers.map(c => (
+                <tr key={c.id} className={cn("border-b border-border hover:bg-muted/30", selected.has(c.id) && "bg-primary/5")}>
+                  <td className="p-3"><Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggleSelect(c.id)} /></td>
+                  <td className="p-3 text-sm font-body">{c.name}</td>
+                  <td className="p-3 font-mono text-xs" dir="ltr">{c.phone}</td>
+                  <td className="p-3 text-sm">{c.country === "SA" ? "🇸🇦 السعودية" : c.country === "YE" ? "🇾🇪 اليمن" : c.country}</td>
+                  <td className="p-3 text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString("ar-SA")}</td>
+                  <td className="p-3">
+                    <div className="flex gap-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => openWhatsApp(c)}><MessageCircle className="w-4 h-4" /></Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setConfirmDelete({ id: c.id })}><Trash2 className="w-4 h-4" /></Button>
                     </div>
                   </td>
                 </tr>
               ))}
-              {filteredCustomers.length === 0 && (
-                <tr>
-                  <td colSpan={5} className="p-8 text-center text-muted-foreground">
-                    {isLoading ? 'جاري التحميل...' : 'لا يوجد عملاء'}
-                  </td>
-                </tr>
-              )}
             </tbody>
           </table>
         </div>
+        <AdminPagination page={page} pageSize={PAGE_SIZE} total={total} onPageChange={setPage} className="px-4 border-t border-border" />
       </div>
+
+      <AlertDialog open={!!confirmDelete} onOpenChange={(o) => !o && setConfirmDelete(null)}>
+        <AlertDialogContent dir="rtl">
+          <AlertDialogHeader>
+            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
+            <AlertDialogDescription>{confirmDelete?.bulk ? `سيتم حذف ${selected.size} عميل نهائياً.` : "سيتم حذف هذا العميل نهائياً."}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel>إلغاء</AlertDialogCancel>
+            <AlertDialogAction className="bg-destructive text-destructive-foreground hover:bg-destructive/90" onClick={() => {
+              if (confirmDelete?.bulk) bulkDelete();
+              else if (confirmDelete?.id) { deleteOne(confirmDelete.id); setConfirmDelete(null); }
+            }}>حذف</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 };

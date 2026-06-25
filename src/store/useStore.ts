@@ -1,5 +1,6 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
+import { track } from "@/lib/analytics";
 
 export type Country = "YE" | "SA";
 
@@ -82,6 +83,20 @@ export const useStore = create<StoreState>()(
 
       addToCart: (product, quantity = 1, selectedSize, selectedAccessories) => {
         const cart = get().cart;
+        // Fire-and-forget analytics
+        const accPrice = (selectedAccessories ?? []).reduce(
+          (s, a) => s + a.price * a.quantity,
+          0,
+        );
+        const unit = product.discount
+          ? product.price * (1 - product.discount / 100)
+          : product.price;
+        track({
+          event_type: "add_to_cart",
+          product_id: product.id,
+          value: (unit + accPrice) * quantity,
+          metadata: { name: product.nameAr || product.name, quantity },
+        });
         // Create a unique key based on product + size + accessories
         const accessoriesKey = selectedAccessories
           ? selectedAccessories

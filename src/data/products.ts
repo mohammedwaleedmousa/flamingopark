@@ -16,7 +16,7 @@ export const products: Product[] = [
       'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=800',
     ],
     category: 'necklaces',
-    brand: 'ERMGOLD',
+    brand: 'Flamingo',
     inStock: true,
     countries: ['YE', 'SA'],
     isFeatured: true,
@@ -35,7 +35,7 @@ export const products: Product[] = [
       'https://images.unsplash.com/photo-1603561591411-07134e71a2a9?w=800',
     ],
     category: 'rings',
-    brand: 'ERMGOLD',
+    brand: 'Flamingo',
     inStock: true,
     countries: ['YE', 'SA'],
     isFeatured: true,
@@ -90,7 +90,7 @@ export const products: Product[] = [
       'https://images.unsplash.com/photo-1601121141461-9d6647bca1ed?w=800',
     ],
     category: 'sets',
-    brand: 'ERMGOLD',
+    brand: 'Flamingo',
     inStock: true,
     countries: ['YE'],
     isFeatured: true,
@@ -115,7 +115,7 @@ export const products: Product[] = [
 ];
 
 export const brands = [
-  { id: '1', name: 'ERMGOLD', logo: '💎' },
+  { id: '1', name: 'Flamingo', logo: '💎' },
   { id: '2', name: 'Luxury Gold', logo: '👑' },
   { id: '3', name: 'Pearl Collection', logo: '🦪' },
   { id: '4', name: 'Modern Gold', logo: '✨' },

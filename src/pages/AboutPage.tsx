@@ -218,7 +218,7 @@ const AboutPage = () => {
           <div className="absolute inset-0">
             <img
               src={getContent('about_hero_image', 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=1920')}
-              alt="ERMGOLD Background"
+              alt="Flamingo Background"
               className="w-full h-full object-cover"
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/80" />
@@ -325,7 +325,7 @@ const AboutPage = () => {
                 <div className="relative aspect-[4/5] rounded-2xl overflow-hidden">
                   <img
                     src={getContent('about_section_1_image', 'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=800')}
-                    alt="ERMGOLD Story"
+                    alt="Flamingo Story"
                     className="w-full h-full object-cover"
                   />
                   {/* Overlay Gradient */}

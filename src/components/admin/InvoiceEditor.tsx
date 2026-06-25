@@ -266,7 +266,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
             {/* Invoice Header */}
             <div className="flex items-center justify-between pb-4 border-b border-gray-200">
               <div>
-                <img src={ermgoldLogo} alt="ERMGOLD" className="h-16 w-auto object-contain" />
+                <img src={ermgoldLogo} alt="Flamingo" className="h-16 w-auto object-contain" />
                 <p className="text-sm text-gray-500 mt-1">فاتورة طلب</p>
               </div>
               <div className="text-left">

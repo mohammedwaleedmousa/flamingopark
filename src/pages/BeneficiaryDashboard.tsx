@@ -315,7 +315,7 @@ const BeneficiaryDashboard = () => {
                 {/* Center Logo/Text */}
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
                   <div className="bg-white px-2 py-1 rounded shadow-sm">
-                    <span className="text-[10px] font-bold text-primary tracking-tight">ermgold</span>
+                    <span className="text-[10px] font-bold text-primary tracking-tight">flamingo</span>
                   </div>
                 </div>
               </div>

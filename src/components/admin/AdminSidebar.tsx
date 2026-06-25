@@ -94,11 +94,11 @@ const AdminSidebar = () => {
       <SidebarHeader className="px-4 py-5 border-b border-sidebar-border">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-heading text-sm shadow-sm">
-            EG
+            F
           </div>
           {!collapsed && (
             <div className="leading-tight">
-              <p className="font-heading text-base text-sidebar-foreground tracking-wide">ERMGOLD</p>
+              <p className="font-heading text-base text-sidebar-foreground tracking-wide">FLAMINGO</p>
               <p className="text-[10px] text-sidebar-foreground/60 uppercase tracking-[0.18em]">Admin Panel</p>
             </div>
           )}

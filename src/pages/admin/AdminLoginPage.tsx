@@ -129,7 +129,7 @@ const AdminLoginPage = () => {
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                  placeholder="admin@ermgold.com"
+                  placeholder="admin@flamingo.com"
                   className="bg-background/50 border-0 ring-1 ring-border/50 focus:ring-2 focus:ring-primary pr-10 rounded-xl h-12 transition-all"
                   dir="ltr"
                 />

@@ -48,8 +48,8 @@ const QRCodePage = () => {
     if (navigator.share) {
       try {
         await navigator.share({
-          title: 'ERMGOLD',
-          text: 'تسوق منتجات ERMGOLD الفاخرة',
+          title: 'Flamingo',
+          text: 'تسوق منتجات فلامنجو الفاخرة',
           url: websiteUrl,
         });
       } catch (error) {
@@ -81,7 +81,7 @@ const QRCodePage = () => {
             <div className="text-center mb-4">
               <img 
                 src={ermgoldLogo} 
-                alt="ERMGOLD" 
+                alt="Flamingo" 
                 className="h-12 w-auto mx-auto object-contain"
               />
             </div>
@@ -98,7 +98,7 @@ const QRCodePage = () => {
             </div>
             
             <div className="text-center mt-4">
-              <p className="text-gray-900 font-heading text-lg">ERMGOLD</p>
+              <p className="text-gray-900 font-heading text-lg">Flamingo</p>
               <p className="text-gray-500 text-xs mt-1">امسح للتسوق</p>
             </div>
           </div>

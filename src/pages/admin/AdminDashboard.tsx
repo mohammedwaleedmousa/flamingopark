@@ -114,7 +114,7 @@ const AdminDashboard = () => {
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
           <h1 className="font-heading text-2xl md:text-3xl text-foreground">لوحة التحكم</h1>
-          <p className="text-muted-foreground text-sm mt-1">مرحباً بك في لوحة تحكم ERMGOLD</p>
+          <p className="text-muted-foreground text-sm mt-1">مرحباً بك في لوحة تحكم فلامنجو</p>
         </div>
         <Button asChild className="btn-gold gap-2 w-full sm:w-auto">
           <Link to="/admin/products/new">

@@ -9,6 +9,7 @@ import { CheckCircle, MessageCircle, Home, Copy, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import ermgoldLogo from '@/assets/ermgold-logo-new.jpeg';
+import { track } from '@/lib/analytics';
 
 interface SelectedAccessory {
   name: string;
@@ -61,6 +62,18 @@ const OrderConfirmationPage = () => {
   useEffect(() => {
     if (location.state?.orderData) {
       setOrderData(location.state.orderData);
+      const od = location.state.orderData as OrderData;
+      track({
+        event_type: 'purchase',
+        value: Number(od.total) || 0,
+        metadata: {
+          order_number: od.orderNumber,
+          items_count: od.items?.length ?? 0,
+          country: od.country,
+          payment_method: od.paymentMethod,
+          coupon_code: od.couponCode ?? null,
+        },
+      });
     } else {
       navigate('/home');
     }

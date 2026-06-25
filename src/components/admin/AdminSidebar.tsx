@@ -94,7 +94,7 @@ const AdminSidebar = () => {
       <SidebarHeader className="px-4 py-5 border-b border-sidebar-border">
         <div className={cn("flex items-center gap-3", collapsed && "justify-center")}>
           <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center text-primary-foreground font-heading text-sm shadow-sm">
-            EG
+            F
           </div>
           {!collapsed && (
             <div className="leading-tight">

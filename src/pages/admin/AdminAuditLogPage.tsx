@@ -135,7 +135,7 @@ const AdminAuditLogPage = () => {
         )}
       </div>
 
-      <AdminPagination page={page} pageSize={PAGE_SIZE} total={count} onChange={setPage} />
+      <AdminPagination page={page} pageSize={PAGE_SIZE} total={count} onPageChange={setPage} />
     </div>
   );
 };

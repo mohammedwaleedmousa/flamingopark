@@ -7,6 +7,7 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-route
 import { useStore } from "@/store/useStore";
 import SplashScreen from "@/components/SplashScreen";
 import LoadingScreen from "@/components/LoadingScreen";
+import AnalyticsTracker from "@/components/AnalyticsTracker";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
@@ -51,6 +52,8 @@ const AdminProfitReportPage = lazy(() => import("./pages/admin/AdminProfitReport
 const AdminOffersPage = lazy(() => import("./pages/admin/AdminOffersPage"));
 const AdminCouponsPage = lazy(() => import("./pages/admin/AdminCouponsPage"));
 const AdminBeneficiariesPage = lazy(() => import("./pages/admin/AdminBeneficiariesPage"));
+const AdminAnalyticsPage = lazy(() => import("./pages/admin/AdminAnalyticsPage"));
+const AdminAuditLogPage = lazy(() => import("./pages/admin/AdminAuditLogPage"));
 const BeneficiaryAuthPage = lazy(() => import("./pages/BeneficiaryAuthPage"));
 const BeneficiaryDashboard = lazy(() => import("./pages/BeneficiaryDashboard"));
 const MohammedInvoicesPage = lazy(() => import("./pages/MohammedInvoicesPage"));
@@ -100,6 +103,7 @@ const App = () => {
       )}
       <BrowserRouter>
         <ScrollToTop />
+        <AnalyticsTracker />
         <Suspense fallback={<RouteFallback />}>
           <Routes>
             <Route path="/" element={<AuthRedirect />} />
@@ -148,6 +152,8 @@ const App = () => {
               <Route path="offers" element={<AdminOffersPage />} />
               <Route path="coupons" element={<AdminCouponsPage />} />
               <Route path="beneficiaries" element={<AdminBeneficiariesPage />} />
+              <Route path="analytics" element={<AdminAnalyticsPage />} />
+              <Route path="audit-log" element={<AdminAuditLogPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
             </Route>
 

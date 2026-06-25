@@ -598,7 +598,7 @@ const ProductDetailPage = () => {
               <div className="space-y-3">
                 <h3 className="font-heading text-lg text-foreground">الوصف</h3>
                 <p className="font-body text-foreground/70 leading-relaxed text-base">
-                  {product.descriptionAr || 'منتج فاخر من ERMGOLD بجودة عالية وتصميم أنيق يناسب جميع المناسبات.'}
+                  {product.descriptionAr || 'منتج فاخر من فلامنجو بجودة عالية وتصميم أنيق يناسب جميع المناسبات.'}
                 </p>
               </div>
 

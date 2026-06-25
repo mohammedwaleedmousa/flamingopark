@@ -11,8 +11,8 @@ const AdminSettingsPage = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   const [storeInfo, setStoreInfo] = useState({
-    name: "ERMGOLD",
-    email: "info@ermgold.com",
+    name: "Flamingo",
+    email: "info@flamingo.com",
     phone_sa: "",
     phone_ye: "",
   });
@@ -28,8 +28,8 @@ const AdminSettingsPage = () => {
   });
 
   const [bankAccounts, setBankAccounts] = useState({
-    sa: [{ bank: "", account: "", name: "ERMGOLD" }],
-    ye: [{ bank: "", account: "", name: "ERMGOLD" }],
+    sa: [{ bank: "", account: "", name: "Flamingo" }],
+    ye: [{ bank: "", account: "", name: "Flamingo" }],
   });
 
   const [certPdfUrl, setCertPdfUrl] = useState("");
@@ -232,7 +232,7 @@ const AdminSettingsPage = () => {
   const addBankAccount = (country: "sa" | "ye") => {
     setBankAccounts((prev) => ({
       ...prev,
-      [country]: [...prev[country], { bank: "", account: "", name: "ERMGOLD" }],
+      [country]: [...prev[country], { bank: "", account: "", name: "Flamingo" }],
     }));
   };
 

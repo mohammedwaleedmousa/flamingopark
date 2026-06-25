@@ -98,7 +98,7 @@ const AdminSidebar = () => {
           </div>
           {!collapsed && (
             <div className="leading-tight">
-              <p className="font-heading text-base text-sidebar-foreground tracking-wide">ERMGOLD</p>
+              <p className="font-heading text-base text-sidebar-foreground tracking-wide">Flamingo</p>
               <p className="text-[10px] text-sidebar-foreground/60 uppercase tracking-[0.18em]">Admin Panel</p>
             </div>
           )}

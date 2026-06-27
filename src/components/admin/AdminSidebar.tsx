@@ -1,7 +1,8 @@
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Image, Tag, Truck, Star,
   Settings, LogOut, Grid3X3, LayoutGrid, FileText, Receipt, MapPin,
-  TrendingUp, Percent, Ticket, QrCode, UserCheck, PieChart, BarChart3, ShieldAlert,
+  TrendingUp, Percent, Ticket, QrCode, PieChart, BarChart3, ShieldAlert,
+  BookOpen, RotateCcw, Wallet, Boxes,
   ChevronDown,
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
@@ -33,6 +34,16 @@ const groups: { label: string; items: { title: string; url: string; icon: any }[
       { title: 'الطلبات', url: '/admin/orders', icon: ShoppingCart },
       { title: 'الفواتير', url: '/admin/invoices', icon: Receipt },
       { title: 'العملاء', url: '/admin/customers', icon: Users },
+    ],
+  },
+  {
+    label: 'المحاسبة المالية',
+    items: [
+      { title: 'دفتر اليومية', url: '/admin/ledger', icon: BookOpen },
+      { title: 'المرتجعات', url: '/admin/refunds', icon: RotateCcw },
+      { title: 'المصروفات', url: '/admin/expenses', icon: Receipt },
+      { title: 'طرق الدفع والتسويات', url: '/admin/payment-methods', icon: Wallet },
+      { title: 'تسوية المخزون', url: '/admin/inventory-adjustments', icon: Boxes },
     ],
   },
   {

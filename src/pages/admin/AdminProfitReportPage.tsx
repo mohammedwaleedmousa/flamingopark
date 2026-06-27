@@ -99,7 +99,7 @@ const AdminProfitReportPage = () => {
           ? (order.items as unknown as OrderItem[])
           : [],
         discount_amount: order.discount_amount || 0,
-        beneficiary_commission: order.beneficiary_commission || 0,
+        beneficiary_commission: 0,
       }));
 
       setOrders(mappedOrders);

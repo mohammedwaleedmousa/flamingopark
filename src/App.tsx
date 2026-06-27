@@ -51,11 +51,8 @@ const AdminRevenuePage = lazy(() => import("./pages/admin/AdminRevenuePage"));
 const AdminProfitReportPage = lazy(() => import("./pages/admin/AdminProfitReportPage"));
 const AdminOffersPage = lazy(() => import("./pages/admin/AdminOffersPage"));
 const AdminCouponsPage = lazy(() => import("./pages/admin/AdminCouponsPage"));
-const AdminBeneficiariesPage = lazy(() => import("./pages/admin/AdminBeneficiariesPage"));
 const AdminAnalyticsPage = lazy(() => import("./pages/admin/AdminAnalyticsPage"));
 const AdminAuditLogPage = lazy(() => import("./pages/admin/AdminAuditLogPage"));
-const BeneficiaryAuthPage = lazy(() => import("./pages/BeneficiaryAuthPage"));
-const BeneficiaryDashboard = lazy(() => import("./pages/BeneficiaryDashboard"));
 const MohammedInvoicesPage = lazy(() => import("./pages/MohammedInvoicesPage"));
 
 const queryClient = new QueryClient();
@@ -151,17 +148,12 @@ const App = () => {
               <Route path="profit-report" element={<AdminProfitReportPage />} />
               <Route path="offers" element={<AdminOffersPage />} />
               <Route path="coupons" element={<AdminCouponsPage />} />
-              <Route path="beneficiaries" element={<AdminBeneficiariesPage />} />
               <Route path="analytics" element={<AdminAnalyticsPage />} />
               <Route path="audit-log" element={<AdminAuditLogPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
             </Route>
 
             <Route path="/mohammed" element={<MohammedInvoicesPage />} />
-            <Route path="/bene" element={<BeneficiaryAuthPage />} />
-            <Route path="/bene/:code" element={<BeneficiaryDashboard />} />
-            <Route path="/beneficiary" element={<BeneficiaryAuthPage />} />
-            <Route path="/beneficiary/:code" element={<BeneficiaryDashboard />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>

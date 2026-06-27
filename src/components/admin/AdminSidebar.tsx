@@ -49,7 +49,6 @@ const groups: { label: string; items: { title: string; url: string; icon: any }[
     items: [
       { title: 'العروض', url: '/admin/offers', icon: Percent },
       { title: 'الكوبونات', url: '/admin/coupons', icon: Ticket },
-      { title: 'المستفيدين', url: '/admin/beneficiaries', icon: UserCheck },
       { title: 'البانرات', url: '/admin/banners', icon: Image },
       { title: 'التقييمات', url: '/admin/reviews', icon: Star },
     ],

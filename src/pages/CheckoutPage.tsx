@@ -691,14 +691,6 @@ const CheckoutPage = () => {
                     {deliveryFee.toFixed(2)} {currency}
                   </span>
                 </div>
-                {beneficiaryDiscount > 0 && (
-                  <div className="flex justify-between text-primary font-medium text-sm">
-                    <span>خصم الإحالة ({activeBeneficiary?.discount_percentage}%)</span>
-                    <span>
-                      -{beneficiaryDiscount.toFixed(2)} {currency}
-                    </span>
-                  </div>
-                )}
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-green-600 font-medium text-sm">
                     <span>خصم الكوبون</span>

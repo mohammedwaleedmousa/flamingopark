@@ -1,7 +1,8 @@
 import {
   LayoutDashboard, Package, ShoppingCart, Users, Image, Tag, Truck, Star,
   Settings, LogOut, Grid3X3, LayoutGrid, FileText, Receipt, MapPin,
-  TrendingUp, Percent, Ticket, QrCode, UserCheck, PieChart, BarChart3, ShieldAlert,
+  TrendingUp, Percent, Ticket, QrCode, PieChart, BarChart3, ShieldAlert,
+  BookOpen, RotateCcw, Wallet, Boxes,
   ChevronDown,
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
@@ -36,6 +37,16 @@ const groups: { label: string; items: { title: string; url: string; icon: any }[
     ],
   },
   {
+    label: 'المحاسبة المالية',
+    items: [
+      { title: 'دفتر اليومية', url: '/admin/ledger', icon: BookOpen },
+      { title: 'المرتجعات', url: '/admin/refunds', icon: RotateCcw },
+      { title: 'المصروفات', url: '/admin/expenses', icon: Receipt },
+      { title: 'طرق الدفع والتسويات', url: '/admin/payment-methods', icon: Wallet },
+      { title: 'تسوية المخزون', url: '/admin/inventory-adjustments', icon: Boxes },
+    ],
+  },
+  {
     label: 'الكتالوج',
     items: [
       { title: 'المنتجات', url: '/admin/products', icon: Package },
@@ -49,7 +60,6 @@ const groups: { label: string; items: { title: string; url: string; icon: any }[
     items: [
       { title: 'العروض', url: '/admin/offers', icon: Percent },
       { title: 'الكوبونات', url: '/admin/coupons', icon: Ticket },
-      { title: 'المستفيدين', url: '/admin/beneficiaries', icon: UserCheck },
       { title: 'البانرات', url: '/admin/banners', icon: Image },
       { title: 'التقييمات', url: '/admin/reviews', icon: Star },
     ],

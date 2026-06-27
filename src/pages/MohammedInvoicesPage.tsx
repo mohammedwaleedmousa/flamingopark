@@ -34,8 +34,6 @@ interface Order {
   discount_amount: number | null;
   total: number;
   coupon_code: string | null;
-  beneficiary_code: string | null;
-  beneficiary_commission: number | null;
   created_at: string;
   invoice_url: string | null;
 }
@@ -375,9 +373,6 @@ const MohammedInvoicesPage = () => {
 
                       <div className="text-xs text-muted-foreground space-y-1">
                         <p>طريقة الدفع: <span className="text-foreground">{order.payment_method === 'cod' ? 'الدفع عند الاستلام' : order.payment_method}</span></p>
-                        {order.beneficiary_code && (
-                          <p>كود المستفيد: <span className="text-foreground">{order.beneficiary_code}</span> (عمولة: {order.beneficiary_commission})</p>
-                        )}
                         {order.customer_notes && (
                           <p>ملاحظات: <span className="text-foreground">{order.customer_notes}</span></p>
                         )}

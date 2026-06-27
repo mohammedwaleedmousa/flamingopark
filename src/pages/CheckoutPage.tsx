@@ -11,17 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle, Gift, X } from "lucide-react";
-
-interface Beneficiary {
-  id: string;
-  name: string;
-  code: string;
-  commission_percentage: number;
-  discount_percentage: number;
-  is_active: boolean;
-  is_approved: boolean;
-}
+import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle, X } from "lucide-react";
 
 // Zod schemas
 const orderAccessorySchema = z.object({
@@ -80,11 +70,9 @@ const CheckoutPage = () => {
   const [couponCode, setCouponCode] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [activeBeneficiary, setActiveBeneficiary] = useState<Beneficiary | null>(null);
-  const [beneficiaryDiscount, setBeneficiaryDiscount] = useState(0);
 
   const subtotal = getCartTotal();
-  const currency = country === "SA" ? "ر.س" : "ر.ي";
+  const currency = "ر.ي";
 
   // Calculate total cost price (for discount calculations)
   const getCostPriceTotal = () => {
@@ -100,42 +88,6 @@ const CheckoutPage = () => {
   };
 
   const costPriceTotal = getCostPriceTotal();
-
-  // Check for beneficiary referral code
-  useEffect(() => {
-    const checkBeneficiaryCode = async () => {
-      const refCode = localStorage.getItem('beneficiary_ref');
-      if (!refCode) return;
-      
-      try {
-        const { data, error } = await supabase
-          .from("beneficiaries")
-          .select("*")
-          .eq("code", refCode.toUpperCase())
-          .eq("is_active", true)
-          .eq("is_approved", true)
-          .maybeSingle();
-        
-        if (data && !error) {
-          setActiveBeneficiary(data as Beneficiary);
-          // Auto-apply beneficiary discount - ONLY on cost price
-          const discount = (costPriceTotal * data.discount_percentage) / 100;
-          setBeneficiaryDiscount(discount);
-        }
-      } catch (err) {
-        console.error("Error checking beneficiary:", err);
-      }
-    };
-    
-    checkBeneficiaryCode();
-  }, [costPriceTotal]);
-
-  // Clear beneficiary
-  const clearBeneficiary = () => {
-    localStorage.removeItem('beneficiary_ref');
-    setActiveBeneficiary(null);
-    setBeneficiaryDiscount(0);
-  };
 
   // Apply coupon - checks both coupons table and offers table
   const applyCoupon = async () => {
@@ -333,7 +285,7 @@ const CheckoutPage = () => {
 
   const selectedCompany = deliveryCompanies.find((c) => c.id === selectedDelivery);
   const deliveryFee = selectedCompany?.base_fee || 0;
-  const totalDiscount = discountAmount + beneficiaryDiscount;
+  const totalDiscount = discountAmount;
   const total = subtotal + deliveryFee - totalDiscount;
 
   const handleCopyAccount = (account: string) => {
@@ -397,18 +349,13 @@ const CheckoutPage = () => {
     const orderItems = validationResult.data;
 
     try {
-      // Calculate beneficiary commission if applicable
-      const beneficiaryCommission = activeBeneficiary 
-        ? (subtotal * activeBeneficiary.commission_percentage) / 100 
-        : 0;
-
       const orderPayload: Record<string, unknown> = {
         order_number: orderNumber,
         customer_name: customer?.name || formData.name || "عميل",
         customer_phone: customer?.phone || formData.phone || "",
         customer_address: "-",
         customer_notes: null,
-        country: country || "SA",
+        country: "YE",
         items: orderItems,
         subtotal,
         delivery_fee: deliveryFee,
@@ -417,9 +364,6 @@ const CheckoutPage = () => {
         payment_method: paymentMethod,
         coupon_code: discountAmount > 0 ? couponCode.trim().toUpperCase() : null,
         discount_amount: totalDiscount,
-        beneficiary_id: activeBeneficiary?.id || null,
-        beneficiary_code: activeBeneficiary?.code || null,
-        beneficiary_commission: beneficiaryCommission,
       };
       
       // Only add customer_id if it's a valid registered customer (not guest)
@@ -429,43 +373,10 @@ const CheckoutPage = () => {
       
       const createdOrder = await createOrderMutation.mutateAsync(orderPayload);
       
-      // If there was a beneficiary, update the most recent visit to mark it as converted
-      if (activeBeneficiary) {
-        try {
-          // Find the most recent unconverted visit for this beneficiary
-          const { data: recentVisit } = await supabase
-            .from("beneficiary_visits")
-            .select("id")
-            .eq("beneficiary_id", activeBeneficiary.id)
-            .eq("converted_to_order", false)
-            .order("visited_at", { ascending: false })
-            .limit(1)
-            .maybeSingle();
-          
-          if (recentVisit) {
-            await supabase
-              .from("beneficiary_visits")
-              .update({ 
-                converted_to_order: true, 
-                order_id: createdOrder.id 
-              })
-              .eq("id", recentVisit.id);
-          }
-        } catch (err) {
-          console.error("Error updating visit:", err);
-        }
-        
-        // Clear the beneficiary ref after successful order
-        localStorage.removeItem('beneficiary_ref');
-      }
-      
       const selectedRegionData = codRegions.find((r) => r.id === selectedRegion);
       
-      // Determine WhatsApp number based on customer's country
-      const customerCountry = country || "SA";
-      const correctWhatsappNumber = customerCountry === "YE" 
-        ? "967782676054" 
-        : "966557302919";
+      // Single-storefront: Yemen WhatsApp
+      const correctWhatsappNumber = "967782676054";
       
       const orderData = {
         orderNumber,
@@ -482,7 +393,7 @@ const CheckoutPage = () => {
         paymentMethod,
         deliveryCompany: selectedCompany?.name || "",
         selectedRegion: paymentMethod === "cod" && selectedRegionData ? selectedRegionData.region_name_ar : null,
-        country: customerCountry,
+        country: "YE",
         whatsappNumber: correctWhatsappNumber,
         createdAt: new Date().toISOString(),
       };
@@ -524,27 +435,6 @@ const CheckoutPage = () => {
           >
             إتمام <span className="text-gold">الطلب</span>
           </motion.h1>
-          
-          {/* Beneficiary Discount Banner */}
-          {activeBeneficiary && (
-            <motion.div
-              initial={{ opacity: 0, y: -10 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="bg-gradient-to-r from-green-500/10 to-emerald-500/10 border border-green-200 rounded-xl p-4 mb-6"
-            >
-              <div className="flex items-center justify-center gap-3 text-center">
-                <Gift className="w-6 h-6 text-green-600" />
-                <div>
-                  <p className="font-bold text-green-700 text-lg">
-                    🎉 لديك خصم {activeBeneficiary.discount_percentage}%!
-                  </p>
-                  <p className="text-sm text-green-600">
-                    خصم حصري عبر رابط الإحالة من {activeBeneficiary.name} - مطبق تلقائياً
-                  </p>
-                </div>
-              </div>
-            </motion.div>
-          )}
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
@@ -723,29 +613,6 @@ const CheckoutPage = () => {
               transition={{ delay: 0.3 }}
               className="space-y-6"
             >
-              {/* Beneficiary Badge - Only shows when customer entered via referral link */}
-              {activeBeneficiary && (
-                <div className="bg-gradient-to-r from-primary/10 to-primary/5 border border-primary/30 rounded-lg p-4">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                      <Gift className="w-5 h-5 text-primary" />
-                    </div>
-                    <div>
-                      <p className="font-medium text-sm text-foreground">خصم حصري عبر رابط الإحالة</p>
-                      <p className="text-xs text-muted-foreground">
-                        خصم {activeBeneficiary.discount_percentage}% مطبق تلقائياً
-                      </p>
-                    </div>
-                  </div>
-                  <div className="mt-3 pt-3 border-t border-primary/20">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">خصم الإحالة ({activeBeneficiary.discount_percentage}%)</span>
-                      <span className="text-primary font-medium">-{beneficiaryDiscount.toFixed(2)} {currency}</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
               {/* Coupon */}
               <div className="bg-card border border-border rounded-lg p-6">
                 <h2 className="font-heading text-lg text-foreground mb-4">كود الخصم</h2>
@@ -824,14 +691,6 @@ const CheckoutPage = () => {
                     {deliveryFee.toFixed(2)} {currency}
                   </span>
                 </div>
-                {beneficiaryDiscount > 0 && (
-                  <div className="flex justify-between text-primary font-medium text-sm">
-                    <span>خصم الإحالة ({activeBeneficiary?.discount_percentage}%)</span>
-                    <span>
-                      -{beneficiaryDiscount.toFixed(2)} {currency}
-                    </span>
-                  </div>
-                )}
                 {discountAmount > 0 && (
                   <div className="flex justify-between text-green-600 font-medium text-sm">
                     <span>خصم الكوبون</span>

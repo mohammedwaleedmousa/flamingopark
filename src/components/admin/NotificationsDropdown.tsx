@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { Bell, ShoppingBag, MessageSquare, UserCheck, Check, Trash2 } from "lucide-react";
+import { Bell, ShoppingBag, MessageSquare, Check, Trash2, Info } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useNavigate } from "react-router-dom";
@@ -11,7 +11,7 @@ import { ar } from "date-fns/locale";
 interface NotificationCounts {
   pendingOrders: number;
   pendingReviews: number;
-  beneficiaryNotifications: number;
+  generalNotifications: number;
 }
 
 interface AdminNotification {
@@ -29,7 +29,7 @@ const NotificationsDropdown = () => {
   const [counts, setCounts] = useState<NotificationCounts>({
     pendingOrders: 0,
     pendingReviews: 0,
-    beneficiaryNotifications: 0,
+    generalNotifications: 0,
   });
   const [notifications, setNotifications] = useState<AdminNotification[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -53,7 +53,7 @@ const NotificationsDropdown = () => {
       setCounts({
         pendingOrders: ordersRes.count || 0,
         pendingReviews: reviewsRes.count || 0,
-        beneficiaryNotifications: notificationsRes.data?.length || 0,
+        generalNotifications: notificationsRes.data?.length || 0,
       });
       
       setNotifications(notificationsRes.data || []);
@@ -119,7 +119,7 @@ const NotificationsDropdown = () => {
     fetchCounts();
   };
 
-  const totalCount = counts.pendingOrders + counts.pendingReviews + counts.beneficiaryNotifications;
+  const totalCount = counts.pendingOrders + counts.pendingReviews + counts.generalNotifications;
 
   const quickNotifications = [
     {
@@ -172,7 +172,7 @@ const NotificationsDropdown = () => {
       <PopoverContent className="w-80 p-0" align="end" dir="rtl">
         <div className="p-3 border-b border-border flex items-center justify-between">
           <h3 className="font-heading text-sm">الإشعارات</h3>
-          {counts.beneficiaryNotifications > 0 && (
+          {counts.generalNotifications > 0 && (
             <Button 
               variant="ghost" 
               size="sm" 
@@ -208,13 +208,13 @@ const NotificationsDropdown = () => {
             ))}
         </div>
 
-        {/* Beneficiary Notifications */}
+        {/* General Notifications */}
         {notifications.length > 0 && (
           <>
             <div className="px-3 py-2 bg-muted/50">
               <p className="text-xs text-muted-foreground flex items-center gap-1">
-                <UserCheck className="w-3 h-3" />
-                إشعارات المستفيدين
+                <Info className="w-3 h-3" />
+                إشعارات النظام
               </p>
             </div>
             <ScrollArea className="max-h-64">
@@ -227,7 +227,7 @@ const NotificationsDropdown = () => {
                   >
                     <div className="flex items-start gap-2">
                       <div className="p-1.5 rounded-full bg-primary/10 text-primary mt-0.5">
-                        <UserCheck className="w-3 h-3" />
+                        <Info className="w-3 h-3" />
                       </div>
                       <div className="flex-1 min-w-0">
                         <p className="text-sm font-medium">{notification.title}</p>

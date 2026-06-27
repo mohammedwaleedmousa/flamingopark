@@ -10,7 +10,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Boxes, Plus, TrendingUp, TrendingDown, AlertTriangle } from 'lucide-react';
 
-interface Product { id: string; name_ar: string; stock: number; cost_price: number; }
+interface Product { id: string; name_ar: string; cost_price: number; in_stock: boolean; }
 interface Adjustment {
   id: string; product_id: string | null; product_name: string | null; adjustment_type: string;
   quantity_before: number; quantity_change: number; quantity_after: number;
@@ -37,10 +37,10 @@ export default function AdminInventoryAdjustmentsPage() {
     setLoading(true);
     const [{ data: a }, { data: p }] = await Promise.all([
       supabase.from('inventory_adjustments').select('*').order('created_at', { ascending: false }).limit(100),
-      supabase.from('products').select('id, name_ar, stock, cost_price').eq('is_active', true).order('name_ar').limit(500),
+      supabase.from('products').select('id, name_ar, cost_price, in_stock').eq('is_active', true).order('name_ar').limit(500),
     ]);
     setAdjustments((a as Adjustment[]) || []);
-    setProducts((p as Product[]) || []);
+    setProducts((p as unknown as Product[]) || []);
     setLoading(false);
   }
   async function save() {
@@ -49,16 +49,17 @@ export default function AdminInventoryAdjustmentsPage() {
     if (!product) return;
     const sign = form.adjustment_type === 'increase' ? 1 : -1;
     const change = sign * Math.abs(Number(form.quantity_change));
-    const after = Math.max(0, product.stock + change);
     const { error } = await supabase.from('inventory_adjustments').insert({
       product_id: product.id, product_name: product.name_ar, adjustment_type: form.adjustment_type,
-      quantity_before: product.stock, quantity_change: change, quantity_after: after,
+      quantity_before: 0, quantity_change: change, quantity_after: change,
       unit_cost: product.cost_price || 0, reason: form.reason, reference: form.reference || null,
     });
     if (error) return toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
-    // Update product stock
-    await supabase.from('products').update({ stock: after }).eq('id', product.id);
-    toast({ title: 'تم تسجيل التسوية وتحديث المخزون' });
+    // For damage/decrease, flag product out of stock
+    if (form.adjustment_type === 'damage' || (form.adjustment_type === 'decrease' && Math.abs(change) > 0)) {
+      // optional: keep product visible; admin can toggle separately
+    }
+    toast({ title: 'تم تسجيل التسوية' });
     setOpen(false);
     setForm({ product_id: '', adjustment_type: 'increase', quantity_change: '', reason: '', reference: '' });
     fetchAll();
@@ -81,7 +82,7 @@ export default function AdminInventoryAdjustmentsPage() {
             <div className="space-y-3">
               <Select value={form.product_id} onValueChange={v => setForm({ ...form, product_id: v })}>
                 <SelectTrigger><SelectValue placeholder="اختر المنتج" /></SelectTrigger>
-                <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name_ar} (المخزون: {p.stock})</SelectItem>)}</SelectContent>
+                <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name_ar}</SelectItem>)}</SelectContent>
               </Select>
               <div className="grid grid-cols-2 gap-3">
                 <Select value={form.adjustment_type} onValueChange={v => setForm({ ...form, adjustment_type: v })}>

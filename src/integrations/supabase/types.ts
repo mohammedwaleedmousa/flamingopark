@@ -20,7 +20,6 @@ export type Database = {
           id: string
           is_read: boolean | null
           message: string
-          related_beneficiary_id: string | null
           related_order_id: string | null
           title: string
           type: string
@@ -30,7 +29,6 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           message: string
-          related_beneficiary_id?: string | null
           related_order_id?: string | null
           title: string
           type?: string
@@ -40,19 +38,11 @@ export type Database = {
           id?: string
           is_read?: boolean | null
           message?: string
-          related_beneficiary_id?: string | null
           related_order_id?: string | null
           title?: string
           type?: string
         }
         Relationships: [
-          {
-            foreignKeyName: "admin_notifications_related_beneficiary_id_fkey"
-            columns: ["related_beneficiary_id"]
-            isOneToOne: false
-            referencedRelation: "beneficiaries"
-            referencedColumns: ["id"]
-          },
           {
             foreignKeyName: "admin_notifications_related_order_id_fkey"
             columns: ["related_order_id"]
@@ -215,105 +205,6 @@ export type Database = {
         }
         Relationships: []
       }
-      beneficiaries: {
-        Row: {
-          code: string
-          commission_percentage: number
-          country: string | null
-          created_at: string
-          discount_percentage: number
-          email: string | null
-          id: string
-          is_active: boolean | null
-          is_approved: boolean | null
-          name: string
-          password_hash: string | null
-          phone: string | null
-          registered_at: string | null
-          sort_order: number | null
-          updated_at: string
-        }
-        Insert: {
-          code: string
-          commission_percentage?: number
-          country?: string | null
-          created_at?: string
-          discount_percentage?: number
-          email?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_approved?: boolean | null
-          name: string
-          password_hash?: string | null
-          phone?: string | null
-          registered_at?: string | null
-          sort_order?: number | null
-          updated_at?: string
-        }
-        Update: {
-          code?: string
-          commission_percentage?: number
-          country?: string | null
-          created_at?: string
-          discount_percentage?: number
-          email?: string | null
-          id?: string
-          is_active?: boolean | null
-          is_approved?: boolean | null
-          name?: string
-          password_hash?: string | null
-          phone?: string | null
-          registered_at?: string | null
-          sort_order?: number | null
-          updated_at?: string
-        }
-        Relationships: []
-      }
-      beneficiary_visits: {
-        Row: {
-          beneficiary_id: string
-          converted_to_order: boolean | null
-          id: string
-          order_id: string | null
-          visited_at: string
-          visitor_info: string | null
-          visitor_ip: string | null
-        }
-        Insert: {
-          beneficiary_id: string
-          converted_to_order?: boolean | null
-          id?: string
-          order_id?: string | null
-          visited_at?: string
-          visitor_info?: string | null
-          visitor_ip?: string | null
-        }
-        Update: {
-          beneficiary_id?: string
-          converted_to_order?: boolean | null
-          id?: string
-          order_id?: string | null
-          visited_at?: string
-          visitor_info?: string | null
-          visitor_ip?: string | null
-        }
-        Relationships: [
-          {
-            foreignKeyName: "beneficiary_visits_beneficiary_id_fkey"
-            columns: ["beneficiary_id"]
-            isOneToOne: false
-            referencedRelation: "beneficiaries"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "beneficiary_visits_order_id_fkey"
-            columns: ["order_id"]
-            isOneToOne: false
-            referencedRelation: "orders"
-            referencedColumns: ["id"]
-          },
-        ]
-      }
       brands: {
         Row: {
           countries: string[] | null
@@ -417,6 +308,53 @@ export type Database = {
           sort_order?: number | null
         }
         Relationships: []
+      }
+      chart_of_accounts: {
+        Row: {
+          code: string
+          created_at: string
+          description: string | null
+          id: string
+          is_active: boolean
+          name: string
+          name_ar: string
+          parent_id: string | null
+          type: Database["public"]["Enums"]["account_type"]
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name: string
+          name_ar: string
+          parent_id?: string | null
+          type: Database["public"]["Enums"]["account_type"]
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          name_ar?: string
+          parent_id?: string | null
+          type?: Database["public"]["Enums"]["account_type"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chart_of_accounts_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       cod_regions: {
         Row: {
@@ -535,6 +473,140 @@ export type Database = {
         }
         Relationships: []
       }
+      expense_categories: {
+        Row: {
+          account_id: string | null
+          created_at: string
+          id: string
+          is_active: boolean
+          name: string
+          name_ar: string
+        }
+        Insert: {
+          account_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          name_ar: string
+        }
+        Update: {
+          account_id?: string | null
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          name_ar?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expense_categories_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      expenses: {
+        Row: {
+          amount: number
+          category_id: string | null
+          created_at: string
+          created_by: string | null
+          description: string
+          expense_date: string
+          id: string
+          notes: string | null
+          payment_method_id: string | null
+          receipt_url: string | null
+          updated_at: string
+          vendor: string | null
+        }
+        Insert: {
+          amount: number
+          category_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          payment_method_id?: string | null
+          receipt_url?: string | null
+          updated_at?: string
+          vendor?: string | null
+        }
+        Update: {
+          amount?: number
+          category_id?: string | null
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          expense_date?: string
+          id?: string
+          notes?: string | null
+          payment_method_id?: string | null
+          receipt_url?: string | null
+          updated_at?: string
+          vendor?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "expenses_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "expense_categories"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_payment_method_fk"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      financial_transactions: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string
+          entry_date: string
+          id: string
+          is_posted: boolean
+          reference: string | null
+          source_id: string | null
+          source_type: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description: string
+          entry_date?: string
+          id?: string
+          is_posted?: boolean
+          reference?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string
+          entry_date?: string
+          id?: string
+          is_posted?: boolean
+          reference?: string | null
+          source_id?: string | null
+          source_type?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       homepage_sections: {
         Row: {
           countries: string[] | null
@@ -582,6 +654,65 @@ export type Database = {
           view_all_link?: string | null
         }
         Relationships: []
+      }
+      inventory_adjustments: {
+        Row: {
+          adjustment_type: string
+          created_at: string
+          created_by: string | null
+          id: string
+          notes: string | null
+          product_id: string | null
+          product_name: string | null
+          quantity_after: number
+          quantity_before: number
+          quantity_change: number
+          reason: string
+          reference: string | null
+          total_cost: number | null
+          unit_cost: number | null
+        }
+        Insert: {
+          adjustment_type: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          quantity_after: number
+          quantity_before?: number
+          quantity_change: number
+          reason: string
+          reference?: string | null
+          total_cost?: number | null
+          unit_cost?: number | null
+        }
+        Update: {
+          adjustment_type?: string
+          created_at?: string
+          created_by?: string | null
+          id?: string
+          notes?: string | null
+          product_id?: string | null
+          product_name?: string | null
+          quantity_after?: number
+          quantity_before?: number
+          quantity_change?: number
+          reason?: string
+          reference?: string | null
+          total_cost?: number | null
+          unit_cost?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_adjustments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       offers: {
         Row: {
@@ -687,9 +818,6 @@ export type Database = {
       }
       orders: {
         Row: {
-          beneficiary_code: string | null
-          beneficiary_commission: number | null
-          beneficiary_id: string | null
           country: string
           coupon_code: string | null
           created_at: string
@@ -712,10 +840,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
-          beneficiary_code?: string | null
-          beneficiary_commission?: number | null
-          beneficiary_id?: string | null
-          country: string
+          country?: string
           coupon_code?: string | null
           created_at?: string
           customer_address: string
@@ -737,9 +862,6 @@ export type Database = {
           updated_at?: string
         }
         Update: {
-          beneficiary_code?: string | null
-          beneficiary_commission?: number | null
-          beneficiary_id?: string | null
           country?: string
           coupon_code?: string | null
           created_at?: string
@@ -763,13 +885,6 @@ export type Database = {
         }
         Relationships: [
           {
-            foreignKeyName: "orders_beneficiary_id_fkey"
-            columns: ["beneficiary_id"]
-            isOneToOne: false
-            referencedRelation: "beneficiaries"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "orders_customer_id_fkey"
             columns: ["customer_id"]
             isOneToOne: false
@@ -788,9 +903,6 @@ export type Database = {
       orders_archive: {
         Row: {
           archived_at: string
-          beneficiary_code: string | null
-          beneficiary_commission: number | null
-          beneficiary_id: string | null
           country: string
           coupon_code: string | null
           created_at: string
@@ -812,9 +924,6 @@ export type Database = {
         }
         Insert: {
           archived_at?: string
-          beneficiary_code?: string | null
-          beneficiary_commission?: number | null
-          beneficiary_id?: string | null
           country: string
           coupon_code?: string | null
           created_at?: string
@@ -836,9 +945,6 @@ export type Database = {
         }
         Update: {
           archived_at?: string
-          beneficiary_code?: string | null
-          beneficiary_commission?: number | null
-          beneficiary_id?: string | null
           country?: string
           coupon_code?: string | null
           created_at?: string
@@ -859,6 +965,106 @@ export type Database = {
           total?: number
         }
         Relationships: []
+      }
+      payment_methods: {
+        Row: {
+          account_id: string | null
+          code: string
+          created_at: string
+          details: Json | null
+          id: string
+          is_active: boolean
+          name: string
+          name_ar: string
+          sort_order: number
+          type: string
+          updated_at: string
+        }
+        Insert: {
+          account_id?: string | null
+          code: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          is_active?: boolean
+          name: string
+          name_ar: string
+          sort_order?: number
+          type?: string
+          updated_at?: string
+        }
+        Update: {
+          account_id?: string | null
+          code?: string
+          created_at?: string
+          details?: Json | null
+          id?: string
+          is_active?: boolean
+          name?: string
+          name_ar?: string
+          sort_order?: number
+          type?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_methods_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_settlements: {
+        Row: {
+          actual_amount: number
+          created_at: string
+          created_by: string | null
+          difference: number | null
+          expected_amount: number
+          id: string
+          notes: string | null
+          payment_method_id: string | null
+          settlement_date: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          actual_amount?: number
+          created_at?: string
+          created_by?: string | null
+          difference?: number | null
+          expected_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method_id?: string | null
+          settlement_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          actual_amount?: number
+          created_at?: string
+          created_by?: string | null
+          difference?: number | null
+          expected_amount?: number
+          id?: string
+          notes?: string | null
+          payment_method_id?: string | null
+          settlement_date?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_settlements_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       product_reviews: {
         Row: {
@@ -1007,6 +1213,74 @@ export type Database = {
         }
         Relationships: []
       }
+      refunds: {
+        Row: {
+          amount: number
+          created_at: string
+          created_by: string | null
+          customer_name: string | null
+          customer_phone: string | null
+          id: string
+          items: Json
+          notes: string | null
+          order_id: string | null
+          order_number: string | null
+          processed_at: string | null
+          processed_by: string | null
+          reason: string
+          refund_method: string
+          refund_number: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          items?: Json
+          notes?: string | null
+          order_id?: string | null
+          order_number?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          reason: string
+          refund_method?: string
+          refund_number?: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          created_by?: string | null
+          customer_name?: string | null
+          customer_phone?: string | null
+          id?: string
+          items?: Json
+          notes?: string | null
+          order_id?: string | null
+          order_number?: string | null
+          processed_at?: string | null
+          processed_by?: string | null
+          reason?: string
+          refund_method?: string
+          refund_number?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "refunds_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       reviews: {
         Row: {
           country: string
@@ -1094,6 +1368,51 @@ export type Database = {
         }
         Relationships: []
       }
+      transaction_lines: {
+        Row: {
+          account_id: string
+          created_at: string
+          credit: number
+          debit: number
+          description: string | null
+          id: string
+          transaction_id: string
+        }
+        Insert: {
+          account_id: string
+          created_at?: string
+          credit?: number
+          debit?: number
+          description?: string | null
+          id?: string
+          transaction_id: string
+        }
+        Update: {
+          account_id?: string
+          created_at?: string
+          credit?: number
+          debit?: number
+          description?: string | null
+          id?: string
+          transaction_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "transaction_lines_account_id_fkey"
+            columns: ["account_id"]
+            isOneToOne: false
+            referencedRelation: "chart_of_accounts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "transaction_lines_transaction_id_fkey"
+            columns: ["transaction_id"]
+            isOneToOne: false
+            referencedRelation: "financial_transactions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_roles: {
         Row: {
           created_at: string
@@ -1131,6 +1450,7 @@ export type Database = {
       show_trgm: { Args: { "": string }; Returns: string[] }
     }
     Enums: {
+      account_type: "asset" | "liability" | "equity" | "revenue" | "expense"
       app_role: "admin" | "moderator" | "user"
     }
     CompositeTypes: {
@@ -1259,6 +1579,7 @@ export type CompositeTypes<
 export const Constants = {
   public: {
     Enums: {
+      account_type: ["asset", "liability", "equity", "revenue", "expense"],
       app_role: ["admin", "moderator", "user"],
     },
   },

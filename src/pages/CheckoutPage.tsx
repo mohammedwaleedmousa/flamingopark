@@ -393,7 +393,7 @@ const CheckoutPage = () => {
         paymentMethod,
         deliveryCompany: selectedCompany?.name || "",
         selectedRegion: paymentMethod === "cod" && selectedRegionData ? selectedRegionData.region_name_ar : null,
-        country: customerCountry,
+        country: "YE",
         whatsappNumber: correctWhatsappNumber,
         createdAt: new Date().toISOString(),
       };

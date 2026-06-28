@@ -142,6 +142,7 @@ const CheckoutPage = () => {
         .select("discount_percentage, product_ids")
         .eq("discount_code", normalized)
         .eq("is_active", true)
+        .contains("countries", [effectiveCountry])
         .limit(1)
         .maybeSingle();
 
@@ -212,6 +213,7 @@ const CheckoutPage = () => {
       const { data, error } = await supabase
         .from("delivery_companies")
         .select("*")
+        .eq("country", country)
         .eq("is_active", true)
         .order("name");
       if (error) throw error;
@@ -264,6 +266,7 @@ const CheckoutPage = () => {
       const { data, error } = await supabase
         .from("cod_regions")
         .select("id, region_name, region_name_ar")
+        .eq("country", country)
         .eq("is_active", true)
         .order("region_name_ar");
       if (error) throw error;

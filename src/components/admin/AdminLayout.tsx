@@ -71,7 +71,7 @@ const AdminLayout = () => {
 
   return (
     <SidebarProvider defaultOpen={true}>
-      <div className="min-h-screen flex w-full bg-background font-admin" dir="rtl">
+      <div className="min-h-screen flex w-full bg-background" dir="rtl">
         <AdminSidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
@@ -89,7 +89,7 @@ const AdminLayout = () => {
               <NotificationsDropdown />
             </div>
           </header>
-          <main className="flex-1 p-6 overflow-auto bg-gradient-to-b from-gray-50 to-white">
+          <main className="flex-1 p-4 md:p-6 overflow-auto bg-muted/30">
             <Outlet />
           </main>
         </div>

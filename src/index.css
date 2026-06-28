@@ -17,7 +17,7 @@
     --popover-foreground: 25 18% 14%;
 
     /* Primary = warm gold */
-    --primary: 346 100% 65%;           /* #D4A574 warm gold */
+    --primary: 32 49% 64%;            /* #D4A574 warm gold */
     --primary-foreground: 25 25% 12%;
     --primary-container: 36 50% 95%;
 
@@ -27,7 +27,7 @@
     --muted: 36 30% 94%;
     --muted-foreground: 25 12% 38%;
 
-    --accent: 0 0% 100%;
+    --accent: 28 32% 36%;
     --accent-foreground: 36 60% 98%;
 
     --destructive: 0 60% 45%;
@@ -68,8 +68,8 @@
     --shadow-hover: 0 22px 50px -15px hsl(25 18% 14% / 0.18);
 
     /* Sidebar — dark warm brown */
-    --sidebar-background: 0 0% 100%;
-    --sidebar-foreground: 0 0% 0%;
+    --sidebar-background: 25 22% 12%;
+    --sidebar-foreground: 36 35% 92%;
     --sidebar-primary: 32 49% 64%;
     --sidebar-primary-foreground: 25 25% 10%;
     --sidebar-accent: 25 18% 18%;

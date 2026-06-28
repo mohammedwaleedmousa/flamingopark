@@ -12,11 +12,13 @@ export default {
         "2xl": "1400px",
       },
     },
+    
     extend: {
       fontFamily: {
         heading: ["Playfair Display", "Cormorant Garamond", "serif"],
         body: ["Inter", "DM Sans", "system-ui", "sans-serif"],
         brand: ["Playfair Display", "Cormorant Garamond", "serif"],
+        admin: ["IBM Plex Sans Arabic", "Inter", "sans-serif"],
       },
       colors: {
         border: "hsl(var(--border))",
@@ -75,6 +77,7 @@ export default {
           border: "hsl(var(--sidebar-border))",
           ring: "hsl(var(--sidebar-ring))",
         },
+        
       },
       borderRadius: {
         lg: "var(--radius)",
@@ -131,7 +134,9 @@ export default {
         card: "0 2px 12px -2px hsl(0 0% 0% / 0.08)",
         hover: "0 20px 50px -15px hsl(0 0% 0% / 0.15)",
       },
+      
     },
   },
   plugins: [require("tailwindcss-animate")],
 } satisfies Config;
+

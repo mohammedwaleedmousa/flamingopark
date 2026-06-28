@@ -102,31 +102,33 @@ const AdminSidebar = () => {
 
   return (
     <Sidebar
-      className="border-l border-sidebar-border bg-gradient-to-b from-sidebar via-sidebar to-sidebar/95"
-      collapsible="icon"
+ className="
+    border-l-2 border-pink-400
+    bg-white
+    text-black
+    [&_*]:text-black
+    shadow-[20px_0_60px_-30px_rgba(0,0,0,0.25)]
+    font-admin
+  "      collapsible="icon"
       side="right"
     >
-      <SidebarHeader className="px-4 py-5 border-b border-sidebar-border/60">
-        <div className={cn('flex items-center gap-3', collapsed && 'justify-center')}>
-          <div className="relative w-10 h-10 rounded-2xl bg-gradient-to-br from-primary via-primary to-primary/70 flex items-center justify-center text-primary-foreground font-heading text-base shadow-md shadow-primary/20 ring-1 ring-primary/30">
-            <span className="absolute inset-0 rounded-2xl bg-white/10 opacity-0 hover:opacity-100 transition-opacity" />
-            F
-          </div>
-          {!collapsed && (
-            <div className="leading-tight">
-              <p className="font-heading text-base text-sidebar-foreground tracking-[0.18em]">FLAMINGO</p>
-              <p className="text-[10px] text-sidebar-foreground/55 uppercase tracking-[0.22em] mt-0.5">Admin Panel</p>
-            </div>
-          )}
-        </div>
+      <SidebarHeader className="px-4 py-6 border-b border-black/5 bg-white/40 backdrop-blur-xl flex justify-center items-center">
+        <div className="flex items-center justify-center">
+  <img
+    src="/icons/flamingo.jpeg"
+    alt="logo"
+    className="w-20 h-20 object-contain transition-all duration-500 ease-in-out
+    hover:scale-105"
+  />
+</div>
       </SidebarHeader>
 
-      <SidebarContent className="py-3 gap-1 scrollbar-thin">
+      <SidebarContent className="py-3 gap-1 hide-scrollbar overflow-y-auto overflow-x-hidden overscroll-contain">
         {groups.map((group) => {
           const groupActive = group.items.some((i) => isActive(i.url));
           const isOpen = collapsed ? true : openGroups[group.label] ?? true;
           return (
-            <SidebarGroup key={group.label} className="px-1">
+            <SidebarGroup key={group.label} className="px-1 py-1 mb-2 rounded-xl bg-white/60 border border-black/5 shadow-[0_6px_20px_-18px_rgba(0,0,0,0.2)] backdrop-blur-md">
               {collapsed ? (
                 <GroupItems group={group} isActive={isActive} onNav={handleNavClick} collapsed />
               ) : (
@@ -138,7 +140,7 @@ const AdminSidebar = () => {
                     <button
                       className={cn(
                         'w-full flex items-center justify-between px-3 py-1.5 mb-0.5 rounded-md transition-colors',
-                        'text-[10px] uppercase tracking-[0.18em] text-sidebar-foreground/50 hover:text-sidebar-foreground',
+                        'text-[10px] uppercase tracking-[0.25em] font-medium text-black/50 hover:text-black/80 transition-all',
                         groupActive && 'text-sidebar-foreground/70',
                       )}
                     >
@@ -151,7 +153,7 @@ const AdminSidebar = () => {
                       />
                     </button>
                   </CollapsibleTrigger>
-                  <CollapsibleContent className="data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down overflow-hidden">
+                  <CollapsibleContent className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in data-[state=closed]:fade-out duration-200 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down overflow-hidden">
                     <GroupItems group={group} isActive={isActive} onNav={handleNavClick} collapsed={false} />
                   </CollapsibleContent>
                 </Collapsible>
@@ -162,17 +164,21 @@ const AdminSidebar = () => {
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-sidebar-border/60">
-        <Button
-          onClick={handleLogout}
-          variant="ghost"
-          className={cn(
-            "w-full gap-3 text-sidebar-foreground/80 hover:bg-destructive/10 hover:text-destructive transition-colors",
-            collapsed ? "justify-center px-2" : "justify-start"
-          )}
-        >
-          <LogOut className="w-5 h-5" />
-          {!collapsed && <span>تسجيل الخروج</span>}
-        </Button>
+        <button
+  onClick={handleLogout}
+  className={cn(
+    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300",
+    "text-black/60 hover:text-black hover:bg-black/5 hover:shadow-sm",
+    collapsed && "justify-center"
+  )}
+>
+  <LogOut className="w-5 h-5" />
+  {!collapsed && (
+    <span className="text-[13px] font-medium">
+      تسجيل الخروج
+    </span>
+  )}
+</button>
       </SidebarFooter>
     </Sidebar>
   );
@@ -190,7 +196,7 @@ const GroupItems = ({
   collapsed: boolean;
 }) => (
   <SidebarGroupContent>
-    <SidebarMenu className="space-y-0.5 px-1">
+    <SidebarMenu className="space-y-1 px-1">
       {group.items.map((item) => {
         const active = isActive(item.url);
         return (
@@ -201,22 +207,34 @@ const GroupItems = ({
                 end={item.url === '/admin'}
                 onClick={onNav}
                 className={cn(
-                  'relative flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 group',
+                  "relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 ease-out",
+                  "focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
+
                   active
-                    ? 'bg-primary/12 text-primary font-medium shadow-[0_1px_0_0_hsl(var(--primary)/0.15)_inset]'
-                    : 'text-sidebar-foreground/75 hover:bg-sidebar-accent/70 hover:text-sidebar-foreground',
+                    ? "bg-white text-black font-medium shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/5"
+                    : "text-black/80 hover:bg-white hover:text-black hover:shadow-[0_12px_35px_-15px_rgba(0,0,0,0.25)] hover:translate-y-[-3px] hover:scale-[1.02] active:scale-[0.98]"
                 )}
+                style={{ 
+                  direction: "rtl",
+                  transformStyle: "preserve-3d",
+                  willChange: "transform",
+                  color: "inherit"
+                }}
               >
                 {active && (
-                  <span className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-l-full bg-gradient-to-b from-primary to-primary/60" />
+                <span className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-full bg-gradient-to-b from-black via-black/60 to-transparent shadow-md" />
                 )}
                 <item.icon
                   className={cn(
-                    'w-[18px] h-[18px] shrink-0 transition-all duration-200',
-                    active ? 'text-primary scale-105' : 'text-sidebar-foreground/55 group-hover:text-sidebar-foreground',
+                    'w-[18px] h-[18px] shrink-0 transition-all duration-300 ease-out',
+                    active ? 'text-black drop-shadow-sm scale-105' : 'text-sidebar-foreground/55 group-hover:text-sidebar-foreground',
                   )}
                 />
-                {!collapsed && <span className="flex-1 text-[13px]">{item.title}</span>}
+                {!collapsed && (
+                  <span className="flex-1 text-[13px] leading-none text-right text-black/80">
+                    {item.title}
+                  </span>
+                )}
               </NavLink>
             </SidebarMenuButton>
           </SidebarMenuItem>

@@ -129,7 +129,6 @@ const OffersPage = () => {
       const { data, error } = await supabase
         .from("offers_settings")
         .select("*")
-        .contains("countries", [country])
         .limit(1)
         .maybeSingle();
       if (error) throw error;
@@ -147,7 +146,6 @@ const OffersPage = () => {
         .from("offers")
         .select("*")
         .eq("is_active", true)
-        .contains("countries", [country])
         .or(`end_date.is.null,end_date.gt.${now}`)
         .order("sort_order", { ascending: true });
       if (error) throw error;
@@ -175,7 +173,6 @@ const OffersPage = () => {
         .from("products")
         .select("*")
         .eq("is_active", true)
-        .contains("countries", [country])
         .in("id", offerProductIds);
       if (error) throw error;
       return data.map((p) => ({

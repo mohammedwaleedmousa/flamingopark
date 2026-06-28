@@ -25,7 +25,6 @@ const BrandsStrip = () => {
         .from("brands")
         .select("id, name")
         .eq("is_active", true)
-        .contains("countries", [country])
         .order("sort_order", { ascending: true });
       if (error) throw error;
       return data as Brand[];

@@ -58,6 +58,8 @@ const AdminRefundsPage = lazy(() => import("./pages/admin/AdminRefundsPage"));
 const AdminExpensesPage = lazy(() => import("./pages/admin/AdminExpensesPage"));
 const AdminPaymentMethodsPage = lazy(() => import("./pages/admin/AdminPaymentMethodsPage"));
 const AdminInventoryAdjustmentsPage = lazy(() => import("./pages/admin/AdminInventoryAdjustmentsPage"));
+const AdminFinanceDashboard = lazy(() => import("./pages/admin/AdminFinanceDashboard"));
+const AdminCustomerIntelligence = lazy(() => import("./pages/admin/AdminCustomerIntelligence"));
 const MohammedInvoicesPage = lazy(() => import("./pages/MohammedInvoicesPage"));
 
 const queryClient = new QueryClient();
@@ -160,6 +162,8 @@ const App = () => {
               <Route path="expenses" element={<AdminExpensesPage />} />
               <Route path="payment-methods" element={<AdminPaymentMethodsPage />} />
               <Route path="inventory-adjustments" element={<AdminInventoryAdjustmentsPage />} />
+              <Route path="finance" element={<AdminFinanceDashboard />} />
+              <Route path="customer-intelligence" element={<AdminCustomerIntelligence />} />
               <Route path="settings" element={<AdminSettingsPage />} />
             </Route>
 

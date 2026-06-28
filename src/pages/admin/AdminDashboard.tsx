@@ -17,6 +17,13 @@ import {
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import {
+  LineChart,
+  Line,
+  XAxis,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 
 interface Stats {
   products: number;
@@ -41,6 +48,14 @@ const AdminDashboard = () => {
     fetchRecentOrders();
   }, []);
 
+  const [revenueData, setRevenueData] = useState([
+    { name: "الإثنين", value: 120 },
+    { name: "الثلاثاء", value: 300 },
+    { name: "الأربعاء", value: 200 },
+    { name: "الخميس", value: 450 },
+    { name: "الجمعة", value: 380 },
+  ]);
+
   const fetchStats = async () => {
     const [productsRes, ordersRes, customersRes] = await Promise.all([
       supabase.from('products').select('id', { count: 'exact' }),
@@ -49,9 +64,33 @@ const AdminDashboard = () => {
     ]);
 
     const orders = ordersRes.data || [];
+    const grouped: Record<string, number> = {
+      "الإثنين": 0,
+      "الثلاثاء": 0,
+      "الأربعاء": 0,
+      "الخميس": 0,
+      "الجمعة": 0,
+      "السبت": 0,
+      "الأحد": 0,
+    };
+    orders.forEach((o) => {
+      const day = new Date(o.created_at).toLocaleDateString("ar-SA", {
+        weekday: "long",
+      });
+
+      if (grouped[day] !== undefined) {
+        grouped[day] += parseFloat(String(o.total)) || 0;
+      }
+    });
+    setRevenueData(
+      Object.keys(grouped).map((key) => ({
+        name: key,
+        value: grouped[key],
+      }))
+    );
     const revenue = orders.reduce((sum, o) => sum + (parseFloat(String(o.total)) || 0), 0);
     const pendingOrders = orders.filter(o => o.status === 'pending').length;
-
+  
     setStats({
       products: productsRes.count || 0,
       orders: ordersRes.count || 0,
@@ -109,6 +148,8 @@ const AdminDashboard = () => {
   };
 
   return (
+    <div className="space-y-10 text-right min-h-screen bg-gradient-to-br from-background via-background to-muted/30">
+    <div className="max-w-7xl mx-auto px-4 md:px-6 py-6 space-y-8">
     <div className="space-y-6">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -133,7 +174,9 @@ const AdminDashboard = () => {
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.1 }}
             className={cn(
-              "bg-card border rounded-xl p-4 md:p-5 relative overflow-hidden",
+              "relative overflow-hidden rounded-2xl p-5 border backdrop-blur-xl",
+              "bg-white/5 hover:bg-white/10 transition-all duration-300",
+              "hover:-translate-y-1 hover:shadow-xl",
               stat.borderColor
             )}
           >
@@ -149,10 +192,44 @@ const AdminDashboard = () => {
                 <TrendingUp className="w-4 h-4 text-green-500" />
               </div>
               <h3 className="text-xl md:text-2xl font-heading text-foreground">{stat.value}</h3>
+              <div className="flex items-center gap-2 mt-2">
+                <TrendingUp className="w-3 h-3 text-green-500" />
+                <span className="text-xs text-green-500">نمو هذا الأسبوع</span>
+              </div>
               <p className="text-xs md:text-sm text-muted-foreground mt-1">{stat.title}</p>
             </div>
           </motion.div>
         ))}
+      </div>
+
+      <div className="bg-card border border-border rounded-2xl p-5">
+        <h2 className="text-lg font-heading mb-4">نظرة على الإيرادات</h2>
+
+        <div className="h-64">
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={revenueData}>
+              <XAxis dataKey="name" stroke="#888" />
+              <Tooltip
+                contentStyle={{
+                  backgroundColor: "rgba(0,0,0,0.8)",
+                  border: "1px solid rgba(255,255,255,0.1)",
+                  borderRadius: "12px",
+                  textAlign: "right",
+                  direction: "rtl",
+                }}
+                formatter={(value) => [`${value} ر.س`, "الإيرادات"]}
+              />
+              <Line
+                type="monotone"
+                dataKey="value"
+                stroke="#6366f1"
+                strokeWidth={3}
+                dot={{ r: 4 }}
+                activeDot={{ r: 7, strokeWidth: 2 }}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
       </div>
 
       {/* Quick Actions - Mobile */}
@@ -280,6 +357,8 @@ const AdminDashboard = () => {
           </table>
         </div>
       </motion.div>
+    </div>
+    </div>
     </div>
   );
 };

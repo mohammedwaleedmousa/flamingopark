@@ -79,7 +79,6 @@ const AdminProductsPage = () => {
     }
     if (status !== "all") q = q.eq("is_active", status === "active");
     if (stock !== "all") q = q.eq("in_stock", stock === "in");
-    if (country !== "all") q = q.contains("countries", [country]);
 
     const from = (page - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;

@@ -6,29 +6,29 @@
 
 @layer base {
   :root {
-    /* Warm Boutique — Cream / Deep Brown / Soft Gold */
-    --background: 36 60% 98%;         /* #FFFDF9 cream */
-    --foreground: 25 18% 14%;         /* #2A2520 deep brown */
+    /* Flamingo Park — Pink / White / Soft Cream */
+    --background: 0 0% 100%;          /* #FFFFFF */
+    --foreground: 240 14% 14%;        /* near-black for body text */
 
     --card: 0 0% 100%;
-    --card-foreground: 25 18% 14%;
+    --card-foreground: 240 14% 14%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 25 18% 14%;
+    --popover-foreground: 240 14% 14%;
 
-    /* Primary = warm gold */
-    --primary: 346 100% 65%;           /* #D4A574 warm gold */
-    --primary-foreground: 25 25% 12%;
-    --primary-container: 36 50% 95%;
+    /* Primary = Flamingo pink */
+    --primary: 335 85% 58%;            /* #EC2C7C-ish */
+    --primary-foreground: 0 0% 100%;
+    --primary-container: 335 100% 96%;
 
-    --secondary: 28 32% 36%;          /* #7A5C3E rich brown */
-    --secondary-foreground: 36 60% 98%;
+    --secondary: 240 14% 14%;
+    --secondary-foreground: 0 0% 100%;
 
-    --muted: 36 30% 94%;
-    --muted-foreground: 25 12% 38%;
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 9% 46%;
 
-    --accent: 0 0% 100%;
-    --accent-foreground: 36 60% 98%;
+    --accent: 335 100% 96%;
+    --accent-foreground: 335 85% 40%;
 
     --destructive: 0 60% 45%;
     --destructive-foreground: 0 0% 100%;
@@ -36,36 +36,40 @@
     --success: 145 40% 38%;
     --warning: 38 80% 45%;
 
-    --border: 32 22% 86%;
-    --input: 32 22% 90%;
-    --ring: 32 49% 64%;
+    --border: 220 14% 92%;
+    --input: 220 14% 94%;
+    --ring: 335 85% 58%;
 
-    --radius: 0.5rem;
+    --radius: 1rem;
 
     /* Brand aliases */
-    --gold: 32 49% 64%;
-    --gold-light: 32 49% 78%;
-    --gold-dark: 32 49% 48%;
-    --beige: 36 35% 94%;
-    --beige-dark: 32 24% 86%;
+    --gold: 335 85% 58%;
+    --gold-light: 335 90% 75%;
+    --gold-dark: 335 85% 45%;
+    --beige: 220 14% 96%;
+    --beige-dark: 220 14% 90%;
     --cream: 36 60% 98%;
-    --charcoal: 25 18% 14%;
-    --marble: 36 40% 96%;
-    --icon-light: 28 32% 36%;
+    --charcoal: 240 14% 14%;
+    --marble: 0 0% 100%;
+    --icon-light: 240 14% 14%;
+    --pink: 335 85% 58%;
+    --pink-soft: 335 100% 96%;
 
-    /* Gradients */
-    --gradient-gold: linear-gradient(135deg, hsl(32 49% 70%) 0%, hsl(32 49% 56%) 100%);
-    --gradient-gold-shine: linear-gradient(90deg, transparent 0%, hsl(36 60% 100% / 0.5) 50%, transparent 100%);
-    --gradient-beige: linear-gradient(180deg, hsl(36 60% 98%) 0%, hsl(36 30% 94%) 100%);
-    --gradient-dark: linear-gradient(180deg, hsl(25 18% 18%) 0%, hsl(25 25% 10%) 100%);
-    --gradient-marble: linear-gradient(135deg, hsl(36 60% 98%) 0%, hsl(32 30% 95%) 50%, hsl(36 60% 98%) 100%);
-    --gradient-warm-hero: linear-gradient(160deg, hsl(36 50% 96%) 0%, hsl(32 45% 92%) 40%, hsl(28 35% 85%) 100%);
+    /* Gradients — soft pink */
+    --gradient-gold: linear-gradient(135deg, hsl(335 90% 70%) 0%, hsl(335 85% 55%) 100%);
+    --gradient-gold-shine: linear-gradient(90deg, transparent 0%, hsl(0 0% 100% / 0.5) 50%, transparent 100%);
+    --gradient-beige: linear-gradient(180deg, #ffffff 0%, #faf7f4 100%);
+    --gradient-dark: linear-gradient(180deg, hsl(240 14% 18%) 0%, hsl(240 14% 10%) 100%);
+    --gradient-marble: linear-gradient(135deg, #ffffff 0%, #fdf2f8 50%, #ffffff 100%);
+    --gradient-warm-hero: linear-gradient(135deg, #FDE7F0 0%, #FCE0EC 40%, #F8D0E0 100%);
+    --gradient-hero-pink: linear-gradient(135deg, #FDE7F0 0%, #FBC2D8 100%);
+    --gradient-account: linear-gradient(135deg, #C8A4F0 0%, #7BB7FF 100%);
 
-    /* Shadows — warmer */
-    --shadow-gold: 0 4px 24px -6px hsl(28 32% 36% / 0.12);
-    --shadow-elegant: 0 12px 40px -12px hsl(25 18% 14% / 0.14);
-    --shadow-card: 0 2px 14px -3px hsl(28 30% 30% / 0.08);
-    --shadow-hover: 0 22px 50px -15px hsl(25 18% 14% / 0.18);
+    /* Shadows */
+    --shadow-gold: 0 10px 30px -12px hsl(335 85% 58% / 0.35);
+    --shadow-elegant: 0 12px 40px -12px hsl(240 14% 14% / 0.08);
+    --shadow-card: 0 2px 14px -3px hsl(240 14% 14% / 0.06);
+    --shadow-hover: 0 18px 40px -15px hsl(240 14% 14% / 0.12);
 
     /* Sidebar — dark warm brown */
     --sidebar-background: 0 0% 100%;

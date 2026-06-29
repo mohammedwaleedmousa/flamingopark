@@ -13,6 +13,7 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import type { User as SupaUser } from "@supabase/supabase-js";
 import { toast } from "@/hooks/use-toast";
+import Logo from "@/components/Logo";
 
 const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div className="pt-5 pb-1">
@@ -102,15 +103,15 @@ const Navbar = () => {
   };
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 bg-background/95 backdrop-blur border-b border-border" dir="rtl">
+    <header className="sticky top-0 inset-x-0 z-50 bg-white/95 backdrop-blur border-b border-border/60" dir="rtl">
       <div className="container mx-auto px-4 md:px-8">
         <div className="relative flex items-center justify-between h-16 md:h-20">
-          {/* Right (in RTL): menu + search */}
+          {/* Right (RTL): menu */}
           <div className="flex items-center gap-1 z-10">
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
-                <button className="p-2 hover:opacity-60 transition" aria-label="القائمة">
-                  <Menu className="w-5 h-5" />
+                <button className="w-10 h-10 grid place-items-center rounded-full hover:bg-muted transition" aria-label="القائمة">
+                  <Menu className="w-5 h-5 text-foreground" />
                 </button>
               </SheetTrigger>
               <SheetContent side="right" className="w-[92vw] sm:w-[420px] p-0 bg-background border-l overflow-hidden " dir="rtl">
@@ -277,37 +278,39 @@ const Navbar = () => {
                 </div>
               </SheetContent>
             </Sheet>
-            <button onClick={() => setIsSearchOpen((v) => !v)} className="p-2 hover:opacity-60 transition" aria-label="بحث">
-              {isSearchOpen ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
-            </button>
           </div>
 
-          {/* Center wordmark */}
-          <Link to="/home" className="absolute left-1/2 -translate-x-1/2 logo-flamingo text-xl md:text-2xl">
-            FLAMINGO
+          {/* Center logo */}
+          <Link to="/home" aria-label="Flamingo Park" className="flex items-center">
+            <Logo size="md" />
           </Link>
 
-          {/* Left (RTL): account, wishlist, bag */}
-          <div className="flex items-center gap-1 z-10">
-            <Link to={user ? "/account" : "/auth"} className="p-2 hover:opacity-60 transition hidden md:inline-flex" aria-label="حساب">
-              <User className="w-5 h-5" />
-            </Link>
-            <Link to="/favorites" className="relative p-2 hover:opacity-60 transition" aria-label="مفضلة">
-              <Heart className="w-5 h-5" />
-              {favorites.length > 0 && (
-                <span className="absolute top-1 left-1 min-w-[16px] h-4 px-1 text-[10px] flex items-center justify-center bg-foreground text-background">{favorites.length}</span>
-              )}
-            </Link>
-            <button onClick={openCart} className="relative p-2 hover:opacity-60 transition" aria-label="سلة">
-              <ShoppingBag className="w-5 h-5" />
+          {/* Left (RTL): notifications + cart with pink badges */}
+          <div className="flex items-center gap-2 z-10">
+            <button
+              onClick={() => navigate("/offers")}
+              className="relative w-10 h-10 grid place-items-center rounded-full bg-muted/60 hover:bg-muted transition"
+              aria-label="إشعارات"
+            >
+              <Bell className="w-[18px] h-[18px] text-foreground" strokeWidth={1.8} />
+              <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 text-[10px] flex items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold ring-2 ring-white">3</span>
+            </button>
+            <button
+              onClick={openCart}
+              className="relative w-10 h-10 grid place-items-center rounded-full bg-muted/60 hover:bg-muted transition"
+              aria-label="السلة"
+            >
+              <ShoppingBag className="w-[18px] h-[18px] text-foreground" strokeWidth={1.8} />
               {cartCount > 0 && (
-                <span className="absolute top-1 left-1 min-w-[16px] h-4 px-1 text-[10px] flex items-center justify-center bg-foreground text-background">{cartCount}</span>
+                <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 text-[10px] flex items-center justify-center rounded-full bg-primary text-primary-foreground font-semibold ring-2 ring-white">
+                  {cartCount}
+                </span>
               )}
             </button>
           </div>
         </div>
 
-        {/* Sub-nav */}
+        {/* Desktop sub-nav */}
         <nav className="hidden md:flex items-center justify-center gap-8 h-10 border-t border-border/60 overflow-x-auto hide-scrollbar">
           {topLinks.map((l) => (
             <Link key={l.href} to={l.href} className="text-[11px] tracking-[0.32em] uppercase text-foreground/75 hover:text-foreground transition whitespace-nowrap">

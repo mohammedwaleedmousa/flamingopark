@@ -23,8 +23,8 @@ const groups: { label: string; items: { title: string; url: string; icon: any }[
     label: 'نظرة عامة',
     items: [
       { title: 'لوحة التحكم', url: '/admin', icon: LayoutDashboard },
-      { title: 'الذكاء المالي', url: '/admin/finance', icon: Wallet },
-      { title: 'ذكاء العملاء', url: '/admin/customer-intelligence', icon: Brain },
+      { title: 'التحليل المالي', url: '/admin/finance', icon: Wallet },
+      { title: 'تحليل العملاء', url: '/admin/customer-intelligence', icon: Brain },
       { title: 'التقارير والتحليلات', url: '/admin/analytics', icon: BarChart3 },
       { title: 'الإيرادات', url: '/admin/revenue', icon: TrendingUp },
       { title: 'تقرير الأرباح', url: '/admin/profit-report', icon: PieChart },

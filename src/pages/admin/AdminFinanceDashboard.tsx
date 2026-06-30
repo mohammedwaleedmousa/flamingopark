@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { Wallet, TrendingUp, TrendingDown, ArrowDownRight, ArrowUpRight, BookOpen, Receipt, PiggyBank } from "lucide-react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Legend, Line, LineChart } from "recharts";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 const currency = "ر.ي";
 const fmt = (n: number) => new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 0 }).format(n);
@@ -21,7 +22,11 @@ export default function AdminFinanceDashboard() {
   const [series, setSeries] = useState<{ label: string; revenue: number; expenses: number; profit: number }[]>([]);
   const [totals, setTotals] = useState({ revenue: 0, expenses: 0, profit: 0, refunds: 0 });
   const [txs, setTxs] = useState<any[]>([]);
-
+  const options: { value: Range; label: string }[] = [
+  { value: "7d", label: "7 أيام" },
+  { value: "30d", label: "شهر" },
+  { value: "12m", label: "سنة" },
+];
   useEffect(() => { load(); }, [range]);
 
   async function load() {
@@ -59,7 +64,7 @@ export default function AdminFinanceDashboard() {
       expenses: Math.round(v.expenses),
       profit: Math.round(v.revenue - v.expenses),
     }));
-
+    
     const sumRev = orders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
     const sumExp = expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
     const sumRef = refunds.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
@@ -84,31 +89,65 @@ export default function AdminFinanceDashboard() {
       <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wider">المالية</p>
-          <h1 className="font-heading text-2xl md:text-3xl">لوحة الذكاء المالي</h1>
+          <h1 className="font-heading text-2xl md:text-3xl">لوحة التحليل المالي</h1>
           <p className="text-sm text-muted-foreground mt-1">إيرادات، مصروفات، تدفقات نقدية، وأرباح</p>
         </div>
         <div className="flex items-center gap-2">
-          <Tabs value={range} onValueChange={(v) => setRange(v as Range)}>
-            <TabsList>
-              <TabsTrigger value="7d">7 أيام</TabsTrigger>
-              <TabsTrigger value="30d">30 يوم</TabsTrigger>
-              <TabsTrigger value="12m">12 شهر</TabsTrigger>
-            </TabsList>
-          </Tabs>
+          <div className="flex items-center bg-white/70 backdrop-blur border rounded-2xl p-1 shadow-sm w-fit">
+  
+  {options.map((opt) => (
+    <button
+      key={opt.value}
+      onClick={() => setRange(opt.value)}
+      className="relative px-6 py-2 text-xs font-medium rounded-xl transition-colors"
+    >
+      {/* ACTIVE PILL */}
+      {range === opt.value && (
+        <motion.div
+          layoutId="active-pill"
+          className="absolute inset-0 bg-gradient-to-r from-pink-500 to-fuchsia-600 rounded-xl"
+          transition={{ type: "spring", stiffness: 500, damping: 35 }}
+        />
+      )}
+
+      {/* TEXT */}
+      <span
+        className={`relative z-10 transition-colors ${
+          range === opt.value ? "text-white" : "text-gray-600"
+        }`}
+      >
+        {opt.label}
+      </span>
+    </button>
+  ))}
+</div>
         </div>
       </header>
 
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {kpis.map(k => (
-          <Card key={k.label} className="p-5 ring-1 ring-black/5 border-0 shadow-none">
+          <Card
+            key={k.label}
+            className="relative p-5 rounded-2xl border-0 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group"
+          >
+            <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
             <div className="flex items-start justify-between">
-              <div className={cn("p-2.5 rounded-xl", k.bg)}><k.icon className={cn("w-4.5 h-4.5", k.tone)} /></div>
+              <div className="relative z-10 p-3 rounded-xl bg-white/70 backdrop-blur border"><k.icon className={cn("w-4.5 h-4.5", k.tone)} /></div>
             </div>
             <p className="text-xs text-muted-foreground mt-3">{k.label}</p>
-            {loading
-              ? <Skeleton className="h-7 w-28 mt-1.5" />
-              : <p className="text-xl md:text-2xl font-heading tabular-nums mt-1">{fmt(k.value)} <span className="text-xs text-muted-foreground">{currency}</span></p>}
-          </Card>
+            {loading ? (
+  <Skeleton className="h-7 w-28 mt-3" />
+) : (
+  <div className="relative z-10 mt-2">
+    <p className="text-2xl md:text-3xl font-semibold tracking-tight tabular-nums text-foreground">
+      {fmt(k.value)}
+    </p>
+
+    <p className="text-xs text-muted-foreground mt-1">
+      {currency}
+    </p>
+  </div>
+)}        </Card>
         ))}
       </section>
 
@@ -135,7 +174,7 @@ export default function AdminFinanceDashboard() {
           </div>
         </Card>
 
-        <Card className="p-5 ring-1 ring-black/5 border-0 shadow-none">
+        <Card className="p-5 relative overflow-hidden border border-black/5 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between mb-3">
             <h2 className="font-heading text-base">التدفق النقدي</h2>
             <PiggyBank className="w-4 h-4 text-muted-foreground" />
@@ -178,7 +217,7 @@ export default function AdminFinanceDashboard() {
           </div>
         </Card>
 
-        <Card className="p-5 ring-1 ring-black/5 border-0 shadow-none">
+        <Card className="p-5 relative overflow-hidden border border-black/5 shadow-sm hover:shadow-md transition">
           <h2 className="font-heading text-base mb-3">روابط سريعة</h2>
           <div className="space-y-2">
             {[

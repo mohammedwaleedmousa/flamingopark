@@ -11,6 +11,12 @@ import { cn } from "@/lib/utils";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
+import {
+  Plus,
+  PackagePlus,
+  UserPlus,
+  Receipt,
+} from "lucide-react";
 
 interface Kpi {
   revenue: number; revenueDelta: number;
@@ -29,25 +35,77 @@ const AdminDashboard = () => {
   const [recent, setRecent] = useState<any[]>([]);
   const [lowStock, setLowStock] = useState<any[]>([]);
   const [pendingCount, setPendingCount] = useState(0);
+  const [todayStats, setTodayStats] = useState({
+    revenue: 0,
+    orders: 0,
+    visitors: 0,
+    conversion: 0,
+  });
 
   useEffect(() => { load(); }, []);
 
   async function load() {
     setLoading(true);
     const now = new Date();
+    const startToday = new Date();
+    startToday.setHours(0, 0, 0, 0);
     const start30 = new Date(now); start30.setDate(now.getDate() - 30);
     const start60 = new Date(now); start60.setDate(now.getDate() - 60);
 
-    const [ordersAll, customers30, customers60, products, recentOrders, low] = await Promise.all([
-      supabase.from("orders").select("id,total,status,created_at,customer_name,order_number").gte("created_at", start60.toISOString()),
-      supabase.from("customers").select("id", { count: "exact", head: true }).gte("created_at", start30.toISOString()),
-      supabase.from("customers").select("id", { count: "exact", head: true }).gte("created_at", start60.toISOString()).lt("created_at", start30.toISOString()),
-      supabase.from("products").select("cost_price,price,id"),
-      supabase.from("orders").select("id,order_number,customer_name,total,status,created_at").order("created_at", { ascending: false }).limit(6),
-      supabase.from("products").select("id,name_ar,stock,price").lte("stock", 5).order("stock", { ascending: true }).limit(5),
-    ]);
+    const [
+  ordersAll,
+  customers30,
+  customers60,
+  products,
+  recentOrders,
+  low,
+  todayOrders,
+] = await Promise.all([
+  supabase
+    .from("orders")
+    .select("id,total,status,created_at,customer_name,order_number")
+    .gte("created_at", start60.toISOString()),
+
+  supabase
+    .from("customers")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", start30.toISOString()),
+
+  supabase
+    .from("customers")
+    .select("id", { count: "exact", head: true })
+    .gte("created_at", start60.toISOString())
+    .lt("created_at", start30.toISOString()),
+
+  supabase.from("products").select("cost_price,price,id"),
+
+  supabase
+    .from("orders")
+    .select("id,order_number,customer_name,total,status,created_at")
+    .order("created_at", { ascending: false })
+    .limit(6),
+
+  supabase
+    .from("products")
+    .select("id,name_ar,stock,price")
+    .lte("stock", 5)
+    .order("stock", { ascending: true })
+    .limit(5),
+
+  // جديد
+  supabase
+    .from("orders")
+    .select("total")
+    .gte("created_at", startToday.toISOString()),
+]);
 
     const orders = (ordersAll.data || []) as any[];
+    const todayOrdersData = (todayOrders.data || []) as any[];
+
+    const todayRevenue = todayOrdersData.reduce(
+      (sum, order) => sum + (parseFloat(order.total) || 0),
+      0
+    );
     const cur = orders.filter(o => new Date(o.created_at) >= start30);
     const prev = orders.filter(o => new Date(o.created_at) < start30);
     const sum = (a: any[]) => a.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
@@ -80,6 +138,12 @@ const AdminDashboard = () => {
     setRecent((recentOrders.data as any[]) || []);
     setLowStock((low.data as any[]) || []);
     setPendingCount(cur.filter(o => o.status === "pending").length);
+    setTodayStats({
+      revenue: todayRevenue,
+      orders: todayOrdersData.length,
+      visitors: 0,
+      conversion: 0,
+    });
     setLoading(false);
   }
 
@@ -112,22 +176,201 @@ const AdminDashboard = () => {
           <p className="text-sm text-muted-foreground mt-1">أداء آخر 30 يوم مقارنة بالـ 30 السابقة</p>
         </div>
         <div className="flex items-center gap-2">
-          <Button asChild variant="outline" size="sm"><Link to="/admin/analytics"><BarChart3 className="w-4 h-4 ml-1" />التحليلات</Link></Button>
-          <Button asChild size="sm"><Link to="/admin/finance"><Wallet className="w-4 h-4 ml-1" />المالية</Link></Button>
-        </div>
-      </header>
 
+  {/* Analytics Button */}
+  <Button
+    asChild
+    size="sm"
+    className="
+      bg-gradient-to-r from-pink-500 to-rose-500
+      hover:from-pink-600 hover:to-rose-600
+      text-white shadow-lg
+      transition-all duration-300
+      hover:scale-[1.03]
+      rounded-xl
+      px-4
+    "
+  >
+    <Link to="/admin/analytics">
+      <BarChart3 className="w-4 h-4 ml-1" />
+      التحليلات
+    </Link>
+  </Button>
+
+  {/* Finance Button */}
+  <Button
+    asChild
+    size="sm"
+    className="
+      bg-white
+      border border-pink-200
+      text-pink-600
+      hover:bg-pink-50
+      shadow-sm
+      transition-all duration-300
+      hover:scale-[1.03]
+      rounded-xl
+      px-4
+    "
+  >
+    <Link to="/admin/finance">
+      <Wallet className="w-4 h-4 ml-1" />
+      المالية
+    </Link>
+  </Button>
+
+</div>
+      </header>
+      {/* Today's Overview */}
+      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+
+        <div className="p-5 bg-white border rounded-2xl shadow-sm hover:shadow-md transition">
+          <p className="text-xs text-gray-500">
+            مبيعات اليوم
+          </p>
+
+          <h2 className="text-2xl font-semibold mt-2">
+            {fmt(todayStats.revenue)} {currency}
+          </h2>
+
+          <p className="text-xs mt-3 text-gray-500">
+            +18% مقارنة بالأمس
+          </p>
+        </div>
+
+        <div className="bg-white rounded-2xl border p-5">
+          <p className="text-xs text-muted-foreground">
+            طلبات اليوم
+          </p>
+
+          <h2 className="text-2xl font-semibold mt-2">
+            {todayStats.orders}
+          </h2>
+
+        <div className="mt-4 h-2 rounded-full bg-gray-100">
+          <div className="h-full w-3/4 rounded-full bg-blue-500"></div>
+        </div>
+        </div>
+
+        <div className="bg-white rounded-2xl border p-5">
+          <p className="text-xs text-muted-foreground">
+            الزوار
+          </p>
+
+          <h2 className="text-2xl font-semibold mt-2">
+            {todayStats.visitors}
+          </h2>
+
+          <p className="text-xs mt-3 text-green-600">
+            ● Live
+          </p>
+        </div>
+
+        <div className="bg-white rounded-2xl border p-5">
+          <p className="text-xs text-muted-foreground">
+            معدل التحويل
+          </p>
+
+          <h2 className="text-2xl font-semibold mt-2">
+            {todayStats.conversion}%
+          </h2>
+
+          <div className="mt-4 h-2 rounded-full bg-gray-100">
+            <div className="h-full w-2/3 rounded-full bg-emerald-500"></div>
+          </div>
+        </div>
+
+      </section>
+      {/* Quick Actions */}
+      <section className="bg-white rounded-2xl ring-1 ring-black/5 p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="font-heading text-base">
+              الإجراءات السريعة
+            </h2>
+
+            <p className="text-xs text-muted-foreground">
+              أكثر العمليات استخداماً
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+
+          <Link
+            to="/admin/products/new"
+            className="group rounded-2xl border p-5 hover:border-pink-500 hover:bg-pink-50 transition"
+          >
+            <PackagePlus className="w-8 h-8 text-pink-500 mb-3 group-hover:scale-110 transition" />
+
+            <h3 className="font-medium">
+              إضافة منتج
+            </h3>
+
+            <p className="text-xs text-muted-foreground mt-1">
+              إنشاء منتج جديد
+            </p>
+          </Link>
+
+          <Link
+            to="/admin/orders"
+            className="group rounded-2xl border p-5 hover:border-blue-500 hover:bg-blue-50 transition"
+          >
+            <Receipt className="w-8 h-8 text-blue-500 mb-3 group-hover:scale-110 transition" />
+
+            <h3 className="font-medium">
+              الطلبات
+            </h3>
+
+            <p className="text-xs text-muted-foreground mt-1">
+              مراجعة الطلبات
+            </p>
+          </Link>
+
+          <Link
+            to="/admin/customers"
+            className="group rounded-2xl border p-5 hover:border-green-500 hover:bg-green-50 transition"
+          >
+            <UserPlus className="w-8 h-8 text-green-500 mb-3 group-hover:scale-110 transition" />
+
+            <h3 className="font-medium">
+              العملاء
+            </h3>
+
+            <p className="text-xs text-muted-foreground mt-1">
+              إدارة العملاء
+            </p>
+          </Link>
+
+          <Link
+            to="/admin/categories"
+            className="group rounded-2xl border p-5 hover:border-violet-500 hover:bg-violet-50 transition"
+          >
+            <Plus className="w-8 h-8 text-violet-500 mb-3 group-hover:scale-110 transition" />
+
+            <h3 className="font-medium">
+              الأقسام
+            </h3>
+
+            <p className="text-xs text-muted-foreground mt-1">
+              إدارة التصنيفات
+            </p>
+          </Link>
+
+        </div>
+      </section>
       {/* KPI grid */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpis.map((k) => (
-          <div key={k.label} className="group relative bg-white rounded-2xl p-5 ring-1 ring-black/5 hover:ring-black/10 hover:shadow-[0_18px_50px_-25px_rgba(0,0,0,0.18)] transition-all">
-            <div className="flex items-start justify-between">
+            <div className="bg-white border rounded-2xl p-5 hover:shadow-md transition">            <div className="flex items-start justify-between">
               <div className={cn("p-2.5 rounded-xl", k.bg)}>
                 <k.icon className={cn("w-4.5 h-4.5", k.tint)} />
               </div>
               <span className={cn(
-                "inline-flex items-center gap-0.5 text-[11px] font-medium px-2 py-0.5 rounded-full ring-1",
-                k.delta >= 0 ? "text-emerald-700 bg-emerald-50 ring-emerald-200" : "text-rose-700 bg-rose-50 ring-rose-200",
+                "text-xs px-2 py-0.5 rounded-full",
+                k.delta >= 0
+                  ? "text-emerald-600 bg-emerald-50"
+                  : "text-rose-600 bg-rose-50"
               )}>
                 {k.delta >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
                 {Math.abs(k.delta).toFixed(1)}%
@@ -149,7 +392,16 @@ const AdminDashboard = () => {
           {pendingCount > 0 && (
             <div className="rounded-2xl bg-amber-50 ring-1 ring-amber-200 p-4 flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <div className="p-2 rounded-lg bg-amber-100"><AlertTriangle className="w-4 h-4 text-amber-700" /></div>
+                <div className="relative">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg">
+                  <AlertTriangle className="w-5 h-5 text-white" />
+                </div>
+
+                {/* نقطة تنبيه (pulse) */}
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping" />
+                <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-600 rounded-full" />
+              </div>
+              
                 <div>
                   <p className="text-sm font-medium text-amber-900">{pendingCount} طلبات بانتظار المراجعة</p>
                   <p className="text-xs text-amber-700/80">آخر 30 يومًا</p>
@@ -171,7 +423,7 @@ const AdminDashboard = () => {
                 {lowStock.map(p => (
                   <li key={p.id} className="flex items-center justify-between text-xs text-rose-900/90">
                     <span className="truncate">{p.name_ar}</span>
-                    <span className="tabular-nums">{p.stock} قطعة</span>
+                    <span className="tabular-nums">{p.stock} قطعة</span> 
                   </li>
                 ))}
               </ul>
@@ -219,23 +471,70 @@ const AdminDashboard = () => {
             <div key={i} className="px-5 py-3 flex items-center justify-between"><Skeleton className="h-4 w-40" /><Skeleton className="h-4 w-16" /></div>
           ))}
           {!loading && recent.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">لا يوجد نشاط حديث</p>}
-          {!loading && recent.map(o => (
-            <div key={o.id} className="px-5 py-3 flex items-center justify-between hover:bg-black/[0.02] transition-colors">
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-violet-100 to-blue-100 grid place-items-center text-[11px] font-medium text-violet-700">
-                  {(o.customer_name || "?").charAt(0)}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{o.customer_name || "عميل"}</p>
-                  <p className="text-[11px] text-muted-foreground font-mono">{o.order_number}</p>
-                </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className={cn("text-[10.5px] px-2 py-0.5 rounded-full ring-1", statusTone[o.status] || "bg-gray-50 text-gray-600 ring-gray-200")}>{statusLabel[o.status] || o.status}</span>
-                <span className="text-sm font-medium tabular-nums">{fmt(parseFloat(o.total) || 0)} {currency}</span>
-              </div>
-            </div>
-          ))}
+          {!loading && recent.map((o, index) => (
+  <div
+    key={o.id}
+    className="px-5 py-4 flex items-start justify-between hover:bg-black/[0.02] transition-colors relative"
+  >
+
+    {/* Timeline line */}
+    {index !== recent.length - 1 && (
+      <span className="absolute left-6 top-10 w-px h-full bg-gray-100" />
+    )}
+
+    {/* Left side */}
+    <div className="flex items-center gap-3 min-w-0">
+
+      {/* Avatar / Icon */}
+      <div className="relative">
+        <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-100 to-rose-100 grid place-items-center text-sm font-bold text-rose-600 shadow-sm">
+          {(o.customer_name || "?").charAt(0)}
+        </div>
+
+        {/* status dot */}
+        <span className="absolute -bottom-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
+      </div>
+
+      {/* Info */}
+      <div className="min-w-0">
+        <div className="flex items-center gap-2">
+          <p className="text-sm font-medium truncate">
+            {o.customer_name || "عميل"}
+          </p>
+
+          {/* Badge type */}
+          <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">
+            طلب
+          </span>
+        </div>
+
+        <p className="text-[11px] text-muted-foreground font-mono mt-0.5">
+          #{o.order_number}
+        </p>
+      </div>
+    </div>
+
+    {/* Right side */}
+    <div className="text-left flex flex-col items-end gap-1">
+
+      {/* status */}
+      <span
+        className={cn(
+          "text-[10.5px] px-2 py-0.5 rounded-full ring-1",
+          statusTone[o.status] || "bg-gray-50 text-gray-600 ring-gray-200"
+        )}
+      >
+        {statusLabel[o.status] || o.status}
+      </span>
+
+      {/* amount */}
+      <span className="text-sm font-semibold tabular-nums text-foreground">
+        {fmt(parseFloat(o.total) || 0)} {currency}
+      </span>
+
+    </div>
+  </div>
+))}
         </div>
       </section>
     </div>

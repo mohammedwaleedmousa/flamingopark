@@ -23,7 +23,14 @@ const RANGE_OPTIONS: { value: Range; label: string; ms: number; defaultGrain: Gr
 ];
 
 const COLORS = ['#C9A962', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#06b6d4', '#ec4899'];
-
+const ACCENTS = {
+  visitors: "from-blue-500/10 to-blue-600/5",
+  views: "from-cyan-500/10 to-cyan-600/5",
+  cart: "from-pink-500/10 to-rose-500/5",
+  orders: "from-emerald-500/10 to-green-500/5",
+  revenue: "from-yellow-500/10 to-amber-500/5",
+  conv: "from-purple-500/10 to-fuchsia-500/5",
+};
 interface EventRow {
   event_type: string;
   session_id: string | null;
@@ -39,17 +46,31 @@ interface EventRow {
 }
 
 const StatCard = ({ icon: Icon, label, value, hint, accent }: any) => (
-  <div className="bg-card border rounded-2xl p-4 md:p-5 relative overflow-hidden">
-    <div className={cn('absolute inset-0 bg-gradient-to-br opacity-40', accent)} />
-    <div className="relative">
-      <div className="flex items-center justify-between mb-3">
-        <div className="p-2.5 rounded-xl bg-background/80 text-primary">
-          <Icon className="w-5 h-5" />
-        </div>
-        {hint && <span className="text-[10px] text-muted-foreground">{hint}</span>}
+  <div className="relative rounded-2xl border bg-white/70 backdrop-blur-md p-5 shadow-sm hover:shadow-md transition">
+
+    {/* soft glow */}
+    <div className={`absolute inset-0 opacity-10 bg-gradient-to-br ${accent}`} />
+
+    <div className="relative flex items-start justify-between">
+
+      <div>
+        <p className="text-xs text-muted-foreground">{label}</p>
+
+        <h2 className="text-2xl font-semibold mt-1 tabular-nums">
+          {value}
+        </h2>
+
+        {hint && (
+          <p className="text-[11px] text-muted-foreground mt-1">
+            {hint}
+          </p>
+        )}
       </div>
-      <div className="text-2xl md:text-3xl font-heading text-foreground tabular-nums">{value}</div>
-      <p className="text-xs text-muted-foreground mt-1">{label}</p>
+
+      <div className="p-2 rounded-xl bg-black/5">
+        <Icon className="w-4 h-4 text-muted-foreground" />
+      </div>
+
     </div>
   </div>
 );
@@ -278,39 +299,56 @@ const AdminAnalyticsPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-        <div>
-          <h1 className="font-heading text-2xl md:text-3xl text-foreground flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-primary" />
-            التقارير والتحليلات
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            بيانات حقيقية محدّثة لحظياً — زوار، تحويل، إعلانات، أفضل المنتجات
-          </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <Select value={range} onValueChange={(v) => setRange(v as Range)}>
-            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {RANGE_OPTIONS.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
-            </SelectContent>
-          </Select>
-          <Select value={grain} onValueChange={(v) => setGrain(v as Grain)}>
-            <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="hour">بالساعة</SelectItem>
-              <SelectItem value="day">باليوم</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="icon" onClick={() => setRefreshKey((k) => k + 1)} aria-label="تحديث">
-            <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
-          </Button>
-        </div>
-      </div>
+    
+<div className="min-h-screen bg-gradient-to-b from-background via-background to-muted/20 space-y-8">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-6">
+          <div className="relative overflow-hidden rounded-3xl border bg-gradient-to-br from-black/5 via-background to-black/5 p-6 w-full md:w-auto">
+
+    <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top_right,rgba(255,0,150,0.2),transparent)]" />
+  <h1 className="text-2xl md:text-3xl font-bold text-pink-600 flex items-center gap-2">
+    <BarChart3 className="w-6 h-6" />
+    لوحة التحليلات الذكية
+  </h1>
+
+  <p className="text-sm text-muted-foreground mt-1">
+    تحليل لحظي لأداء المتجر — زوار، مبيعات، وتحويلات
+  </p>
+  
+</div>
+
+
+        
+  <div className="flex items-center gap-2">
+    <Select value={range} onValueChange={(v) => setRange(v as Range)}>
+      <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
+      <SelectContent>
+        {RANGE_OPTIONS.map((o) => (
+          <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+
+    <Select value={grain} onValueChange={(v) => setGrain(v as Grain)}>
+      <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
+      <SelectContent>
+        <SelectItem value="hour">Hour</SelectItem>
+        <SelectItem value="day">Day</SelectItem>
+      </SelectContent>
+    </Select>
+
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={() => setRefreshKey((k) => k + 1)}
+    >
+      <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
+    </Button>
+  </div>
+
+</div>
 
       {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-6 gap-4">
         <StatCard icon={Users} label="زوار فريدون" value={stats.visitors.toLocaleString('en')} accent="from-blue-500/10 to-blue-600/5" />
         <StatCard icon={Eye} label="مشاهدات الصفحات" value={stats.pageViews.toLocaleString('en')} accent="from-cyan-500/10 to-cyan-600/5" />
         <StatCard icon={MousePointerClick} label="إضافة للسلة" value={stats.addToCart.toLocaleString('en')} accent="from-amber-500/10 to-amber-600/5" />

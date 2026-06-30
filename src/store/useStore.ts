@@ -2,17 +2,10 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { track } from "@/lib/analytics";
 
-// Backward-compat — single unified storefront. Type widened so legacy
-// SA-era code still type-checks; runtime always uses "YE".
-export type Country = "YE" | "SA";
-export const detectCountryFromPhone = (_phone: string): Country => "YE";
-
 export interface Customer {
   id: string;
   name: string;
   phone: string;
-  /** @deprecated unified single-platform; always "YE". */
-  country?: Country;
 }
 
 export interface Product {
@@ -32,8 +25,6 @@ export interface Product {
   inStock: boolean;
   isFeatured?: boolean;
   isBestSeller?: boolean;
-  /** @deprecated kept for legacy fixtures/components. */
-  countries?: Country[];
 }
 
 export interface SelectedAccessory {
@@ -55,12 +46,8 @@ interface StoreState {
   customer: Customer | null;
   cart: CartItem[];
   isCartOpen: boolean;
-  /** @deprecated unified — always "YE". */
-  country: Country;
 
   setCustomer: (customer: Customer | null) => void;
-  /** @deprecated no-op — unified single platform. */
-  setCountry: (country: Country) => void;
 
   addToCart: (
     product: Product,
@@ -89,10 +76,8 @@ export const useStore = create<StoreState>()(
       customer: null,
       cart: [],
       isCartOpen: false,
-      country: "YE" as Country,
 
       setCustomer: (customer) => set({ customer }),
-      setCountry: (_country) => set({ country: "YE" }),
 
       addToCart: (product, quantity = 1, selectedSize, selectedAccessories) => {
         const cart = get().cart;

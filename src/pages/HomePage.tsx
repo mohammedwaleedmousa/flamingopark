@@ -1,10 +1,13 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
-import { useState } from "react";
-import { Search, ArrowLeft, Truck, ShieldCheck, Lock, RotateCcw } from "lucide-react";
+import { Link } from "react-router-dom";
+import { ArrowLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
+import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
+import HeroSlider from "@/components/HeroSlider";
+import ProductCard from "@/components/ProductCard";
 import { supabase } from "@/integrations/supabase/client";
+import type { Product } from "@/store/useStore";
 
 interface DbProduct {
   id: string;
@@ -25,203 +28,287 @@ interface DbProduct {
   is_best_seller: boolean;
 }
 
-const FALLBACK_CAT: Record<string, string> = {
-  women: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=400&q=85",
-  men: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=400&q=85",
-  kids: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=400&q=85",
-  bags: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=400&q=85",
-  shoes: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=400&q=85",
-  beauty: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=400&q=85",
-  perfumes: "https://images.unsplash.com/photo-1541643600914-78b084683601?w=400&q=85",
-  watches: "https://images.unsplash.com/photo-1524805444758-089113d48a6d?w=400&q=85",
-  electronics: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&q=85",
-  sports: "https://images.unsplash.com/photo-1517649763962-0c623066013b?w=400&q=85",
-  accessories: "https://images.unsplash.com/photo-1511499767150-a48a237f0083?w=400&q=85",
-};
+const toProduct = (p: DbProduct): Product => ({
+  id: p.id,
+  name: p.name,
+  nameAr: p.name_ar,
+  slug: p.slug,
+  price: Number(p.price),
+  originalPrice: p.original_price ? Number(p.original_price) : undefined,
+  discount: p.discount ?? undefined,
+  description: p.description,
+  descriptionAr: p.description_ar,
+  images: Array.isArray(p.images) ? p.images : [],
+  category: p.category,
+  brand: p.brand,
+  inStock: p.in_stock,
+  countries: (p.countries || ["YE"]) as Product["countries"],
+  isFeatured: p.is_featured,
+  isBestSeller: p.is_best_seller,
+});
 
-const trust = [
-  { icon: Truck, title: "شحن سريع", note: "2-5 أيام" },
-  { icon: ShieldCheck, title: "منتجات أصلية", note: "100%" },
-  { icon: Lock, title: "دفع آمن", note: "تشفير كامل" },
-  { icon: RotateCcw, title: "إرجاع سهل", note: "15 يوم" },
+const featuredCategories = [
+  {
+    title: "نسائي",
+    subtitle: "Women",
+    image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=900&q=85",
+    link: "/products?category=women",
+  },
+  {
+    title: "رجالي",
+    subtitle: "Men",
+    image: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=900&q=85",
+    link: "/products?category=men",
+  },
+  {
+    title: "أطفال",
+    subtitle: "Kids",
+    image: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=900&q=85",
+    link: "/products?category=kids",
+  },
+  {
+    title: "حقائب",
+    subtitle: "Bags",
+    image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=900&q=85",
+    link: "/products?category=bags",
+  },
+  {
+    title: "أحذية",
+    subtitle: "Shoes",
+    image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=900&q=85",
+    link: "/products?category=shoes",
+  },
+  {
+    title: "تجميل",
+    subtitle: "Beauty",
+    image: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=900&q=85",
+    link: "/products?category=beauty",
+  },
 ];
 
-const stats = [
-  { value: "500+", label: "ماركة عالمية" },
-  { value: "20K+", label: "منتج أصلي" },
-  { value: "15K+", label: "عميل سعيد" },
-  { value: "99%", label: "تقييم إيجابي" },
+const editorial = [
+  {
+    eyebrow: "Featured Collection",
+    title: "أناقة تدوم",
+    body: "اكتشف مجموعة مختارة بعناية من القطع العصرية المصممة لتمنحك إطلالة متجددة تجمع بين الجودة والتفاصيل الراقية.",
+    cta: "اكتشف اختياراتنا المميزة",
+    href: "/products?filter=featured",
+    image: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=1400&q=90",
+    reverse: false,
+  },
+
+  {
+    eyebrow: "Flamingo Collection",
+    title: "متجر فلامنجو",
+    body: "نقدم مجموعة مختارة من الأزياء والإكسسوارات التي تجمع بين الأناقة العصرية والجودة العالية لتمنحك تجربة تسوق مميزة في كل موسم.",
+    cta: "استكشف المتجر",
+    href: "/about",
+    image: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1400&q=90",
+    reverse: true,
+  }
+
 ];
 
 const HomePage = () => {
-  const navigate = useNavigate();
-  const [search, setSearch] = useState("");
-
-  const { data: categories = [] } = useQuery({
-    queryKey: ["home-cats"],
+  const { data: products = [] } = useQuery({
+    queryKey: ["home-products"],
     queryFn: async () => {
-      const { data } = await supabase
-        .from("categories")
-        .select("id,slug,name,name_ar,image_url,sort_order,parent_id")
-        .eq("is_active", true)
-        .is("parent_id", null)
-        .order("sort_order");
-      return (data || []) as any[];
-    },
-  });
-
-  const { data: brands = [] } = useQuery({
-    queryKey: ["home-brands"],
-    queryFn: async () => {
-      const { data } = await supabase
-        .from("brands")
-        .select("id,slug,name,logo_url,sort_order")
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
         .eq("is_active", true)
         .order("sort_order")
-        .limit(8);
-      return (data || []) as any[];
+        .limit(20);
+      if (error) throw error;
+      return (data || []).map(toProduct);
     },
   });
 
-  const onSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!search.trim()) return;
-    navigate(`/products?search=${encodeURIComponent(search.trim())}`);
-  };
+  const { data: bestSellers = [] } = useQuery({
+    queryKey: ["home-best-sellers"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .eq("is_best_seller", true)
+        .order("sort_order")
+        .limit(8);
+      if (error) throw error;
+      return (data as DbProduct[]).map(toProduct);
+    },
+  });
 
+  const { data: newArrivals = [] } = useQuery({
+    queryKey: ["home-new-arrivals"],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .eq("is_active", true)
+        .eq("is_featured", true)
+        .order("sort_order")
+        .limit(8);
+      if (error) throw error;
+      return (data as DbProduct[]).map(toProduct);
+    },
+  });
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
+    <div className="min-h-screen relative bg-background" dir="rtl">
       <Navbar />
       <CartDrawer />
 
-      <main className="container mx-auto px-4 md:px-6 pb-6">
-        {/* Search */}
-        <form onSubmit={onSearch} className="mt-4 relative">
-          <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-[18px] h-[18px] text-muted-foreground" />
-          <input
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            placeholder="ابحث عن منتجات، ماركات وأقسام..."
-            className="w-full h-12 pr-11 pl-14 rounded-2xl bg-muted/60 border border-transparent focus:border-primary/40 focus:bg-white text-[13px] placeholder:text-muted-foreground/80 focus:outline-none transition"
-          />
-          <button
-            type="submit"
-            aria-label="بحث"
-            className="absolute left-1.5 top-1/2 -translate-y-1/2 h-9 w-11 rounded-xl bg-primary text-primary-foreground grid place-items-center hover:opacity-90 transition"
-          >
-            <Search className="w-[18px] h-[18px]" strokeWidth={2.2} />
-          </button>
-        </form>
+      <main>
+        {/* Hero — sits behind the navbar */}
+        <HeroSlider />
 
-        {/* Hero card */}
-        <section className="mt-4 relative overflow-hidden rounded-3xl shadow-[0_10px_30px_-15px_rgba(236,44,124,0.35)]"
-          style={{ background: "linear-gradient(135deg,#FDE7F0 0%, #FBC2D8 100%)" }}
-        >
-          <div className="relative grid grid-cols-[1.1fr_1fr] gap-2 px-5 pt-6 pb-7 min-h-[230px]">
-            <div className="flex flex-col justify-center text-foreground">
-              <p className="text-[11px] text-foreground/70 mb-1.5">أرقى الماركات العالمية</p>
-              <h2 className="font-heading text-[26px] leading-[1.2] font-bold">
-                تجربة تسوق
-                <br />
-                <span className="text-primary">استثنائية</span>
-              </h2>
-              <Link
-                to="/products"
-                className="mt-5 inline-flex items-center gap-2 self-start bg-primary text-primary-foreground text-[12px] font-semibold px-5 py-2.5 rounded-full shadow-[0_8px_20px_-8px_rgba(236,44,124,0.6)] hover:opacity-95 transition"
-              >
-                <ArrowLeft className="w-3.5 h-3.5" /> تسوق الآن
-              </Link>
+        {/* Featured Categories — Dior-style large editorial cards */}
+        <section className="py-20 md:py-28">
+          <div className="container mx-auto px-6">
+            <div className="text-center mb-14">
+              <p className="text-[20px] tracking-[0.4em] uppercase text-muted-foreground mb-3">تسوّق حسب</p>
+              <h2 className="font-heading text-3xl md:text-5xl text-foreground">الأقسام الرئيسية</h2>
             </div>
-            <div className="relative">
-              <img
-                src="https://images.unsplash.com/photo-1483985988355-763728e1935b?w=600&q=85"
-                alt="Flamingo"
-                className="absolute inset-0 w-full h-full object-cover rounded-2xl"
-                loading="eager"
-              />
-            </div>
-          </div>
-          <div className="absolute bottom-2 inset-x-0 flex items-center justify-center gap-1.5">
-            {[0, 1, 2].map((i) => (
-              <span key={i} className={`h-1.5 rounded-full transition-all ${i === 0 ? "w-5 bg-primary" : "w-1.5 bg-primary/30"}`} />
-            ))}
-          </div>
-        </section>
-
-        {/* Trust strip */}
-        <section className="mt-4 grid grid-cols-4 gap-2.5">
-          {trust.map((t) => {
-            const Icon = t.icon;
-            return (
-              <div key={t.title} className="bg-white rounded-2xl px-2 py-3 text-center border border-border/60 shadow-[0_2px_8px_-4px_rgba(0,0,0,0.06)]">
-                <div className="mx-auto mb-1.5 w-9 h-9 rounded-full bg-primary/10 grid place-items-center">
-                  <Icon className="w-[18px] h-[18px] text-primary" strokeWidth={2} />
-                </div>
-                <p className="text-[11px] font-semibold text-foreground leading-tight">{t.title}</p>
-                <p className="text-[10px] text-muted-foreground mt-0.5">{t.note}</p>
-              </div>
-            );
-          })}
-        </section>
-
-        {/* Stats */}
-        <section className="mt-3 bg-white rounded-2xl border border-border/60 shadow-[0_2px_8px_-4px_rgba(0,0,0,0.06)] grid grid-cols-4 divide-x divide-x-reverse divide-border/60 py-4">
-          {stats.map((s) => (
-            <div key={s.label} className="text-center">
-              <p className="text-primary font-bold text-[18px] tabular-nums">{s.value}</p>
-              <p className="text-[10px] text-muted-foreground mt-1 leading-tight px-1">{s.label}</p>
-            </div>
-          ))}
-        </section>
-
-        {/* Categories */}
-        <section className="mt-6">
-          <div className="flex items-center justify-between mb-3">
-            <h2 className="text-[15px] font-bold text-foreground">تسوّق حسب الأقسام</h2>
-            <Link to="/categories" className="text-[12px] text-primary font-semibold">عرض الكل</Link>
-          </div>
-          <div className="flex gap-3 overflow-x-auto hide-scrollbar -mx-1 px-1 pb-1">
-            {categories.slice(0, 8).map((c) => (
-              <Link key={c.id} to={`/products?category=${c.slug}`} className="flex-shrink-0 w-[68px] text-center">
-                <div className="w-[68px] h-[68px] rounded-2xl overflow-hidden bg-muted shadow-[0_3px_10px_-4px_rgba(0,0,0,0.10)]">
+            <div className="grid grid-cols-2 md:grid-cols-6 gap-1 md:gap-2">
+              {featuredCategories.map((c) => (
+                <Link key={c.title} to={c.link} className="group relative aspect-[3/4] overflow-hidden bg-muted">
                   <img
-                    src={c.image_url || FALLBACK_CAT[c.slug] || FALLBACK_CAT.women}
-                    alt={c.name_ar}
+                    src={c.image}
+                    alt={c.title}
                     loading="lazy"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-105"
                   />
-                </div>
-                <p className="text-[11px] mt-1.5 text-foreground/90 line-clamp-1">{c.name_ar}</p>
-              </Link>
-            ))}
-          </div>
-        </section>
-
-        {/* Brands */}
-        {brands.length > 0 && (
-          <section className="mt-6">
-            <div className="flex items-center justify-between mb-3">
-              <h2 className="text-[15px] font-bold text-foreground">أشهر الماركات</h2>
-              <Link to="/products" className="text-[12px] text-primary font-semibold">عرض الكل</Link>
-            </div>
-            <div className="grid grid-cols-5 gap-2.5">
-              {brands.slice(0, 5).map((b) => (
-                <Link
-                  key={b.id}
-                  to={`/products?brand=${b.slug}`}
-                  className="aspect-square bg-white rounded-2xl border border-border/60 grid place-items-center p-2 hover:border-primary/40 hover:shadow-[0_4px_14px_-6px_rgba(236,44,124,0.3)] transition"
-                >
-                  {b.logo_url ? (
-                    <img src={b.logo_url} alt={b.name} className="max-w-full max-h-full object-contain" loading="lazy" />
-                  ) : (
-                    <span className="font-bold text-[12px] text-foreground/70">{b.name}</span>
-                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/65 via-black/10 to-transparent" />
+                  <div className="absolute inset-x-0 bottom-0 p-5 text-center text-white">
+                    <p className="text-[10px] tracking-[0.4em] uppercase opacity-80">{c.subtitle}</p>
+                    <h3 className="font-heading text-xl md:text-2xl mt-1">{c.title}</h3>
+                  </div>
                 </Link>
               ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Editorial split — image left, text right (alternating) */}
+        {editorial.map((e) => (
+          <section key={e.title} className="bg-background">
+            <div className={`grid md:grid-cols-2 ${e.reverse ? "" : ""}`}>
+              <div
+                className={`relative aspect-[4/5] md:aspect-auto md:h-[640px] overflow-hidden ${e.reverse ? "md:order-2" : ""}`}
+              >
+                <img src={e.image} alt={e.title} loading="lazy" className="w-full h-full object-cover" />
+              </div>
+              <div
+                className={`flex items-center justify-center px-8 md:px-20 py-16 md:py-0 ${e.reverse ? "md:order-1" : ""}`}
+              >
+                <div className="max-w-md text-center md:text-right">
+                  <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-5">{e.eyebrow}</p>
+                  <h3 className="font-heading text-3xl md:text-5xl leading-tight text-foreground mb-6">{e.title}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed mb-10">{e.body}</p>
+                  <Link
+                    to={e.href}
+                    className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-foreground pb-2 hover:opacity-60 transition-opacity"
+                  >
+                    {e.cta} <ArrowLeft className="w-3 h-3" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+        ))}
+
+        {/* Best Sellers */}
+        {bestSellers.length > 0 && (
+          <section className="py-20 md:py-28 bg-muted">
+            <div className="container mx-auto px-6">
+              <div className="text-center mb-14">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">الأكثر طلباً</p>
+                <h2 className="font-heading text-3xl md:text-5xl text-foreground">الأكثر مبيعاً</h2>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+                {bestSellers.slice(0, 8).map((p) => (
+                  <ProductCard key={p.id} product={p} badge="BEST SELLER" />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* New Arrivals */}
+        {newArrivals.length > 0 && (
+          <section className="py-20 md:py-28">
+            <div className="container mx-auto px-6">
+              <div className="flex items-end justify-between mb-12">
+                <div>
+                  <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">وصل حديثاً</p>
+                  <h2 className="font-heading text-3xl md:text-5xl text-foreground">جديد الموسم</h2>
+                </div>
+                <Link
+                  to="/products?filter=featured"
+                  className="text-[11px] tracking-[0.35em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
+                >
+                  عرض الكل <ArrowLeft className="w-3 h-3" />
+                </Link>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+                {newArrivals.slice(0, 8).map((p) => (
+                  <ProductCard key={p.id} product={p} badge="NEW IN" />
+                ))}
+              </div>
+            </div>
+          </section>
+        )}
+
+        {/* Full-width campaign banner */}
+        <section className="relative h-[60vh] min-h-[420px] overflow-hidden">
+          <img
+            src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1800&q=90"
+            alt="Flamingo campaign"
+            loading="lazy"
+            className="absolute inset-0 w-full h-full object-cover"
+          />
+          <div className="absolute inset-0 bg-black/30" />
+          <div className="relative h-full flex items-center justify-center text-center px-6">
+            <div className="text-white max-w-2xl">
+              <p className="text-[10px] tracking-[0.4em] uppercase opacity-80 mb-4">حملة 2026</p>
+              <h2 className="font-heading text-4xl md:text-6xl leading-tight mb-8">صُممت لتُروى</h2>
+              <Link
+                to="/products"
+                className="inline-flex items-center justify-center bg-white text-black text-[11px] tracking-[0.35em] uppercase px-10 py-4 hover:bg-white/90 transition-colors"
+              >
+                اكتشف الآن
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* All products preview */}
+        {products.length > 0 && (
+          <section className="py-20 md:py-28">
+            <div className="container mx-auto px-6">
+              <div className="text-center mb-14">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">المختارات</p>
+                <h2 className="font-heading text-3xl md:text-5xl text-foreground">قطع مختارة بعناية</h2>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+                {products.slice(0, 8).map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
+              </div>
+              <div className="text-center mt-14">
+                <Link
+                  to="/products"
+                  className="inline-flex items-center justify-center border border-foreground text-foreground text-[11px] tracking-[0.35em] uppercase px-10 py-4 hover:bg-foreground hover:text-background transition-colors"
+                >
+                  عرض جميع المنتجات
+                </Link>
+              </div>
             </div>
           </section>
         )}
       </main>
+
+      <Footer />
     </div>
   );
 };

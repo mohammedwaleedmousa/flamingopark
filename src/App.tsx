@@ -8,7 +8,6 @@ import { useStore } from "@/store/useStore";
 import SplashScreen from "@/components/SplashScreen";
 import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
-import BottomNavBar from "@/components/BottomNavBar";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
@@ -59,8 +58,6 @@ const AdminRefundsPage = lazy(() => import("./pages/admin/AdminRefundsPage"));
 const AdminExpensesPage = lazy(() => import("./pages/admin/AdminExpensesPage"));
 const AdminPaymentMethodsPage = lazy(() => import("./pages/admin/AdminPaymentMethodsPage"));
 const AdminInventoryAdjustmentsPage = lazy(() => import("./pages/admin/AdminInventoryAdjustmentsPage"));
-const AdminFinanceDashboard = lazy(() => import("./pages/admin/AdminFinanceDashboard"));
-const AdminCustomerIntelligence = lazy(() => import("./pages/admin/AdminCustomerIntelligence"));
 const MohammedInvoicesPage = lazy(() => import("./pages/MohammedInvoicesPage"));
 
 const queryClient = new QueryClient();
@@ -163,8 +160,6 @@ const App = () => {
               <Route path="expenses" element={<AdminExpensesPage />} />
               <Route path="payment-methods" element={<AdminPaymentMethodsPage />} />
               <Route path="inventory-adjustments" element={<AdminInventoryAdjustmentsPage />} />
-              <Route path="finance" element={<AdminFinanceDashboard />} />
-              <Route path="customer-intelligence" element={<AdminCustomerIntelligence />} />
               <Route path="settings" element={<AdminSettingsPage />} />
             </Route>
 
@@ -172,7 +167,6 @@ const App = () => {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
-        <BottomNavBar />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

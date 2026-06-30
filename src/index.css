@@ -6,29 +6,29 @@
 
 @layer base {
   :root {
-    /* Warm Boutique — Cream / Deep Brown / Soft Gold */
-    --background: 36 60% 98%;         /* #FFFDF9 cream */
-    --foreground: 25 18% 14%;         /* #2A2520 deep brown */
+    /* Luxury Boutique — Soft Pink / Gold / Warm Neutral */
+    --background: 30 40% 99%;          /* warm white */
+    --foreground: 25 18% 12%;          /* deep charcoal */
 
     --card: 0 0% 100%;
-    --card-foreground: 25 18% 14%;
+    --card-foreground: 25 18% 12%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 25 18% 14%;
+    --popover-foreground: 25 18% 12%;
 
-    /* Primary = warm gold */
-    --primary: 346 100% 65%;           /* #D4A574 warm gold */
-    --primary-foreground: 25 25% 12%;
-    --primary-container: 36 50% 95%;
+    /* Primary = soft rose pink */
+    --primary: 346 70% 62%;            /* soft rose */
+    --primary-foreground: 0 0% 100%;
+    --primary-container: 346 80% 96%;
 
-    --secondary: 28 32% 36%;          /* #7A5C3E rich brown */
-    --secondary-foreground: 36 60% 98%;
+    --secondary: 40 55% 56%;           /* #C9A962 gold */
+    --secondary-foreground: 25 25% 12%;
 
-    --muted: 36 30% 94%;
-    --muted-foreground: 25 12% 38%;
+    --muted: 30 25% 96%;
+    --muted-foreground: 25 10% 42%;
 
-    --accent: 0 0% 100%;
-    --accent-foreground: 36 60% 98%;
+    --accent: 346 80% 96%;
+    --accent-foreground: 346 60% 30%;
 
     --destructive: 0 60% 45%;
     --destructive-foreground: 0 0% 100%;
@@ -36,36 +36,43 @@
     --success: 145 40% 38%;
     --warning: 38 80% 45%;
 
-    --border: 32 22% 86%;
-    --input: 32 22% 90%;
-    --ring: 32 49% 64%;
+    --border: 25 15% 90%;
+    --input: 25 15% 92%;
+    --ring: 346 70% 62%;
 
-    --radius: 0.5rem;
+    --radius: 1rem;
 
     /* Brand aliases */
-    --gold: 32 49% 64%;
-    --gold-light: 32 49% 78%;
-    --gold-dark: 32 49% 48%;
-    --beige: 36 35% 94%;
-    --beige-dark: 32 24% 86%;
-    --cream: 36 60% 98%;
-    --charcoal: 25 18% 14%;
-    --marble: 36 40% 96%;
-    --icon-light: 28 32% 36%;
+    --gold: 40 55% 56%;
+    --gold-light: 40 60% 72%;
+    --gold-dark: 40 55% 42%;
+    --rose: 346 70% 62%;
+    --rose-light: 346 80% 92%;
+    --beige: 30 35% 96%;
+    --beige-dark: 30 20% 90%;
+    --cream: 30 40% 99%;
+    --charcoal: 25 18% 12%;
+    --marble: 30 40% 98%;
+    --icon-light: 25 18% 18%;
 
-    /* Gradients */
-    --gradient-gold: linear-gradient(135deg, hsl(32 49% 70%) 0%, hsl(32 49% 56%) 100%);
-    --gradient-gold-shine: linear-gradient(90deg, transparent 0%, hsl(36 60% 100% / 0.5) 50%, transparent 100%);
-    --gradient-beige: linear-gradient(180deg, hsl(36 60% 98%) 0%, hsl(36 30% 94%) 100%);
-    --gradient-dark: linear-gradient(180deg, hsl(25 18% 18%) 0%, hsl(25 25% 10%) 100%);
-    --gradient-marble: linear-gradient(135deg, hsl(36 60% 98%) 0%, hsl(32 30% 95%) 50%, hsl(36 60% 98%) 100%);
-    --gradient-warm-hero: linear-gradient(160deg, hsl(36 50% 96%) 0%, hsl(32 45% 92%) 40%, hsl(28 35% 85%) 100%);
+    /* Gradients — rose to gold luxury */
+    --gradient-primary: linear-gradient(135deg, hsl(346 75% 68%) 0%, hsl(40 60% 60%) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(40 60% 68%) 0%, hsl(40 55% 48%) 100%);
+    --gradient-rose: linear-gradient(135deg, hsl(346 85% 90%) 0%, hsl(346 70% 72%) 100%);
+    --gradient-glow: radial-gradient(circle at 20% 0%, hsl(346 80% 92% / 0.7), transparent 55%), radial-gradient(circle at 80% 100%, hsl(40 70% 88% / 0.55), transparent 50%);
+    --gradient-gold-shine: linear-gradient(90deg, transparent 0%, hsl(0 0% 100% / 0.55) 50%, transparent 100%);
+    --gradient-beige: linear-gradient(180deg, hsl(30 40% 99%) 0%, hsl(30 30% 95%) 100%);
+    --gradient-dark: linear-gradient(180deg, hsl(25 18% 16%) 0%, hsl(25 25% 9%) 100%);
+    --gradient-marble: linear-gradient(135deg, hsl(30 40% 99%) 0%, hsl(346 40% 97%) 50%, hsl(40 40% 97%) 100%);
+    --gradient-warm-hero: linear-gradient(160deg, hsl(346 80% 96%) 0%, hsl(30 40% 97%) 45%, hsl(40 60% 92%) 100%);
 
-    /* Shadows — warmer */
-    --shadow-gold: 0 4px 24px -6px hsl(28 32% 36% / 0.12);
-    --shadow-elegant: 0 12px 40px -12px hsl(25 18% 14% / 0.14);
-    --shadow-card: 0 2px 14px -3px hsl(28 30% 30% / 0.08);
-    --shadow-hover: 0 22px 50px -15px hsl(25 18% 14% / 0.18);
+    /* Shadows — soft luxury */
+    --shadow-gold: 0 8px 28px -10px hsl(40 55% 56% / 0.28);
+    --shadow-rose: 0 12px 40px -12px hsl(346 70% 62% / 0.30);
+    --shadow-elegant: 0 18px 50px -18px hsl(25 18% 14% / 0.18);
+    --shadow-card: 0 4px 20px -6px hsl(25 18% 14% / 0.08);
+    --shadow-hover: 0 24px 60px -20px hsl(346 50% 30% / 0.22);
+    --shadow-glass: 0 8px 32px -8px hsl(25 18% 14% / 0.10);
 
     /* Sidebar — dark warm brown */
     --sidebar-background: 0 0% 100%;

@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Truck, ShieldCheck, Sparkles, RotateCcw } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
@@ -162,16 +162,43 @@ const HomePage = () => {
         {/* Hero — sits behind the navbar */}
         <HeroSlider />
 
+        {/* Trust badges strip */}
+        <section className="bg-luxury-glow border-y border-border/40">
+          <div className="container mx-auto px-6 py-6">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+              {[
+                { icon: Truck, title: "توصيل سريع", sub: "خلال 24-72 ساعة" },
+                { icon: ShieldCheck, title: "دفع آمن", sub: "حماية كاملة" },
+                { icon: Sparkles, title: "جودة فاخرة", sub: "منتجات أصلية" },
+                { icon: RotateCcw, title: "إرجاع مجاني", sub: "خلال 7 أيام" },
+              ].map((b) => {
+                const Icon = b.icon;
+                return (
+                  <div key={b.title} className="glass-panel rounded-2xl p-3 md:p-4 flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full flex items-center justify-center text-white shrink-0" style={{ background: "var(--gradient-primary)" }}>
+                      <Icon className="w-5 h-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs md:text-sm font-semibold text-foreground leading-tight">{b.title}</p>
+                      <p className="text-[10px] md:text-xs text-muted-foreground leading-tight mt-0.5">{b.sub}</p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
         {/* Featured Categories — Dior-style large editorial cards */}
         <section className="py-20 md:py-28">
           <div className="container mx-auto px-6">
             <div className="text-center mb-14">
               <p className="text-[20px] tracking-[0.4em] uppercase text-muted-foreground mb-3">تسوّق حسب</p>
-              <h2 className="font-heading text-3xl md:text-5xl text-foreground">الأقسام الرئيسية</h2>
+              <h2 className="font-heading text-3xl md:text-5xl text-gradient-luxury">الأقسام الرئيسية</h2>
             </div>
             <div className="grid grid-cols-2 md:grid-cols-6 gap-1 md:gap-2">
               {featuredCategories.map((c) => (
-                <Link key={c.title} to={c.link} className="group relative aspect-[3/4] overflow-hidden bg-muted">
+                <Link key={c.title} to={c.link} className="group relative aspect-[3/4] overflow-hidden bg-muted rounded-2xl shadow-[var(--shadow-card)] hover:shadow-[var(--shadow-hover)] transition-shadow duration-500">
                   <img
                     src={c.image}
                     alt={c.title}
@@ -267,16 +294,16 @@ const HomePage = () => {
             loading="lazy"
             className="absolute inset-0 w-full h-full object-cover"
           />
-          <div className="absolute inset-0 bg-black/30" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
           <div className="relative h-full flex items-center justify-center text-center px-6">
             <div className="text-white max-w-2xl">
               <p className="text-[10px] tracking-[0.4em] uppercase opacity-80 mb-4">حملة 2026</p>
               <h2 className="font-heading text-4xl md:text-6xl leading-tight mb-8">صُممت لتُروى</h2>
               <Link
                 to="/products"
-                className="inline-flex items-center justify-center bg-white text-black text-[11px] tracking-[0.35em] uppercase px-10 py-4 hover:bg-white/90 transition-colors"
+                className="btn-luxury text-[11px] tracking-[0.35em] uppercase px-10 py-4"
               >
-                اكتشف الآن
+                تسوق الآن
               </Link>
             </div>
           </div>

@@ -8,6 +8,7 @@ import { useStore } from "@/store/useStore";
 import SplashScreen from "@/components/SplashScreen";
 import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
+import MobileBottomNav from "@/components/MobileBottomNav";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
@@ -167,6 +168,7 @@ const App = () => {
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
+        <MobileBottomNav />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

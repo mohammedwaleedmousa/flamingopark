@@ -168,6 +168,11 @@
   input, textarea, select {
     font-size: 16px;
   }
+
+  /* Leave room for mobile bottom nav (hidden on md+) */
+  @media (max-width: 767px) {
+    body { padding-bottom: 88px; }
+  }
 }
 
 @layer components {

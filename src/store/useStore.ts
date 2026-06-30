@@ -2,10 +2,15 @@ import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { track } from "@/lib/analytics";
 
+export type Country = "YE" | "SA";
+
+export const detectCountryFromPhone = (_phone?: string): Country => "YE";
+
 export interface Customer {
   id: string;
   name: string;
   phone: string;
+  country?: Country;
 }
 
 export interface Product {
@@ -23,6 +28,7 @@ export interface Product {
   category: string;
   brand: string;
   inStock: boolean;
+  countries?: Country[];
   isFeatured?: boolean;
   isBestSeller?: boolean;
 }
@@ -46,6 +52,8 @@ interface StoreState {
   customer: Customer | null;
   cart: CartItem[];
   isCartOpen: boolean;
+  country: Country;
+  setCountry: (c: Country) => void;
 
   setCustomer: (customer: Customer | null) => void;
 
@@ -76,6 +84,8 @@ export const useStore = create<StoreState>()(
       customer: null,
       cart: [],
       isCartOpen: false,
+      country: "YE",
+      setCountry: (country) => set({ country }),
 
       setCustomer: (customer) => set({ customer }),
 

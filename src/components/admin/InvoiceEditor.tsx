@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Save, Printer, X, Pencil, Download } from "lucide-react";
-import ermgoldLogo from "@/assets/ermgold-logo-new.jpeg";
+// Use public path for static assets that live in /public
+const ermgoldLogo = "/icons/flamingo.jpeg";
 
 interface SelectedAccessory {
   name: string;

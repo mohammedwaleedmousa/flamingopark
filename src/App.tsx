@@ -8,7 +8,8 @@ import { useStore } from "@/store/useStore";
 import SplashScreen from "@/components/SplashScreen";
 import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
-import MobileBottomNav from "@/components/MobileBottomNav";
+import AdminCustomerIntelligence from "./pages/admin/AdminCustomerIntelligence";
+import AdminFinanceDashboard from "./pages/admin/AdminFinanceDashboard";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
@@ -162,13 +163,14 @@ const App = () => {
               <Route path="payment-methods" element={<AdminPaymentMethodsPage />} />
               <Route path="inventory-adjustments" element={<AdminInventoryAdjustmentsPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
+              <Route path="/admin/finance" element={<AdminFinanceDashboard />} />
+              <Route path="/admin/customer-intelligence" element={<AdminCustomerIntelligence/>} />
             </Route>
 
             <Route path="/mohammed" element={<MohammedInvoicesPage />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </Suspense>
-        <MobileBottomNav />
       </BrowserRouter>
     </TooltipProvider>
   </QueryClientProvider>

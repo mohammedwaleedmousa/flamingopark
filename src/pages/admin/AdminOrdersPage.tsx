@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { supabase } from "@/integrations/supabase/client";
+import { useMemo, useState } from "react";
+import { useAdminOrders, useUpdateOrderStatus, useDeleteOrder, useBulkUpdateOrderStatus, useDeleteOrders } from "@/lib/admin/hooks";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -52,84 +52,60 @@ const statusOptions = [
 const currencyOf = (c: string) => (c === "SA" ? "ر.س" : c === "YE" ? "ر.ي" : "");
 
 const AdminOrdersPage = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [total, setTotal] = useState(0);
   const [page, setPage] = useState(1);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
-
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 350);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [countryFilter, setCountryFilter] = useState<string>("all");
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [bulkBusy, setBulkBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ id?: string; bulk?: boolean } | null>(null);
   const [bulkStatus, setBulkStatus] = useState<string>("");
 
-  useEffect(() => { setPage(1); }, [search, statusFilter, countryFilter]);
-  useEffect(() => { fetchOrders(); /* eslint-disable-next-line */ }, [search, statusFilter, countryFilter, page]);
+  const ordersQuery = useAdminOrders({
+    search,
+    status: statusFilter,
+    country: countryFilter,
+    page,
+    pageSize: PAGE_SIZE,
+  });
+  const updateStatusMutation = useUpdateOrderStatus();
+  const deleteOrderMutation = useDeleteOrder();
+  const bulkUpdateMutation = useBulkUpdateOrderStatus();
+  const deleteOrdersMutation = useDeleteOrders();
 
-  const fetchOrders = async () => {
-    setIsLoading(true);
-    setSelected(new Set());
-    let q = supabase.from("orders").select("*", { count: "exact" });
-
-    if (search.trim()) {
-      const term = `%${search.trim()}%`;
-      q = q.or(`order_number.ilike.${term},customer_name.ilike.${term},customer_phone.ilike.${term}`);
-    }
-    if (statusFilter !== "all") q = q.eq("status", statusFilter);
-    if (countryFilter !== "all") q = q.eq("country", countryFilter);
-
-    const from = (page - 1) * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
-    const { data, count, error } = await q.order("created_at", { ascending: false }).range(from, to);
-
-    if (error) toast({ title: "خطأ", description: "فشل تحميل الطلبات", variant: "destructive" });
-    else { setOrders((data || []) as Order[]); setTotal(count || 0); }
-    setIsLoading(false);
-  };
+  const orders = ordersQuery.data?.data ?? [];
+  const total = ordersQuery.data?.count ?? 0;
+  const isLoading = ordersQuery.isLoading || ordersQuery.isFetching;
 
   const updateStatus = async (orderId: string, newStatus: string) => {
-    setOrders(os => os.map(o => o.id === orderId ? { ...o, status: newStatus } : o));
-    if (selectedOrder?.id === orderId) setSelectedOrder({ ...selectedOrder, status: newStatus });
-    const { error } = await supabase.from("orders").update({ status: newStatus }).eq("id", orderId);
-    if (error) { toast({ title: "خطأ", description: "فشل تحديث الحالة", variant: "destructive" }); fetchOrders(); }
-    else toast({ title: "تم", description: "تم تحديث حالة الطلب" });
+    setSelectedOrder((current) => current?.id === orderId ? { ...current, status: newStatus } : current);
+    await updateStatusMutation.mutateAsync({ orderId, newStatus });
+    toast({ title: "تم", description: "تم تحديث حالة الطلب" });
   };
 
   const deleteOne = async (id: string) => {
-    const { error } = await supabase.from("orders").delete().eq("id", id);
-    if (error) toast({ title: "خطأ", description: "فشل في حذف الطلب", variant: "destructive" });
-    else {
-      toast({ title: "تم", description: "تم حذف الطلب" });
-      if (selectedOrder?.id === id) setSelectedOrder(null);
-      fetchOrders();
-    }
+    await deleteOrderMutation.mutateAsync(id);
+    toast({ title: "تم", description: "تم حذف الطلب" });
+    if (selectedOrder?.id === id) setSelectedOrder(null);
+    setSelected(new Set());
   };
 
   const bulkUpdateStatus = async (s: string) => {
     if (!s || selected.size === 0) return;
-    setBulkBusy(true);
-    const ids = Array.from(selected);
-    const { error } = await supabase.from("orders").update({ status: s }).in("id", ids);
-    setBulkBusy(false);
+    await bulkUpdateMutation.mutateAsync({ orderIds: Array.from(selected), newStatus: s });
     setBulkStatus("");
-    if (error) toast({ title: "خطأ", description: "فشل التحديث الجماعي", variant: "destructive" });
-    else { toast({ title: "تم", description: `تم تحديث ${ids.length} طلب` }); fetchOrders(); }
+    setSelected(new Set());
+    toast({ title: "تم", description: `تم تحديث ${selected.size} طلب` });
   };
 
   const bulkDelete = async () => {
     if (selected.size === 0) return;
-    setBulkBusy(true);
-    const ids = Array.from(selected);
-    const { error } = await supabase.from("orders").delete().in("id", ids);
-    setBulkBusy(false);
+    await deleteOrdersMutation.mutateAsync(Array.from(selected));
     setConfirmDelete(null);
-    if (error) toast({ title: "خطأ", description: "فشل الحذف الجماعي", variant: "destructive" });
-    else { toast({ title: "تم", description: `تم حذف ${ids.length} طلب` }); fetchOrders(); }
+    setSelected(new Set());
+    toast({ title: "تم", description: `تم حذف ${selected.size} طلب` });
   };
 
   const toggleSelectAll = () =>
@@ -209,7 +185,7 @@ const AdminOrdersPage = () => {
                   {statusOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
                 </SelectContent>
               </Select>
-              <Button size="sm" variant="destructive" disabled={bulkBusy} onClick={() => setConfirmDelete({ bulk: true })}>
+              <Button size="sm" variant="destructive" onClick={() => setConfirmDelete({ bulk: true })}>
                 <Trash2 className="w-4 h-4 ml-1" /> حذف
               </Button>
               <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>إلغاء</Button>

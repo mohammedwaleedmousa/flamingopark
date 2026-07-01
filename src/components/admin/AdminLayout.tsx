@@ -6,6 +6,7 @@ import AdminSidebar from './AdminSidebar';
 import { Loader2, Menu } from 'lucide-react';
 import Logo from '@/components/Logo';
 import NotificationsDropdown from './NotificationsDropdown';
+import { DateRangeProvider } from '@/lib/analytics/dateRange';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
@@ -18,6 +19,16 @@ const AdminLayout = () => {
 
   const checkAdminAccess = async () => {
     try {
+      // Local dev bypass: add ?dev=true to URL to skip auth checks when needed
+      if (typeof window !== "undefined") {
+        const params = new URLSearchParams(window.location.search);
+        if (params.get("dev") === "true") {
+          setIsAdmin(true);
+          setIsLoading(false);
+          return;
+        }
+      }
+
       const { data: { user } } = await supabase.auth.getUser();
       
       if (!user) {
@@ -71,6 +82,7 @@ const AdminLayout = () => {
 
   return (
     <SidebarProvider defaultOpen={true}>
+      <DateRangeProvider>
       <div className="min-h-screen flex w-full bg-background font-admin" dir="rtl">
         <AdminSidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
@@ -94,6 +106,7 @@ const AdminLayout = () => {
           </main>
         </div>
       </div>
+      </DateRangeProvider>
     </SidebarProvider>
   );
 };

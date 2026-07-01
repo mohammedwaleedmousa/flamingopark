@@ -54,10 +54,10 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
   <Link to={`/product/${product.slug}`} className="group block" dir="rtl">
 
     <div className="
-      relative aspect-[3/4]
+      relative aspect-[4/6] sm:aspect-[3/4]
       bg-white
       border border-pink-100/20
-      rounded-[28px]
+      rounded-[20px]
       overflow-hidden
       flex flex-col
 
@@ -67,7 +67,7 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
     ">
 
       {/* IMAGE FULL AREA */}
-      <div className="relative flex-1 overflow-hidden bg-neutral-100">
+      <div className="relative flex-1 overflow-hidden bg-neutral-100 ">
 
         <img
           src={product.images?.[0]}

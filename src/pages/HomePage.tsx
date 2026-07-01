@@ -390,100 +390,100 @@ const HomePage = () => {
         {/* Editorial split — image left, text right (alternating) */}
 
         {editorial.map((e, i) => (
-  <section
-    key={e.title}
-    className="
-      bg-background
-      py-16 md:py-28
-
-      opacity-0
-      translate-y-6
-      animate-[fadeUp_0.8s_ease_forwards]
-    "
-    style={{
-      animationDelay: `${i * 100}ms`,
-    }}
-  >
-
-    <div className="grid md:grid-cols-2 items-center">
-
-      {/* IMAGE */}
-      <div
-        className={`relative aspect-[4/5] md:h-[680px] overflow-hidden ${
-          e.reverse ? "md:order-2" : ""
-        }`}
-      >
-        <img
-          src={e.image}
-          alt={e.title}
-          loading="lazy"
-          decoding="async"
-          className="
-            w-full h-full object-cover
-            scale-105 hover:scale-110
-            transition duration-700
-          "
-        />
-
-        <div className="
-          absolute inset-0
-          bg-gradient-to-t from-black/40 via-transparent to-pink-500/5
-        " />
-      </div>
-
-      {/* CONTENT */}
-      <div className={`
-        flex items-center justify-center px-8 md:px-24 py-12 md:py-0
-        ${e.reverse ? "md:order-1" : ""}
-      `}>
-
-        <div className="max-w-md text-center md:text-right space-y-6">
-
-          <p className="
-            text-[10px]
-            tracking-[0.6em]
-            uppercase
-            text-pink-400
-          ">
-            {e.eyebrow}
-          </p>
-
-          <h3 className="text-3xl md:text-5xl font-medium leading-tight">
-            {e.title}
-          </h3>
-
-          <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">
-            {e.body}
-          </p>
-
-          <Link
-            to={e.href}
+          <section
+            key={e.title}
             className="
-              inline-flex items-center gap-3
+              bg-background
+              py-16 md:py-28
 
-              text-[11px]
-              tracking-[0.2em]
-              uppercase
-
-              text-pink-500
-              border-b border-pink-300/40
-              pb-2
-
-              hover:opacity-60
-              transition
+              opacity-0
+              translate-y-6
+              animate-[fadeUp_0.8s_ease_forwards]
             "
+            style={{
+              animationDelay: `${i * 100}ms`,
+            }}
           >
-            {e.cta}
-            <ArrowLeft className="w-3 h-3" />
-          </Link>
 
-        </div>
+            <div className="grid md:grid-cols-2 items-center">
 
-      </div>
+              {/* IMAGE */}
+              <div
+                className={`relative aspect-[4/5] md:h-[680px] overflow-hidden ${
+                  e.reverse ? "md:order-2" : ""
+                }`}
+              >
+                <img
+                  src={e.image}
+                  alt={e.title}
+                  loading="lazy"
+                  decoding="async"
+                  className="
+                    w-full h-full object-cover
+                    scale-105 hover:scale-110
+                    transition duration-700
+                  "
+                />
 
-    </div>
+                <div className="
+                  absolute inset-0
+                  bg-gradient-to-t from-black/40 via-transparent to-pink-500/5
+                " />
+              </div>
 
-  </section>
+              {/* CONTENT */}
+              <div className={`
+                flex items-center justify-center px-8 md:px-24 py-12 md:py-0
+                ${e.reverse ? "md:order-1" : ""}
+              `}>
+
+                <div className="max-w-md text-center md:text-right space-y-6">
+
+                  <p className="
+                    text-[10px]
+                    tracking-[0.6em]
+                    uppercase
+                    text-pink-400
+                  ">
+                    {e.eyebrow}
+                  </p>
+
+                  <h3 className="text-3xl md:text-5xl font-medium leading-tight">
+                    {e.title}
+                  </h3>
+
+                  <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">
+                    {e.body}
+                  </p>
+
+                  <Link
+                    to={e.href}
+                    className="
+                      inline-flex items-center gap-3
+
+                      text-[11px]
+                      tracking-[0em]
+                      uppercase
+
+                      text-pink-500
+                      border-b border-pink-300/40
+                      pb-2
+
+                      hover:opacity-60
+                      transition
+                    "
+                  >
+                    {e.cta}
+                    <ArrowLeft className="w-3 h-3" />
+                  </Link>
+
+                </div>
+
+              </div>
+
+            </div>
+
+          </section>
         ))}
         {/* Best Sellers */}
         {bestSellers.length > 0 && (

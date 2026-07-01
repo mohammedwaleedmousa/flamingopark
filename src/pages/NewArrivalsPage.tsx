@@ -38,7 +38,7 @@ const NewArrivalsPage = () => {
       <CartDrawer />
       <main className="pt-24 pb-20">
         <section className="container mx-auto px-6 mb-10 text-center">
-          <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-3">Just Arrived</p>
+          <p className="text-[10px] tracking-[0em] uppercase text-muted-foreground mb-3">Just Arrived</p>
           <h1 className="font-heading text-4xl md:text-6xl">وصل حديثاً</h1>
         </section>
         <section className="container mx-auto px-6">

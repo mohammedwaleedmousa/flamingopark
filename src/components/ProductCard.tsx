@@ -94,7 +94,7 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
 
         <div className="flex items-center justify-between">
 
-          <p className="text-[10px] tracking-[0.2em] uppercase text-pink-400">
+          <p className="text-[10px] tracking-[0em] uppercase text-pink-400">
             {product.brand}
           </p>
 

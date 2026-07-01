@@ -389,123 +389,122 @@ const HomePage = () => {
 
         {/* Editorial split — image left, text right (alternating) */}
 
-
-{editorial.map((e) => (
-  <motion.section
-    key={e.title}
-    className="bg-background py-24 md:py-36"
-    initial={{ opacity: 0, y: 90, filter: "blur(12px)" }}
-    whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-    viewport={{ once: true, amount: 0.25 }}
-    transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-  >
-    
-    <div className="grid md:grid-cols-2 items-center">
-
-      {/* IMAGE (Flamingo cinematic depth) */}
-      <motion.div
-        className={`relative aspect-[4/5] md:h-[740px] overflow-hidden ${
-          e.reverse ? "md:order-2" : ""
-        }`}
-        initial={{ opacity: 0, scale: 1.12 }}
-        whileInView={{ opacity: 1, scale: 1 }}
-        viewport={{ once: true, amount: 0.25 }}
-        transition={{ duration: 1.3, ease: "easeOut" }}
-      >
-        <motion.img
-          src={e.image}
-          alt={e.title}
-          loading="lazy"
-          className="w-full h-full object-cover"
-          initial={{ scale: 1.18 }}
-          whileInView={{ scale: 1 }}
-          transition={{ duration: 1.6, ease: "easeOut" }}
-        />
-
-        {/* 🦩 Flamingo signature overlay */}
-        <div className="
-          absolute inset-0
-          bg-gradient-to-t
-          from-black/60
-          via-black/10
-          to-pink-500/10
-        " />
-      </motion.div>
-
-      {/* CONTENT (Luxury editorial block) */}
-      <motion.div
-        className={`flex items-center justify-center px-8 md:px-28 py-16 md:py-0 ${
-          e.reverse ? "md:order-1" : ""
-        }`}
-        initial={{ opacity: 0, x: e.reverse ? -70 : 70 }}
-        whileInView={{ opacity: 1, x: 0 }}
-        viewport={{ once: true, amount: 0.25 }}
-        transition={{ duration: 1, ease: "easeOut", delay: 0.1 }}
-      >
-        <div className="max-w-md text-center md:text-right space-y-8">
-
-          {/* EYEBROW (Flamingo identity line) */}
-          <p className="
-            text-[10px]
-            tracking-[0.65em]
-            uppercase
-            text-pink-400
-            font-medium
-            opacity-90
-          ">
-            {e.eyebrow}
-          </p>
-
-          {/* TITLE (Fashion magazine style) */}
-          <h3 className="
-            text-3xl md:text-5xl
-            font-medium
-            leading-tight
-            tracking-tight
-            text-foreground
-          ">
-            {e.title}
-          </h3>
-
-          {/* BODY */}
-          <p className="
-            text-sm md:text-[15px]
-            text-muted-foreground
-            leading-relaxed
-            max-w-sm mx-auto md:mx-0
-          ">
-            {e.body}
-          </p>
-
-          {/* CTA (Flamingo luxury link) */}
-          <Link
-            to={e.href}
-            className="
-              inline-flex items-center gap-3
-
-              text-[11px]
-              tracking-[0.6em]
-              uppercase
-
-              text-pink-500
-              border-b border-pink-400/40
-
-              pb-2
-
-              hover:opacity-60
-              transition-all duration-300
-            "
+        {editorial.map((e) => (
+          <motion.section
+            key={e.title}
+            className="bg-background py-10 md:py-36"
+            initial={{ opacity: 0, y: 90, filter: "blur(12px)" }}
+            whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+            viewport={{ once: true, amount: 0.25 }}
+            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
           >
-            {e.cta}
-            <ArrowLeft className="w-3 h-3" />
-          </Link>
+            
+            <div className="grid md:grid-cols-2 items-center">
 
-        </div>
-      </motion.div>
+              {/* IMAGE (Flamingo cinematic depth) */}
+              <motion.div
+                className={`relative aspect-[4/5] md:h-[740px] overflow-hidden ${
+                  e.reverse ? "md:order-2" : ""
+                }`}
+                initial={{ opacity: 0, scale: 1.12 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true, amount: 0.25 }}
+                transition={{ duration: 1.3, ease: "easeOut" }}
+              >
+                <motion.img
+                  src={e.image}
+                  alt={e.title}
+                  loading="lazy"
+                  className="w-full h-full object-cover"
+                  initial={{ scale: 1.18 }}
+                  whileInView={{ scale: 1 }}
+                  transition={{ duration: 1.6, ease: "easeOut" }}
+                />
 
-    </div>
-  </motion.section>
-))}
+                {/* 🦩 Flamingo signature overlay */}
+                <div className="
+                  absolute inset-0
+                  bg-gradient-to-t
+                  from-black/60
+                  via-black/10
+                  to-pink-500/10
+                " />
+              </motion.div>
+
+              {/* CONTENT (Luxury editorial block) */}
+              <motion.div
+                className={`flex items-center justify-center px-8 md:px-28 py-16 md:py-0 ${
+                  e.reverse ? "md:order-1" : ""
+                }`}
+                initial={{ opacity: 0, x: e.reverse ? -70 : 70 }}
+                whileInView={{ opacity: 1, x: 0 }}
+                viewport={{ once: true, amount: 0.25 }}
+                transition={{ duration: 1, ease: "easeOut", delay: 0.1 }}
+              >
+                <div className="max-w-md text-center md:text-right space-y-8">
+
+                  {/* EYEBROW (Flamingo identity line) */}
+                  <p className="
+                    text-[10px]
+                    tracking-[0.65em]
+                    uppercase
+                    text-pink-400
+                    font-medium
+                    opacity-90
+                  ">
+                    {e.eyebrow}
+                  </p>
+
+                  {/* TITLE (Fashion magazine style) */}
+                  <h3 className="
+                    text-3xl md:text-5xl
+                    font-medium
+                    leading-tight
+                    tracking-tight
+                    text-foreground
+                  ">
+                    {e.title}
+                  </h3>
+
+                  {/* BODY */}
+                  <p className="
+                    text-sm md:text-[15px]
+                    text-muted-foreground
+                    leading-relaxed
+                    max-w-sm mx-auto md:mx-0
+                  ">
+                    {e.body}
+                  </p>
+
+                  {/* CTA (Flamingo luxury link) */}
+                  <Link
+                    to={e.href}
+                    className="
+                      inline-flex items-center gap-3
+
+                      text-[11px]
+                      tracking-[0.6em]
+                      uppercase
+
+                      text-pink-500
+                      border-b border-pink-400/40
+
+                      pb-2
+
+                      hover:opacity-60
+                      transition-all duration-300
+                    "
+                  >
+                    {e.cta}
+                    <ArrowLeft className="w-3 h-3" />
+                  </Link>
+
+                </div>
+              </motion.div>
+
+            </div>
+          </motion.section>
+        ))}
         {/* Best Sellers */}
         {bestSellers.length > 0 && (
           <section className="py-20 md:py-28 bg-muted">

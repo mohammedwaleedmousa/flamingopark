@@ -462,7 +462,7 @@ const HomePage = () => {
               inline-flex items-center gap-3
 
               text-[11px]
-              tracking-[0.5em]
+              tracking-[0.2em]
               uppercase
 
               text-pink-500

@@ -31,7 +31,7 @@ const SplashScreen = ({ onDone }: { onDone: () => void }) => {
         <div className="h-px w-24 bg-white/30 overflow-hidden">
           <div className="h-full bg-white animate-splash-line" />
         </div>
-        <p className="text-white/60 text-[10px] tracking-[0.5em] uppercase">Maison de Luxe</p>
+        <p className="text-white/60 text-[10px] tracking-[0.2em] uppercase">Maison de Luxe</p>
       </div>
     </div>
   );

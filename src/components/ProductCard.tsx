@@ -51,107 +51,123 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
   };
 
   return (
-    <Link to={`/product/${product.slug}`} className="group block" dir="rtl">
-      <div className="relative aspect-[3/4] overflow-hidden bg-muted rounded-2xl shadow-[var(--shadow-card)] group-hover:shadow-[var(--shadow-hover)] transition-shadow duration-500">
-        {product.images?.[0] ? (
-          <>
-            <img
-              src={product.images[0]}
-              alt={product.nameAr}
-              loading="lazy"
-              decoding="async"
-              className={`w-full h-full object-cover transition-all duration-[900ms] ease-out group-hover:scale-[1.06] ${hasSecondImage ? "group-hover:opacity-0" : ""}`}
-            />
-            {hasSecondImage && (
-              <img
-                src={product.images[1]}
-                alt={product.nameAr}
-                loading="lazy"
-                decoding="async"
-                className="absolute inset-0 w-full h-full object-cover opacity-0 transition-opacity duration-[900ms] ease-out group-hover:opacity-100"
-              />
-            )}
-          </>
-        ) : (
-          <div className="w-full h-full bg-muted" />
-        )}
+  <Link to={`/product/${product.slug}`} className="group block" dir="rtl">
 
-        {/* Hover overlay */}
-        <div className="absolute inset-0 bg-gradient-to-t from-foreground/15 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+    <div className="
+      relative aspect-[3/4]
+      bg-white
+      border border-pink-100/20
+      rounded-[28px]
+      overflow-hidden
+      flex flex-col
 
-        {/* Badges stack — top right */}
-        <div className="absolute top-3 right-3 flex flex-col gap-1.5 items-end z-10">
-          {computedBadge && (
-            <span className="glass-panel text-foreground text-[9px] font-medium tracking-[0.25em] uppercase px-2.5 py-1 rounded-full">
-              {computedBadge}
-            </span>
-          )}
-          {product.discount ? (
-            <span className="text-white text-[10px] font-semibold px-2.5 py-1 rounded-full" style={{background: "var(--gradient-primary)"}}>
-              -{product.discount}%
-            </span>
-          ) : null}
-          {product.isBestSeller && (
-            <span className="bg-secondary text-secondary-foreground text-[9px] font-medium tracking-[0.25em] uppercase px-2.5 py-1 rounded-full shadow-sm">
-              BEST
-            </span>
-          )}
-        </div>
+      transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]
+      hover:-translate-y-2
+      hover:shadow-[0_50px_100px_-40px_rgba(255,105,180,0.25)]
+    ">
 
-        <button
-          onClick={handleLike}
-          aria-label="favorite"
-          className={`absolute top-3 left-3 w-9 h-9 flex items-center justify-center rounded-full transition-all active:scale-90 ${
-            isLiked
-              ? "text-white shadow-[var(--shadow-rose)]"
-              : "glass-panel text-foreground hover:text-primary"
-          }`}
-          style={isLiked ? { background: "var(--gradient-primary)" } : undefined}
-        >
-          <Heart className={`w-4 h-4 ${isLiked ? "fill-current" : ""} ${heartBeat ? "animate-[heart-beat_0.4s_ease-out]" : ""}`} />
-        </button>
+      {/* IMAGE FULL AREA */}
+      <div className="relative flex-1 overflow-hidden bg-neutral-100">
 
-        {/* Quick add bar — slides up on hover */}
-        {product.inStock && (
-          <div className="absolute inset-x-3 bottom-3 translate-y-[120%] group-hover:translate-y-0 transition-transform duration-500 ease-out">
-            <button
-              onClick={handleAdd}
-              className="btn-luxury w-full py-3 text-[10px] tracking-[0.35em] uppercase"
-            >
-              <ShoppingBag className={`w-3.5 h-3.5 ${bagPop ? "animate-[heart-beat_0.4s_ease-out]" : ""}`} /> إضافة سريعة
-            </button>
-          </div>
-        )}
+        <img
+          src={product.images?.[0]}
+          alt={product.nameAr}
+          className="
+            w-full h-full object-cover
+            transition duration-1000 ease-out
+            group-hover:scale-110
+          "
+        />
 
-        {!product.inStock && (
-          <div className="absolute inset-0 bg-background/70 backdrop-blur-sm flex items-center justify-center">
-            <span className="bg-foreground text-background text-[10px] tracking-[0.3em] uppercase px-4 py-2 rounded-full">
-              نفد المخزون
-            </span>
-          </div>
-        )}
+        {/* soft cinematic flamingo overlay */}
+        <div className="
+          absolute inset-0
+          bg-gradient-to-t from-black/30 via-transparent to-transparent
+          opacity-0 group-hover:opacity-100
+          transition duration-500
+        " />
+
       </div>
 
-      <div className="mt-4 px-1 text-center">
-        <p className="text-[9px] uppercase tracking-[0.35em] text-muted-foreground mb-1.5">
-          {product.brand}
-        </p>
-        <h3 className="font-heading text-sm md:text-base text-foreground line-clamp-2 leading-snug min-h-[2.5em]">
+      {/* INFO BASE (always visible minimal) */}
+      <div className="p-4 space-y-2 bg-white">
+
+        <div className="flex items-center justify-between">
+
+          <p className="text-[10px] tracking-[0.5em] uppercase text-pink-400">
+            {product.brand}
+          </p>
+
+          <span className="text-[11px] text-neutral-500 flex items-center gap-1">
+            <span className="text-pink-400">★</span>
+            {product.rating ? Number(product.rating).toFixed(1) : "4.5"}
+          </span>
+
+        </div>
+
+        <h3 className="text-sm font-medium text-neutral-900 line-clamp-2">
           {product.nameAr}
         </h3>
-        <div className="flex items-baseline justify-center gap-2 mt-2">
-          <span className="font-body text-sm text-gradient-luxury font-semibold">
-            {finalPrice.toFixed(0)} {currency}
-          </span>
-          {product.discount && (
-            <span className="text-[11px] text-muted-foreground line-through">
-              {product.price.toFixed(0)}
-            </span>
-          )}
-        </div>
+
+        <span className="text-sm font-semibold text-black">
+          {Math.floor(finalPrice)} {currency}
+        </span>
+
       </div>
-    </Link>
-  );
+
+      {/* 🛒 EDITORIAL ACTION BAR (NEW CONCEPT) */}
+      {product.inStock && (
+        <div className="
+          absolute bottom-0 left-0 right-0
+
+          translate-y-full group-hover:translate-y-0
+          transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]
+
+          bg-white/80 backdrop-blur-xl
+          border-t border-pink-100/30
+
+          flex items-center justify-between
+
+          px-4 py-3
+        ">
+
+          <span className="
+            text-[10px]
+            tracking-[0.4em]
+            uppercase
+            text-neutral-500
+          ">
+            فلامنجو
+          </span>
+
+          <button
+            onClick={handleAdd}
+            className="
+              px-4 py-2
+
+              rounded-full
+              bg-gradient-to-r from-pink-500 to-rose-400
+              text-white
+
+              text-[10px]
+              tracking-[0.35em]
+              uppercase
+
+              shadow-[0_10px_25px_-10px_rgba(255,105,180,0.5)]
+
+              hover:scale-105 active:scale-95
+              transition
+            "
+          >
+            أضف للسلة
+          </button>
+
+        </div>
+      )}
+
+    </div>
+  </Link>
+);
 };
 
 export default ProductCard;

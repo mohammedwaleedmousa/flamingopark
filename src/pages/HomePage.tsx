@@ -136,123 +136,134 @@ const CategoryCarousel = ({ items }: { items: typeof featuredCategories }) => {
   const [active, setActive] = useState(items[0]);
 
   return (
-    <section className="relative py-20 overflow-hidden">
+    <section className="py-10 md:py-14 bg-background">
+      <div className="container mx-auto px-6">
 
-      {/* Dynamic Background (core idea) */}
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={active.title}
-          initial={{ opacity: 0, scale: 1.1 }}
-          animate={{ opacity: 1, scale: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.8 }}
-          className="absolute inset-0"
-        >
-          <img
-            src={active.image}
-            className="w-full h-full object-cover blur-[2px] scale-110"
-          />
-          <div className="absolute inset-0 bg-black/60" />
-        </motion.div>
-      </AnimatePresence>
-
-      <div className="relative container mx-auto px-6 grid md:grid-cols-12 gap-10 items-center">
-
-        {/* LEFT: Category list */}
-        <div className="md:col-span-4 space-y-4 z-10">
-          <p className="text-[11px] tracking-[0.4em] uppercase text-white/60">
-            Explore Categories
+        {/* Header */}
+        <div className="mb-10 text-center md:text-right">
+  
+          <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
+            فلامنجو
           </p>
 
-          <h2 className="text-white text-3xl md:text-5xl font-semibold font-heading">
-            اكتشف العوالم
+          <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">
+            عوالم فلامنجو
           </h2>
 
-          <div className="space-y-2 mt-8">
-            {items.map((item) => {
-              const isActive = active.title === item.title;
+          <div className="mt-4 h-[1px] w-16 bg-[#E91E63] mx-auto md:mx-0" />
 
-              return (
-                <button
-                  key={item.title}
-                  onClick={() => setActive(item)}
-                  className={`
-                    w-full text-right px-4 py-3 rounded-xl transition
-                    border backdrop-blur-md
-                    ${
-                      isActive
-                        ? "bg-white text-black border-white"
-                        : "bg-white/10 text-white border-white/10 hover:bg-white/20"
-                    }
-                  `}
-                >
-                  <div className="text-sm font-medium">{item.title}</div>
-                  <div className="text-[11px] opacity-70">{item.subtitle}</div>
-                </button>
-              );
-            })}
+          <p className="mt-4 text-sm text-muted-foreground max-w-md">
+            اكتشف تشكيلات مختارة بعناية تجمع بين الأناقة العصرية والهوية الفاخرة
+          </p>
+
+        </div>
+
+        {/* Layout */}
+        <div className="grid md:grid-cols-12 gap-8 items-start">
+
+          {/* LEFT: Navigation */}
+          <div className="md:col-span-7">
+
+            <div className="flex flex-wrap gap-x-6 gap-y-3 border-b border-gray-200 pb-4">
+
+              {items.map((item) => {
+                const isActive = active.title === item.title;
+
+                return (
+                  <button
+                    key={item.title}
+                    onClick={() => setActive(item)}
+                    className={`
+                      relative text-sm md:text-[15px]
+                      transition-colors duration-200
+                      ${isActive ? "text-black" : "text-muted-foreground hover:text-black"}
+                    `}
+                  >
+                    {item.title}
+
+                    <span
+                      className={`
+                        absolute left-0 -bottom-2 h-[2px] bg-black transition-all duration-300
+                        ${isActive ? "w-full" : "w-0"}
+                      `}
+                    />
+                  </button>
+                );
+              })}
+
+            </div>
+
+            {/* description */}
+            <div className="mt-6 max-w-md">
+              <p className="text-sm text-muted-foreground leading-relaxed">
+                اكتشف تشكيلات فلامنجو المختارة بعناية لتجربة تسوق فاخرة تجمع بين الأناقة والبساطة والهوية العصرية.
+              </p>
+            </div>
+
           </div>
+
+          {/* RIGHT: Preview */}
+          <div className="md:col-span-5">
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={active.title}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.25 }}
+              >
+
+                <div className="rounded-2xl overflow-hidden border bg-white shadow-sm">
+
+                  {/* image */}
+                  <div className="h-[280px] overflow-hidden">
+                    <img
+                      src={active.image}
+                      className="w-full h-full object-cover hover:scale-105 transition duration-500"
+                    />
+                  </div>
+
+                  {/* content */}
+                  <div className="p-4 text-right">
+
+                    <p className="text-[10px] tracking-[0.35em] uppercase text-[#E91E63]">
+                      فلامنجو
+                    </p>
+
+                    <h3 className="text-lg font-medium mt-1">
+                      {active.title}
+                    </h3>
+
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {active.subtitle}
+                    </p>
+
+                    <Link
+                      to={active.link}
+                      className="
+                        inline-flex mt-4 text-sm
+                        text-black border-b border-black pb-1
+                        hover:opacity-60 transition
+                      "
+                    >
+                      تسوّق الآن
+                    </Link>
+
+                  </div>
+
+                </div>
+
+              </motion.div>
+            </AnimatePresence>
+
+          </div>
+
         </div>
-
-        {/* RIGHT: Hero Experience */}
-        <div className="md:col-span-8 z-10">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={active.title}
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              transition={{ duration: 0.5 }}
-              className="relative h-[500px] md:h-[650px] rounded-3xl overflow-hidden shadow-2xl"
-            >
-
-              <img
-                src={active.image}
-                className="w-full h-full object-cover"
-              />
-
-              {/* cinematic layers */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-              <div className="absolute inset-0 backdrop-blur-[1px]" />
-
-              {/* floating content */}
-              <div className="absolute bottom-10 right-10 left-10 text-white">
-                <p className="text-[11px] tracking-[0.4em] uppercase text-white/70">
-                  {active.subtitle}
-                </p>
-
-                <h3 className="text-4xl md:text-6xl font-semibold mt-2">
-                  {active.title}
-                </h3>
-
-                <p className="text-white/70 mt-4 max-w-md leading-relaxed">
-                  اكتشف مجموعة {active.title} بتجربة تسوق فاخرة تجمع بين التصميم الحديث والهوية البصرية القوية.
-                </p>
-
-                <Link
-                  to={active.link}
-                  className="
-                    inline-flex mt-6
-                    px-10 py-4
-                    rounded-full
-                    bg-white text-black
-                    text-[11px] tracking-[0.35em] uppercase
-                    hover:scale-105 transition
-                  "
-                >
-                  استكشف الآن
-                </Link>
-              </div>
-
-            </motion.div>
-          </AnimatePresence>
-        </div>
-
       </div>
     </section>
   );
 };
-
 const editorial = [
   {
     eyebrow: "Featured Collection",
@@ -328,7 +339,7 @@ const HomePage = () => {
       <main>
         {/* Hero — sits behind the navbar */}
         <HeroSlider />
-
+        
         {/* Brands strip below hero */}
         <BrandsStripInline />
 

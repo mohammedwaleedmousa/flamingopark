@@ -345,6 +345,47 @@ const HomePage = () => {
 
         {/* Categories — replaced with horizontal CategoryCarousel for improved UX */}
         <CategoryCarousel items={featuredCategories} />
+        {products.length > 0 && (
+  <section className="py-16 md:py-24 bg-background">
+    <div className="container mx-auto px-6">
+
+      {/* Title */}
+      <div className="text-center mb-12">
+        <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
+          مختارات فلامنجو
+        </p>
+
+        <h2 className="text-3xl md:text-4xl font-semibold mt-2">
+          قطع مختارة بعناية
+        </h2>
+
+        <div className="mt-4 h-[2px] w-16 bg-[#E91E63] mx-auto" />
+
+        <p className="text-sm text-muted-foreground mt-4 max-w-md mx-auto">
+          مجموعة من أفضل القطع المختارة لتجربة تسوق فاخرة
+        </p>
+      </div>
+
+      {/* Products */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+        {products.slice(0, 8).map((p) => (
+          <ProductCard key={p.id} product={p} />
+        ))}
+      </div>
+
+      {/* CTA */}
+      <div className="text-center mt-12">
+        <Link
+          to="/products"
+          className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition"
+        >
+          عرض جميع المنتجات <ArrowLeft className="w-3 h-3" />
+        </Link>
+      </div>
+
+    </div>
+  </section>
+)}
 
         {/* Editorial split — image left, text right (alternating) */}
         {editorial.map((e) => (

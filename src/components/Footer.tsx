@@ -1,9 +1,10 @@
 import { Link } from "react-router-dom";
+import { FaInstagram, FaWhatsapp, FaFacebookF, FaSnapchatGhost } from "react-icons/fa";
 import { Instagram, Mail, ArrowUp } from "lucide-react";
 
 const cols: { title: string; links: { label: string; href: string }[] }[] = [
   {
-    title: "Customer Care",
+    title: "خدمة العملاء",
     links: [
       { label: "اتصل بنا", href: "/contact" },
       { label: "الشحن والتوصيل", href: "/about" },
@@ -12,7 +13,7 @@ const cols: { title: string; links: { label: string; href: string }[] }[] = [
     ],
   },
   {
-    title: "The Maison",
+    title: "الرئيسية",
     links: [
       { label: "عن فلامنجو", href: "/about" },
       { label: "متاجرنا", href: "/about" },
@@ -21,11 +22,11 @@ const cols: { title: string; links: { label: string; href: string }[] }[] = [
     ],
   },
   {
-    title: "Discover",
+    title: "اكتشف",
     links: [
-      { label: "Women", href: "/products?category=women" },
-      { label: "Men", href: "/products?category=men" },
-      { label: "Beauty", href: "/products?category=beauty" },
+      { label: "نساء", href: "/products?category=women" },
+      { label: "رجال", href: "/products?category=men" },
+      { label: "جمال", href: "/products?category=beauty" },
       { label: "العروض", href: "/offers" },
     ],
   },
@@ -37,7 +38,7 @@ const Footer = () => {
       {/* Newsletter */}
       <section className="border-b border-border">
         <div className="container mx-auto px-6 py-20 md:py-28 text-center max-w-2xl">
-          <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-5">Newsletter</p>
+          <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-5">النشرة البريدية</p>
           <h2 className="font-heading text-3xl md:text-5xl leading-tight mb-6">
             انضم/ي إلى عالم فلامنجو
           </h2>
@@ -65,18 +66,59 @@ const Footer = () => {
       <div className="container mx-auto px-6 py-16">
         <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
           <div>
-            <Link to="/home" className="logo-flamingo text-xl">FLAMINGO</Link>
+            <Link to="/home" className="flex items-center">
+              <img
+                src="/icons/flamingo.jpeg"
+                alt="Flamingo"
+                className="h-20 md:h-10 w-auto object-contain pr-12"
+              />
+            </Link>
             <p className="mt-5 text-xs text-muted-foreground leading-relaxed">
               دار أزياء تجمع بين الحرفة الفاخرة والروح المعاصرة.
             </p>
             <div className="flex items-center gap-3 mt-6">
-              <a href="#" aria-label="Instagram" className="w-9 h-9 border border-border flex items-center justify-center hover:bg-foreground hover:text-background transition-colors">
-                <Instagram className="w-4 h-4" />
-              </a>
-              <a href="mailto:hello@flamingo.com" aria-label="Email" className="w-9 h-9 border border-border flex items-center justify-center hover:bg-foreground hover:text-background transition-colors">
-                <Mail className="w-4 h-4" />
-              </a>
-            </div>
+
+  {/* Instagram */}
+  <a
+    href="#"
+    aria-label="Instagram"
+    className="w-9 h-9 rounded-full border border-border flex items-center justify-center
+    hover:bg-pink-500 hover:text-white transition"
+  >
+    <FaInstagram />
+  </a>
+
+  {/* WhatsApp */}
+  <a
+    href="#"
+    aria-label="WhatsApp"
+    className="w-9 h-9 rounded-full border border-border flex items-center justify-center
+    hover:bg-green-500 hover:text-white transition"
+  >
+    <FaWhatsapp />
+  </a>
+
+  {/* Facebook */}
+  <a
+    href="#"
+    aria-label="Facebook"
+    className="w-9 h-9 rounded-full border border-border flex items-center justify-center
+    hover:bg-blue-600 hover:text-white transition"
+  >
+    <FaFacebookF />
+  </a>
+
+  {/* Snapchat */}
+  <a
+    href="#"
+    aria-label="Snapchat"
+    className="w-9 h-9 rounded-full border border-border flex items-center justify-center
+    hover:bg-yellow-400 hover:text-black transition"
+  >
+    <FaSnapchatGhost />
+  </a>
+
+</div>
           </div>
 
           {cols.map((col) => (
@@ -95,9 +137,8 @@ const Footer = () => {
           ))}
         </div>
 
-        <div className="mt-16 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center text-[11px] text-muted-foreground gap-4">
-          <p>© 2026 FLAMINGO PARK— All rights reserved.</p>
-          <p>created with Eng/ Mohammed Waleed +967 77 333 5065</p>
+        <div className="mt-16 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center text-[11px] text-muted-foreground gap-4 -mb-20">
+          <p>© 2026 فلامنجو بارك — جميع الحقوق محفوظة.</p>
           <button
             onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
             className="flex items-center gap-2 hover:text-foreground transition-colors"

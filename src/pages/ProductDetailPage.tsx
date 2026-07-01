@@ -751,7 +751,7 @@ const ProductDetailPage = () => {
           {recentItems.filter((p) => p.id !== product.id).length > 0 && (
             <section className="mt-20 pt-12 border-t border-border animate-fade-in" dir="rtl">
               <div className="text-center mb-10">
-                <p className="text-[10px] tracking-[0em] uppercase text-muted-foreground mb-3">
+                <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-3">
                   Recently Viewed
                 </p>
                 <h2 className="font-heading text-2xl md:text-3xl text-foreground">

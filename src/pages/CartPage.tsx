@@ -19,7 +19,7 @@ const CartPage = () => {
       <main className="pt-24 pb-24">
         <div className="container mx-auto px-6">
           <div className="text-center mb-12">
-            <p className="text-[10px] tracking-[0em] uppercase text-muted-foreground mb-3">Your Bag</p>
+            <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-3">Your Bag</p>
             <h1 className="font-heading text-4xl md:text-5xl">حقيبتي</h1>
           </div>
 

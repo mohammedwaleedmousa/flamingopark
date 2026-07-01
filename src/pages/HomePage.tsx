@@ -339,9 +339,6 @@ const HomePage = () => {
       <main>
         {/* Hero — sits behind the navbar */}
         <HeroSlider />
-        
-        {/* Brands strip below hero */}
-        <BrandsStripInline />
 
         {/* Categories — replaced with horizontal CategoryCarousel for improved UX */}
         <CategoryCarousel items={featuredCategories} />
@@ -462,7 +459,7 @@ const HomePage = () => {
                       inline-flex items-center gap-3
 
                       text-[11px]
-                      tracking-[0em]
+                      tracking-[0.2em]
                       uppercase
 
                       text-pink-500

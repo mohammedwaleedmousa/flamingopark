@@ -390,120 +390,107 @@ const HomePage = () => {
         {/* Editorial split — image left, text right (alternating) */}
 
         {editorial.map((e) => (
-          <motion.section
-            key={e.title}
-            className="bg-background py-10 md:py-36"
-            initial={{ opacity: 0, y: 90, filter: "blur(12px)" }}
-            whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-            viewport={{ once: true, amount: 0.25 }}
-            transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
-          >
-            
-            <div className="grid md:grid-cols-2 items-center">
+        <motion.section
+          key={e.title}
+          className="bg-background py-16 md:py-28"
+          initial={{ opacity: 0, y: 40 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+        >
 
-              {/* IMAGE (Flamingo cinematic depth) */}
-              <motion.div
-                className={`relative aspect-[4/5] md:h-[740px] overflow-hidden ${
-                  e.reverse ? "md:order-2" : ""
-                }`}
-                initial={{ opacity: 0, scale: 1.12 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true, amount: 0.25 }}
-                transition={{ duration: 1.3, ease: "easeOut" }}
-              >
-                <motion.img
-                  src={e.image}
-                  alt={e.title}
-                  loading="lazy"
-                  className="w-full h-full object-cover"
-                  initial={{ scale: 1.18 }}
-                  whileInView={{ scale: 1 }}
-                  transition={{ duration: 1.6, ease: "easeOut" }}
-                />
+          <div className="grid md:grid-cols-2 items-center">
 
-                {/* 🦩 Flamingo signature overlay */}
-                <div className="
-                  absolute inset-0
-                  bg-gradient-to-t
-                  from-black/60
-                  via-black/10
-                  to-pink-500/10
-                " />
-              </motion.div>
+            {/* IMAGE (NO HEAVY ANIMATION) */}
+            <div
+              className={`relative aspect-[4/5] md:h-[680px] overflow-hidden ${
+                e.reverse ? "md:order-2" : ""
+              }`}
+            >
+              <motion.img
+                src={e.image}
+                alt={e.title}
+                loading="lazy"
+                className="
+                  w-full h-full object-cover
+                  scale-105 hover:scale-110
+                  transition duration-700 ease-out
+                "
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                transition={{ duration: 0.6 }}
+              />
 
-              {/* CONTENT (Luxury editorial block) */}
-              <motion.div
-                className={`flex items-center justify-center px-8 md:px-28 py-16 md:py-0 ${
-                  e.reverse ? "md:order-1" : ""
-                }`}
-                initial={{ opacity: 0, x: e.reverse ? -70 : 70 }}
-                whileInView={{ opacity: 1, x: 0 }}
-                viewport={{ once: true, amount: 0.25 }}
-                transition={{ duration: 1, ease: "easeOut", delay: 0.1 }}
-              >
-                <div className="max-w-md text-center md:text-right space-y-8">
-
-                  {/* EYEBROW (Flamingo identity line) */}
-                  <p className="
-                    text-[10px]
-                    tracking-[0.65em]
-                    uppercase
-                    text-pink-400
-                    font-medium
-                    opacity-90
-                  ">
-                    {e.eyebrow}
-                  </p>
-
-                  {/* TITLE (Fashion magazine style) */}
-                  <h3 className="
-                    text-3xl md:text-5xl
-                    font-medium
-                    leading-tight
-                    tracking-tight
-                    text-foreground
-                  ">
-                    {e.title}
-                  </h3>
-
-                  {/* BODY */}
-                  <p className="
-                    text-sm md:text-[15px]
-                    text-muted-foreground
-                    leading-relaxed
-                    max-w-sm mx-auto md:mx-0
-                  ">
-                    {e.body}
-                  </p>
-
-                  {/* CTA (Flamingo luxury link) */}
-                  <Link
-                    to={e.href}
-                    className="
-                      inline-flex items-center gap-3
-
-                      text-[11px]
-                      tracking-[0.6em]
-                      uppercase
-
-                      text-pink-500
-                      border-b border-pink-400/40
-
-                      pb-2
-
-                      hover:opacity-60
-                      transition-all duration-300
-                    "
-                  >
-                    {e.cta}
-                    <ArrowLeft className="w-3 h-3" />
-                  </Link>
-
-                </div>
-              </motion.div>
-
+              {/* subtle overlay only */}
+              <div className="
+                absolute inset-0
+                bg-gradient-to-t from-black/40 via-transparent to-pink-500/5
+              " />
             </div>
-          </motion.section>
+
+            {/* CONTENT (LIGHT MOTION ONLY) */}
+            <motion.div
+              className={`flex items-center justify-center px-8 md:px-24 py-12 md:py-0 ${
+                e.reverse ? "md:order-1" : ""
+              }`}
+              initial={{ opacity: 0, x: e.reverse ? -20 : 20 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true, amount: 0.2 }}
+              transition={{ duration: 0.5 }}
+            >
+              <div className="max-w-md text-center md:text-right space-y-6">
+
+                <p className="
+                  text-[10px]
+                  tracking-[0.6em]
+                  uppercase
+                  text-pink-400
+                ">
+                  {e.eyebrow}
+                </p>
+
+                <h3 className="
+                  text-3xl md:text-5xl
+                  font-medium
+                  leading-tight
+                ">
+                  {e.title}
+                </h3>
+
+                <p className="
+                  text-sm md:text-[15px]
+                  text-muted-foreground
+                  leading-relaxed
+                ">
+                  {e.body}
+                </p>
+
+                <Link
+                  to={e.href}
+                  className="
+                    inline-flex items-center gap-3
+
+                    text-[11px]
+                    tracking-[0.5em]
+                    uppercase
+
+                    text-pink-500
+                    border-b border-pink-300/40
+                    pb-2
+
+                    hover:opacity-60
+                    transition
+                  "
+                >
+                  {e.cta}
+                  <ArrowLeft className="w-3 h-3" />
+                </Link>
+
+              </div>
+            </motion.div>
+
+          </div>
+        </motion.section>
         ))}
         {/* Best Sellers */}
         {bestSellers.length > 0 && (
@@ -548,26 +535,145 @@ const HomePage = () => {
         )}
 
         {/* Full-width campaign banner */}
-        <section className="relative h-[60vh] min-h-[420px] overflow-hidden">
-          <img
+        
+        <section className="relative h-[75vh] md:h-[85vh] min-h-[520px] overflow-hidden">
+
+          {/* BACKGROUND IMAGE */}
+          <motion.img
             src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1800&q=90"
             alt="Flamingo campaign"
             loading="lazy"
-            className="absolute inset-0 w-full h-full object-cover"
+            initial={{ scale: 1.15 }}
+            whileInView={{ scale: 1 }}
+            transition={{ duration: 2, ease: "easeOut" }}
+            className="
+              absolute inset-0 w-full h-full object-cover
+            "
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-          <div className="relative h-full flex items-center justify-center text-center px-6">
-            <div className="text-white max-w-2xl">
-              <p className="text-[10px] tracking-[0.4em] uppercase opacity-80 mb-4">حملة 2026</p>
-              <h2 className="font-heading text-4xl md:text-6xl leading-tight mb-8">صُممت لتُروى</h2>
-              <Link
-                to="/products"
-                className="btn-luxury text-[11px] tracking-[0.35em] uppercase px-10 py-4"
+
+          {/* OVERLAY */}
+          <div className="
+            absolute inset-0
+            bg-gradient-to-t
+            from-black/75
+            via-black/35
+            to-pink-500/5
+          " />
+
+          {/* CONTENT */}
+          <div className="
+            relative h-full flex items-center justify-center
+            text-center px-6
+          ">
+
+            <motion.div
+              initial={{ opacity: 0, y: 30, filter: "blur(10px)" }}
+              whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              transition={{ duration: 1, ease: [0.16, 1, 0.3, 1] }}
+              className="max-w-2xl space-y-7"
+            >
+
+              {/* EYEBROW */}
+              <motion.p
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                transition={{ delay: 0.2 }}
+                className="
+                  text-[10px]
+                  tracking-[0.75em]
+                  uppercase
+                  text-pink-300
+                  opacity-90
+                "
               >
-                تسوق الآن
-              </Link>
-            </div>
+                Flamingo · Campaign 2026
+              </motion.p>
+
+              {/* TITLE */}
+              <motion.h2
+                initial={{ opacity: 0, y: 20 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3, duration: 0.8 }}
+                className="
+                  text-4xl md:text-6xl lg:text-7xl
+                  font-medium
+                  leading-tight
+                  text-white
+                "
+              >
+                صُممت لتُروى
+              </motion.h2>
+
+              {/* SUB TEXT */}
+              <motion.p
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                transition={{ delay: 0.4 }}
+                className="
+                  text-sm md:text-[15px]
+                  text-white/70
+                  leading-relaxed
+                  max-w-md mx-auto
+                "
+              >
+                تجربة مختارة بعناية تعكس هوية فلامنجو في الأناقة والبساطة والتميّز
+              </motion.p>
+
+              {/* CTA */}
+              <motion.div
+                initial={{ opacity: 0, y: 15 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 }}
+                className="flex items-center justify-center gap-10 pt-5"
+              >
+
+                <Link
+                  to="/products"
+                  className="
+                    px-8 py-3
+
+                    text-[11px]
+                    tracking-[0.55em]
+                    uppercase
+
+                    bg-white
+                    text-black
+
+                    rounded-full
+                    hover:bg-pink-500
+                    hover:text-white
+
+                    transition
+                  "
+                >
+                  تسوق الآن
+                </Link>
+
+                <Link
+                  to="/about"
+                  className="
+                    text-[11px]
+                    tracking-[0.55em]
+                    uppercase
+
+                    text-white/80
+                    hover:text-white
+
+                    border-b border-white/30
+                    pb-1
+
+                    transition
+                  "
+                >
+                  قصة فلامنجو
+                </Link>
+
+              </motion.div>
+
+            </motion.div>
+
           </div>
+
         </section>
 
       </main>

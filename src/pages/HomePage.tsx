@@ -397,18 +397,17 @@ const HomePage = () => {
       py-16 md:py-28
 
       opacity-0
-      translate-y-8
-      animate-fadeUp
+      translate-y-6
+      animate-[fadeUp_0.8s_ease_forwards]
     "
     style={{
-      animationDelay: `${i * 120}ms`,
-      animationFillMode: "forwards",
+      animationDelay: `${i * 100}ms`,
     }}
   >
 
     <div className="grid md:grid-cols-2 items-center">
 
-      {/* IMAGE (NO MOTION LIBRARY) */}
+      {/* IMAGE */}
       <div
         className={`relative aspect-[4/5] md:h-[680px] overflow-hidden ${
           e.reverse ? "md:order-2" : ""
@@ -432,7 +431,7 @@ const HomePage = () => {
         " />
       </div>
 
-      {/* CONTENT (STATIC = FAST) */}
+      {/* CONTENT */}
       <div className={`
         flex items-center justify-center px-8 md:px-24 py-12 md:py-0
         ${e.reverse ? "md:order-1" : ""}

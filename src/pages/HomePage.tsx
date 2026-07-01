@@ -389,108 +389,102 @@ const HomePage = () => {
 
         {/* Editorial split — image left, text right (alternating) */}
 
-        {editorial.map((e) => (
-        <motion.section
-          key={e.title}
-          className="bg-background py-16 md:py-28"
-          initial={{ opacity: 0, y: 40 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
-        >
+        {editorial.map((e, i) => (
+  <section
+    key={e.title}
+    className="
+      bg-background
+      py-16 md:py-28
 
-          <div className="grid md:grid-cols-2 items-center">
+      opacity-0
+      translate-y-8
+      animate-fadeUp
+    "
+    style={{
+      animationDelay: `${i * 120}ms`,
+      animationFillMode: "forwards",
+    }}
+  >
 
-            {/* IMAGE (NO HEAVY ANIMATION) */}
-            <div
-              className={`relative aspect-[4/5] md:h-[680px] overflow-hidden ${
-                e.reverse ? "md:order-2" : ""
-              }`}
-            >
-              <motion.img
-                src={e.image}
-                alt={e.title}
-                loading="lazy"
-                className="
-                  w-full h-full object-cover
-                  scale-105 hover:scale-110
-                  transition duration-700 ease-out
-                "
-                initial={{ opacity: 0 }}
-                whileInView={{ opacity: 1 }}
-                transition={{ duration: 0.6 }}
-              />
+    <div className="grid md:grid-cols-2 items-center">
 
-              {/* subtle overlay only */}
-              <div className="
-                absolute inset-0
-                bg-gradient-to-t from-black/40 via-transparent to-pink-500/5
-              " />
-            </div>
+      {/* IMAGE (NO MOTION LIBRARY) */}
+      <div
+        className={`relative aspect-[4/5] md:h-[680px] overflow-hidden ${
+          e.reverse ? "md:order-2" : ""
+        }`}
+      >
+        <img
+          src={e.image}
+          alt={e.title}
+          loading="lazy"
+          decoding="async"
+          className="
+            w-full h-full object-cover
+            scale-105 hover:scale-110
+            transition duration-700
+          "
+        />
 
-            {/* CONTENT (LIGHT MOTION ONLY) */}
-            <motion.div
-              className={`flex items-center justify-center px-8 md:px-24 py-12 md:py-0 ${
-                e.reverse ? "md:order-1" : ""
-              }`}
-              initial={{ opacity: 0, x: e.reverse ? -20 : 20 }}
-              whileInView={{ opacity: 1, x: 0 }}
-              viewport={{ once: true, amount: 0.2 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="max-w-md text-center md:text-right space-y-6">
+        <div className="
+          absolute inset-0
+          bg-gradient-to-t from-black/40 via-transparent to-pink-500/5
+        " />
+      </div>
 
-                <p className="
-                  text-[10px]
-                  tracking-[0.6em]
-                  uppercase
-                  text-pink-400
-                ">
-                  {e.eyebrow}
-                </p>
+      {/* CONTENT (STATIC = FAST) */}
+      <div className={`
+        flex items-center justify-center px-8 md:px-24 py-12 md:py-0
+        ${e.reverse ? "md:order-1" : ""}
+      `}>
 
-                <h3 className="
-                  text-3xl md:text-5xl
-                  font-medium
-                  leading-tight
-                ">
-                  {e.title}
-                </h3>
+        <div className="max-w-md text-center md:text-right space-y-6">
 
-                <p className="
-                  text-sm md:text-[15px]
-                  text-muted-foreground
-                  leading-relaxed
-                ">
-                  {e.body}
-                </p>
+          <p className="
+            text-[10px]
+            tracking-[0.6em]
+            uppercase
+            text-pink-400
+          ">
+            {e.eyebrow}
+          </p>
 
-                <Link
-                  to={e.href}
-                  className="
-                    inline-flex items-center gap-3
+          <h3 className="text-3xl md:text-5xl font-medium leading-tight">
+            {e.title}
+          </h3>
 
-                    text-[11px]
-                    tracking-[0.5em]
-                    uppercase
+          <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">
+            {e.body}
+          </p>
 
-                    text-pink-500
-                    border-b border-pink-300/40
-                    pb-2
+          <Link
+            to={e.href}
+            className="
+              inline-flex items-center gap-3
 
-                    hover:opacity-60
-                    transition
-                  "
-                >
-                  {e.cta}
-                  <ArrowLeft className="w-3 h-3" />
-                </Link>
+              text-[11px]
+              tracking-[0.5em]
+              uppercase
 
-              </div>
-            </motion.div>
+              text-pink-500
+              border-b border-pink-300/40
+              pb-2
 
-          </div>
-        </motion.section>
+              hover:opacity-60
+              transition
+            "
+          >
+            {e.cta}
+            <ArrowLeft className="w-3 h-3" />
+          </Link>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </section>
         ))}
         {/* Best Sellers */}
         {bestSellers.length > 0 && (

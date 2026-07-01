@@ -54,7 +54,7 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
   <Link to={`/product/${product.slug}`} className="group block" dir="rtl">
 
     <div className="
-      relative aspect-[4/6] sm:aspect-[3/4]
+      relative aspect-[4/8] sm:aspect-[3/4]
       bg-white
       border border-pink-100/20
       rounded-[20px]

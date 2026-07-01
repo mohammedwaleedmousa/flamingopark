@@ -70,7 +70,7 @@ const Footer = () => {
               <img
                 src="/icons/flamingo.jpeg"
                 alt="Flamingo"
-                className="h-20 md:h-10 w-auto object-contain pr-12"
+                className="h-20 md:h-10 w-auto object-contain pr-10"
               />
             </Link>
             <p className="mt-5 text-xs text-muted-foreground leading-relaxed">

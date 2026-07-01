@@ -346,75 +346,166 @@ const HomePage = () => {
         {/* Categories — replaced with horizontal CategoryCarousel for improved UX */}
         <CategoryCarousel items={featuredCategories} />
         {products.length > 0 && (
-  <section className="py-16 md:py-24 bg-background">
-    <div className="container mx-auto px-6">
+          <section className="py-16 md:py-24 bg-background">
+            <div className="container mx-auto px-6">
 
-      {/* Title */}
-      <div className="text-center mb-12">
-        <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
-          مختارات فلامنجو
-        </p>
+              {/* Title */}
+              <div className="text-center mb-12">
+                <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
+                  مختارات فلامنجو
+                </p>
 
-        <h2 className="text-3xl md:text-4xl font-semibold mt-2">
-          قطع مختارة بعناية
-        </h2>
+                <h2 className="text-3xl md:text-4xl font-semibold mt-2">
+                  قطع مختارة بعناية
+                </h2>
 
-        <div className="mt-4 h-[2px] w-16 bg-[#E91E63] mx-auto" />
+                <div className="mt-4 h-[2px] w-16 bg-[#E91E63] mx-auto" />
 
-        <p className="text-sm text-muted-foreground mt-4 max-w-md mx-auto">
-          مجموعة من أفضل القطع المختارة لتجربة تسوق فاخرة
-        </p>
-      </div>
-
-      {/* Products */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
-        {products.slice(0, 8).map((p) => (
-          <ProductCard key={p.id} product={p} />
-        ))}
-      </div>
-
-      {/* CTA */}
-      <div className="text-center mt-12">
-        <Link
-          to="/products"
-          className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition"
-        >
-          عرض جميع المنتجات <ArrowLeft className="w-3 h-3" />
-        </Link>
-      </div>
-
-    </div>
-  </section>
-)}
-
-        {/* Editorial split — image left, text right (alternating) */}
-        {editorial.map((e) => (
-          <section key={e.title} className="bg-background">
-            <div className={`grid md:grid-cols-2 ${e.reverse ? "" : ""}`}>
-              <div
-                className={`relative aspect-[4/5] md:aspect-auto md:h-[640px] overflow-hidden ${e.reverse ? "md:order-2" : ""}`}
-              >
-                <img src={e.image} alt={e.title} loading="lazy" className="w-full h-full object-cover" />
+                <p className="text-sm text-muted-foreground mt-4 max-w-md mx-auto">
+                  مجموعة من أفضل القطع المختارة لتجربة تسوق فاخرة
+                </p>
               </div>
-              <div
-                className={`flex items-center justify-center px-8 md:px-20 py-16 md:py-0 ${e.reverse ? "md:order-1" : ""}`}
-              >
-                <div className="max-w-md text-center md:text-right">
-                  <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-5">{e.eyebrow}</p>
-                  <h3 className="font-heading text-3xl md:text-5xl leading-tight text-foreground mb-6">{e.title}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed mb-10">{e.body}</p>
-                  <Link
-                    to={e.href}
-                    className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-foreground pb-2 hover:opacity-60 transition-opacity"
-                  >
-                    {e.cta} <ArrowLeft className="w-3 h-3" />
-                  </Link>
-                </div>
+
+              {/* Products */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+                {products.slice(0, 8).map((p) => (
+                  <ProductCard key={p.id} product={p} />
+                ))}
               </div>
+
+              {/* CTA */}
+              <div className="text-center mt-12">
+                <Link
+                  to="/products"
+                  className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition"
+                >
+                  عرض جميع المنتجات <ArrowLeft className="w-3 h-3" />
+                </Link>
+              </div>
+
             </div>
           </section>
-        ))}
+        )}
 
+        {/* Editorial split — image left, text right (alternating) */}
+
+
+{editorial.map((e) => (
+  <motion.section
+    key={e.title}
+    className="bg-background py-24 md:py-36"
+    initial={{ opacity: 0, y: 90, filter: "blur(12px)" }}
+    whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+    viewport={{ once: true, amount: 0.25 }}
+    transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+  >
+    
+    <div className="grid md:grid-cols-2 items-center">
+
+      {/* IMAGE (Flamingo cinematic depth) */}
+      <motion.div
+        className={`relative aspect-[4/5] md:h-[740px] overflow-hidden ${
+          e.reverse ? "md:order-2" : ""
+        }`}
+        initial={{ opacity: 0, scale: 1.12 }}
+        whileInView={{ opacity: 1, scale: 1 }}
+        viewport={{ once: true, amount: 0.25 }}
+        transition={{ duration: 1.3, ease: "easeOut" }}
+      >
+        <motion.img
+          src={e.image}
+          alt={e.title}
+          loading="lazy"
+          className="w-full h-full object-cover"
+          initial={{ scale: 1.18 }}
+          whileInView={{ scale: 1 }}
+          transition={{ duration: 1.6, ease: "easeOut" }}
+        />
+
+        {/* 🦩 Flamingo signature overlay */}
+        <div className="
+          absolute inset-0
+          bg-gradient-to-t
+          from-black/60
+          via-black/10
+          to-pink-500/10
+        " />
+      </motion.div>
+
+      {/* CONTENT (Luxury editorial block) */}
+      <motion.div
+        className={`flex items-center justify-center px-8 md:px-28 py-16 md:py-0 ${
+          e.reverse ? "md:order-1" : ""
+        }`}
+        initial={{ opacity: 0, x: e.reverse ? -70 : 70 }}
+        whileInView={{ opacity: 1, x: 0 }}
+        viewport={{ once: true, amount: 0.25 }}
+        transition={{ duration: 1, ease: "easeOut", delay: 0.1 }}
+      >
+        <div className="max-w-md text-center md:text-right space-y-8">
+
+          {/* EYEBROW (Flamingo identity line) */}
+          <p className="
+            text-[10px]
+            tracking-[0.65em]
+            uppercase
+            text-pink-400
+            font-medium
+            opacity-90
+          ">
+            {e.eyebrow}
+          </p>
+
+          {/* TITLE (Fashion magazine style) */}
+          <h3 className="
+            text-3xl md:text-5xl
+            font-medium
+            leading-tight
+            tracking-tight
+            text-foreground
+          ">
+            {e.title}
+          </h3>
+
+          {/* BODY */}
+          <p className="
+            text-sm md:text-[15px]
+            text-muted-foreground
+            leading-relaxed
+            max-w-sm mx-auto md:mx-0
+          ">
+            {e.body}
+          </p>
+
+          {/* CTA (Flamingo luxury link) */}
+          <Link
+            to={e.href}
+            className="
+              inline-flex items-center gap-3
+
+              text-[11px]
+              tracking-[0.6em]
+              uppercase
+
+              text-pink-500
+              border-b border-pink-400/40
+
+              pb-2
+
+              hover:opacity-60
+              transition-all duration-300
+            "
+          >
+            {e.cta}
+            <ArrowLeft className="w-3 h-3" />
+          </Link>
+
+        </div>
+      </motion.div>
+
+    </div>
+  </motion.section>
+))}
         {/* Best Sellers */}
         {bestSellers.length > 0 && (
           <section className="py-20 md:py-28 bg-muted">
@@ -480,30 +571,6 @@ const HomePage = () => {
           </div>
         </section>
 
-        {/* All products preview */}
-        {products.length > 0 && (
-          <section className="py-20 md:py-28">
-            <div className="container mx-auto px-6">
-              <div className="text-center mb-14">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">المختارات</p>
-                <h2 className="font-heading text-3xl md:text-5xl text-foreground">قطع مختارة بعناية</h2>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
-                {products.slice(0, 8).map((p) => (
-                  <ProductCard key={p.id} product={p} />
-                ))}
-              </div>
-              <div className="text-center mt-14">
-                <Link
-                  to="/products"
-                  className="inline-flex items-center justify-center border border-foreground text-foreground text-[11px] tracking-[0.35em] uppercase px-10 py-4 hover:bg-foreground hover:text-background transition-colors"
-                >
-                  عرض جميع المنتجات
-                </Link>
-              </div>
-            </div>
-          </section>
-        )}
       </main>
 
       <Footer />

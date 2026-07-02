@@ -11,7 +11,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, MessageCircle, Trash2, Users, Loader2, X, Globe2 } from "lucide-react";
+import { Search, MessageCircle, Trash2, Users, Loader2, X, Globe2, Wallet } from "lucide-react";
+import { useCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import { useDebounce } from "@/hooks/useDebounce";
@@ -28,7 +29,9 @@ const PAGE_SIZE = 30;
 
 const AdminCustomersPage = () => {
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [spendMap, setSpendMap] = useState<Record<string, { total: number; count: number }>>({});
   const [total, setTotal] = useState(0);
+  const { format } = useCurrency();
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -55,7 +58,30 @@ const AdminCustomersPage = () => {
     const from = (page - 1) * PAGE_SIZE;
     const { data, count, error } = await q.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
     if (error) toast({ title: "خطأ", description: "فشل تحميل العملاء", variant: "destructive" });
-    else { setCustomers((data || []) as Customer[]); setTotal(count || 0); }
+    else {
+      const list = (data || []) as Customer[];
+      setCustomers(list);
+      setTotal(count || 0);
+      // Enrich with total spent from orders (by customer phone)
+      const phones = list.map((c) => c.phone).filter(Boolean);
+      if (phones.length > 0) {
+        const { data: orders } = await supabase
+          .from("orders")
+          .select("customer_phone,total")
+          .in("customer_phone", phones);
+        const map: Record<string, { total: number; count: number }> = {};
+        (orders || []).forEach((o: any) => {
+          const key = o.customer_phone;
+          if (!key) return;
+          if (!map[key]) map[key] = { total: 0, count: 0 };
+          map[key].total += Number(o.total || 0);
+          map[key].count += 1;
+        });
+        setSpendMap(map);
+      } else {
+        setSpendMap({});
+      }
+    }
     setIsLoading(false);
   };
 
@@ -151,21 +177,27 @@ const AdminCustomersPage = () => {
                 <th className="text-right p-3 font-heading">الاسم</th>
                 <th className="text-right p-3 font-heading">الهاتف</th>
                 <th className="text-right p-3 font-heading">البلد</th>
+                <th className="text-right p-3 font-heading">إجمالي الإنفاق</th>
+                <th className="text-right p-3 font-heading">الطلبات</th>
                 <th className="text-right p-3 font-heading">التسجيل</th>
                 <th className="text-right p-3 font-heading">الإجراءات</th>
               </tr>
             </thead>
             <tbody>
               {isLoading && customers.length === 0 ? (
-                <tr><td colSpan={6} className="p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" /></td></tr>
+                <tr><td colSpan={8} className="p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" /></td></tr>
               ) : customers.length === 0 ? (
-                <tr><td colSpan={6} className="p-12 text-center text-muted-foreground"><Users className="w-10 h-10 mx-auto mb-3 opacity-50" /> لا يوجد عملاء</td></tr>
+                <tr><td colSpan={8} className="p-12 text-center text-muted-foreground"><Users className="w-10 h-10 mx-auto mb-3 opacity-50" /> لا يوجد عملاء</td></tr>
               ) : customers.map(c => (
                 <tr key={c.id} className={cn("border-b border-border hover:bg-muted/30", selected.has(c.id) && "bg-primary/5")}>
                   <td className="p-3"><Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggleSelect(c.id)} /></td>
                   <td className="p-3 text-sm font-body">{c.name}</td>
                   <td className="p-3 font-mono text-xs" dir="ltr">{c.phone}</td>
                   <td className="p-3 text-sm">{c.country === "SA" ? "🇸🇦 السعودية" : c.country === "YE" ? "🇾🇪 اليمن" : c.country}</td>
+                  <td className="p-3 text-sm font-semibold text-primary">
+                    <span className="inline-flex items-center gap-1"><Wallet className="w-3.5 h-3.5 opacity-60" />{format(spendMap[c.phone]?.total || 0)}</span>
+                  </td>
+                  <td className="p-3 text-xs">{spendMap[c.phone]?.count || 0}</td>
                   <td className="p-3 text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString("ar-SA")}</td>
                   <td className="p-3">
                     <div className="flex gap-1">

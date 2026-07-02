@@ -12,7 +12,7 @@ type ChartOfAccountRow = Database["public"]["Tables"]["chart_of_accounts"]["Row"
 type RefundsRow = Database["public"]["Tables"]["refunds"]["Row"];
 type AnalyticsEventRow = Database["public"]["Tables"]["analytics_events"]["Row"];
 
-type DateRange = { start: string; end: string };
+export type DateRange = { start: string; end: string };
 
 export type AdminOrderQueryParams = {
   search?: string;
@@ -135,7 +135,7 @@ function buildProductListQuery(params: AdminProductQueryParams) {
   }
   if (params.status && params.status !== "all") query = query.eq("is_active", params.status === "active");
   if (params.stock && params.stock !== "all") query = query.eq("in_stock", params.stock === "in");
-  if (params.country && params.country !== "all") query = query.eq("countries", params.country);
+  if (params.country && params.country !== "all") query = query.contains("countries", [params.country]);
   const page = params.page ?? 1;
   const pageSize = params.pageSize ?? 25;
   const from = (page - 1) * pageSize;
@@ -442,15 +442,14 @@ export async function getRecentOrders(startDate: string, endDate: string, limit 
   return data ?? [];
 }
 
-export async function getLowStock(threshold = 5, limit = 5) {
+export async function getLowStock(_threshold = 5, limit = 5) {
   const { data, error } = await supabase
     .from("products")
-    .select("id,name_ar,stock,price")
-    .lte("stock", threshold)
-    .order("stock", { ascending: true })
+    .select("id,name_ar,price,in_stock")
+    .eq("in_stock", false)
     .limit(limit);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map((p: any) => ({ ...p, stock: 0 }));
 }
 
 export async function getFinanceOverview(range: DateRange): Promise<AdminFinanceOverview> {

@@ -7,6 +7,8 @@ import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import HeroSlider from "@/components/HeroSlider";
 import ProductCard from "@/components/ProductCard";
+import PromoBannerGrid from "@/components/PromoBannerGrid";
+import BrandsStrip from "@/components/BrandsStrip";
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/store/useStore";
 import { motion, AnimatePresence } from "framer-motion";
@@ -339,6 +341,12 @@ const HomePage = () => {
       <main>
         {/* Hero — sits behind the navbar */}
         <HeroSlider />
+
+        {/* Professional promo banner grid */}
+        <PromoBannerGrid />
+
+        {/* Brands strip */}
+        <BrandsStrip />
 
         {/* Categories — replaced with horizontal CategoryCarousel for improved UX */}
         <CategoryCarousel items={featuredCategories} />

@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
 import { track } from "@/lib/analytics";
+import type { CurrencyMode } from "@/lib/currency";
 
 export type Country = "YE" | "SA";
 
@@ -55,6 +56,9 @@ interface StoreState {
   country: Country;
   setCountry: (c: Country) => void;
 
+  currencyMode: CurrencyMode;
+  setCurrencyMode: (m: CurrencyMode) => void;
+
   setCustomer: (customer: Customer | null) => void;
 
   addToCart: (
@@ -86,6 +90,9 @@ export const useStore = create<StoreState>()(
       isCartOpen: false,
       country: "YE",
       setCountry: (country) => set({ country }),
+
+      currencyMode: "SAR",
+      setCurrencyMode: (currencyMode) => set({ currencyMode }),
 
       setCustomer: (customer) => set({ customer }),
 
@@ -200,6 +207,7 @@ export const useStore = create<StoreState>()(
       partialize: (state) => ({
         customer: state.customer,
         cart: state.cart,
+        currencyMode: state.currencyMode,
       }),
     }
   )

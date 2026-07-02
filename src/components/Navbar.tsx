@@ -127,7 +127,7 @@ const Navbar = () => {
               <SheetContent
                 side="right"
                 className="
-                  w-[60vw] sm:w-[360px] p-0
+                  w-[70vw] sm:w-[360px] p-0
                   bg-white backdrop-blur-xl
                   border-l border-black/5
                   shadow-[20px_0_60px_-30px_rgba(0,0,0,0.25)]

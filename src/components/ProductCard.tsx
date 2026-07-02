@@ -4,6 +4,7 @@ import { Heart, ShoppingBag } from "lucide-react";
 import { Product, useStore } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
 import { toast } from "@/hooks/use-toast";
+import { useCurrency } from "@/lib/currency";
 
 interface ProductCardProps {
   product: Product;
@@ -15,7 +16,7 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { addToCart, openCart } = useStore();
   const isLiked = isFavorite(product.id);
-  const currency = "ر.ي";
+  const { format } = useCurrency();
   const [heartBeat, setHeartBeat] = useState(false);
   const [bagPop, setBagPop] = useState(false);
   const hasSecondImage = (product.images?.length ?? 0) > 1;
@@ -110,7 +111,7 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
         </h3>
 
         <span className="text-sm font-semibold text-black">
-          {Math.floor(finalPrice)} {currency}
+          {format(finalPrice)}
         </span>
 
       </div>

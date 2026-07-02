@@ -18,7 +18,7 @@ export type LedgerEntry = {
 
 export async function getOrdersRevenueEntries(startDate: string, endDate: string) {
   const { data, error } = await supabase
-    .from<OrdersRow>("orders")
+    .from("orders")
     .select("id,total,created_at")
     .gte("created_at", startDate)
     .lte("created_at", endDate)
@@ -37,7 +37,7 @@ export async function getOrdersRevenueEntries(startDate: string, endDate: string
 
 export async function getExpensesEntries(startDate: string, endDate: string) {
   const { data, error } = await supabase
-    .from<ExpensesRow>("expenses")
+    .from("expenses")
     .select("id,amount,expense_date,description,vendor")
     .gte("expense_date", startDate)
     .lte("expense_date", endDate)

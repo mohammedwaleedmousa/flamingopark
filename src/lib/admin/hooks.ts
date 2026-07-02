@@ -20,7 +20,7 @@ export function useAdminOrders(params: service.AdminOrderQueryParams = {}) {
   return useQuery({
     queryKey: orderQueryKey(params),
     queryFn: () => service.getOrders(params),
-    keepPreviousData: true,
+    placeholderData: (prev: any) => prev,
   });
 }
 
@@ -60,7 +60,7 @@ export function useAdminProducts(params: service.AdminProductQueryParams = {}) {
   return useQuery({
     queryKey: productQueryKey(params),
     queryFn: () => service.getProducts(params),
-    keepPreviousData: true,
+    placeholderData: (prev: any) => prev,
   });
 }
 
@@ -84,7 +84,7 @@ export function useAdminCustomers(params: service.AdminCustomerQueryParams = {})
   return useQuery({
     queryKey: customerQueryKey(params),
     queryFn: () => service.getCustomers(params),
-    keepPreviousData: true,
+    placeholderData: (prev: any) => prev,
   });
 }
 
@@ -100,7 +100,7 @@ export function useCustomerIntelligence(range: service.DateRange) {
   return useQuery({
     queryKey: ["admin", "customer-intelligence", range.start, range.end],
     queryFn: () => service.getCustomerIntelligenceData(range),
-    keepPreviousData: true,
+    placeholderData: (prev: any) => prev,
   });
 }
 
@@ -108,7 +108,7 @@ export function useCustomerOrders(search: service.AdminCustomerDetailSearch, ran
   return useQuery({
     queryKey: ["admin", "customer-orders", search.phone ?? search.name, range.start, range.end],
     queryFn: () => service.getCustomerOrders(search, range),
-    keepPreviousData: true,
+    placeholderData: (prev: any) => prev,
   });
 }
 
@@ -132,7 +132,7 @@ export function useFinanceOverview(range: service.DateRange) {
   return useQuery({
     queryKey: ["admin", "finance-overview", range.start, range.end],
     queryFn: () => service.getFinanceOverview(range),
-    keepPreviousData: true,
+    placeholderData: (prev: any) => prev,
   });
 }
 

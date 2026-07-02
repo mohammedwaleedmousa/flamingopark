@@ -484,10 +484,10 @@ export async function getFinanceOverview(range: DateRange): Promise<AdminFinance
   if (txRes.error) throw txRes.error;
 
   return {
-    orders: ordersRes.data ?? [],
-    expenses: expensesRes.data ?? [],
-    refunds: refundsRes.data ?? [],
-    transactions: txRes.data ?? [],
+    orders: (ordersRes.data ?? []) as any,
+    expenses: (expensesRes.data ?? []) as any,
+    refunds: (refundsRes.data ?? []) as any,
+    transactions: (txRes.data ?? []) as any,
   };
 }
 
@@ -507,7 +507,7 @@ export async function getAnalyticsEvents(sinceIso: string, limit = 10000) {
       .range(start, end);
     if (error) throw error;
     if (!data?.length) break;
-    events.push(...data);
+    events.push(...(data as any));
     if (data.length < pageSize) break;
   }
   return events;

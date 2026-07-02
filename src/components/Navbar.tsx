@@ -127,10 +127,12 @@ const Navbar = () => {
               <SheetContent
                 side="right"
                 className="
-                  w-[80vw] sm:w-[360px] p-0
+                  w-[60vw] sm:w-[360px] p-0
                   bg-white backdrop-blur-xl
                   border-l border-black/5
                   shadow-[20px_0_60px_-30px_rgba(0,0,0,0.25)]
+                  [&>button]:left-3
+                  [&>button]:right-auto
                 "
                 dir="rtl"
               >

@@ -278,7 +278,7 @@ export async function getCustomerOrders(search: AdminCustomerDetailSearch, range
   const normalized = normalizeRange(range);
   let query = supabase
     .from("orders")
-    .select("id,order_number,customer_name,customer_phone,customer_address,total,created_at,status,line_items")
+    .select("id,order_number,customer_name,customer_phone,customer_address,total,created_at,status,items")
     .neq("status", "cancelled")
     .order("created_at", { ascending: false })
     .limit(2000);

@@ -113,7 +113,7 @@ const Navbar = () => {
   };
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 bg-background/95 backdrop-blur border-b border-border" dir="rtl">
+    <header className="fixed top-0 inset-x-0 z-50 bg-white backdrop-blur-xl border-b border-black/5 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.2)]" dir="rtl">      
       <div className="container mx-auto px-4 md:px-8">
         <div className="relative flex items-center justify-between h-16 md:h-20">
           {/* Right (in RTL): menu + search */}
@@ -124,83 +124,27 @@ const Navbar = () => {
                   <Menu className="w-5 h-5" />
                 </button>
               </SheetTrigger>
-              <SheetContent side="right" className="w-[92vw] sm:w-[420px] p-0 bg-background border-l overflow-hidden " dir="rtl">
+              <SheetContent
+                side="right"
+                className="
+                  w-[60vw] sm:w-[360px] p-0
+                  bg-white backdrop-blur-xl
+                  border-l border-black/5
+                  shadow-[20px_0_60px_-30px_rgba(0,0,0,0.25)]
+                "
+                dir="rtl"
+              >
                 <div className="flex flex-col h-full p-3">
                   {/* Hero header */}
-                  <div className="rounded-3xl relative px-6 pt-8 pb-6 bg-foreground text-background overflow-hidden">
-                    <div className="absolute inset-0 opacity-[0.06] pointer-events-none"
-                      style={{ backgroundImage: "radial-gradient(circle at 20% 20%, white 1px, transparent 1px), radial-gradient(circle at 80% 70%, white 1px, transparent 1px)", backgroundSize: "24px 24px" }}
+                  <div className="w-full flex justify-center items-center py-4">
+                    <img
+                      src="/icons/flamingo.jpeg"
+                      alt="logo"
+                      className="w-20 h-20 object-contain transition-all duration-500 ease-in-out hover:scale-105"
                     />
-                    <div className="relative">
-                      <div className="z-50 flex items-center justify-between -mb-10">
-                        <span className="logo-flamingo text-lg tracking-[0.35em]">FLAMINGO</span>
-                        <button onClick={() => setMenuOpen(false)} className="w-8 h-8 rounded-full bg-background/10 hover:bg-background/20 flex items-center justify-center transition">
-                          <X className="w-4 h-4" />
-                        </button>
-                      </div>
-
-                      <div className=" flex items-center gap-3">
-                        <div onClick={() => user && goTo("/account")}
-                          className="w-12 h-12 rounded-full bg-background/10 ring-1 ring-background/20 flex items-center justify-center cursor-pointer hover:bg-background/20 transition">
-                          {user ? (
-                            <span className="text-sm font-medium">
-                              {(user.user_metadata?.full_name?.[0] || user.email?.[0] || "?").toUpperCase()}
-                            </span>
-                          ) : (
-                            <User className="w-5 h-5" />
-                          )}
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          {user ? (
-                            <>
-                              <p className="text-[11px] tracking-[0.25em] uppercase opacity-60">مرحباً</p>
-                              <p className="text-sm font-medium truncate">{user.user_metadata?.full_name || user.email}</p>
-                            </>
-                          ) : (
-                            <>
-                              <p className=" text-[11px] tracking-[0.25em] uppercase opacity-60">ضيف</p>
-                              <button onClick={() => goTo("/auth")} className="text-sm font-medium underline underline-offset-4">
-                                تسجيل الدخول · إنشاء حساب
-                              </button>
-                            </>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Search */}
-                      <form onSubmit={sideSubmit} className="relative mt-6">
-                        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 opacity-60" />
-                        <input
-                          value={sideSearch}
-                          onChange={(e) => setSideSearch(e.target.value)}
-                          placeholder="ابحث في FLAMINGO..."
-                          className="w-full pr-10 pl-4 py-3 text-sm bg-background/10 border border-background/20 rounded-full placeholder:text-background/50 focus:outline-none focus:border-background/60 transition"
-                          dir="rtl"
-                        />
-                      </form>
-
-                      {/* Quick stats */}
-                      <div className="grid grid-cols-3 gap-2 mt-5">
-                        <button onClick={() => goTo("/cart")} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-background/5 hover:bg-background/10 transition">
-                          <ShoppingBag className="w-4 h-4" />
-                          <span className="text-[10px] opacity-70">الحقيبة</span>
-                          <span className="text-xs font-medium">{cartCount}</span>
-                        </button>
-                        <button onClick={() => goTo("/favorites")} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-background/5 hover:bg-background/10 transition">
-                          <Heart className="w-4 h-4" />
-                          <span className="text-[10px] opacity-70">مفضلة</span>
-                          <span className="text-xs font-medium">{favorites.length}</span>
-                        </button>
-                        <button onClick={() => goTo("/offers")} className="flex flex-col items-center gap-1 py-2.5 rounded-xl bg-background/5 hover:bg-background/10 transition">
-                          <Gift className="w-4 h-4" />
-                          <span className="text-[10px] opacity-70">عروض</span>
-                          <span className="text-xs font-medium">●</span>
-                        </button>
-                      </div>
-                    </div>
                   </div>
 
-                  <nav className="flex-1 overflow-y-auto pb-4">
+                  <nav className="flex-1 overflow-y-auto pb-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     {/* Shopping */}
                     <Section label="التسوق">
                       <NavItem to="/home" icon={Home} label="الرئيسية" onClick={() => goTo("/home")} />
@@ -343,7 +287,7 @@ const Navbar = () => {
         </div>
 
         {/* Sub-nav */}
-        <nav className="hidden md:flex items-center justify-center gap-8 h-10 border-t border-border/60 overflow-x-auto hide-scrollbar">
+        <nav className="hidden md:flex flex-row-reverse items-center justify-center gap-8 h-10 border-t border-border/60 overflow-x-auto hide-scrollbar w-full text-right">
           {topLinks.map((l) => (
             <Link key={l.href} to={l.href} className="text-[11px] tracking-[0.32em] uppercase text-foreground/75 hover:text-foreground transition whitespace-nowrap">
               {l.label}

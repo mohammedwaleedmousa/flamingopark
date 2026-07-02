@@ -100,7 +100,7 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
 
           <span className="text-[11px] text-neutral-500 flex items-center gap-1">
             <span className="text-pink-400">★</span>
-            {product.rating ? Number(product.rating).toFixed(1) : "4.5"}
+            {(product as any).rating ? Number((product as any).rating).toFixed(1) : "4.5"}
           </span>
 
         </div>

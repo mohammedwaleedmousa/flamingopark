@@ -45,7 +45,7 @@ export async function getExpensesEntries(startDate: string, endDate: string) {
   if (error) throw error;
   return (data ?? []).map((e) => ({
     id: `expense-${e.id}`,
-    date: e.expense_date ?? e.created_at,
+    date: e.expense_date ?? (e as any).created_at,
     type: "expense" as const,
     category: "expenses",
     amount: -(Number(e.amount ?? 0)),

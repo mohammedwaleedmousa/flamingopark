@@ -12,7 +12,7 @@ type ChartOfAccountRow = Database["public"]["Tables"]["chart_of_accounts"]["Row"
 type RefundsRow = Database["public"]["Tables"]["refunds"]["Row"];
 type AnalyticsEventRow = Database["public"]["Tables"]["analytics_events"]["Row"];
 
-type DateRange = { start: string; end: string };
+export type DateRange = { start: string; end: string };
 
 export type AdminOrderQueryParams = {
   search?: string;
@@ -109,7 +109,7 @@ function dateRangeFilters<T>(query: any, range: DateRange, column = "created_at"
 }
 
 function buildOrderListQuery(params: AdminOrderQueryParams) {
-  let query = supabase.from<OrdersRow>("orders").select("*", { count: "exact" });
+  let query = supabase.from("orders").select("*", { count: "exact" });
   if (params.search?.trim()) {
     const term = `%${params.search.trim()}%`;
     query = query.or(`order_number.ilike.${term},customer_name.ilike.${term},customer_phone.ilike.${term}`);
@@ -127,7 +127,7 @@ function buildOrderListQuery(params: AdminOrderQueryParams) {
 
 function buildProductListQuery(params: AdminProductQueryParams) {
   let query = supabase
-    .from<ProductsRow>("products")
+    .from("products")
     .select("id,name,name_ar,slug,price,cost_price,discount,category,brand,in_stock,is_active,countries,images,sort_order,created_at", { count: "exact" });
   if (params.search?.trim()) {
     const term = `%${params.search.trim()}%`;
@@ -135,7 +135,7 @@ function buildProductListQuery(params: AdminProductQueryParams) {
   }
   if (params.status && params.status !== "all") query = query.eq("is_active", params.status === "active");
   if (params.stock && params.stock !== "all") query = query.eq("in_stock", params.stock === "in");
-  if (params.country && params.country !== "all") query = query.eq("countries", params.country);
+  if (params.country && params.country !== "all") query = query.contains("countries", [params.country]);
   const page = params.page ?? 1;
   const pageSize = params.pageSize ?? 25;
   const from = (page - 1) * pageSize;
@@ -144,7 +144,7 @@ function buildProductListQuery(params: AdminProductQueryParams) {
 }
 
 function buildCustomerListQuery(params: AdminCustomerQueryParams) {
-  let query = supabase.from<CustomersRow>("customers").select("*", { count: "exact" });
+  let query = supabase.from("customers").select("*", { count: "exact" });
   if (params.search?.trim()) {
     const term = `%${params.search.trim()}%`;
     query = query.or(`name.ilike.${term},phone.ilike.${term}`);
@@ -189,7 +189,7 @@ export async function deleteOrders(orderIds: string[]) {
 export async function getProducts(params: AdminProductQueryParams = {}): Promise<AdminProductResult> {
   const { data, count, error } = await buildProductListQuery(params);
   if (error) throw error;
-  return { data: data ?? [], count: count ?? 0 };
+  return { data: (data ?? []) as unknown as ProductsRow[], count: count ?? 0 };
 }
 
 export async function updateProductActive(productId: string, next: boolean) {
@@ -219,7 +219,7 @@ export async function deleteCustomers(customerIds: string[]) {
 export async function getCustomerIntelligenceData(range: DateRange): Promise<AdminCustomerIntelligenceRow[]> {
   const normalized = normalizeRange(range);
   const { data, error } = await supabase
-    .from<OrdersRow>("orders")
+    .from("orders")
     .select("customer_name,customer_phone,customer_address,total,created_at,status")
     .neq("status", "cancelled")
     .gte("created_at", normalized.start)
@@ -277,8 +277,8 @@ export async function getCustomerIntelligenceData(range: DateRange): Promise<Adm
 export async function getCustomerOrders(search: AdminCustomerDetailSearch, range: DateRange): Promise<OrdersRow[]> {
   const normalized = normalizeRange(range);
   let query = supabase
-    .from<OrdersRow>("orders")
-    .select("id,order_number,customer_name,customer_phone,customer_address,total,created_at,status,line_items")
+    .from("orders")
+    .select("id,order_number,customer_name,customer_phone,customer_address,total,created_at,status,items")
     .neq("status", "cancelled")
     .order("created_at", { ascending: false })
     .limit(2000);
@@ -293,7 +293,7 @@ export async function getCustomerOrders(search: AdminCustomerDetailSearch, range
 
   const { data, error } = await query;
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as unknown as OrdersRow[];
 }
 
 export async function getCustomerPayments(orderIds: string[]) {
@@ -303,7 +303,7 @@ export async function getCustomerPayments(orderIds: string[]) {
   if (!refs) return [];
 
   const { data, error } = await supabase
-    .from<FinancialTxnRow>("financial_transactions")
+    .from("financial_transactions")
     .select("id,entry_date,description,reference,source_id,source_type")
     .or(refs)
     .limit(100);
@@ -314,7 +314,7 @@ export async function getCustomerPayments(orderIds: string[]) {
 
 export async function getCustomerByPhone(phone: string) {
   const { data, error } = await supabase
-    .from<CustomersRow>("customers")
+    .from("customers")
     .select("*")
     .eq("phone", phone)
     .limit(1)
@@ -325,7 +325,7 @@ export async function getCustomerByPhone(phone: string) {
 
 export async function getRevenueSummary(startDate: string, endDate: string) {
   const { data, error } = await supabase
-    .from<OrdersRow>("orders")
+    .from("orders")
     .select("total, created_at")
     .gte("created_at", startDate)
     .lte("created_at", endDate);
@@ -337,7 +337,7 @@ export async function getRevenueSummary(startDate: string, endDate: string) {
 
 export async function getOrdersSummary(startDate: string, endDate: string) {
   const { data, error } = await supabase
-    .from<OrdersRow>("orders")
+    .from("orders")
     .select("id, total, created_at")
     .gte("created_at", startDate)
     .lte("created_at", endDate);
@@ -351,7 +351,7 @@ export async function getOrdersSummary(startDate: string, endDate: string) {
 
 export async function getCustomersCount(startDate: string, endDate: string) {
   const { data, error } = await supabase
-    .from<CustomersRow>("customers")
+    .from("customers")
     .select("id, created_at")
     .gte("created_at", startDate)
     .lte("created_at", endDate);
@@ -361,7 +361,7 @@ export async function getCustomersCount(startDate: string, endDate: string) {
 
 export async function getRevenueTimeseries(startDate: string, endDate: string) {
   const { data, error } = await supabase
-    .from<OrdersRow>("orders")
+    .from("orders")
     .select("total, created_at")
     .gte("created_at", startDate)
     .lte("created_at", endDate)
@@ -379,7 +379,7 @@ export async function getRevenueTimeseries(startDate: string, endDate: string) {
 
 export async function getProfitSummary(startDate: string, endDate: string) {
   const { data: orders, error: ordersError } = await supabase
-    .from<OrdersRow>("orders")
+    .from("orders")
     .select("id, total, items, created_at")
     .gte("created_at", startDate)
     .lte("created_at", endDate);
@@ -406,7 +406,7 @@ export async function getProfitSummary(startDate: string, endDate: string) {
   if (prodIds.size > 0) {
     const ids = Array.from(prodIds);
     const { data: products } = await supabase
-      .from<ProductsRow>("products")
+      .from("products")
       .select("id, cost_price")
       .in("id", ids as string[]);
     for (const p of products ?? []) {
@@ -432,7 +432,7 @@ export async function getProfitSummary(startDate: string, endDate: string) {
 
 export async function getRecentOrders(startDate: string, endDate: string, limit = 6) {
   const { data, error } = await supabase
-    .from<OrdersRow>("orders")
+    .from("orders")
     .select("id,order_number,customer_name,total,status,created_at")
     .gte("created_at", startDate)
     .lte("created_at", endDate)
@@ -442,38 +442,37 @@ export async function getRecentOrders(startDate: string, endDate: string, limit 
   return data ?? [];
 }
 
-export async function getLowStock(threshold = 5, limit = 5) {
+export async function getLowStock(_threshold = 5, limit = 5) {
   const { data, error } = await supabase
-    .from<ProductsRow>("products")
-    .select("id,name_ar,stock,price")
-    .lte("stock", threshold)
-    .order("stock", { ascending: true })
+    .from("products")
+    .select("id,name_ar,price,in_stock")
+    .eq("in_stock", false)
     .limit(limit);
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []).map((p: any) => ({ ...p, stock: 0 }));
 }
 
 export async function getFinanceOverview(range: DateRange): Promise<AdminFinanceOverview> {
   const normalized = normalizeRange(range);
   const [ordersRes, expensesRes, refundsRes, txRes] = await Promise.all([
     supabase
-      .from<OrdersRow>("orders")
+      .from("orders")
       .select("total,created_at,status")
       .gte("created_at", normalized.start)
       .lte("created_at", normalized.end)
       .neq("status", "cancelled"),
     supabase
-      .from<ExpensesRow>("expenses")
+      .from("expenses")
       .select("amount,expense_date,category_id,description,vendor")
       .gte("expense_date", normalized.start)
       .lte("expense_date", normalized.end),
     supabase
-      .from<RefundsRow>("refunds")
+      .from("refunds")
       .select("amount,created_at")
       .gte("created_at", normalized.start)
       .lte("created_at", normalized.end),
     supabase
-      .from<FinancialTxnRow>("financial_transactions")
+      .from("financial_transactions")
       .select("id,entry_date,description,reference,transaction_lines(debit,credit)")
       .order("entry_date", { ascending: false })
       .limit(8),
@@ -485,10 +484,10 @@ export async function getFinanceOverview(range: DateRange): Promise<AdminFinance
   if (txRes.error) throw txRes.error;
 
   return {
-    orders: ordersRes.data ?? [],
-    expenses: expensesRes.data ?? [],
-    refunds: refundsRes.data ?? [],
-    transactions: txRes.data ?? [],
+    orders: (ordersRes.data ?? []) as any,
+    expenses: (expensesRes.data ?? []) as any,
+    refunds: (refundsRes.data ?? []) as any,
+    transactions: (txRes.data ?? []) as any,
   };
 }
 
@@ -499,7 +498,7 @@ export async function getAnalyticsEvents(sinceIso: string, limit = 10000) {
     const start = page * pageSize;
     const end = start + pageSize - 1;
     const { data, error } = await supabase
-      .from<AnalyticsEventRow>("analytics_events")
+      .from("analytics_events")
       .select(
         "event_type,session_id,user_id,product_id,value,utm_source,utm_campaign,referrer,device,created_at,metadata",
       )
@@ -508,7 +507,7 @@ export async function getAnalyticsEvents(sinceIso: string, limit = 10000) {
       .range(start, end);
     if (error) throw error;
     if (!data?.length) break;
-    events.push(...data);
+    events.push(...(data as any));
     if (data.length < pageSize) break;
   }
   return events;
@@ -516,7 +515,7 @@ export async function getAnalyticsEvents(sinceIso: string, limit = 10000) {
 
 export async function getChartOfAccounts() {
   const { data, error } = await supabase
-    .from<CheckboxRow>("chart_of_accounts")
+    .from("chart_of_accounts")
     .select("id, code, name_ar, type")
     .eq("is_active", true)
     .order("code");
@@ -526,7 +525,7 @@ export async function getChartOfAccounts() {
 
 export async function getLedgerTransactions(limit = 100) {
   const { data, error } = await supabase
-    .from<FinancialTxnRow>("financial_transactions")
+    .from("financial_transactions")
     .select("id, entry_date, reference, description, created_at, transaction_lines(debit, credit, account_id, chart_of_accounts(name_ar, code))")
     .order("entry_date", { ascending: false })
     .limit(limit);
@@ -541,13 +540,13 @@ export async function createFinancialTransaction(
   lines: AdminTransactionLineInput[],
 ) {
   const { data: tx, error } = await supabase
-    .from<FinancialTxnRow>("financial_transactions")
+    .from("financial_transactions")
     .insert({ entry_date: entryDate, reference: reference || null, description })
     .select()
     .single();
   if (error || !tx) throw error || new Error("Failed to create transaction");
 
-  const { error: lerr } = await supabase.from<TransactionLineRow>("transaction_lines").insert(
+  const { error: lerr } = await supabase.from("transaction_lines").insert(
     lines.map((line) => ({
       transaction_id: tx.id,
       account_id: line.account_id,

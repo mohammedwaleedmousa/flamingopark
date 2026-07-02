@@ -13,6 +13,10 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { supabase } from "@/integrations/supabase/client";
 import type { User as SupaUser } from "@supabase/supabase-js";
 import { toast } from "@/hooks/use-toast";
+import { useCurrency } from "@/lib/currency";
+import {
+  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <div className="pt-5 pb-1">
@@ -58,6 +62,13 @@ const Navbar = () => {
   const { favorites } = useFavorites();
   const cartCount = getCartCount();
   const navigate = useNavigate();
+  const { mode, setMode, short, label } = useCurrency();
+
+  const currencies: { key: typeof mode; label: string; flag: string }[] = [
+    { key: "SAR",       label: "ريال سعودي",              flag: "🇸🇦" },
+    { key: "YER_SOUTH", label: "ريال يمني — محافظات جنوبية", flag: "🇾🇪" },
+    { key: "YER_NORTH", label: "ريال يمني — محافظات شمالية", flag: "🇾🇪" },
+  ];
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
@@ -289,6 +300,30 @@ const Navbar = () => {
 
           {/* Left (RTL): account, wishlist, bag */}
           <div className="flex items-center gap-1 z-10">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <button
+                  className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-border text-[11px] tracking-[0.15em] uppercase hover:bg-foreground hover:text-background transition"
+                  aria-label="العملة"
+                  title={label}
+                >
+                  <Globe className="w-3.5 h-3.5" />
+                  <span className="font-medium">{short}</span>
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-64" style={{ direction: "rtl" }}>
+                <DropdownMenuLabel className="text-xs">اختر العملة</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                {currencies.map((c) => (
+                  <DropdownMenuItem key={c.key} onClick={() => setMode(c.key)} className="justify-between gap-2 cursor-pointer">
+                    <span className="flex items-center gap-2 text-sm">
+                      <span>{c.flag}</span>{c.label}
+                    </span>
+                    {mode === c.key && <span className="text-[10px] text-primary">●</span>}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
             <Link to={user ? "/account" : "/auth"} className="p-2 hover:opacity-60 transition hidden md:inline-flex" aria-label="حساب">
               <User className="w-5 h-5" />
             </Link>

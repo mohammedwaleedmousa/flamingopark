@@ -1,118 +1,41 @@
-import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { supabase } from "@/integrations/supabase/client";
-import { useStore } from "@/store/useStore";
-import { useRef, useState } from "react";
-
-interface Brand {
-  id: string;
-  name: string;
-}
+const BRANDS = [
+  "NIKE", "ADIDAS", "ZARA", "GUCCI", "PUMA",
+  "LOUIS VUITTON", "DIOR", "CHANEL", "PRADA", "BALENCIAGA",
+];
 
 const BrandsStrip = () => {
-  const { country } = useStore();
-  const navigate = useNavigate();
-  const containerRef = useRef<HTMLDivElement>(null);
-  const [isDragging, setIsDragging] = useState(false);
-  const [startX, setStartX] = useState(0);
-  const [scrollLeft, setScrollLeft] = useState(0);
-  const [moved, setMoved] = useState(0); // لمسافة السحب
-
-  const { data: brands = [] } = useQuery({
-    queryKey: ["brands-strip", country],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("brands")
-        .select("id, name")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true });
-      if (error) throw error;
-      return data as Brand[];
-    },
-    enabled: !!country,
-  });
-
-  if (brands.length === 0) return null;
-
-  const handleBrandClick = (brandName: string) => {
-    // السماح بالنقر إذا السحب أقل من 5px
-    if (moved <= 5) {
-      navigate(`/products?brand=${encodeURIComponent(brandName)}`);
-    }
-    setMoved(0); // إعادة تعيين
-  };
-
-  const handleMouseDown = (e: React.MouseEvent) => {
-    if (!containerRef.current) return;
-    setIsDragging(false);
-    setStartX(e.pageX - containerRef.current.offsetLeft);
-    setScrollLeft(containerRef.current.scrollLeft);
-    setMoved(0);
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    if (!containerRef.current || startX === null) return;
-    const x = e.pageX - containerRef.current.offsetLeft;
-    const walk = (x - startX) * 1.5;
-    containerRef.current.scrollLeft = scrollLeft - walk;
-    if (Math.abs(x - startX) > 5) setIsDragging(true);
-    setMoved(Math.abs(x - startX));
-  };
-
-  const handleMouseUp = () => {
-    setTimeout(() => setIsDragging(false), 10);
-    setMoved(0);
-  };
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (!containerRef.current) return;
-    setIsDragging(false);
-    setStartX(e.touches[0].pageX - containerRef.current.offsetLeft);
-    setScrollLeft(containerRef.current.scrollLeft);
-    setMoved(0);
-  };
-
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!containerRef.current || startX === null) return;
-    const x = e.touches[0].pageX - containerRef.current.offsetLeft;
-    const walk = (x - startX) * 1.5;
-    containerRef.current.scrollLeft = scrollLeft - walk;
-    if (Math.abs(x - startX) > 5) setIsDragging(true);
-    setMoved(Math.abs(x - startX));
-  };
-
+  // duplicate for seamless loop
+  const items = [...BRANDS, ...BRANDS];
   return (
-    <section className="bg-secondary py-4 md:py-5 overflow-hidden border-y border-gold/10">
-      <div
-        ref={containerRef}
-        className="flex items-center overflow-x-auto scrollbar-hide cursor-grab active:cursor-grabbing select-none scroll-smooth"
-        onMouseDown={handleMouseDown}
-        onMouseMove={handleMouseMove}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseUp}
-        onTouchStart={handleTouchStart}
-        onTouchMove={handleTouchMove}
-        onTouchEnd={handleMouseUp}
-        style={{ scrollbarWidth: "none", msOverflowStyle: "none", scrollBehavior: "smooth" }}
-      >
-        {brands.map((brand, index) => (
-          <button
-            key={brand.id}
-            onClick={() => handleBrandClick(brand.name)}
-            className="px-6 md:px-10 whitespace-nowrap transition-all duration-300 hover:scale-105 flex-shrink-0"
-            style={{
-              fontFamily: "'Playfair Display', 'Cormorant Garamond', serif",
-              fontStyle: index % 2 === 0 ? "italic" : "normal",
-              fontWeight: 500,
-              fontSize: "16px",
-              color: "#D4AF37",
-              letterSpacing: "0.08em",
-            }}
-          >
-            {brand.name}
-          </button>
-        ))}
+    <section className="py-8 md:py-12 border-y border-border/60 bg-background overflow-hidden" dir="ltr">
+      <div className="container mx-auto px-6 mb-6">
+        <p className="text-[10px] tracking-[0.5em] uppercase text-muted-foreground text-center">
+          — علاماتنا المميزة · Our Brands —
+        </p>
       </div>
+
+      <div className="relative">
+        <div className="pointer-events-none absolute inset-y-0 left-0 w-16 md:w-32 bg-gradient-to-r from-background to-transparent z-10" />
+        <div className="pointer-events-none absolute inset-y-0 right-0 w-16 md:w-32 bg-gradient-to-l from-background to-transparent z-10" />
+
+        <div className="flex gap-14 md:gap-20 whitespace-nowrap animate-[brand-scroll_40s_linear_infinite] hover:[animation-play-state:paused]">
+          {items.map((b, i) => (
+            <span
+              key={i}
+              className="font-heading text-lg md:text-2xl tracking-[0.4em] text-foreground/50 hover:text-foreground transition"
+            >
+              {b}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <style>{`
+        @keyframes brand-scroll {
+          from { transform: translateX(0); }
+          to   { transform: translateX(-50%); }
+        }
+      `}</style>
     </section>
   );
 };

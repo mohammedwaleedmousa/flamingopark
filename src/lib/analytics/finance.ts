@@ -18,7 +18,7 @@ export type LedgerEntry = {
 
 export async function getOrdersRevenueEntries(startDate: string, endDate: string) {
   const { data, error } = await supabase
-    .from<OrdersRow>("orders")
+    .from("orders")
     .select("id,total,created_at")
     .gte("created_at", startDate)
     .lte("created_at", endDate)
@@ -37,7 +37,7 @@ export async function getOrdersRevenueEntries(startDate: string, endDate: string
 
 export async function getExpensesEntries(startDate: string, endDate: string) {
   const { data, error } = await supabase
-    .from<ExpensesRow>("expenses")
+    .from("expenses")
     .select("id,amount,expense_date,description,vendor")
     .gte("expense_date", startDate)
     .lte("expense_date", endDate)
@@ -45,7 +45,7 @@ export async function getExpensesEntries(startDate: string, endDate: string) {
   if (error) throw error;
   return (data ?? []).map((e) => ({
     id: `expense-${e.id}`,
-    date: e.expense_date ?? e.created_at,
+    date: e.expense_date ?? (e as any).created_at,
     type: "expense" as const,
     category: "expenses",
     amount: -(Number(e.amount ?? 0)),
@@ -56,7 +56,7 @@ export async function getExpensesEntries(startDate: string, endDate: string) {
 
 export async function getFinancialTransactionsEntries(startDate: string, endDate: string) {
   const { data, error } = await supabase
-    .from<FinancialTxn>("financial_transactions")
+    .from("financial_transactions")
     .select("id,entry_date,description,reference")
     .gte("entry_date", startDate)
     .lte("entry_date", endDate)
@@ -67,7 +67,7 @@ export async function getFinancialTransactionsEntries(startDate: string, endDate
   // fetch lines for transactions in range
   const txnIds = txns.map((t) => t.id);
   const { data: lines } = await supabase
-    .from<TransactionLine>("transaction_lines")
+    .from("transaction_lines")
     .select("id,transaction_id,debit,credit,created_at,description")
     .in("transaction_id", txnIds.length ? txnIds : [""] as string[]);
 

@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Star, Send, Loader2, User } from 'lucide-react';
+import { Star, Send, Loader2, User, ImagePlus, X } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/store/useStore';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
 
 interface ProductReviewsProps {
   productId: string;
@@ -19,6 +20,7 @@ interface ProductReview {
   rating: number;
   comment: string | null;
   created_at: string;
+  images?: string[] | null;
 }
 
 const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
@@ -27,6 +29,36 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
+  const [images, setImages] = useState<string[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [zoomImg, setZoomImg] = useState<string | null>(null);
+
+  const MAX_IMAGES = 5;
+
+  const handleFiles = async (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const remaining = MAX_IMAGES - images.length;
+    const list = Array.from(files).slice(0, remaining);
+    if (list.length === 0) {
+      toast({ title: 'الحد الأقصى 5 صور', variant: 'destructive' });
+      return;
+    }
+    setUploading(true);
+    const uploaded: string[] = [];
+    for (const file of list) {
+      const ext = file.name.split('.').pop();
+      const path = `reviews/${productId}/${crypto.randomUUID()}.${ext}`;
+      const { error } = await supabase.storage.from('uploads').upload(path, file, { upsert: false });
+      if (error) {
+        toast({ title: 'تعذر رفع الصورة', description: error.message, variant: 'destructive' });
+        continue;
+      }
+      const { data } = supabase.storage.from('uploads').getPublicUrl(path);
+      uploaded.push(data.publicUrl);
+    }
+    setImages((prev) => [...prev, ...uploaded]);
+    setUploading(false);
+  };
 
   // Fetch approved reviews for this product
   const { data: reviews = [], isLoading } = useQuery({
@@ -56,7 +88,8 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
         comment: comment.trim() || null,
         country,
         is_approved: false,
-      });
+        images,
+      } as any);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -66,6 +99,7 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
       });
       setRating(0);
       setComment('');
+      setImages([]);
       queryClient.invalidateQueries({ queryKey: ['product-reviews', productId] });
     },
     onError: (error: Error) => {
@@ -187,6 +221,46 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
                 dir="rtl"
               />
 
+              {/* Image uploader (SHEIN-style) */}
+              <div className="mb-4">
+                <div className="flex flex-wrap gap-2">
+                  {images.map((src, i) => (
+                    <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border group">
+                      <img src={src} className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setImages((p) => p.filter((_, idx) => idx !== i))}
+                        className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center opacity-0 group-hover:opacity-100 transition"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </div>
+                  ))}
+                  {images.length < MAX_IMAGES && (
+                    <label className="w-16 h-16 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition text-muted-foreground">
+                      {uploading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : (
+                        <>
+                          <ImagePlus className="w-4 h-4" />
+                          <span className="text-[9px] mt-0.5">{images.length}/{MAX_IMAGES}</span>
+                        </>
+                      )}
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => handleFiles(e.target.files)}
+                      />
+                    </label>
+                  )}
+                </div>
+                <p className="text-[10px] text-muted-foreground mt-1.5">
+                  يمكنك إرفاق حتى 5 صور مع تقييمك
+                </p>
+              </div>
+
               <Button
                 onClick={() => submitReview.mutate()}
                 disabled={rating === 0 || submitReview.isPending}
@@ -254,6 +328,20 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
                         {review.comment}
                       </p>
                     )}
+                    {review.images && review.images.length > 0 && (
+                      <div className="flex flex-wrap gap-2 mt-3">
+                        {review.images.map((src, i) => (
+                          <button
+                            key={i}
+                            type="button"
+                            onClick={() => setZoomImg(src)}
+                            className="w-16 h-16 rounded-lg overflow-hidden border border-border hover:ring-2 hover:ring-primary transition"
+                          >
+                            <img src={src} className="w-full h-full object-cover" loading="lazy" />
+                          </button>
+                        ))}
+                      </div>
+                    )}
                   </div>
                 </div>
               </motion.div>
@@ -267,6 +355,12 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
           )}
         </div>
       </div>
+
+      <Dialog open={!!zoomImg} onOpenChange={(o) => !o && setZoomImg(null)}>
+        <DialogContent className="max-w-3xl p-2 bg-black/95 border-0">
+          {zoomImg && <img src={zoomImg} className="w-full h-auto max-h-[80vh] object-contain rounded" />}
+        </DialogContent>
+      </Dialog>
     </motion.div>
   );
 };

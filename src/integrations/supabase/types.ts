@@ -1073,9 +1073,11 @@ export type Database = {
           created_at: string
           customer_name: string
           id: string
+          images: string[] | null
           is_approved: boolean | null
           product_id: string
           rating: number
+          updated_at: string
         }
         Insert: {
           comment?: string | null
@@ -1083,9 +1085,11 @@ export type Database = {
           created_at?: string
           customer_name: string
           id?: string
+          images?: string[] | null
           is_approved?: boolean | null
           product_id: string
           rating: number
+          updated_at?: string
         }
         Update: {
           comment?: string | null
@@ -1093,9 +1097,11 @@ export type Database = {
           created_at?: string
           customer_name?: string
           id?: string
+          images?: string[] | null
           is_approved?: boolean | null
           product_id?: string
           rating?: number
+          updated_at?: string
         }
         Relationships: []
       }

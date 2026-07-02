@@ -189,7 +189,7 @@ export async function deleteOrders(orderIds: string[]) {
 export async function getProducts(params: AdminProductQueryParams = {}): Promise<AdminProductResult> {
   const { data, count, error } = await buildProductListQuery(params);
   if (error) throw error;
-  return { data: data ?? [], count: count ?? 0 };
+  return { data: (data ?? []) as unknown as ProductsRow[], count: count ?? 0 };
 }
 
 export async function updateProductActive(productId: string, next: boolean) {
@@ -293,7 +293,7 @@ export async function getCustomerOrders(search: AdminCustomerDetailSearch, range
 
   const { data, error } = await query;
   if (error) throw error;
-  return data ?? [];
+  return (data ?? []) as unknown as OrdersRow[];
 }
 
 export async function getCustomerPayments(orderIds: string[]) {

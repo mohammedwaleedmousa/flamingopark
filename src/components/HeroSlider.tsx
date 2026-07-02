@@ -5,7 +5,7 @@ const slides = [
   {
     image:
       "https://lh3.googleusercontent.com/aida-public/AB6AXuB17rZoAKdh6xzkPmcre-fyzoQaMvSwYza3RP0tdzew44HqFSkCZDUqdeB_BMukNUwD-6FDPKvjJG8VC9-BseJEoTtweNq3rTLsLk9UBm68oOzy1VLXIZu5t_td3LYj135_2-1A-LRM355Qa2IQ8QC1AoxbVYDuL-UhFcGF5q_CnIPl7Cu5o4sEiHbZPQ7q4eZODOroykjUqtZBOj_yfpLUuoxQXtbi0E1VuYZLbHG2IcKE4uHRKfXyY11eauDju1rlDfCrpdEoUQ",
-    tag: "فلامنجو عدن بارك",
+    tag: "فلامنجو بارك - عدن",
     title: "إرث يُعاد صياغته\nبلغة الفخامة المعاصرة",
     desc: "رحلة بصرية تنسج بين الأصالة والحداثة، حيث تتحول التفاصيل إلى تجربة شعورية تُشبه عروض الأزياء العالمية.",
   },
@@ -105,7 +105,7 @@ export default function VisionProHero() {
           className="absolute bottom-10 right-10 flex flex-col items-end"
         >
           <span className="text-[10px] text-pink-200/60 mb-2">
-            تجربة فلامنجو البصرية · عدن بارك
+            تجربة فلامنجو بارك البصرية · عدن 
           </span>
 
           <div className="w-56 h-[1px] bg-white/10 overflow-hidden relative">

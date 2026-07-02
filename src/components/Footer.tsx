@@ -78,47 +78,47 @@ const Footer = () => {
             </p>
             <div className="flex items-center gap-3 mt-6">
 
-  {/* Instagram */}
-  <a
-    href="#"
-    aria-label="Instagram"
-    className="w-9 h-9 rounded-full border border-border flex items-center justify-center
-    hover:bg-pink-500 hover:text-white transition"
-  >
-    <FaInstagram />
-  </a>
+              {/* Instagram */}
+              <a
+                href="#"
+                aria-label="Instagram"
+                className="w-9 h-9 rounded-full border border-border flex items-center justify-center
+                hover:bg-pink-500 hover:text-white transition"
+              >
+                <FaInstagram />
+              </a>
 
-  {/* WhatsApp */}
-  <a
-    href="#"
-    aria-label="WhatsApp"
-    className="w-9 h-9 rounded-full border border-border flex items-center justify-center
-    hover:bg-green-500 hover:text-white transition"
-  >
-    <FaWhatsapp />
-  </a>
+              {/* WhatsApp */}
+              <a
+                href="#"
+                aria-label="WhatsApp"
+                className="w-9 h-9 rounded-full border border-border flex items-center justify-center
+                hover:bg-green-500 hover:text-white transition"
+              >
+                <FaWhatsapp />
+              </a>
 
-  {/* Facebook */}
-  <a
-    href="#"
-    aria-label="Facebook"
-    className="w-9 h-9 rounded-full border border-border flex items-center justify-center
-    hover:bg-blue-600 hover:text-white transition"
-  >
-    <FaFacebookF />
-  </a>
+              {/* Facebook */}
+              <a
+                href="#"
+                aria-label="Facebook"
+                className="w-9 h-9 rounded-full border border-border flex items-center justify-center
+                hover:bg-blue-600 hover:text-white transition"
+              >
+                <FaFacebookF />
+              </a>
 
-  {/* Snapchat */}
-  <a
-    href="#"
-    aria-label="Snapchat"
-    className="w-9 h-9 rounded-full border border-border flex items-center justify-center
-    hover:bg-yellow-400 hover:text-black transition"
-  >
-    <FaSnapchatGhost />
-  </a>
+              {/* Snapchat */}
+              <a
+                href="#"
+                aria-label="Snapchat"
+                className="w-9 h-9 rounded-full border border-border flex items-center justify-center
+                hover:bg-yellow-400 hover:text-black transition"
+              >
+                <FaSnapchatGhost />
+              </a>
 
-</div>
+            </div>
           </div>
 
           {cols.map((col) => (

@@ -342,9 +342,6 @@ const HomePage = () => {
         {/* Hero — sits behind the navbar */}
         <HeroSlider />
 
-        {/* Professional promo banner grid */}
-        <PromoBannerGrid />
-
         {/* Brands strip */}
         <BrandsStrip />
 

@@ -88,12 +88,12 @@ export default function AdminFinanceDashboard() {
     ]);
 
     const orders = (ordersRes.data || []) as any[];
-    const expenses = ((expensesRes.data || []) as any[]).filter(e => new Date(e.expense_date) >= start);
-    const refunds = ((refundsRes.data || []) as any[]).filter(r => new Date(r.created_at) >= start);
+    const expenses = ((expensesRes.data || []) as any[]).filter(e => new Date(e.expense_date) >= startDate);
+    const refunds = ((refundsRes.data || []) as any[]).filter(r => new Date(r.created_at) >= startDate);
 
     const buckets: Record<string, { revenue: number; expenses: number }> = {};
     const keyOf = (d: Date) => monthMode ? d.toISOString().slice(0,7) : d.toISOString().slice(0,10);
-    const steps = monthMode ? 12 : days;
+    const steps = monthMode ? 12 : daysSpan;
     for (let i = steps - 1; i >= 0; i--) {
       const d = new Date(now);
       if (monthMode) d.setMonth(now.getMonth() - i); else d.setDate(now.getDate() - i);

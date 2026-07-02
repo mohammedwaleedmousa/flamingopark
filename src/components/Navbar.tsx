@@ -311,7 +311,7 @@ const Navbar = () => {
                   <span className="font-medium">{short}</span>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" dir="rtl" className="w-64">
+              <DropdownMenuContent align="end" className="w-64" style={{ direction: "rtl" }}>
                 <DropdownMenuLabel className="text-xs">اختر العملة</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {currencies.map((c) => (

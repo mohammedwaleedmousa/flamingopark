@@ -622,7 +622,7 @@ interface Row {
         <div className="p-4 rounded-xl bg-gray-50 border">
         <p className="text-xs text-muted-foreground">الشهر السابق</p>
         <p className="text-xl font-semibold text-gray-700">
-            {fmt(aiEngine.lastRevenue)} ر.ي
+            {fmt(aiEngine.prevRevenue)} ر.ي
         </p>
         </div>
 

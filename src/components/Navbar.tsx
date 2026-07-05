@@ -251,6 +251,7 @@ const Navbar = () => {
                   <nav className="flex-1 overflow-y-auto pb-4 flex flex-col [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     {/* Shopping */}
                     <Section label="التسوق">
+                      <NavItem to="/notifications" icon={Bell} label="الإشعارات" />
                       <NavItem to="/home" icon={House} label="الرئيسية" />
                       <NavItem to="/categories" icon={SquaresFour} label="جميع الأقسام" />
                       <NavItem to="/products" icon={Package} label="جميع المنتجات" />
@@ -268,8 +269,7 @@ const Navbar = () => {
 
                     <Section label="معلومات">
                       <NavItem to="/store-info" icon={MapPin} label="معلومات المتجر" />
-                      <NavItem to="/about" icon={Info} label="من نحن" />
-                      <NavItem to="/notifications" icon={Bell} label="الإشعارات" />
+                    
                     </Section>
                   </nav>
                 <div className="border-t border-border px-6 py-5 bg-white">

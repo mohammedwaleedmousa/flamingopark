@@ -291,14 +291,28 @@ const CheckoutPage = () => {
         return data;
       };
 
+      const normalizeCountryForLegacy = (payload: Record<string, unknown>) => {
+        if (payload.country === "GLOBAL") {
+          return { ...payload, country: "YE" };
+        }
+        return payload;
+      };
+
       try {
-        return await insertOrder(orderData as Record<string, unknown>);
+        return await insertOrder(normalizeCountryForLegacy(orderData as Record<string, unknown>));
       } catch (error) {
         const message = String((error as { message?: string })?.message || "");
         const hasMissingColumnError =
           /column .* does not exist/i.test(message) ||
           /Could not find the '.*' column/i.test(message) ||
           /schema cache/i.test(message);
+        const hasCountryConstraintError =
+          /country/i.test(message) && /constraint|check/i.test(message);
+
+        if (hasCountryConstraintError) {
+          const retryPayload = { ...(orderData as Record<string, unknown>), country: "YE" };
+          return await insertOrder(retryPayload);
+        }
 
         if (!hasMissingColumnError) {
           throw error;
@@ -402,7 +416,7 @@ const CheckoutPage = () => {
         customer_address: formData.address || "-",
         customer_city: formData.city || "",
         customer_notes: formData.notes || null,
-        country: country || "GLOBAL",
+        country: country === "GLOBAL" ? "YE" : country || "YE",
         currency_mode: currencyMode,
         items: orderItems,
         subtotal,
@@ -441,7 +455,7 @@ const CheckoutPage = () => {
         paymentMethod,
         deliveryCompany: selectedCompany?.name || "",
         selectedRegion: paymentMethod === "cod" && selectedRegionData ? selectedRegionData.region_name_ar : null,
-        country: country || "GLOBAL",
+        country: country === "GLOBAL" ? "YE" : country || "YE",
         currencyMode,
         whatsappNumber: correctWhatsappNumber,
         createdAt: new Date().toISOString(),
@@ -450,7 +464,10 @@ const CheckoutPage = () => {
       navigate("/order-confirmation", { state: { orderData } });
     } catch (error) {
       console.error("Order submission error:", error);
-      const errorMessage = error instanceof Error ? error.message : "حدث خطأ أثناء إرسال الطلب";
+      const errorMessage =
+        error instanceof Error
+          ? error.message
+          : String((error as { message?: string; details?: string })?.message || (error as { details?: string })?.details || "حدث خطأ أثناء إرسال الطلب");
       toast({ title: "خطأ", description: errorMessage, variant: "destructive" });
       setIsSubmitting(false);
     }

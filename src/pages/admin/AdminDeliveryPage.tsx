@@ -18,6 +18,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import { toast } from '@/hooks/use-toast';
 import { Plus, Pencil, Trash2, Truck, Search, Loader2, Clock, DollarSign } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -174,18 +175,23 @@ const AdminDeliveryPage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl md:text-3xl text-foreground">شركات التوصيل</h1>
-          <p className="text-muted-foreground text-sm mt-1">{stats.total} شركة • {stats.active} نشطة</p>
-        </div>
-        <Button onClick={() => { resetForm(); setIsDialogOpen(true); }} className="btn-gold gap-2 w-full sm:w-auto">
-          <Plus className="w-4 h-4" />
-          إضافة شركة
-        </Button>
-      </div>
+    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
+      <AdminPageHeader
+        category="الإدارة"
+        title="شركات التوصيل"
+        description={`${stats.total} شركة • ${stats.active} نشطة`}
+        actions={[
+          {
+            label: "إضافة شركة",
+            icon: Plus,
+            onClick: () => { 
+              resetForm(); 
+              setIsDialogOpen(true); 
+            },
+            variant: "primary",
+          },
+        ]}
+      />
 
       {/* Stats */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">

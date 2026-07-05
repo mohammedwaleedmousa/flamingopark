@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Plus, Trash2, MapPin, Search } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
+import AdminPageHeader from '@/components/admin/AdminPageHeader';
 
 interface CODRegion {
   id: string;
@@ -102,12 +103,20 @@ const AdminCODRegionsPage = () => {
   };
 
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div>
-        <h1 className="font-heading text-2xl md:text-3xl text-foreground">مناطق الدفع عند الاستلام</h1>
-        <p className="text-muted-foreground text-sm mt-1">إدارة المناطق المسموح فيها الدفع عند الاستلام</p>
-      </div>
+    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
+      <AdminPageHeader
+        category="الإدارة"
+        title="مناطق الدفع عند الاستلام"
+        description="إدارة المناطق المسموح فيها الدفع عند الاستلام"
+        actions={[
+          {
+            label: "تحديث",
+            icon: MapPin,
+            onClick: fetchRegions,
+            variant: "secondary",
+          },
+        ]}
+      />
 
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-3">

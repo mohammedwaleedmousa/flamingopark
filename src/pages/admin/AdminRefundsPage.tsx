@@ -9,6 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { RotateCcw, Plus, CheckCircle, XCircle, Clock } from 'lucide-react';
+import AdminPageHeader from '@/components/admin/AdminPageHeader';
 
 interface Refund {
   id: string; refund_number: string; order_number: string | null; customer_name: string | null;
@@ -57,14 +58,22 @@ export default function AdminRefundsPage() {
   const totalProcessed = refunds.filter(r => r.status === 'processed').reduce((s, r) => s + Number(r.amount), 0);
 
   return (
-    <div className="space-y-6 p-2">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-heading text-2xl flex items-center gap-2"><RotateCcw className="w-6 h-6 text-primary" /> المرتجعات والاسترجاع</h1>
-          <p className="text-sm text-muted-foreground">إدارة طلبات استرجاع الأموال</p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button><Plus className="w-4 h-4 ml-1" />مرتجع جديد</Button></DialogTrigger>
+    <div className="space-y-6 max-w-[1400px] mx-auto p-2" dir="rtl">
+      <AdminPageHeader
+        category="المالية"
+        title="المرتجعات والاسترجاع"
+        description="إدارة طلبات استرجاع الأموال"
+        actions={[
+          {
+            label: "مرتجع جديد",
+            icon: Plus,
+            onClick: () => setOpen(true),
+            variant: "primary",
+          },
+        ]}
+      />
+
+      <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent>
             <DialogHeader><DialogTitle>إضافة مرتجع</DialogTitle></DialogHeader>
             <div className="space-y-3">
@@ -89,7 +98,6 @@ export default function AdminRefundsPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">إجمالي المرتجعات</p><p className="text-2xl font-bold mt-1">{refunds.length}</p></CardContent></Card>

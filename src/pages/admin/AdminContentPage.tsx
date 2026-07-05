@@ -7,6 +7,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { toast } from '@/hooks/use-toast';
 import { Loader2, Save, FileText, Search, Upload, Image, X } from 'lucide-react';
+import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import {
   Accordion,
   AccordionContent,
@@ -32,7 +33,7 @@ const AdminContentPage = () => {
   const [uploadingKey, setUploadingKey] = useState<string | null>(null);
   const fileInputRefs = useRef<Record<string, HTMLInputElement | null>>({});
 
-  const { data: contents = [], isLoading } = useQuery({
+  const { data: contents = [], isLoading, refetch: refetchContent } = useQuery({
     queryKey: ['site-content'],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -178,13 +179,20 @@ const AdminContentPage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-heading text-foreground">إدارة المحتوى</h1>
-          <p className="text-muted-foreground font-body mt-1">تعديل جميع النصوص والصور الموجودة في المتجر</p>
-        </div>
-      </div>
+    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
+      <AdminPageHeader
+        category="المحتوى"
+        title="إدارة المحتوى"
+        description="تعديل جميع النصوص والصور الموجودة في المتجر"
+        actions={[
+          {
+            label: "تحديث",
+            icon: Search,
+            onClick: refetchContent,
+            variant: "secondary",
+          },
+        ]}
+      />
 
       {/* Search */}
       <div className="relative max-w-md">

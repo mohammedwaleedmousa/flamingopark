@@ -10,6 +10,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Badge } from '@/components/ui/badge';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookOpen, Plus, Trash2, Scale } from 'lucide-react';
+import AdminPageHeader from '@/components/admin/AdminPageHeader';
 
 interface Account { id: string; code: string; name_ar: string; type: string; }
 interface Line { account_id: string; debit: number; credit: number; description?: string; }
@@ -75,14 +76,22 @@ export default function AdminLedgerPage() {
   }
 
   return (
-    <div className="space-y-6 p-2">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-heading text-2xl flex items-center gap-2"><BookOpen className="w-6 h-6 text-primary" /> دفتر اليومية</h1>
-          <p className="text-sm text-muted-foreground">قيود محاسبية بنظام القيد المزدوج</p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button><Plus className="w-4 h-4 ml-1" />قيد جديد</Button></DialogTrigger>
+    <div className="space-y-6 max-w-[1400px] mx-auto p-2" dir="rtl">
+      <AdminPageHeader
+        category="المالية"
+        title="دفتر اليومية"
+        description="قيود محاسبية بنظام القيد المزدوج"
+        actions={[
+          {
+            label: "قيد جديد",
+            icon: Plus,
+            onClick: () => setOpen(true),
+            variant: "primary",
+          },
+        ]}
+      />
+
+      <Dialog open={open} onOpenChange={setOpen}>
           <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
             <DialogHeader><DialogTitle>إضافة قيد محاسبي</DialogTitle></DialogHeader>
             <div className="space-y-4">
@@ -115,7 +124,6 @@ export default function AdminLedgerPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
 
       <Card>
         <CardHeader><CardTitle className="text-base">آخر القيود</CardTitle></CardHeader>

@@ -4,7 +4,8 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Upload, X, FileText } from "lucide-react";
+import { Loader2, Upload, X, FileText, Save } from "lucide-react";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 
 const AdminSettingsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -259,13 +260,20 @@ const AdminSettingsPage = () => {
   }
 
   return (
-    <div className="max-w-4xl space-y-8">
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-3xl text-foreground">الإعدادات</h1>
-        <Button onClick={handleSave} disabled={isSaving} className="btn-gold">
-          {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ التغييرات"}
-        </Button>
-      </div>
+    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
+      <AdminPageHeader
+        category="الإدارة"
+        title="الإعدادات"
+        description="إدارة إعدادات المتجر والمعلومات الأساسية"
+        actions={[
+          {
+            label: "حفظ التغييرات",
+            icon: Save,
+            onClick: handleSave,
+            variant: "primary",
+          },
+        ]}
+      />
 
       {/* Store Info */}
       <div className="bg-card border border-border rounded p-6 space-y-4">

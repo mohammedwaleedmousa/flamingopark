@@ -12,6 +12,12 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle, X } from "lucide-react";
+import {
+  SavedAddress,
+  migrateLegacyCheckoutInfo,
+  upsertSavedAddress,
+  getSavedAddresses,
+} from "@/lib/savedAddresses";
 
 // Zod schemas
 const orderAccessorySchema = z.object({
@@ -57,8 +63,6 @@ interface CODRegion {
   region_name_ar: string;
 }
 
-const CHECKOUT_INFO_STORAGE_KEY = "checkout_saved_info_v1";
-
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { country, customer, cart, getCartTotal, clearCart, currencyMode } = useStore();
@@ -75,63 +79,82 @@ const CheckoutPage = () => {
   const [couponCode, setCouponCode] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [hasSavedInfo, setHasSavedInfo] = useState(false);
+  const [addressOwnerKey, setAddressOwnerKey] = useState("guest");
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
 
   const subtotal = getCartTotal();
   const currency = "ر.ي";
 
   useEffect(() => {
-    try {
-      const raw = localStorage.getItem(CHECKOUT_INFO_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Partial<typeof formData>;
-      setHasSavedInfo(true);
-      setFormData((prev) => ({
-        ...prev,
-        name: customer?.id === "guest" ? String(parsed.name || prev.name || "") : prev.name,
-        phone: customer?.id === "guest" ? String(parsed.phone || prev.phone || "") : prev.phone,
-        address: String(parsed.address || prev.address || ""),
-        city: String(parsed.city || prev.city || ""),
-        notes: String(parsed.notes || prev.notes || ""),
-      }));
-    } catch {
-      // Ignore invalid local storage payload.
-    }
+    let mounted = true;
+    supabase.auth.getUser().then(({ data }) => {
+      if (!mounted) return;
+      const owner = data.user?.id || customer?.id || "guest";
+      setAddressOwnerKey(owner);
+    });
+    return () => {
+      mounted = false;
+    };
   }, [customer?.id]);
 
+  useEffect(() => {
+    const list = migrateLegacyCheckoutInfo(addressOwnerKey);
+    setSavedAddresses(list);
+    const def = list.find((a) => a.isDefault) || list[0];
+    if (def) {
+      setSelectedAddressId(def.id);
+      setFormData((prev) => ({
+        ...prev,
+        name: customer?.id === "guest" ? String(def.name || prev.name || "") : prev.name,
+        phone: customer?.id === "guest" ? String(def.phone || prev.phone || "") : prev.phone,
+        city: def.city,
+        address: def.address,
+        notes: def.notes || "",
+      }));
+    }
+  }, [addressOwnerKey, customer?.id]);
+
   const saveCustomerInfo = () => {
-    const payload = {
+    const now = Date.now();
+    const currentLabel = selectedAddressId
+      ? getSavedAddresses(addressOwnerKey).find((a) => a.id === selectedAddressId)?.label || `عنوان ${savedAddresses.length + 1}`
+      : `عنوان ${savedAddresses.length + 1}`;
+
+    const next = upsertSavedAddress(addressOwnerKey, {
+      id: selectedAddressId || `addr-${now}`,
+      label: currentLabel,
       name: formData.name.trim(),
       phone: formData.phone.trim(),
-      address: formData.address.trim(),
       city: formData.city.trim(),
+      address: formData.address.trim(),
       notes: formData.notes.trim(),
-    };
-    localStorage.setItem(CHECKOUT_INFO_STORAGE_KEY, JSON.stringify(payload));
-    setHasSavedInfo(true);
-    toast({ title: "تم الحفظ", description: "تم حفظ بيانات العنوان للاستخدام لاحقًا" });
+      isDefault: true,
+    });
+    setSavedAddresses(next);
+    const def = next.find((a) => a.isDefault) || next[0];
+    setSelectedAddressId(def?.id || "");
+    toast({ title: "تم الحفظ", description: "تم حفظ العنوان وربطه بحسابك" });
   };
 
   const useSavedCustomerInfo = () => {
-    try {
-      const raw = localStorage.getItem(CHECKOUT_INFO_STORAGE_KEY);
-      if (!raw) return;
-      const parsed = JSON.parse(raw) as Partial<typeof formData>;
-      setFormData((prev) => ({
-        ...prev,
-        name: customer?.id === "guest" ? String(parsed.name || prev.name || "") : prev.name,
-        phone: customer?.id === "guest" ? String(parsed.phone || prev.phone || "") : prev.phone,
-        address: String(parsed.address || ""),
-        city: String(parsed.city || ""),
-        notes: String(parsed.notes || ""),
-      }));
-      toast({ title: "تم", description: "تم تعبئة البيانات المحفوظة" });
-    } catch {
-      toast({ title: "خطأ", description: "تعذر قراءة البيانات المحفوظة", variant: "destructive" });
+    const chosen = savedAddresses.find((a) => a.id === selectedAddressId);
+    if (!chosen) {
+      return toast({ title: "تنبيه", description: "اختر عنوانًا محفوظًا أولاً", variant: "destructive" });
     }
+    setFormData((prev) => ({
+      ...prev,
+      name: customer?.id === "guest" ? String(chosen.name || prev.name || "") : prev.name,
+      phone: customer?.id === "guest" ? String(chosen.phone || prev.phone || "") : prev.phone,
+      city: chosen.city,
+      address: chosen.address,
+      notes: chosen.notes || "",
+    }));
+    toast({ title: "تم", description: "تم تعبئة العنوان المحفوظ" });
   };
 
   const startNewAddress = () => {
+    setSelectedAddressId("");
     setFormData((prev) => ({ ...prev, address: "", city: "", notes: "" }));
     toast({ title: "عنوان جديد", description: "يمكنك الآن إدخال عنوان مختلف" });
   };
@@ -650,11 +673,29 @@ const CheckoutPage = () => {
                     />
                   </div>
 
+                  {savedAddresses.length > 0 && (
+                    <div>
+                      <label className="block text-sm font-body text-muted-foreground mb-2">العناوين المحفوظة</label>
+                      <select
+                        value={selectedAddressId}
+                        onChange={(e) => setSelectedAddressId(e.target.value)}
+                        className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+                      >
+                        <option value="">اختر عنوانًا محفوظًا</option>
+                        {savedAddresses.map((addr) => (
+                          <option key={addr.id} value={addr.id}>
+                            {addr.label} - {addr.city}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="outline" onClick={saveCustomerInfo}>
                       حفظ المعلومات
                     </Button>
-                    {hasSavedInfo && (
+                    {savedAddresses.length > 0 && (
                       <Button type="button" variant="outline" onClick={useSavedCustomerInfo}>
                         استخدام المحفوظ
                       </Button>

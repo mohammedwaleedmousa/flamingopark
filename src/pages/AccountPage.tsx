@@ -9,6 +9,13 @@ import { User, Heart, ShoppingBag, LogOut, Package, Mail, ChevronLeft, Settings,
 import { useFavorites } from "@/hooks/useFavorites";
 import LoadingScreen from "@/components/LoadingScreen";
 import { useAuthActions } from "@/hooks/useAuthActions";
+import {
+  SavedAddress,
+  getSavedAddresses,
+  upsertSavedAddress,
+  removeSavedAddress,
+  migrateLegacyCheckoutInfo,
+} from "@/lib/savedAddresses";
 
 const AccountPage = () => {
   const navigate = useNavigate();
@@ -18,6 +25,9 @@ const AccountPage = () => {
   const [formLoading, setFormLoading] = useState(false);
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [addressForm, setAddressForm] = useState({ label: "", city: "", address: "", notes: "" });
+  const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
   const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
@@ -41,6 +51,61 @@ const AccountPage = () => {
       setAvatarPreview(user?.user_metadata?.avatar_url || "");
     }
   }, [editMode, user]);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const list = migrateLegacyCheckoutInfo(user.id);
+    setSavedAddresses(list);
+  }, [user?.id]);
+
+  const resetAddressForm = () => {
+    setAddressForm({ label: "", city: "", address: "", notes: "" });
+    setEditingAddressId(null);
+  };
+
+  const saveAddress = () => {
+    if (!user?.id) return;
+    if (!addressForm.city.trim() || !addressForm.address.trim()) {
+      setNotification({ type: "error", message: "المدينة والعنوان مطلوبان" });
+      return;
+    }
+    const next = upsertSavedAddress(user.id, {
+      id: editingAddressId || `addr-${Date.now()}`,
+      label: addressForm.label.trim() || `عنوان ${savedAddresses.length + 1}`,
+      name: user?.user_metadata?.full_name || "",
+      phone: user?.user_metadata?.phone_number || "",
+      city: addressForm.city.trim(),
+      address: addressForm.address.trim(),
+      notes: addressForm.notes.trim(),
+      isDefault: savedAddresses.length === 0 || editingAddressId !== null,
+    });
+    setSavedAddresses(next);
+    resetAddressForm();
+    setNotification({ type: "success", message: "تم حفظ العنوان" });
+  };
+
+  const editAddress = (addr: SavedAddress) => {
+    setEditingAddressId(addr.id);
+    setAddressForm({
+      label: addr.label || "",
+      city: addr.city || "",
+      address: addr.address || "",
+      notes: addr.notes || "",
+    });
+  };
+
+  const deleteAddress = (id: string) => {
+    if (!user?.id) return;
+    const next = removeSavedAddress(user.id, id);
+    setSavedAddresses(next);
+    if (editingAddressId === id) resetAddressForm();
+  };
+
+  const setDefaultAddress = (addr: SavedAddress) => {
+    if (!user?.id) return;
+    const next = upsertSavedAddress(user.id, { ...addr, isDefault: true });
+    setSavedAddresses(next);
+  };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -256,6 +321,96 @@ const AccountPage = () => {
                 )}
               </motion.div>
             ))}
+          </motion.div>
+
+          {/* Saved Addresses */}
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-3 mb-8"
+          >
+            <h2 className="font-heading text-lg px-2 text-muted-foreground">العناوين المحفوظة</h2>
+
+            <div className="border border-border bg-card rounded-xl p-4 md:p-5 space-y-3">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                <input
+                  value={addressForm.label}
+                  onChange={(e) => setAddressForm((p) => ({ ...p, label: e.target.value }))}
+                  placeholder="اسم العنوان (المنزل/العمل)"
+                  className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-lg"
+                />
+                <input
+                  value={addressForm.city}
+                  onChange={(e) => setAddressForm((p) => ({ ...p, city: e.target.value }))}
+                  placeholder="المدينة *"
+                  className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-lg"
+                />
+              </div>
+              <input
+                value={addressForm.address}
+                onChange={(e) => setAddressForm((p) => ({ ...p, address: e.target.value }))}
+                placeholder="العنوان بالتفصيل *"
+                className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-lg"
+              />
+              <textarea
+                value={addressForm.notes}
+                onChange={(e) => setAddressForm((p) => ({ ...p, notes: e.target.value }))}
+                placeholder="ملاحظات"
+                rows={2}
+                className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-lg"
+              />
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={saveAddress}
+                  className="px-4 py-2 rounded-lg bg-primary text-primary-foreground"
+                >
+                  {editingAddressId ? "تحديث العنوان" : "حفظ عنوان جديد"}
+                </button>
+                {editingAddressId && (
+                  <button
+                    type="button"
+                    onClick={resetAddressForm}
+                    className="px-4 py-2 rounded-lg border border-border"
+                  >
+                    إلغاء
+                  </button>
+                )}
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              {savedAddresses.length === 0 && (
+                <p className="text-sm text-muted-foreground px-2">لا توجد عناوين محفوظة بعد</p>
+              )}
+              {savedAddresses.map((addr) => (
+                <div key={addr.id} className="border border-border rounded-xl p-3 bg-card/60">
+                  <div className="flex items-start justify-between gap-3">
+                    <div>
+                      <p className="font-heading text-sm">
+                        {addr.label} {addr.isDefault ? <span className="text-xs text-primary">(افتراضي)</span> : null}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">{addr.city} - {addr.address}</p>
+                      {addr.notes ? <p className="text-xs text-muted-foreground mt-1">{addr.notes}</p> : null}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      {!addr.isDefault && (
+                        <button type="button" onClick={() => setDefaultAddress(addr)} className="text-xs px-2 py-1 border rounded">
+                          افتراضي
+                        </button>
+                      )}
+                      <button type="button" onClick={() => editAddress(addr)} className="text-xs px-2 py-1 border rounded">
+                        تعديل
+                      </button>
+                      <button type="button" onClick={() => deleteAddress(addr.id)} className="text-xs px-2 py-1 border rounded text-destructive border-destructive/40">
+                        حذف
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           </motion.div>
 
           {/* Logout Button */}

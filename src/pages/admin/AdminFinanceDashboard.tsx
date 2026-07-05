@@ -197,30 +197,22 @@ export default function AdminFinanceDashboard() {
         .gte("expense_date", startDate.toISOString())
         .lte("expense_date", new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString());
 
-      const [ordersRes, expensesRes, refundsRes, txRes] = await Promise.all([
+      const [ordersRes, expensesRes, refundsRes] = await Promise.all([
         supabase
           .from("orders")
           .select("total,created_at,status,currency_mode,country")
           .gte("created_at", startDate.toISOString())
           .lte("created_at", new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString())
-          .not("status", "in", "(cancelled,canceled)"),
+          .neq("status", "cancelled"),
         expensesQueryWithMode,
         supabase
           .from("refunds")
           .select("amount,created_at,order_id,orders(currency_mode,country)")
           .gte("created_at", startDate.toISOString())
           .lte("created_at", new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()),
-        supabase
-          .from("financial_transactions")
-          .select("id,entry_date,description,reference,transaction_lines(debit,credit)")
-          .gte("entry_date", startDate.toISOString())
-          .lte("entry_date", endDate.toISOString())
-          .order("entry_date", { ascending: false })
-          .limit(8),
       ]);
 
       if (ordersRes.error) throw ordersRes.error;
-      if (txRes.error) throw txRes.error;
 
       let expensesData = (expensesRes.data || []) as any[];
       if (expensesRes.error && String(expensesRes.error.message || "").toLowerCase().includes("currency_mode")) {
@@ -246,7 +238,10 @@ export default function AdminFinanceDashboard() {
         refundsData = fallbackRefunds.data || [];
       }
 
-      const orders = (ordersRes.data || []) as any[];
+      const orders = ((ordersRes.data || []) as any[]).filter((o) => {
+        const status = String(o?.status || "").toLowerCase();
+        return status !== "cancelled" && status !== "canceled";
+      });
       const expenses = expensesData.filter((e) => new Date(e.expense_date) >= startDate);
       const refunds = refundsData.filter((r) => new Date(r.created_at) >= startDate);
 
@@ -552,6 +547,12 @@ export default function AdminFinanceDashboard() {
         </div>
       </header>
 
+      {overviewError && (
+        <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+          {overviewError}
+        </div>
+      )}
+
       <section className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {[
           { label: "إجمالي المصروفات", value: kpis.expenses, icon: TrendingDown, tone: "text-rose-600", bg: "bg-rose-50" },
@@ -704,12 +705,6 @@ export default function AdminFinanceDashboard() {
                     {alert.level === "high" ? "مرتفع" : alert.level === "medium" ? "متوسط" : "منخفض"}
                   </Badge>
                 </div>
-
-                {overviewError && (
-                  <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-                    {overviewError}
-                  </div>
-                )}
                 <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">{alert.details}</p>
               </div>
             ))}

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Download, Share2, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
-import flamingoLogo from '@/assets/ermgold-logo-clean.png';
+const flamingoLogo = '/icons/flamingo.jpeg';
 
 const QRCodePage = () => {
   const qrRef = useRef<HTMLDivElement>(null);

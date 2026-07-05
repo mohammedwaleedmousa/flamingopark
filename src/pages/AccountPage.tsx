@@ -5,7 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import { supabase } from "@/integrations/supabase/client";
-import { User, Heart, ShoppingBag, LogOut, Package, Mail, ChevronLeft, Settings, Truck, Upload, Check, X, AlertCircle, Camera } from "lucide-react";
+import { User, Heart, ShoppingBag, LogOut, Package, Mail, ChevronLeft, Settings, Truck, Upload, Check, X, AlertCircle, Camera, Receipt } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
 import LoadingScreen from "@/components/LoadingScreen";
 import { useAuthActions } from "@/hooks/useAuthActions";
@@ -31,6 +31,8 @@ const AccountPage = () => {
   const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
+  const [invoices, setInvoices] = useState<Array<{ id: string; order_number: string; total: number; status: string; created_at: string }>>([]);
+  const [invoicesLoading, setInvoicesLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { favorites } = useFavorites();
   const { logout } = useAuthActions();
@@ -57,6 +59,37 @@ const AccountPage = () => {
     const list = migrateLegacyCheckoutInfo(user.id);
     setSavedAddresses(list);
   }, [user?.id]);
+
+  useEffect(() => {
+    const fetchInvoices = async () => {
+      if (!user?.id) return;
+      setInvoicesLoading(true);
+      try {
+        const userPhone = String(user?.user_metadata?.phone_number || "").trim();
+        let query = supabase
+          .from("orders")
+          .select("id, order_number, total, status, created_at")
+          .order("created_at", { ascending: false })
+          .limit(20);
+
+        if (userPhone) {
+          query = query.or(`customer_id.eq.${user.id},customer_phone.eq.${userPhone}`);
+        } else {
+          query = query.eq("customer_id", user.id);
+        }
+
+        const { data, error } = await query;
+        if (error) throw error;
+        setInvoices((data || []) as Array<{ id: string; order_number: string; total: number; status: string; created_at: string }>);
+      } catch {
+        setInvoices([]);
+      } finally {
+        setInvoicesLoading(false);
+      }
+    };
+
+    fetchInvoices();
+  }, [user?.id, user?.user_metadata?.phone_number]);
 
   const resetAddressForm = () => {
     setAddressForm({ label: "", city: "", address: "", notes: "" });
@@ -214,6 +247,8 @@ const AccountPage = () => {
     visible: { opacity: 1, y: 0, transition: { duration: 0.3 } }
   };
 
+  const invoiceTotal = invoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <Navbar />
@@ -251,6 +286,51 @@ const AccountPage = () => {
                 </p>
                 <p className="text-xs text-muted-foreground mt-3">عضو منذ {new Date(user?.created_at).toLocaleDateString('ar-EG')}</p>
               </motion.div>
+            </div>
+          </motion.div>
+
+          {/* Invoices */}
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-3 mb-8"
+          >
+            <h2 className="font-heading text-lg px-2 text-muted-foreground">سجل فواتيري</h2>
+
+            <div className="grid grid-cols-2 gap-3">
+              <div className="border border-border rounded-xl p-4 bg-card">
+                <p className="text-xs text-muted-foreground">عدد الفواتير</p>
+                <p className="text-2xl font-heading mt-1">{invoices.length}</p>
+              </div>
+              <div className="border border-border rounded-xl p-4 bg-card">
+                <p className="text-xs text-muted-foreground">الإجمالي</p>
+                <p className="text-2xl font-heading mt-1">{invoiceTotal.toLocaleString("ar-EG")}</p>
+              </div>
+            </div>
+
+            <div className="border border-border rounded-xl bg-card overflow-hidden">
+              <div className="p-4 border-b border-border/60 flex items-center gap-2">
+                <Receipt className="w-4 h-4 text-primary" />
+                <p className="text-sm font-heading">آخر الفواتير</p>
+              </div>
+
+              <div className="divide-y divide-border/60">
+                {invoicesLoading && <p className="p-4 text-sm text-muted-foreground">جاري تحميل الفواتير...</p>}
+                {!invoicesLoading && invoices.length === 0 && <p className="p-4 text-sm text-muted-foreground">لا توجد فواتير بعد</p>}
+                {!invoicesLoading && invoices.map((inv) => (
+                  <div key={inv.id} className="p-4 flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-medium text-sm">{inv.order_number}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(inv.created_at).toLocaleDateString("ar-EG")}</p>
+                    </div>
+                    <div className="text-left">
+                      <p className="text-sm font-semibold">{Number(inv.total).toLocaleString("ar-EG")}</p>
+                      <p className="text-xs text-muted-foreground">{inv.status}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           </motion.div>
 

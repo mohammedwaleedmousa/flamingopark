@@ -2,12 +2,12 @@ import {
   LayoutDashboard, Package, ShoppingCart, Users, Image, Tag, Truck, Star,
   Settings, LogOut, Grid3X3, LayoutGrid, FileText, Receipt, MapPin,
   TrendingUp, Percent, Ticket, QrCode, PieChart, BarChart3, ShieldAlert,
-  BookOpen, RotateCcw, Wallet, Boxes, LogIn,
+  BookOpen, RotateCcw, Wallet, Boxes,
   ChevronDown, Brain,
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
-import { useAuthActions } from '@/hooks/useAuthActions';
+import { toast } from '@/hooks/use-toast';
 import {
   Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
   SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter,
@@ -16,7 +16,7 @@ import {
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 
 const groups: { label: string; items: { title: string; url: string; icon: any }[] }[] = [
   {
@@ -84,19 +84,6 @@ const AdminSidebar = () => {
   const location = useLocation();
   const { state, setOpenMobile } = useSidebar();
   const collapsed = state === 'collapsed';
-  const [userEmail, setUserEmail] = useState<string>('');
-  const { logout } = useAuthActions();
-
-  useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      setUserEmail(data.user?.email || '');
-    });
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
-      setUserEmail(session?.user?.email || '');
-    });
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
   const isActive = (url: string) =>
     url === '/admin' ? location.pathname === '/admin' : location.pathname.startsWith(url);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
@@ -106,20 +93,13 @@ const AdminSidebar = () => {
   });
 
   const handleLogout = async () => {
-    if (!window.confirm('هل تريد تسجيل الخروج من لوحة التحكم؟')) return;
-    await logout({
-      redirectTo: '/admin/login',
-      successTitle: 'تم تسجيل الخروج بنجاح',
-      onSuccess: () => setUserEmail(''),
-    });
+    await supabase.auth.signOut();
+    toast({ title: 'تم تسجيل الخروج' });
+    navigate('/admin/login');
   };
 
   const handleNavClick = () => {
     setOpenMobile(false);
-  };
-
-  const handleLogin = () => {
-    navigate('/admin/login');
   };
 
   return (
@@ -158,27 +138,23 @@ const AdminSidebar = () => {
                   open={isOpen}
                   onOpenChange={(v) => setOpenGroups((p) => ({ ...p, [group.label]: v }))}
                 >
-                  <CollapsibleTrigger
-  className="
-    w-full flex items-center justify-between
-    px-4 py-3
-    bg-white/60
-    hover:bg-white
-    transition-all duration-300
-    group
-  "
->
-  <span className="text-[11px] tracking-[0.3em] uppercase font-semibold text-black/60 group-hover:text-black">
-    {group.label}
-  </span>
-
-  <ChevronDown
-    className={cn(
-      "w-4 h-4 text-black/40 transition-transform duration-300",
-      isOpen && "rotate-180 text-pink-500"
-    )}
-  />
-</CollapsibleTrigger>
+                  <CollapsibleTrigger asChild>
+                    <button
+                      className={cn(
+                        'w-full flex items-center justify-between px-3 py-1.5 mb-0.5 rounded-md transition-colors',
+                        'text-[10px] uppercase tracking-[0.25em] font-medium text-black/50 hover:text-black/80 transition-all',
+                        groupActive && 'text-sidebar-foreground/70',
+                      )}
+                    >
+                      <span>{group.label}</span>
+                      <ChevronDown
+                        className={cn(
+                          'w-3.5 h-3.5 transition-transform duration-200',
+                          !isOpen && 'rotate-[-90deg]',
+                        )}
+                      />
+                    </button>
+                  </CollapsibleTrigger>
                   <CollapsibleContent className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in data-[state=closed]:fade-out duration-200 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down overflow-hidden">
                     <GroupItems group={group} isActive={isActive} onNav={handleNavClick} collapsed={false} />
                   </CollapsibleContent>
@@ -190,41 +166,21 @@ const AdminSidebar = () => {
       </SidebarContent>
 
       <SidebarFooter className="p-3 border-t border-sidebar-border/60">
-        {!collapsed && userEmail && (
-          <div className="px-3 py-2 mb-2 rounded-xl bg-primary/5 border border-primary/10">
-            <p className="text-[10px] uppercase tracking-[0.2em] text-black/40 mb-1">حساب الأدمن</p>
-            <p className="text-[12px] font-medium text-black truncate" dir="ltr">{userEmail}</p>
-          </div>
-        )}
-        {userEmail ? (
-          <button
-            onClick={handleLogout}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300",
-              "text-black/70 hover:text-white hover:bg-primary hover:shadow-md",
-              collapsed && "justify-center"
-            )}
-          >
-            <LogOut className="w-5 h-5" />
-            {!collapsed && (
-              <span className="text-[13px] font-medium">تسجيل الخروج</span>
-            )}
-          </button>
-        ) : (
-          <button
-            onClick={handleLogin}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300",
-              "text-black/70 hover:text-white hover:bg-primary hover:shadow-md",
-              collapsed && "justify-center"
-            )}
-          >
-            <LogIn className="w-5 h-5" />
-            {!collapsed && (
-              <span className="text-[13px] font-medium">تسجيل الدخول</span>
-            )}
-          </button>
-        )}
+        <button
+  onClick={handleLogout}
+  className={cn(
+    "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300",
+    "text-black/60 hover:text-black hover:bg-black/5 hover:shadow-sm",
+    collapsed && "justify-center"
+  )}
+>
+  <LogOut className="w-5 h-5" />
+  {!collapsed && (
+    <span className="text-[13px] font-medium">
+      تسجيل الخروج
+    </span>
+  )}
+</button>
       </SidebarFooter>
     </Sidebar>
   );
@@ -268,14 +224,12 @@ const GroupItems = ({
                 }}
               >
                 {active && (
-                <span className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-full bg-pink-500 shadow-md" />
+                <span className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-full bg-gradient-to-b from-black via-black/60 to-transparent shadow-md" />
                 )}
                 <item.icon
                   className={cn(
-                    'shrink-0 transition-all duration-300 ease-out',
-                    active
-  ? "text-gold bg-pink-50 rounded-xl p-2"
-  : "text-black/60 group-hover:text-gold group-hover:bg-pink-50 rounded-xl p-2"
+                    'w-[18px] h-[18px] shrink-0 transition-all duration-300 ease-out',
+                    active ? 'text-black drop-shadow-sm scale-105' : 'text-sidebar-foreground/55 group-hover:text-sidebar-foreground',
                   )}
                 />
                 {!collapsed && (

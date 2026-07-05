@@ -4,16 +4,17 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import { supabase } from "@/integrations/supabase/client";
-import { toast } from "@/hooks/use-toast";
 import { User, Heart, ShoppingBag, LogOut, Package, Mail, ChevronLeft } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
 import LoadingScreen from "@/components/LoadingScreen";
+import { useAuthActions } from "@/hooks/useAuthActions";
 
 const AccountPage = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const { favorites } = useFavorites();
+  const { logout } = useAuthActions();
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -24,9 +25,7 @@ const AccountPage = () => {
   }, [navigate]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    toast({ title: "تم تسجيل الخروج" });
-    navigate("/home");
+    await logout({ redirectTo: "/home" });
   };
 
   if (loading) return <LoadingScreen />;

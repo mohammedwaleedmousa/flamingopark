@@ -9,6 +9,7 @@ import { useStore, Product } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { Percent, Clock, Loader2, Sparkles, Tag, Flame, Gift, Zap, Timer, Copy, Check } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
 
 interface Offer {
   id: string;
@@ -118,6 +119,7 @@ const CopyCodeButton = ({ code }: { code: string }) => {
 };
 
 const OffersPage = () => {
+  const { data: content } = useSiteContent("offers_page_");
   const { country } = useStore();
   const queryClient = useQueryClient();
   const [mainTimeLeft, setMainTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: false });
@@ -234,9 +236,9 @@ const OffersPage = () => {
   );
 
   const features = [
-    { icon: Tag, text: "خصومات تصل إلى 50%", color: "text-gold" },
-    { icon: Gift, text: "هدايا مجانية", color: "text-emerald-400" },
-    { icon: Zap, text: "شحن سريع", color: "text-blue-400" },
+    { icon: Tag, text: getSiteText(content, "offers_page_feature_1", "خصومات تصل إلى 50%"), color: "text-gold" },
+    { icon: Gift, text: getSiteText(content, "offers_page_feature_2", "هدايا مجانية"), color: "text-emerald-400" },
+    { icon: Zap, text: getSiteText(content, "offers_page_feature_3", "شحن سريع"), color: "text-blue-400" },
   ];
 
   return (
@@ -291,7 +293,7 @@ const OffersPage = () => {
                 className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-gold/20 to-gold/10 rounded-full mb-8 border border-gold/30"
               >
                 <Flame className="w-4 h-4 text-orange-400 animate-pulse" />
-                <span className="font-body text-sm text-gold">عروض محدودة المدة</span>
+                <span className="font-body text-sm text-gold">{getSiteText(content, "offers_page_badge", "عروض محدودة المدة")}</span>
                 <Sparkles className="w-4 h-4 text-gold" />
               </motion.div>
 
@@ -316,7 +318,7 @@ const OffersPage = () => {
                 transition={{ delay: 0.2 }}
                 className="font-body text-lg md:text-xl text-gold-light/70 max-w-2xl mx-auto mb-12"
               >
-                {settings?.page_subtitle || "اغتنم الفرصة واحصل على أفخم القطع الذهبية بأسعار لا تُقاوم"}
+                {settings?.page_subtitle || getSiteText(content, "offers_page_subtitle", "اغتنم الفرصة واحصل على أفخم القطع الذهبية بأسعار لا تُقاوم")}
               </motion.p>
 
               {/* Main Countdown Timer */}
@@ -329,7 +331,7 @@ const OffersPage = () => {
                 >
                   <p className="text-gold-light/60 text-sm mb-4 font-body flex items-center justify-center gap-2">
                     <Clock className="w-4 h-4" />
-                    تنتهي جميع العروض خلال
+                    {getSiteText(content, "offers_page_countdown_label", "تنتهي جميع العروض خلال")}
                   </p>
                   <div className="flex items-center justify-center gap-3 md:gap-6">
                     <TimeBox value={mainTimeLeft.days} label="يوم" />
@@ -389,7 +391,7 @@ const OffersPage = () => {
         {offersLoading ? (
           <div className="flex flex-col items-center justify-center py-20 gap-4">
             <Loader2 className="w-12 h-12 animate-spin text-gold" />
-            <p className="text-muted-foreground font-body">جاري تحميل العروض...</p>
+            <p className="text-muted-foreground font-body">{getSiteText(content, "offers_page_loading", "جاري تحميل العروض...")}</p>
           </div>
         ) : mainTimerExpired ? (
           <section className="py-20">
@@ -402,9 +404,9 @@ const OffersPage = () => {
                 <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
                   <Clock className="w-12 h-12 text-muted-foreground" />
                 </div>
-                <h3 className="font-heading text-2xl text-foreground mb-3">انتهت العروض</h3>
+                <h3 className="font-heading text-2xl text-foreground mb-3">{getSiteText(content, "offers_page_expired_title", "انتهت العروض")}</h3>
                 <p className="text-muted-foreground font-body text-lg max-w-md mx-auto">
-                  ترقبوا عروضنا القادمة! سنُعلمكم فور توفر عروض جديدة
+                  {getSiteText(content, "offers_page_expired_desc", "ترقبوا عروضنا القادمة! سنُعلمكم فور توفر عروض جديدة")}
                 </p>
               </motion.div>
             </div>
@@ -420,9 +422,9 @@ const OffersPage = () => {
                 <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-muted flex items-center justify-center">
                   <Tag className="w-12 h-12 text-muted-foreground" />
                 </div>
-                <h3 className="font-heading text-2xl text-foreground mb-3">لا توجد عروض حالياً</h3>
+                <h3 className="font-heading text-2xl text-foreground mb-3">{getSiteText(content, "offers_page_empty_title", "لا توجد عروض حالياً")}</h3>
                 <p className="text-muted-foreground font-body text-lg max-w-md mx-auto">
-                  ترقبوا عروضنا القادمة! سنُعلمكم فور توفر عروض جديدة
+                  {getSiteText(content, "offers_page_empty_desc", "ترقبوا عروضنا القادمة! سنُعلمكم فور توفر عروض جديدة")}
                 </p>
               </motion.div>
             </div>
@@ -515,7 +517,7 @@ const OffersPage = () => {
               viewport={{ once: true }}
               className="text-center max-w-2xl mx-auto"
             >
-              <Sparkles className="w-10 h-10 text-gold mx-auto mb-4" />
+              <Sparkles className="w-10 h-10 text-z mx-auto mb-4" />
               <h2 className="font-heading text-2xl md:text-3xl text-foreground mb-4">لا تفوت أي عرض!</h2>
               <p className="text-muted-foreground">تابعنا للحصول على آخر العروض والخصومات الحصرية</p>
             </motion.div>

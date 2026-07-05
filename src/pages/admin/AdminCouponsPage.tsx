@@ -323,7 +323,7 @@ const AdminCouponsPage = () => {
               <Input
                 value={formData.code}
                 onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-                placeholder="مثال: GOLD50"
+                placeholder="مثال: gold50"
                 className="font-mono"
               />
             </div>

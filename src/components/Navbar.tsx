@@ -1,19 +1,31 @@
-import { Link, useNavigate } from "react-router-dom";
 import {
-  ShoppingBag, Search, Menu, Heart, User, X, LogOut, Home, Tag, Sparkles, Info,
-  ChevronDown, Grid3x3, TrendingUp, Star, Package, HelpCircle, Phone, MessageCircle,
-  ChevronLeft, Crown, Gift, Bell, Globe
-} from "lucide-react";
+  ShoppingCart,
+  MagnifyingGlass,
+  List,
+  X,
+  House,
+  Tag,
+  TrendUp,
+  Crown,
+  Heart,
+  User,
+  CaretLeft,
+  SquaresFour,
+} from "phosphor-react";
+import { Globe } from "phosphor-react";
+import { SignOut } from "phosphor-react";
+import { SignIn } from "phosphor-react";
 import { useEffect, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useStore } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { supabase } from "@/integrations/supabase/client";
 import type { User as SupaUser } from "@supabase/supabase-js";
-import { toast } from "@/hooks/use-toast";
+import { useAuthActions } from "@/hooks/useAuthActions";
 import { useCurrency } from "@/lib/currency";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -29,28 +41,73 @@ const Section = ({ label, children }: { label: string; children: React.ReactNode
   </div>
 );
 
+
 const NavItem = ({
-  icon: Icon, label, onClick, badge, highlight,
-}: { to?: string; icon: any; label: string; onClick: () => void; badge?: number | string; highlight?: boolean }) => (
-  <button
-    onClick={onClick}
-    className={`group w-full flex items-center gap-3 px-6 py-3 text-right transition-all duration-200 relative
-      ${highlight ? "text-foreground" : "text-foreground/80 hover:text-foreground"}
-      hover:bg-muted/60`}
-  >
-    <span className="absolute right-0 top-1/2 -translate-y-1/2 h-0 w-[2px] bg-foreground transition-all duration-300 group-hover:h-6" />
-    <span className="w-8 h-8 rounded-full bg-muted/60 flex items-center justify-center group-hover:bg-foreground group-hover:text-background transition-colors">
-      <Icon className="w-4 h-4" />
-    </span>
-    <span className="text-[13px] flex-1 font-medium">{label}</span>
-    {badge !== undefined && badge !== 0 && (
-      <span className="text-[10px] min-w-[20px] h-5 px-1.5 rounded-full bg-foreground text-background flex items-center justify-center font-medium">
-        {badge}
-      </span>
+  to,
+  icon: Icon,
+  label,
+  badge,
+}: {
+  to: string;
+  icon: any;
+  label: string;
+  badge?: number | string;
+}) => (
+  <NavLink to={to} end={to === "/home"}>
+    {({ isActive }) => (
+      <div
+        className={`
+          group relative w-full flex items-center gap-3
+          px-4 py-3 rounded-xl transition-all duration-300
+
+          ${
+            isActive
+              ? "bg-white text-black shadow-[0_10px_30px_-12px_rgba(0,0,0,.18)] ring-1 ring-black/5"
+              : "text-black/80 hover:bg-white hover:text-black hover:shadow-[0_12px_35px_-15px_rgba(0,0,0,.18)]"
+          }
+        `}
+      >
+        {isActive && (
+          <span className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-full bg-pink-500" />
+        )}
+
+        <span
+  className={`
+    w-9 h-9 rounded-xl
+    flex items-center justify-center
+    transition-all duration-300
+    ${isActive
+      ? "bg-pink-50 text-pink-500"
+      : "bg-gray-50 text-black/60 group-hover:bg-pink-50 group-hover:text-pink-600"
+    }
+  `}
+>
+  <Icon size={18} weight="regular" className="w-[18px] h-[18px]" />
+</span>
+
+        <span className="flex-1 text-[13px] font-medium text-right">
+          {label}
+        </span>
+
+        {badge !== undefined && badge !== 0 && (
+          <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-to-br from-pink-400 via-pink-500 to-rose-600 text-white text-[10px] font-bold flex items-center justify-center">
+            {badge}
+          </span>
+        )}
+
+        <CaretLeft
+          className={`w-4 h-4 transition-all duration-300 ${
+            isActive
+              ? "text-pink-500"
+              : "text-black/30 group-hover:text-pink-500 group-hover:-translate-x-1"
+          }`}
+        />
+      </div>
     )}
-    <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground/40 group-hover:text-foreground group-hover:-translate-x-1 transition-all" />
-  </button>
+  </NavLink>
 );
+
+
 
 const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -62,7 +119,10 @@ const Navbar = () => {
   const { favorites } = useFavorites();
   const cartCount = getCartCount();
   const navigate = useNavigate();
+  const { logout } = useAuthActions();
   const { mode, setMode, short, label } = useCurrency();
+  const location = useLocation();
+  const [scrolled, setScrolled] = useState(false);
 
   const currencies: { key: typeof mode; label: string; flag: string }[] = [
     { key: "SAR",       label: "ريال سعودي",              flag: "🇸🇦" },
@@ -98,9 +158,13 @@ const Navbar = () => {
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
-    setMenuOpen(false);
-    toast({ title: "تم تسجيل الخروج" });
+    await logout({
+      redirectTo: "/home",
+      onSuccess: () => {
+        setUser(null);
+        setMenuOpen(false);
+      },
+    });
   };
 
   const goTo = (href: string) => { setMenuOpen(false); navigate(href); };
@@ -120,20 +184,29 @@ const Navbar = () => {
           <div className="flex items-center gap-1 z-10">
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
-                <button className="p-2 hover:opacity-60 transition" aria-label="القائمة">
-                  <Menu className="w-5 h-5" />
+                <button
+                  onClick={() => setMenuOpen(true)}
+                  className="
+                    p-2 rounded-xl
+                    hover:bg-pink-50
+                    transition group
+                  "
+                  aria-label="القائمة"
+                >
+                  <List size={20} weight="regular" className="text-black/80 group-hover:text-black transition" />               
                 </button>
               </SheetTrigger>
               <SheetContent
                 side="right"
                 className="
-                  w-[60vw] sm:w-[360px] p-0
-                  bg-white backdrop-blur-xl
-                  border-l border-black/5
-                  shadow-[20px_0_60px_-30px_rgba(0,0,0,0.25)]
-                  [&>button]:left-3
-                  [&>button]:right-auto
-                "
+                w-[80vw] sm:w-[360px] p-0
+                bg-white backdrop-blur-xl
+                border-l border-black/5
+                shadow-[20px_0_60px_-30px_rgba(0,0,0,0.25)]
+                [&>button]:left-3
+                [&>button]:right-auto
+                flex flex-col h-full
+              "
                 dir="rtl"
               >
                 <div className="flex flex-col h-full p-3">
@@ -146,122 +219,145 @@ const Navbar = () => {
                     />
                   </div>
 
-                  <nav className="flex-1 overflow-y-auto pb-4 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                  <nav className="flex-1 overflow-y-auto pb-4 flex flex-col [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
                     {/* Shopping */}
                     <Section label="التسوق">
-                      <NavItem to="/home" icon={Home} label="الرئيسية" onClick={() => goTo("/home")} />
-                      <NavItem to="/categories" icon={Grid3x3} label="جميع الأقسام" onClick={() => goTo("/categories")} />
-                      <NavItem to="/products" icon={Tag} label="جميع المنتجات" onClick={() => goTo("/products")} />
-                      <NavItem to="/new-arrivals" icon={Sparkles} label="وصل حديثاً" onClick={() => goTo("/new-arrivals")} />
-                      <NavItem to="/best-sellers" icon={TrendingUp} label="الأكثر مبيعاً" onClick={() => goTo("/best-sellers")} />
-                      <NavItem to="/offers" icon={Crown} label="العروض الحصرية" onClick={() => goTo("/offers")} highlight />
+                      <NavItem to="/home" icon={House} label="الرئيسية" />
+                      <NavItem to="/categories" icon={SquaresFour} label="جميع الأقسام" />
+                      <NavItem to="/products" icon={Tag} label="جميع المنتجات" />
+                      <NavItem to="/search" icon={MagnifyingGlass} label="بحث متقدم" />
+                      <NavItem to="/comparison" icon={SquaresFour} label="مقارنة المنتجات" />
+                      <NavItem to="/seasonal-offers" icon={TrendUp} label="العروض الموسمية" />
+                      <NavItem to="/new-arrivals" icon={TrendUp} label="وصل حديثاً" />
+                      <NavItem to="/best-sellers" icon={Crown} label="الأكثر مبيعاً" />
+                      
                     </Section>
 
-                    {/* Categories (multi-level) */}
-                    <Section label="الأقسام">
-                      {parents.map((c) => {
-                        const subs = subsOf(c.id);
-                        if (subs.length === 0) {
-                          return (
-                            <button
-                              key={c.id}
-                              onClick={() => goTo(`/products?category=${c.slug}`)}
-                              className="group w-full flex items-center justify-between px-6 py-3.5 text-right hover:bg-muted/60 transition relative"
-                            >
-                              <span className="absolute right-0 top-1/2 -translate-y-1/2 h-0 w-[2px] bg-foreground transition-all duration-300 group-hover:h-6" />
-                              <span className="font-heading text-base pr-3">{c.name_ar}</span>
-                              <span className="text-[9px] tracking-[0.3em] uppercase text-muted-foreground">{c.name}</span>
-                            </button>
-                          );
-                        }
-                        return (
-                          <Collapsible key={c.id}>
-                            <CollapsibleTrigger className="w-full flex items-center justify-between px-6 py-3.5 hover:bg-muted/60 transition group relative">
-                              <span className="absolute right-0 top-1/2 -translate-y-1/2 h-0 w-[2px] bg-foreground transition-all duration-300 group-hover:h-6 group-data-[state=open]:h-6" />
-                              <span className="font-heading text-base pr-3">{c.name_ar}</span>
-                              <ChevronDown className="w-4 h-4 transition-transform group-data-[state=open]:rotate-180" />
-                            </CollapsibleTrigger>
-                            <CollapsibleContent className="bg-muted/30 overflow-hidden data-[state=open]:animate-accordion-down data-[state=closed]:animate-accordion-up">
-                              <button onClick={() => goTo(`/products?category=${c.slug}`)} className="w-full text-right px-12 py-2.5 text-[13px] text-foreground hover:bg-muted transition flex items-center gap-2">
-                                <span className="w-1 h-1 rounded-full bg-foreground" />
-                                عرض الكل
-                              </button>
-                              {subs.map((s) => (
-                                <button key={s.id} onClick={() => goTo(`/products?category=${s.slug}`)} className="w-full text-right px-12 py-2.5 text-[13px] text-muted-foreground hover:text-foreground hover:bg-muted transition flex items-center gap-2">
-                                  <span className="w-1 h-1 rounded-full bg-muted-foreground/50" />
-                                  {s.name_ar}
-                                </button>
-                              ))}
-                            </CollapsibleContent>
-                          </Collapsible>
-                        );
-                      })}
+                    <Section label="الحساب">
+                      <NavItem to="/cart" icon={ShoppingCart} label="الحقيبة" badge={cartCount || undefined} />
+                      <NavItem to="/favorites" icon={Heart} label="المفضلة" badge={favorites.length || undefined} />
+                      <NavItem to="/account" icon={User} label="حسابي" />
                     </Section>
-
-                    {/* Account */}
-                    <Section label="حسابي">
-                      <NavItem to="/account" icon={User} label="حسابي" onClick={() => goTo("/account")} />
-                      <NavItem to="/favorites" icon={Heart} label="المفضلة" badge={favorites.length || undefined} onClick={() => goTo("/favorites")} />
-                      <NavItem to="/cart" icon={ShoppingBag} label="الحقيبة" badge={cartCount || undefined} onClick={() => goTo("/cart")} />
-                    </Section>
-
-                    {/* Help */}
-                    <Section label="المساعدة">
-                      <NavItem to="/about" icon={Info} label="عن الدار" onClick={() => goTo("/about")} />
-                      <NavItem to="/reviews" icon={MessageCircle} label="آراء العملاء" onClick={() => goTo("/reviews")} />
-                    </Section>
-
-                    {user && (
-                      <div className="px-6 pt-6">
-                        <button onClick={handleLogout} className="w-full flex items-center justify-center gap-2 py-3 rounded-full border border-border text-sm hover:bg-foreground hover:text-background hover:border-foreground transition">
-                          <LogOut className="w-4 h-4" />
-                          تسجيل الخروج
-                        </button>
-                      </div>
-                    )}
                   </nav>
+                <div className="border-t border-border px-6 py-5 bg-white">
+                  {user ? (
+                    <button
+                      onClick={handleLogout}
+                      className="
+                        w-full flex items-center justify-center gap-2
+                        py-3
 
-                  {/* Footer */}
-                  <div className="border-t border-border px-6 py-4 bg-muted/30">
-                    <div className="flex items-center justify-between text-[10px] tracking-[0.3em] uppercase text-muted-foreground">
-                      <span>FLAMINGO © 2026</span>
-                      <div className="flex items-center gap-1">
-                        <Globe className="w-3 h-3" />
-                        <span>عربي</span>
-                      </div>
-                    </div>
-                  </div>
+                        text-[12px]
+                        tracking-[0.35em]
+                        uppercase
+                        font-medium
+
+                        text-black
+                        border border-black/10
+                        bg-transparent
+
+                        transition-all duration-300 ease-out
+                        relative overflow-hidden
+
+                        hover:text-pink-600
+                        hover:border-pink-300
+                        hover:tracking-[0.45em]
+
+                        active:scale-[0.98]
+                      "
+                    >
+                      <SignOut size={18} weight="bold" />
+                      <span className="relative z-10">تسجيل الخروج</span>
+                      <span className="group absolute bottom-0 left-0 w-0 h-[1px] bg-pink-500 transition-all duration-300 group-hover:w-full" />
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => goTo("/auth")}
+                      className="
+                        w-full flex items-center justify-center gap-2
+                        py-3
+
+                        text-[12px]
+                        tracking-[0.35em]
+                        uppercase
+                        font-medium
+
+                        text-black
+                        border border-black/10
+                        bg-transparent
+
+                        transition-all duration-300 ease-out
+                        relative overflow-hidden
+
+                        hover:text-pink-600
+                        hover:border-pink-300
+                        hover:tracking-[0.45em]
+
+                        active:scale-[0.98]
+                      "
+                    >
+                      <SignIn size={18} weight="bold" />
+                      <span className="relative z-10">تسجيل الدخول</span>
+                      <span className="group absolute bottom-0 left-0 w-0 h-[1px] bg-pink-500 transition-all duration-300 group-hover:w-full" />
+                    </button>
+                  )}
+                </div>
                 </div>
               </SheetContent>
+              
             </Sheet>
-            <button onClick={() => setIsSearchOpen((v) => !v)} className="p-2 hover:opacity-60 transition" aria-label="بحث">
-              {isSearchOpen ? <X className="w-5 h-5" /> : <Search className="w-5 h-5" />}
+            <button
+              onClick={() => setIsSearchOpen((v) => !v)}
+              className="
+                p-2 rounded-xl
+                hover:bg-pink-50
+                transition group
+              "
+              aria-label="بحث"
+            >
+              {isSearchOpen ? (
+                <X className="w-5 h-5 text-pink-500 transition" />
+              ) : (
+                <MagnifyingGlass size={20} weight="regular" className="text-black/80 group-hover:text-pink-500 transition" />
+              )}
             </button>
           </div>
 
           {/* Center wordmark */}
-          <Link to="/home" className="absolute left-1/2 -translate-x-1/2 logo-flamingo text-xl md:text-2xl">
-            FLAMINGO
+          <Link
+            to="/home"
+            className="
+              absolute left-1/2 -translate-x-1/2
+              text-[14px] md:text-xl
+              font-semibold tracking-[0.4em]
+              uppercase
+              text-black/80
+            "
+          >
+            <span className="text-pink-500">FLAMINGO</span>
           </Link>
 
           {/* Left (RTL): account, wishlist, bag */}
-          <div className="flex items-center gap-1 z-10">
+          <div className="flex items-center z-10">
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
-                  className="hidden md:inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-full border border-border text-[11px] tracking-[0.15em] uppercase hover:bg-foreground hover:text-background transition"
-                  aria-label="العملة"
-                  title={label}
+                  className="
+                    flex items-center gap-2 px-2.5 py-2 rounded-xl
+                    text-xs font-medium
+                    text-black hover:text-pink-500
+                    hover:bg-pink-50 transition
+                  "
                 >
-                  <Globe className="w-3.5 h-3.5" />
-                  <span className="font-medium">{short}</span>
+                  <Globe size={18} weight="regular" />
+                  <span>{short}</span>
                 </button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" className="w-64" style={{ direction: "rtl" }}>
                 <DropdownMenuLabel className="text-xs">اختر العملة</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {currencies.map((c) => (
-                  <DropdownMenuItem key={c.key} onClick={() => setMode(c.key)} className="justify-between gap-2 cursor-pointer">
+                  <DropdownMenuItem key={c.key} onClick={() => setMode(c.key)} className="justify-between gap-20 cursor-pointer">
                     <span className="flex items-center gap-2 text-sm">
                       <span>{c.flag}</span>{c.label}
                     </span>
@@ -270,47 +366,62 @@ const Navbar = () => {
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
-            <Link to={user ? "/account" : "/auth"} className="p-2 hover:opacity-60 transition hidden md:inline-flex" aria-label="حساب">
-              <User className="w-5 h-5" />
-            </Link>
-            <Link to="/favorites" className="relative p-2 hover:opacity-60 transition" aria-label="مفضلة">
-              <Heart className="w-5 h-5" />
-              {favorites.length > 0 && (
-                <span className="absolute top-1 left-1 min-w-[16px] h-4 px-1 text-[10px] flex items-center justify-center bg-foreground text-background">{favorites.length}</span>
-              )}
-            </Link>
-            <button onClick={openCart} className="relative p-2 hover:opacity-60 transition" aria-label="سلة">
-              <ShoppingBag className="w-5 h-5" />
+            <button
+              onClick={openCart}
+              className="
+                relative p-2 rounded-xl
+                hover:bg-pink-50
+                transition group
+              "
+              aria-label="السلة"
+            >
+              <ShoppingCart size={20} weight="fill" className="text-black/80" />
+
               {cartCount > 0 && (
-                <span className="absolute top-1 left-1 min-w-[16px] h-4 px-1 text-[10px] flex items-center justify-center bg-foreground text-background">{cartCount}</span>
+                <span className="
+                  absolute -top-1 -left-1
+                  min-w-[18px] h-[18px]
+                  px-1.5
+                  rounded-full
+                  bg-gradient-to-br from-pink-400 to-rose-500
+                  text-white text-[10px] font-bold
+                  flex items-center justify-center
+                  shadow-md
+                ">
+                  {cartCount}
+                </span>
               )}
             </button>
           </div>
         </div>
 
-        {/* Sub-nav */}
-        <nav className="hidden md:flex flex-row-reverse items-center justify-center gap-8 h-10 border-t border-border/60 overflow-x-auto hide-scrollbar w-full text-right">
-          {topLinks.map((l) => (
-            <Link key={l.href} to={l.href} className="text-[11px] tracking-[0.32em] uppercase text-foreground/75 hover:text-foreground transition whitespace-nowrap">
-              {l.label}
-            </Link>
-          ))}
-        </nav>
       </div>
 
       {isSearchOpen && (
-        <div className="border-b border-border bg-background animate-fade-in">
-          <form onSubmit={submit} className="container mx-auto px-4 py-3">
+        <div className="border-b bg-white/90 backdrop-blur-xl animate-in fade-in duration-200">
+          <form onSubmit={submit} className="container mx-auto px-4 py-4">
             <div className="relative">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+
+              <MagnifyingGlass size={22} weight="bold" className="text-black/70 group-hover:text-pink-500 transition" />
+
               <input
                 autoFocus
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 placeholder="ابحث عن منتج، ماركة، قسم..."
-                className="w-full pr-10 pl-4 py-3 bg-transparent border-b border-border text-sm focus:outline-none focus:border-foreground"
+                className="
+                  w-full pr-10 pl-4 py-3
+                  bg-white
+                  border border-pink-100
+                  rounded-xl
+                  text-sm
+                  focus:outline-none
+                  focus:ring-2 focus:ring-pink-200
+                  transition
+                "
                 dir="rtl"
               />
+
             </div>
           </form>
         </div>

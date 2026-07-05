@@ -137,7 +137,7 @@ const AdminOffersPage = () => {
         .insert({
           page_title: 'عروض استثنائية',
           page_subtitle: 'اغتنم الفرصة واحصل على أفخم القطع الذهبية بأسعار لا تُقاوم',
-          promo_banner_text: 'استخدم كود GOLD50 للحصول على خصم إضافي',
+          promo_banner_text: 'استخدم كود gold50 للحصول على خصم إضافي',
           show_countdown: true,
           show_promo_banner: true,
           countries: ['SA', 'YE'],
@@ -703,7 +703,7 @@ const AdminOffersPage = () => {
                 <Input
                   value={formData.discount_code}
                   onChange={(e) => setFormData({ ...formData, discount_code: e.target.value.toUpperCase() })}
-                  placeholder="GOLD50"
+                  placeholder="gold50"
                   dir="ltr"
                 />
               </div>

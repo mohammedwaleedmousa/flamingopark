@@ -129,7 +129,7 @@ export default {
         pulse: "pulse 2s ease-in-out infinite",
       },
       boxShadow: {
-        gold: "0 4px 20px -4px hsl(43 45% 59% / 0.3)",
+        gold: "0 4px 20px -4px hsl(346 74% 78% / 0.3)",
         elegant: "0 10px 40px -10px hsl(0 0% 0% / 0.1)",
         card: "0 2px 12px -2px hsl(0 0% 0% / 0.08)",
         hover: "0 20px 50px -15px hsl(0 0% 0% / 0.15)",

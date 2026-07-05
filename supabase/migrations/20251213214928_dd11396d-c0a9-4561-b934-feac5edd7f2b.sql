@@ -46,7 +46,7 @@ CREATE TABLE public.offers_settings (
   page_title text DEFAULT 'عروض استثنائية',
   page_subtitle text DEFAULT 'اغتنم الفرصة واحصل على أفخم القطع الذهبية بأسعار لا تُقاوم',
   countdown_end_date timestamp with time zone,
-  promo_banner_text text DEFAULT 'استخدم كود GOLD50 للحصول على خصم إضافي 10%',
+  promo_banner_text text DEFAULT 'استخدم كود gold50 للحصول على خصم إضافي 10%',
   show_countdown boolean DEFAULT true,
   show_promo_banner boolean DEFAULT true,
   countries text[] DEFAULT '{SA,YE}'::text[],
@@ -69,4 +69,4 @@ USING (has_role(auth.uid(), 'admin'::app_role));
 
 -- Insert default settings
 INSERT INTO public.offers_settings (page_title, page_subtitle, countdown_end_date, promo_banner_text)
-VALUES ('عروض استثنائية', 'اغتنم الفرصة واحصل على أفخم القطع الذهبية بأسعار لا تُقاوم', now() + interval '7 days', 'استخدم كود GOLD50 للحصول على خصم إضافي 10%');
+VALUES ('عروض استثنائية', 'اغتنم الفرصة واحصل على أفخم القطع الذهبية بأسعار لا تُقاوم', now() + interval '7 days', 'استخدم كود gold50 للحصول على خصم إضافي 10%');

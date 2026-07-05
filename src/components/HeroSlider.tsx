@@ -126,10 +126,10 @@ export default function VisionProHero() {
         {/* ================= INDICATOR ================= */}
         <motion.div
           style={{ opacity: contentOpacity }}
-          className="absolute bottom-10 right-10 flex flex-col items-end"
+          className="absolute bottom-10 right-10 flex flex-col items-end" 
         >
           <span className="text-[10px] text-pink-200/60 mb-2">
-            تجربة فلامنجو بارك · عدن · Apple Vision Style
+            تجربة فلامنجو بارك · عدن
           </span>
 
           <div className="w-56 h-[1px] bg-white/10 overflow-hidden">

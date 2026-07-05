@@ -10,6 +10,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { ArrowRight, Loader2, Upload, X, LayoutGrid, Plus, Trash2, Truck, Shield, RotateCcw, GripVertical, ZoomIn, Move } from 'lucide-react';
+import ColorVariantsEditor, { ColorVariant } from '@/components/admin/ColorVariantsEditor';
 
 interface HomepageSection {
   id: string;
@@ -74,6 +75,7 @@ const AdminProductFormPage = () => {
     sizes: [] as string[],
     accessories: [] as Accessory[],
     features: [] as ProductFeature[],
+    color_variants: [] as ColorVariant[],
     image_zoom: 1,
     image_position_x: 50,
     image_position_y: 50,
@@ -164,6 +166,7 @@ const AdminProductFormPage = () => {
         sizes: (data as any).sizes || [],
         accessories: ((data as any).accessories || []) as Accessory[],
         features: ((data as any).features || []) as ProductFeature[],
+        color_variants: ((data as any).color_variants || []) as ColorVariant[],
         image_zoom: 1,
         image_position_x: 50,
         image_position_y: 50,
@@ -277,6 +280,7 @@ const AdminProductFormPage = () => {
       sizes: formData.sizes,
       accessories: formData.accessories as unknown as any,
       features: formData.features as unknown as any,
+      color_variants: formData.color_variants as unknown as any,
     };
 
     try {
@@ -1024,6 +1028,11 @@ const AdminProductFormPage = () => {
             </div>
           )}
         </div>
+        {/* Color Variants */}
+        <ColorVariantsEditor
+          value={formData.color_variants}
+          onChange={(v) => setFormData((prev) => ({ ...prev, color_variants: v }))}
+        />
         <div className="flex gap-4">
           <Button type="submit" disabled={isSaving} className="btn-gold">
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? 'تحديث' : 'إضافة'}

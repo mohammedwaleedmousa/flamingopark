@@ -613,7 +613,7 @@ interface Row {
         {/* CURRENT */}
         <div className="p-4 rounded-xl bg-pink-50 border border-pink-100">
         <p className="text-xs text-muted-foreground">الشهر الحالي</p>
-        <p className="text-2xl font-bold text-pink-600">
+        <p className="text-2xl font-bold text-pink-500">
             {fmt(aiEngine.currentRevenue)} ر.ي
         </p>
         </div>
@@ -677,7 +677,7 @@ interface Row {
 
             <div className="p-3 rounded-xl bg-pink-50 border">
             <p className="text-[10px] text-muted-foreground">التوقع القادم</p>
-            <p className="text-sm font-bold text-pink-600">
+            <p className="text-sm font-bold text-gold">
                 {fmt(aiEngine.forecast)} ر.ي
             </p>
             </div>
@@ -752,7 +752,7 @@ interface Row {
         <div className="p-3 rounded-xl bg-pink-50 border border-pink-100">
             <p className="text-[10px] text-muted-foreground">النمو</p>
             <p className={`text-sm font-bold ${
-            aiEngine.growth >= 0 ? "text-pink-600" : "text-red-500"
+            aiEngine.growth >= 0 ? "text-gold" : "text-red-500"
             }`}>
             {aiEngine.growth.toFixed(1)}%
             </p>

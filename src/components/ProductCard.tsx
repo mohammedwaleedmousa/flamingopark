@@ -1,27 +1,31 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import { Heart, ShoppingBag } from "lucide-react";
+import { Heart } from "lucide-react";
+import { motion } from "framer-motion";
 import { Product, useStore } from "@/store/useStore";
-import { useFavorites } from "@/hooks/useFavorites";
 import { toast } from "@/hooks/use-toast";
 import { useCurrency } from "@/lib/currency";
+import { useFavorites } from "@/hooks/useFavorites";
 
 interface ProductCardProps {
   product: Product;
   index?: number;
   badge?: "NEW IN" | "LIMITED" | "BEST SELLER" | "HOT" | null;
+  size?: "large" | "medium" | "small";
+  onQuickView?: (p: Product) => void;
 }
 
-const ProductCard = ({ product, badge }: ProductCardProps) => {
+const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCardProps) => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { addToCart, openCart } = useStore();
-  const isLiked = isFavorite(product.id);
   const { format } = useCurrency();
-  const [heartBeat, setHeartBeat] = useState(false);
   const [bagPop, setBagPop] = useState(false);
+  const [heartBeat, setHeartBeat] = useState(false);
   const hasSecondImage = (product.images?.length ?? 0) > 1;
+  const [hovered, setHovered] = useState(false);
+  const isLiked = isFavorite(product.id);
 
-  const handleLike = (e: React.MouseEvent) => {
+  const handleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
     const nowLiked = toggleFavorite(product);
@@ -36,14 +40,15 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
     ? product.price * (1 - product.discount / 100)
     : product.price;
 
-  // Auto-pick a badge if none supplied
-  const computedBadge =
-    badge ??
-    (product.isFeatured ? "NEW IN" : product.discount ? "LIMITED" : null);
-
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
+    // If product has variants, open quick view to choose color/size
+    const variants = (product as any).variants as any[] | undefined;
+    if (variants && variants.length > 0) {
+      onQuickView?.(product);
+      return;
+    }
     addToCart(product, 1);
     setBagPop(true);
     setTimeout(() => setBagPop(false), 400);
@@ -51,34 +56,52 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
     openCart();
   };
 
+  const aspectClass = size === 'large' ? 'aspect-[4/5] sm:aspect-[3/4]' : size === 'medium' ? 'aspect-[3/5] sm:aspect-[3/4]' : 'aspect-[4/8] sm:aspect-[3/4]';
+
   return (
-  <Link to={`/product/${product.slug}`} className="group block" dir="rtl">
+    <Link to={`/product/${product.slug}`} className="group block" dir="rtl">
 
-    <div className="
-      relative aspect-[4/8] sm:aspect-[3/4]
-      bg-white
-      border border-pink-100/20
-      rounded-[20px]
-      overflow-hidden
-      flex flex-col
+      <div
+        onMouseEnter={() => setHovered(true)}
+        onMouseLeave={() => setHovered(false)}
+        className={`relative ${aspectClass}
+          bg-white
+          border border-pink-100/10
+          rounded-[20px]
+          overflow-hidden
+          flex flex-col
 
-      transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]
-      hover:-translate-y-2
-      hover:shadow-[0_50px_100px_-40px_rgba(255,105,180,0.25)]
-    ">
+          transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]
+          hover:-translate-y-1 hover:shadow-2xl
+        `}
+      >
 
       {/* IMAGE FULL AREA */}
       <div className="relative flex-1 overflow-hidden bg-neutral-100 ">
 
         <img
-          src={product.images?.[0]}
+          src={hovered && hasSecondImage ? product.images?.[1] : product.images?.[0]}
           alt={product.nameAr}
+          loading="lazy"
           className="
             w-full h-full object-cover
-            transition duration-1000 ease-out
-            group-hover:scale-110
+            transition duration-700 ease-out
+            group-hover:scale-105
           "
         />
+
+        {/* quick-action buttons */}
+        <div className="absolute top-3 left-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+          <motion.button
+            onClick={(e) => { handleFavorite(e); }}
+            whileTap={{ scale: 0.9 }}
+            animate={heartBeat ? { scale: [1, 1.22, 1] } : { scale: 1 }}
+            whileHover={{ scale: 1.06 }}
+            className="w-10 h-10 rounded-full bg-white/90 flex items-center justify-center shadow"
+          >
+            <Heart className={`w-4 h-4 ${isLiked ? 'text-pink-500 fill-pink-500' : 'text-neutral-600'}`} />
+          </motion.button>
+        </div>
 
         {/* soft cinematic flamingo overlay */}
         <div className="
@@ -110,9 +133,28 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
           {product.nameAr}
         </h3>
 
-        <span className="text-sm font-semibold text-black">
-          {format(finalPrice)}
-        </span>
+        <div className="flex items-center justify-between">
+          <div className="text-sm font-semibold text-black">
+            {(() => {
+              const variants = (product as any).variants as any[] | undefined;
+              if (!variants || variants.length === 0) return format(finalPrice);
+              const prices = variants.map((v) => {
+                const p = v.price ?? product.price; const d = v.discount ?? product.discount ?? 0; return p * (1 - d / 100);
+              });
+              const minP = Math.min(...prices); const maxP = Math.max(...prices);
+              return minP === maxP ? format(minP) : `${format(minP)} - ${format(maxP)}`;
+            })()}
+          </div>
+        </div>
+
+        {/* swatches */}
+        {(product as any).variants && (product as any).variants.length > 0 && (
+          <div className="mt-2 flex items-center gap-2">
+            {((product as any).variants as any[]).slice(0,4).map((v: any) => (
+              <div key={v.id} title={v.colorName} className="w-6 h-6 rounded-full border" style={{ background: v.colorHex || '#eee' }} />
+            ))}
+          </div>
+        )}
 
       </div>
 
@@ -141,8 +183,11 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
             فلامنجو
           </span>
 
-          <button
+          <motion.button
             onClick={handleAdd}
+            animate={bagPop ? { scale: [1, 1.06, 1] } : { scale: 1 }}
+            transition={{ duration: 0.45 }}
+            whileTap={{ scale: 0.96 }}
             className="
               px-4 py-2
 
@@ -156,12 +201,11 @@ const ProductCard = ({ product, badge }: ProductCardProps) => {
 
               shadow-[0_10px_25px_-10px_rgba(255,105,180,0.5)]
 
-              hover:scale-105 active:scale-95
               transition
             "
           >
             أضف للسلة
-          </button>
+          </motion.button>
 
         </div>
       )}

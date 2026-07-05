@@ -7,9 +7,16 @@ import CartDrawer from '@/components/CartDrawer';
 import ProductCardMinimal from '@/components/ProductCardMinimal';
 import { useFavorites } from '@/hooks/useFavorites';
 import { Button } from '@/components/ui/button';
+import { useSiteContent, getSiteText, formatSiteText } from '@/hooks/useSiteContent';
 
 const FavoritesPage = () => {
   const { favorites } = useFavorites();
+  const { data: content } = useSiteContent('favorites_');
+  const heroCountTemplate = getSiteText(content, 'favorites_hero_with_count', 'لديك {count} منتج في قائمة المفضلة');
+  const heroText =
+    favorites.length > 0
+      ? formatSiteText(heroCountTemplate, { count: favorites.length })
+      : getSiteText(content, 'favorites_hero_empty', 'لم تقم بإضافة أي منتجات للمفضلة بعد');
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -26,17 +33,14 @@ const FavoritesPage = () => {
               transition={{ duration: 0.6 }}
               className="space-y-4"
             >
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gold/10 mb-4">
-                <Heart className="w-8 h-8 text-gold fill-gold" />
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-pink-50 mb-4">
+                <Heart className="w-8 h-8 text-pink-500 fill-pink-500" />
               </div>
               <h1 className="font-heading text-3xl md:text-4xl text-foreground">
-                المنتجات المفضلة
+                {getSiteText(content, 'favorites_hero_title', 'المنتجات المفضلة')}
               </h1>
               <p className="font-body text-muted-foreground max-w-lg mx-auto">
-                {favorites.length > 0 
-                  ? `لديك ${favorites.length} منتج في قائمة المفضلة`
-                  : 'لم تقم بإضافة أي منتجات للمفضلة بعد'
-                }
+                {heroText}
               </p>
             </motion.div>
           </div>
@@ -70,16 +74,16 @@ const FavoritesPage = () => {
               </div>
               <div className="space-y-2">
                 <h2 className="font-heading text-xl text-foreground">
-                  قائمة المفضلة فارغة
+                  {getSiteText(content, 'favorites_empty_title', 'قائمة المفضلة فارغة')}
                 </h2>
-                <p className="font-body text-muted-foreground max-w-md mx-auto">
-                  اضغط على أيقونة القلب في أي منتج لإضافته إلى قائمة المفضلة
+                <p className="font-body text-muted-foreground max-w-md mx-auto pb-5">
+                  {getSiteText(content, 'favorites_empty_desc', 'اضغط على أيقونة القلب في أي منتج لإضافته إلى قائمة المفضلة')}
                 </p>
               </div>
               <Link to="/products">
                 <Button className="btn-gold gap-2">
                   <ShoppingBag className="w-5 h-5" />
-                  تصفح المنتجات
+                  {getSiteText(content, 'favorites_browse_cta', 'تصفح المنتجات')}
                 </Button>
               </Link>
             </motion.div>

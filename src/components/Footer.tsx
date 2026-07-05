@@ -74,7 +74,7 @@ const Footer = () => {
               />
             </Link>
             <p className="mt-5 text-xs text-muted-foreground leading-relaxed">
-              دار أزياء تجمع بين الحرفة الفاخرة والروح المعاصرة.
+              متجر أزياء يجمع بين الحرفة الفاخرة والروح المعاصرة.
             </p>
             <div className="flex items-center gap-3 mt-6">
 

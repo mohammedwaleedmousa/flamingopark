@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from '@/hooks/use-toast';
+import { useSiteContent, getSiteText } from '@/hooks/useSiteContent';
 
 interface Review {
   id: string;
@@ -23,6 +24,7 @@ interface Review {
 }
 
 const ReviewsPage = () => {
+  const { data: content } = useSiteContent('reviews_page_');
   const { country } = useStore();
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
@@ -91,8 +93,8 @@ const ReviewsPage = () => {
     },
     onSuccess: () => {
       toast({
-        title: 'شكراً لك!',
-        description: 'تم إرسال تقييمك وسيتم مراجعته قريباً',
+        title: getSiteText(content, 'reviews_page_toast_success_title', 'شكراً لك!'),
+        description: getSiteText(content, 'reviews_page_toast_success_desc', 'تم إرسال تقييمك وسيتم مراجعته قريباً'),
       });
       setName('');
       setMessage('');
@@ -100,8 +102,8 @@ const ReviewsPage = () => {
     },
     onError: () => {
       toast({
-        title: 'خطأ',
-        description: 'حدث خطأ أثناء إرسال التقييم',
+        title: getSiteText(content, 'reviews_page_toast_error_title', 'خطأ'),
+        description: getSiteText(content, 'reviews_page_toast_error_desc', 'حدث خطأ أثناء إرسال التقييم'),
         variant: 'destructive',
       });
     },
@@ -111,8 +113,8 @@ const ReviewsPage = () => {
     e.preventDefault();
     if (!name.trim() || !message.trim()) {
       toast({
-        title: 'تنبيه',
-        description: 'يرجى ملء جميع الحقول',
+        title: getSiteText(content, 'reviews_page_toast_warning_title', 'تنبيه'),
+        description: getSiteText(content, 'reviews_page_toast_warning_desc', 'يرجى ملء جميع الحقول'),
         variant: 'destructive',
       });
       return;
@@ -134,10 +136,10 @@ const ReviewsPage = () => {
               animate={{ opacity: 1, y: 0 }}
             >
               <h1 className="font-heading text-4xl md:text-5xl text-gold mb-4">
-                تقييمات العملاء
+                {getSiteText(content, 'reviews_page_title', 'تقييمات العملاء')}
               </h1>
               <p className="text-gold-light/70 font-body max-w-lg mx-auto">
-                نفتخر بآراء عملائنا الكرام ونسعى دائماً لتقديم الأفضل
+                {getSiteText(content, 'reviews_page_subtitle', 'نفتخر بآراء عملائنا الكرام ونسعى دائماً لتقديم الأفضل')}
               </p>
             </motion.div>
           </div>
@@ -170,7 +172,7 @@ const ReviewsPage = () => {
                     ))}
                   </div>
                   <p className="text-muted-foreground text-sm">
-                    بناءً على {stats?.totalReviews || 0} تقييم
+                    {getSiteText(content, 'reviews_page_stats_based_on', 'بناءً على')} {stats?.totalReviews || 0} {getSiteText(content, 'reviews_page_stats_reviews_word', 'تقييم')}
                   </p>
                 </div>
 
@@ -200,14 +202,14 @@ const ReviewsPage = () => {
               >
                 <h3 className="font-heading text-xl text-foreground mb-4 flex items-center gap-2">
                   <MessageSquare className="w-5 h-5 text-gold" />
-                  أضف تقييمك
+                  {getSiteText(content, 'reviews_page_form_title', 'أضف تقييمك')}
                 </h3>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
                   {/* Rating Selector */}
                   <div>
                     <label className="text-sm font-medium text-foreground mb-2 block">
-                      التقييم
+                      {getSiteText(content, 'reviews_page_form_rating_label', 'التقييم')}
                     </label>
                     <div className="flex items-center gap-1">
                       {[1, 2, 3, 4, 5].map((star) => (
@@ -234,12 +236,12 @@ const ReviewsPage = () => {
                   {/* Name Input */}
                   <div>
                     <label className="text-sm font-medium text-foreground mb-2 block">
-                      الاسم
+                      {getSiteText(content, 'reviews_page_form_name_label', 'الاسم')}
                     </label>
                     <Input
                       value={name}
                       onChange={(e) => setName(e.target.value)}
-                      placeholder="أدخل اسمك"
+                      placeholder={getSiteText(content, 'reviews_page_form_name_placeholder', 'أدخل اسمك')}
                       dir="rtl"
                       maxLength={50}
                     />
@@ -248,12 +250,12 @@ const ReviewsPage = () => {
                   {/* Message Input */}
                   <div>
                     <label className="text-sm font-medium text-foreground mb-2 block">
-                      تقييمك
+                      {getSiteText(content, 'reviews_page_form_message_label', 'تقييمك')}
                     </label>
                     <Textarea
                       value={message}
                       onChange={(e) => setMessage(e.target.value)}
-                      placeholder="شاركنا تجربتك مع منتجاتنا..."
+                      placeholder={getSiteText(content, 'reviews_page_form_message_placeholder', 'شاركنا تجربتك مع منتجاتنا...')}
                       dir="rtl"
                       rows={4}
                       maxLength={500}
@@ -270,7 +272,7 @@ const ReviewsPage = () => {
                     ) : (
                       <Send className="w-4 h-4" />
                     )}
-                    إرسال التقييم
+                    {getSiteText(content, 'reviews_page_form_submit', 'إرسال التقييم')}
                   </Button>
                 </form>
               </motion.div>
@@ -279,7 +281,7 @@ const ReviewsPage = () => {
             {/* Reviews List */}
             <div className="lg:col-span-2">
               <h2 className="font-heading text-2xl text-foreground mb-6">
-                جميع التقييمات ({reviews.length})
+                {getSiteText(content, 'reviews_page_list_title', 'جميع التقييمات')} ({reviews.length})
               </h2>
 
               {isLoading ? (
@@ -289,8 +291,8 @@ const ReviewsPage = () => {
               ) : reviews.length === 0 ? (
                 <div className="text-center py-12 bg-muted/50 rounded-2xl">
                   <MessageSquare className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">لا توجد تقييمات بعد</p>
-                  <p className="text-sm text-muted-foreground">كن أول من يقيّم!</p>
+                  <p className="text-muted-foreground">{getSiteText(content, 'reviews_page_empty_title', 'لا توجد تقييمات بعد')}</p>
+                  <p className="text-sm text-muted-foreground">{getSiteText(content, 'reviews_page_empty_desc', 'كن أول من يقيّم!')}</p>
                 </div>
               ) : (
                 <div className="space-y-4">

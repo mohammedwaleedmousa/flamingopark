@@ -115,7 +115,7 @@ const AdminDashboard = () => {
     size="sm"
     className="
       bg-gradient-to-r from-pink-500 to-rose-500
-      hover:from-pink-600 hover:to-rose-600
+      hover:from-pink-500 hover:to-rose-600
       text-white shadow-lg
       transition-all duration-300
       hover:scale-[1.03]
@@ -136,7 +136,7 @@ const AdminDashboard = () => {
     className="
       bg-white
       border border-pink-200
-      text-pink-600
+      text-pink-500
       hover:bg-pink-50
       shadow-sm
       transition-all duration-300

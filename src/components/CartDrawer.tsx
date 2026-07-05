@@ -25,7 +25,7 @@ const CartDrawer = () => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={closeCart}
-            className="fixed inset-0 bg-secondary/80 z-50"
+            className="fixed inset-0 z-50"
           />
 
           {/* Drawer */}
@@ -34,12 +34,12 @@ const CartDrawer = () => {
             animate={{ x: 0 }}
             exit={{ x: '100%' }}
             transition={{ type: 'tween', duration: 0.3, ease: [0.25, 0.46, 0.45, 0.94] }}
-            className="fixed right-0 top-0 bottom-0 w-full max-w-md bg-background border-l border-border z-50 flex flex-col"
+            className="fixed right-0 top-0 bottom-0 w-full max-w-full bg-background border-l border-border z-50 flex flex-col"
           >
             {/* Header */}
-            <div className="flex items-center justify-between p-6 border-b border-border">
+            <div className="flex items-center justify-between p-3.5 border-b border-border">
               <div className="flex items-center gap-3">
-                <ShoppingBag className="w-5 h-5 text-gold" />
+                <ShoppingBag className="w-6 h-5 text-pink-500" />
                 <h2 className="font-heading text-xl text-foreground">سلة التسوق</h2>
               </div>
               <button
@@ -69,20 +69,25 @@ const CartDrawer = () => {
               ) : (
                 <div className="space-y-6">
                   {cart.map((item, cartIndex) => {
-                    const itemPrice = item.product.discount
-                      ? item.product.price * (1 - item.product.discount / 100)
-                      : item.product.price;
-                    
+                    // Variant-aware price
+                    const variant = item.variantId && (item.product as any).variants
+                      ? (item.product as any).variants.find((v: any) => v.id === item.variantId)
+                      : undefined;
+
+                    const basePrice = variant && variant.price !== undefined ? variant.price : item.product.price;
+                    const discount = variant && variant.discount !== undefined ? variant.discount : item.product.discount;
+                    const itemPrice = discount ? basePrice * (1 - discount / 100) : basePrice;
+
                     // Calculate accessories total for this item
                     const accessoriesTotal = item.selectedAccessories
                       ? item.selectedAccessories.reduce((sum, acc) => sum + (acc.price * acc.quantity), 0)
                       : 0;
-                    
+
                     const itemTotalPrice = itemPrice + accessoriesTotal;
 
                     return (
                       <motion.div
-                        key={`${item.product.id}-${cartIndex}`}
+                        key={`${item.product.id}-${item.variantId || 'base'}-${cartIndex}`}
                         layout
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -90,7 +95,7 @@ const CartDrawer = () => {
                         className="flex gap-4 p-4 bg-muted/50 rounded-lg"
                       >
                         <img
-                          src={item.product.images[0]}
+                          src={(variant && variant.images && variant.images[0]) || item.product.images[0]}
                           alt={item.product.nameAr}
                           loading="lazy"
                           decoding="async"
@@ -121,22 +126,22 @@ const CartDrawer = () => {
                             </div>
                           )}
                           
-                          <p className="text-gold font-body text-sm">
+                            <p className="text-pink-500 font-body text-sm">
                             {itemTotalPrice.toFixed(2)} {currency}
                           </p>
 
                           {/* Quantity Controls */}
                           <div className="flex items-center gap-3 mt-3">
                             <button
-                              onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                              className="w-7 h-7 flex items-center justify-center border border-border rounded-md hover:border-gold transition-colors"
+                              onClick={() => updateQuantity(item.product.id, item.quantity - 1, item.variantId)}
+                              className="w-7 h-7 flex items-center justify-center border border-border rounded-md hover:border-pink-50 transition-colors"
                             >
                               <Minus className="w-3 h-3" />
                             </button>
                             <span className="font-body text-sm w-8 text-center">{item.quantity}</span>
                             <button
-                              onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                              className="w-7 h-7 flex items-center justify-center border border-border rounded-md hover:border-gold transition-colors"
+                              onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.variantId)}
+                              className="w-7 h-7 flex items-center justify-center border border-border rounded-md hover:border-pink-50 transition-colors"
                             >
                               <Plus className="w-3 h-3" />
                             </button>
@@ -144,7 +149,7 @@ const CartDrawer = () => {
                         </div>
 
                         <button
-                          onClick={() => removeFromCart(item.product.id)}
+                          onClick={() => removeFromCart(item.product.id, item.variantId)}
                           className="p-2 text-destructive hover:bg-destructive/10 rounded-md transition-colors self-start"
                         >
                           <Trash2 className="w-4 h-4" />
@@ -161,7 +166,7 @@ const CartDrawer = () => {
               <div className="p-6 border-t border-border bg-muted/30">
                 <div className="flex items-center justify-between mb-4">
                   <span className="font-body text-muted-foreground">المجموع</span>
-                  <span className="font-heading text-xl text-gold">{total.toFixed(2)} {currency}</span>
+                  <span className="font-heading text-xl text-pink-500">{total.toFixed(2)} {currency}</span>
                 </div>
                 <Button
                   onClick={handleCheckout}

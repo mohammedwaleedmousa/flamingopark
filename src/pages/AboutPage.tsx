@@ -223,7 +223,7 @@ const AboutPage = () => {
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/80" />
             
-            {/* Subtle Gold Shimmer */}
+            {/* Subtle gold Shimmer */}
             <motion.div 
               className="absolute inset-0 bg-gradient-to-r from-transparent via-gold/5 to-transparent"
               animate={{ x: ['-100%', '100%'] }}

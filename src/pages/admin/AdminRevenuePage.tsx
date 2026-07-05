@@ -157,10 +157,10 @@ const AdminRevenuePage = () => {
       <Tabs value={selectedCountry} onValueChange={(v) => setSelectedCountry(v as 'SA' | 'YE')}>
         <TabsList className="grid w-full max-w-md grid-cols-2">
           <TabsTrigger value="SA" className="gap-2">
-            🇸🇦 السعودية
+            🇸🇦 السعودي
           </TabsTrigger>
           <TabsTrigger value="YE" className="gap-2">
-            🇾🇪 اليمن
+            🇾🇪 اليمني
           </TabsTrigger>
         </TabsList>
 

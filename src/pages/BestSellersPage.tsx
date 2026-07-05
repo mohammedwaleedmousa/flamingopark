@@ -6,6 +6,7 @@ import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/store/useStore";
+import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
 
 const mapProduct = (p: any): Product => ({
   id: p.id,
@@ -27,6 +28,7 @@ const mapProduct = (p: any): Product => ({
 });
 
 const BestSellersPage = () => {
+  const { data: content } = useSiteContent("best_sellers_");
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["best-sellers"],
     queryFn: async () => {
@@ -47,8 +49,8 @@ const BestSellersPage = () => {
       <CartDrawer />
       <main className="pt-24 pb-20">
         <section className="container mx-auto px-6 mb-10 text-center">
-          <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-3">Most Loved</p>
-          <h1 className="font-heading text-4xl md:text-6xl">الأكثر مبيعاً</h1>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-3">{getSiteText(content, "best_sellers_eyebrow", "Most Loved")}</p>
+          <h1 className="font-heading text-4xl md:text-6xl">{getSiteText(content, "best_sellers_title", "الأكثر مبيعاً")}</h1>
         </section>
         <section className="container mx-auto px-6">
           {isLoading ? (
@@ -56,7 +58,7 @@ const BestSellersPage = () => {
               {Array.from({ length: 8 }).map((_, i) => <ProductCardSkeleton key={i} />)}
             </div>
           ) : products.length === 0 ? (
-            <p className="text-center text-muted-foreground py-20">لا توجد منتجات حالياً</p>
+            <p className="text-center text-muted-foreground py-20">{getSiteText(content, "best_sellers_empty", "لا توجد منتجات حالياً")}</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8 animate-fade-in">
               {products.map((p) => <ProductCard key={p.id} product={p} badge="BEST SELLER" />)}

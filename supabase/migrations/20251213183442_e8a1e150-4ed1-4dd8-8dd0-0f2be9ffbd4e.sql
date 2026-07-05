@@ -32,12 +32,12 @@ EXECUTE FUNCTION public.update_updated_at_column();
 
 -- Insert default content entries
 INSERT INTO public.site_content (key, title, content, content_ar, description) VALUES
-('about_title', 'عنوان صفحة من نحن', 'About ERMGOLD', 'عن ارم قولد', 'العنوان الرئيسي لصفحة من نحن'),
-('about_description', 'وصف صفحة من نحن', 'ERMGOLD is your trusted destination for premium gold products and jewelry.', 'ارم قولد هي وجهتك الموثوقة للمنتجات الذهبية والمجوهرات الفاخرة.', 'الوصف الرئيسي لصفحة من نحن'),
+('about_title', 'عنوان صفحة من نحن', 'About ERMgold', 'عن ارم قولد', 'العنوان الرئيسي لصفحة من نحن'),
+('about_description', 'وصف صفحة من نحن', 'ERMgold is your trusted destination for premium gold products and jewelry.', 'ارم قولد هي وجهتك الموثوقة للمنتجات الذهبية والمجوهرات الفاخرة.', 'الوصف الرئيسي لصفحة من نحن'),
 ('about_mission', 'مهمتنا', 'Our mission is to provide the finest quality gold products with exceptional customer service.', 'مهمتنا هي تقديم أجود المنتجات الذهبية مع خدمة عملاء استثنائية.', 'نص المهمة'),
 ('about_vision', 'رؤيتنا', 'To be the leading destination for gold enthusiasts across the region.', 'أن نكون الوجهة الرائدة لعشاق الذهب في المنطقة.', 'نص الرؤية'),
 ('footer_description', 'وصف الفوتر', 'Your trusted destination for premium gold products and jewelry.', 'وجهتك الموثوقة للمنتجات الذهبية والمجوهرات الفاخرة.', 'النص الموجود أسفل الشعار في الفوتر'),
-('footer_copyright', 'حقوق النشر', '© 2024 ERMGOLD. All rights reserved.', '© 2024 ارم قولد. جميع الحقوق محفوظة.', 'نص حقوق النشر'),
+('footer_copyright', 'حقوق النشر', '© 2024 ERMgold. All rights reserved.', '© 2024 ارم قولد. جميع الحقوق محفوظة.', 'نص حقوق النشر'),
 ('contact_email', 'البريد الإلكتروني', 'info@ermgold.com', 'info@ermgold.com', 'البريد الإلكتروني للتواصل'),
 ('contact_phone_sa', 'هاتف السعودية', '+966 XX XXX XXXX', '+966 XX XXX XXXX', 'رقم الهاتف للسعودية'),
 ('contact_phone_ye', 'هاتف اليمن', '+967 XX XXX XXXX', '+967 XX XXX XXXX', 'رقم الهاتف لليمن'),

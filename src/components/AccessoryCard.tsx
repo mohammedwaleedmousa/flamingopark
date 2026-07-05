@@ -27,7 +27,7 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
       {/* Accessory Card - Full Width Image Background Design */}
       <div
         className={`relative w-full h-28 rounded-xl overflow-hidden cursor-pointer border-2 transition-all duration-300 ${
-          quantity > 0 ? 'border-gold shadow-lg shadow-gold/20' : 'border-border hover:border-gold/50'
+          quantity > 0 ? 'border-goldz shadow-lg shadow-gold/20' : 'border-border hover:border-gold/50'
         }`}
         onClick={() => setShowPopup(true)}
       >

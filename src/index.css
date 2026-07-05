@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap');
+@import url("https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;600;700;800&family=Cormorant+Garamond:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700&family=DM+Sans:wght@300;400;500;600;700&display=swap");
 
 @tailwind base;
 @tailwind components;
@@ -6,9 +6,9 @@
 
 @layer base {
   :root {
-    /* Luxury Boutique — Soft Pink / Gold / Warm Neutral */
-    --background: 30 40% 99%;          /* warm white */
-    --foreground: 25 18% 12%;          /* deep charcoal */
+    /* Luxury Boutique — Soft Pink / gold / Warm Neutral */
+    --background: 30 40% 99%; /* warm white */
+    --foreground: 25 18% 12%; /* deep charcoal */
 
     --card: 0 0% 100%;
     --card-foreground: 25 18% 12%;
@@ -17,11 +17,11 @@
     --popover-foreground: 25 18% 12%;
 
     /* Primary = soft rose pink */
-    --primary: 346 70% 62%;            /* soft rose */
+    --primary: 346 70% 62%; /* soft rose */
     --primary-foreground: 0 0% 100%;
     --primary-container: 346 80% 96%;
 
-    --secondary: 40 55% 56%;           /* #C9A962 gold */
+    --secondary: 346 74% 80%; /* soft flamingo pink */
     --secondary-foreground: 25 25% 12%;
 
     --muted: 30 25% 96%;
@@ -42,10 +42,10 @@
 
     --radius: 1rem;
 
-    /* Brand aliases */
-    --gold: 40 55% 56%;
-    --gold-light: 40 60% 72%;
-    --gold-dark: 40 55% 42%;
+    /* Brand aliases — retinted from gold to soft flamingo pink */
+    --gold: 346 74% 80%;
+    --gold-light: 346 85% 92%;
+    --gold-dark: 346 60% 68%;
     --rose: 346 70% 62%;
     --rose-light: 346 80% 92%;
     --beige: 30 35% 96%;
@@ -55,24 +55,77 @@
     --marble: 30 40% 98%;
     --icon-light: 25 18% 18%;
 
-    /* Gradients — rose to gold luxury */
-    --gradient-primary: linear-gradient(135deg, hsl(346 75% 68%) 0%, hsl(40 60% 60%) 100%);
-    --gradient-gold: linear-gradient(135deg, hsl(40 60% 68%) 0%, hsl(40 55% 48%) 100%);
-    --gradient-rose: linear-gradient(135deg, hsl(346 85% 90%) 0%, hsl(346 70% 72%) 100%);
-    --gradient-glow: radial-gradient(circle at 20% 0%, hsl(346 80% 92% / 0.7), transparent 55%), radial-gradient(circle at 80% 100%, hsl(40 70% 88% / 0.55), transparent 50%);
-    --gradient-gold-shine: linear-gradient(90deg, transparent 0%, hsl(0 0% 100% / 0.55) 50%, transparent 100%);
-    --gradient-beige: linear-gradient(180deg, hsl(30 40% 99%) 0%, hsl(30 30% 95%) 100%);
-    --gradient-dark: linear-gradient(180deg, hsl(25 18% 16%) 0%, hsl(25 25% 9%) 100%);
-    --gradient-marble: linear-gradient(135deg, hsl(30 40% 99%) 0%, hsl(346 40% 97%) 50%, hsl(40 40% 97%) 100%);
-    --gradient-warm-hero: linear-gradient(160deg, hsl(346 80% 96%) 0%, hsl(30 40% 97%) 45%, hsl(40 60% 92%) 100%);
+    /* Gradients — soft flamingo pink */
+    --gradient-primary: linear-gradient(
+      135deg,
+      hsl(346 85% 88%) 0%,
+      hsl(346 70% 72%) 100%
+    );
+    --gradient-gold: linear-gradient(
+      135deg,
+      hsl(346 85% 88%) 0%,
+      hsl(346 74% 78%) 100%
+    );
+    --gradient-rose: linear-gradient(
+      135deg,
+      hsl(346 85% 90%) 0%,
+      hsl(346 70% 72%) 100%
+    );
+    --gradient-glow:
+      radial-gradient(
+        circle at 20% 0%,
+        hsl(346 80% 94% / 0.7),
+        transparent 55%
+      ),
+      radial-gradient(
+        circle at 80% 100%,
+        hsl(346 80% 92% / 0.55),
+        transparent 50%
+      );
+    --gradient-gold-shine: linear-gradient(
+      90deg,
+      transparent 0%,
+      hsl(0 0% 100% / 0.55) 50%,
+      transparent 100%
+    );
+    --gradient-beige: linear-gradient(
+      180deg,
+      hsl(30 40% 99%) 0%,
+      hsl(30 30% 95%) 100%
+    );
+    --gradient-dark: linear-gradient(
+      180deg,
+      hsl(25 18% 16%) 0%,
+      hsl(25 25% 9%) 100%
+    );
+    --gradient-marble: linear-gradient(
+      135deg,
+      hsl(30 40% 99%) 0%,
+      hsl(346 40% 97%) 50%,
+      hsl(346 60% 96%) 100%
+    );
+    --gradient-warm-hero: linear-gradient(
+      160deg,
+      hsl(346 80% 96%) 0%,
+      hsl(30 40% 97%) 45%,
+      hsl(346 70% 94%) 100%
+    );
 
     /* Shadows — soft luxury */
-    --shadow-gold: 0 8px 28px -10px hsl(40 55% 56% / 0.28);
-    --shadow-rose: 0 12px 40px -12px hsl(346 70% 62% / 0.30);
+    --shadow-gold: 0 8px 28px -10px hsl(346 74% 78% / 0.28);
+    --shadow-rose: 0 12px 40px -12px hsl(346 70% 62% / 0.3);
     --shadow-elegant: 0 18px 50px -18px hsl(25 18% 14% / 0.18);
     --shadow-card: 0 4px 20px -6px hsl(25 18% 14% / 0.08);
     --shadow-hover: 0 24px 60px -20px hsl(346 50% 30% / 0.22);
-    --shadow-glass: 0 8px 32px -8px hsl(25 18% 14% / 0.10);
+    --shadow-glass: 0 8px 32px -8px hsl(25 18% 14% / 0.1);
+
+    /* Unified flamingo button system */
+    --flamingo-btn-start: 346 84% 86%;
+    --flamingo-btn-end: 346 74% 72%;
+    --flamingo-btn-text: 336 42% 22%;
+    --flamingo-btn-border: 346 58% 68%;
+    --flamingo-btn-hover-start: 346 86% 90%;
+    --flamingo-btn-hover-end: 346 76% 76%;
 
     /* Sidebar — dark warm brown */
     --sidebar-background: 0 0% 100%;
@@ -121,6 +174,12 @@
     --sidebar-accent-foreground: 0 0% 97%;
     --sidebar-border: 0 0% 18%;
     --sidebar-ring: 0 0% 97%;
+    --flamingo-btn-start: 346 54% 36%;
+    --flamingo-btn-end: 346 48% 28%;
+    --flamingo-btn-text: 0 0% 98%;
+    --flamingo-btn-border: 346 48% 42%;
+    --flamingo-btn-hover-start: 346 56% 40%;
+    --flamingo-btn-hover-end: 346 50% 32%;
   }
 }
 
@@ -137,7 +196,17 @@
 
   body {
     @apply bg-background text-foreground font-body antialiased;
-    font-family: 'Inter', 'DM Sans', -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'SF Arabic', 'Geeza Pro', 'Segoe UI', 'Tahoma', sans-serif;
+    font-family:
+      "Inter",
+      "DM Sans",
+      -apple-system,
+      BlinkMacSystemFont,
+      "SF Pro Text",
+      "SF Arabic",
+      "Geeza Pro",
+      "Segoe UI",
+      "Tahoma",
+      sans-serif;
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
     text-rendering: optimizeLegibility;
@@ -145,39 +214,93 @@
     font-synthesis: none;
   }
 
-  h1, h2, h3, h4, h5, h6 {
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
     @apply font-heading;
-    font-family: 'Playfair Display', 'Cormorant Garamond', 'SF Arabic', 'Geeza Pro', Georgia, serif;
+    font-family:
+      "Playfair Display", "Cormorant Garamond", "SF Arabic", "Geeza Pro",
+      Georgia, serif;
     -webkit-font-smoothing: antialiased;
     letter-spacing: 0.005em;
   }
 
   /* Arabic-specific tuning — iOS/Safari render Arabic too tightly without it */
   [dir="rtl"] {
-    font-family: 'Inter', 'SF Arabic', 'Geeza Pro', 'Tahoma', 'Arial', sans-serif;
+    font-family:
+      "Inter", "SF Arabic", "Geeza Pro", "Tahoma", "Arial", sans-serif;
   }
-  [dir="rtl"] h1, [dir="rtl"] h2, [dir="rtl"] h3, [dir="rtl"] h4, [dir="rtl"] h5, [dir="rtl"] h6 {
-    font-family: 'Playfair Display', 'SF Arabic', 'Geeza Pro', Georgia, serif;
+  [dir="rtl"] h1,
+  [dir="rtl"] h2,
+  [dir="rtl"] h3,
+  [dir="rtl"] h4,
+  [dir="rtl"] h5,
+  [dir="rtl"] h6 {
+    font-family: "Playfair Display", "SF Arabic", "Geeza Pro", Georgia, serif;
     line-height: 1.4;
   }
-  [dir="rtl"] p, [dir="rtl"] span, [dir="rtl"] button, [dir="rtl"] a, [dir="rtl"] li {
+  [dir="rtl"] p,
+  [dir="rtl"] span,
+  [dir="rtl"] button,
+  [dir="rtl"] a,
+  [dir="rtl"] li {
     line-height: 1.7;
   }
 
   /* Prevent iOS auto-zoom on input focus */
-  input, textarea, select {
+  input,
+  textarea,
+  select {
     font-size: 16px;
   }
 
   /* Leave room for mobile bottom nav (hidden on md+) */
   @media (max-width: 767px) {
-    body { padding-bottom: 88px; }
+    body {
+      padding-bottom: 88px;
+    }
   }
 }
 
 @layer components {
+  .btn-unified {
+    @apply inline-flex items-center justify-center gap-2 rounded-xl font-medium tracking-wide transition-all duration-300;
+    color: hsl(var(--flamingo-btn-text));
+    background: linear-gradient(
+      135deg,
+      hsl(var(--flamingo-btn-start)) 0%,
+      hsl(var(--flamingo-btn-end)) 100%
+    );
+    border: 1px solid hsl(var(--flamingo-btn-border));
+    box-shadow: 0 10px 30px -14px hsl(346 60% 45% / 0.45);
+  }
+
+  .btn-unified:hover {
+    color: hsl(var(--flamingo-btn-text));
+    background: linear-gradient(
+      135deg,
+      hsl(var(--flamingo-btn-hover-start)) 0%,
+      hsl(var(--flamingo-btn-hover-end)) 100%
+    );
+    transform: translateY(-1px);
+    box-shadow: 0 16px 36px -16px hsl(346 65% 42% / 0.5);
+  }
+
+  .btn-unified:active {
+    transform: translateY(0);
+  }
+
+  .btn-unified:disabled {
+    opacity: 0.55;
+    box-shadow: none;
+    transform: none;
+  }
+
   .text-gold-gradient {
-    background: linear-gradient(135deg, hsl(0 0% 7%) 0%, hsl(0 0% 0%) 100%);
+    background: linear-gradient(135deg, hsl(346 74% 60%) 0%, hsl(346 60% 40%) 100%);
     -webkit-background-clip: text;
     -webkit-text-fill-color: transparent;
     background-clip: text;
@@ -197,17 +320,15 @@
   }
 
   .btn-gold {
-    @apply bg-primary text-primary-foreground hover:bg-accent transition-all duration-300;
-    box-shadow: var(--shadow-gold);
+    @apply btn-unified;
   }
 
   .btn-gold:hover {
-    box-shadow: 0 6px 25px -4px hsl(42 55% 58% / 0.40);
-    transform: translateY(-1px);
+    @apply btn-unified;
   }
 
   .btn-dark {
-    @apply bg-secondary text-secondary-foreground hover:bg-charcoal transition-all duration-300;
+    @apply btn-unified;
   }
 
   .card-luxury {
@@ -223,15 +344,14 @@
 
   /* Luxury gradient CTA — rose to gold */
   .btn-luxury {
-    @apply inline-flex items-center justify-center gap-2 rounded-full text-white font-medium tracking-wide transition-all duration-300;
-    background: var(--gradient-primary);
-    box-shadow: var(--shadow-rose);
+    @apply btn-unified rounded-full;
   }
   .btn-luxury:hover {
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: 0 18px 50px -12px hsl(346 70% 62% / 0.45);
+    transform: translateY(-1px) scale(1.01);
   }
-  .btn-luxury:active { transform: translateY(0) scale(0.99); }
+  .btn-luxury:active {
+    transform: translateY(0) scale(0.99);
+  }
 
   /* Glassmorphism panel */
   .glass-panel {
@@ -249,7 +369,9 @@
     background-clip: text;
   }
 
-  .bg-luxury-glow { background-image: var(--gradient-glow); }
+  .bg-luxury-glow {
+    background-image: var(--gradient-glow);
+  }
 
   .section-beige {
     @apply bg-muted py-16 md:py-24;
@@ -260,7 +382,7 @@
   }
 
   .gold-underline::after {
-    content: '';
+    content: "";
     @apply absolute left-0 bottom-0 w-full h-0.5 bg-primary transform scale-x-0 origin-left transition-transform duration-300;
   }
 
@@ -274,7 +396,7 @@
   }
 
   .shine-effect::before {
-    content: '';
+    content: "";
     position: absolute;
     top: 0;
     left: -100%;
@@ -291,15 +413,20 @@
   /* Flamingo wordmark — Dior-style serif */
   .logo-ermgold,
   .logo-flamingo {
-    font-family: 'Playfair Display', 'Cormorant Garamond', serif;
+    font-family: "Playfair Display", "Cormorant Garamond", serif;
     font-weight: 500;
     letter-spacing: 0.18em;
     text-transform: uppercase;
     color: hsl(var(--primary));
   }
 
-  .hide-scrollbar::-webkit-scrollbar { display: none; }
-  .hide-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .hide-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
 }
 
 @layer utilities {
@@ -307,16 +434,24 @@
     overflow: hidden;
     border-right: 2px solid hsl(var(--primary));
     white-space: nowrap;
-    animation: typing 3s steps(8) forwards, blink 0.75s step-end infinite;
+    animation:
+      typing 3s steps(8) forwards,
+      blink 0.75s step-end infinite;
   }
 
   @keyframes typing {
-    from { width: 0 }
-    to { width: 100% }
+    from {
+      width: 0;
+    }
+    to {
+      width: 100%;
+    }
   }
 
   @keyframes blink {
-    50% { border-color: transparent }
+    50% {
+      border-color: transparent;
+    }
   }
 
   .animate-fade-up {
@@ -354,15 +489,19 @@
     background: linear-gradient(
       90deg,
       hsl(var(--primary)) 0%,
-      hsl(42 80% 70%) 50%,
+      hsl(346 85% 85%) 50%,
       hsl(var(--primary)) 100%
     );
     background-size: 200% 100%;
   }
 
   @keyframes shimmer {
-    0% { background-position: -200% 0 }
-    100% { background-position: 200% 0 }
+    0% {
+      background-position: -200% 0;
+    }
+    100% {
+      background-position: 200% 0;
+    }
   }
 
   .text-balance {
@@ -371,23 +510,45 @@
 
   /* Splash animations */
   @keyframes splashRise {
-    from { transform: translateY(110%); opacity: 0; }
-    to { transform: translateY(0); opacity: 1; }
+    from {
+      transform: translateY(110%);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
   }
-  .animate-splash-rise { animation: splashRise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both; }
+  .animate-splash-rise {
+    animation: splashRise 0.9s cubic-bezier(0.22, 1, 0.36, 1) both;
+  }
 
   @keyframes splashLine {
-    from { width: 0%; }
-    to { width: 100%; }
+    from {
+      width: 0%;
+    }
+    to {
+      width: 100%;
+    }
   }
-  .animate-splash-line { animation: splashLine 1.6s ease-out both; }
+  .animate-splash-line {
+    animation: splashLine 1.6s ease-out both;
+  }
 }
 
 @layer utilities {
   @keyframes heart-beat {
-    0% { transform: scale(1); }
-    30% { transform: scale(1.35); }
-    60% { transform: scale(0.92); }
-    100% { transform: scale(1); }
+    0% {
+      transform: scale(1);
+    }
+    30% {
+      transform: scale(1.35);
+    }
+    60% {
+      transform: scale(0.92);
+    }
+    100% {
+      transform: scale(1);
+    }
   }
 }

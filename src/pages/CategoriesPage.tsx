@@ -4,6 +4,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import { supabase } from "@/integrations/supabase/client";
+import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
 
 interface Category {
   id: string;
@@ -25,6 +26,7 @@ const FALLBACK: Record<string, string> = {
 };
 
 const CategoriesPage = () => {
+  const { data: content } = useSiteContent("categories_page_");
   const { data: categories = [] } = useQuery({
     queryKey: ["categories-parents"],
     queryFn: async () => {
@@ -45,9 +47,9 @@ const CategoriesPage = () => {
       <CartDrawer />
       <main className="pt-24 pb-20">
         <section className="container mx-auto px-6 mb-10 text-center">
-          <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-3">Maison Flamingo</p>
-          <h1 className="font-heading text-4xl md:text-6xl">الأقسام</h1>
-          <p className="text-sm text-muted-foreground mt-3">استكشف عالم فلامنجو الفاخر</p>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-3">{getSiteText(content, "categories_page_eyebrow", "Flamingo Park")}</p>
+          <h1 className="font-heading text-4xl md:text-6xl">{getSiteText(content, "categories_page_title", "الأقسام")}</h1>
+          <p className="text-sm text-muted-foreground mt-3">{getSiteText(content, "categories_page_subtitle", "استكشف عالم فلامنجو الفاخر")}</p>
         </section>
         <section className="container mx-auto px-4 md:px-6">
           <div className="grid grid-cols-2 md:grid-cols-3 gap-3 md:gap-5">

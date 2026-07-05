@@ -1,6 +1,6 @@
 -- Add about page content entries
 INSERT INTO public.site_content (key, title, content, content_ar, description) VALUES
-('about_hero_title', 'عنوان صفحة من نحن', 'Welcome to ERMGOLD', 'مرحباً بكم في إرم جولد', 'العنوان الرئيسي لصفحة من نحن'),
+('about_hero_title', 'عنوان صفحة من نحن', 'Welcome to ERMgold', 'مرحباً بكم في إرم جولد', 'العنوان الرئيسي لصفحة من نحن'),
 ('about_hero_subtitle', 'العنوان الفرعي', 'Your trusted gold partner', 'شريكك الموثوق في الذهب', 'العنوان الفرعي'),
 ('about_hero_image', 'صورة الهيرو', 'https://images.unsplash.com/photo-1610375461246-83df859d849d?w=800', 'https://images.unsplash.com/photo-1610375461246-83df859d849d?w=800', 'صورة الخلفية الرئيسية'),
 ('about_section_1_title', 'عنوان القسم 1', 'Our Story', 'قصتنا', 'عنوان القسم الأول'),
@@ -12,6 +12,6 @@ INSERT INTO public.site_content (key, title, content, content_ar, description) V
 ('about_section_3_title', 'عنوان القسم 3', 'Our Promise', 'وعدنا', 'عنوان القسم الثالث'),
 ('about_section_3_text', 'نص القسم 3', 'Customer satisfaction is our top priority.', 'رضا العملاء هو أولويتنا القصوى.', 'محتوى القسم الثالث'),
 ('about_section_3_image', 'صورة القسم 3', 'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=600', 'https://images.unsplash.com/photo-1617038260897-41a1f14a8ca0?w=600', 'صورة القسم الثالث'),
-('gold_quality_text', 'نص جودة الذهب', '100% Authentic Gold', 'ذهب أصلي 100%', 'نص جودة الذهب في الإحصائيات'),
+('gold_quality_text', 'نص جودة الذهب', '100% Authentic gold', 'ذهب أصلي 100%', 'نص جودة الذهب في الإحصائيات'),
 ('experience_start_date', 'تاريخ بداية الخبرة', '2020-01-01', '2020-01-01', 'تاريخ بداية العمل لحساب سنوات الخبرة تلقائياً')
 ON CONFLICT (key) DO NOTHING;

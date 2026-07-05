@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, MessageCircle, Home, Copy, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import ermgoldLogo from '@/assets/ermgold-logo-new.jpeg';
+import flamingoLogo from '@/assets/ermgold-logo-clean.png';
 import { track } from '@/lib/analytics';
 
 interface SelectedAccessory {
@@ -191,24 +191,12 @@ const OrderConfirmationPage = () => {
 
   if (!orderData) {
     return (
-      <>
-        <Navbar />
-        <div className="min-h-screen bg-background flex items-center justify-center">
-          <div className="text-center space-y-6">
-            <div className="space-y-3">
-              <h2 className="text-2xl font-bold">جاري تحميل بيانات الطلب...</h2>
-              <p className="text-muted-foreground">يرجى الانتظار قليلاً</p>
-            </div>
-            <div className="flex justify-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary" />
-            </div>
-            <Button variant="outline" onClick={() => navigate('/home')}>
-              العودة للرئيسية
-            </Button>
-          </div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold mx-auto mb-4" />
+          <p className="text-muted-foreground">جاري التحميل...</p>
         </div>
-        <Footer />
-      </>
+      </div>
     );
   }
 
@@ -263,7 +251,7 @@ const OrderConfirmationPage = () => {
             {/* Invoice Header */}
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
               <div>
-                <img src={ermgoldLogo} alt="Flamingo" className="h-16 w-auto object-contain" />
+                <img src={flamingoLogo} alt="Flamingo" className="h-16 w-auto object-contain" />
                 <p className="text-sm text-gray-500 mt-1">فاتورة طلب</p>
               </div>
               <div className="text-left">

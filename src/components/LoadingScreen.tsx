@@ -1,35 +1,38 @@
 const LoadingScreen = ({ label = "FLAMINGO" }: { label?: string }) => (
-  <div className="min-h-screen bg-white flex items-center justify-center relative overflow-hidden" dir="rtl">
-    <style>{`
-      @keyframes shimmer {
-        0%, 100% { opacity: 0.6; }
-        50% { opacity: 1; }
-      }
-      .shimmer-text {
-        animation: shimmer 1.5s ease-in-out infinite;
-      }
-    `}</style>
+  <div className="min-h-screen bg-background flex items-center justify-center relative overflow-hidden" dir="rtl">
+    {/* top progress bar */}
+    <div className="absolute top-0 inset-x-0 h-[2px] bg-foreground/5 overflow-hidden">
+      <div className="h-full w-1/3 bg-foreground animate-[loading-bar_1.4s_ease-in-out_infinite]" />
+    </div>
 
-    <div className="flex flex-col items-center justify-center gap-3">
-      <h1 className="shimmer-text text-5xl md:text-7xl font-bold text-black">
-        flamingo
-      </h1>
-      <p className="shimmer-text text-lg md:text-xl text-gray-600 tracking-widest">
-        park
-      </p>
-      <div className="mt-8 flex gap-1">
-        {[0, 1, 2].map((i) => (
-          <div
+    <div className="flex flex-col items-center gap-6">
+      <div className="flex items-center gap-[2px]">
+        {"FLAMINGO".split("").map((ch, i) => (
+          <span
             key={i}
-            className="w-2 h-2 bg-gray-400 rounded-full"
-            style={{
-              animation: `shimmer 1.2s ease-in-out infinite`,
-              animationDelay: `${i * 0.2}s`,
-            }}
-          />
+            className="font-heading text-2xl tracking-[0.3em] text-foreground animate-[letter-fade_1.6s_ease-in-out_infinite]"
+            style={{ animationDelay: `${i * 90}ms` }}
+          >
+            {ch}
+          </span>
         ))}
       </div>
+      <div className="w-24 h-px bg-foreground/10 overflow-hidden">
+        <div className="h-full w-1/2 bg-foreground animate-[loading-bar_1.2s_ease-in-out_infinite]" />
+      </div>
+      <p className="text-[9px] tracking-[0.6em] uppercase text-muted-foreground">جاري التحميل</p>
     </div>
+
+    <style>{`
+      @keyframes loading-bar {
+        0% { transform: translateX(-100%); }
+        100% { transform: translateX(400%); }
+      }
+      @keyframes letter-fade {
+        0%, 100% { opacity: 0.25; transform: translateY(0); }
+        50% { opacity: 1; transform: translateY(-2px); }
+      }
+    `}</style>
   </div>
 );
 

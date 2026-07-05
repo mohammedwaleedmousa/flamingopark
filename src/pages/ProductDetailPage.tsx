@@ -842,12 +842,20 @@ const ProductDetailPage = () => {
                         ids = [];
                       }
 
-                      const withoutCurrent = ids.filter((id) => id !== product.id);
+                      const urlParams = new URLSearchParams(window.location.search);
+                      const queryIds = [
+                        ...urlParams.getAll('id'),
+                        ...String(urlParams.get('ids') || '').split(',').map((v) => v.trim()).filter(Boolean),
+                      ];
+
+                      const merged = Array.from(new Set([...ids, ...queryIds]));
+                      const withoutCurrent = merged.filter((id) => id !== product.id);
                       const nextIds = [...withoutCurrent, product.id].slice(-2);
                       localStorage.setItem(key, JSON.stringify(nextIds));
 
                       const params = new URLSearchParams();
                       nextIds.forEach((id) => params.append('id', id));
+                      params.set('ids', nextIds.join(','));
                       navigate(`/comparison?${params}`);
                     }}
                     className="flex-1 btn-unified py-3 gap-2 text-sm"

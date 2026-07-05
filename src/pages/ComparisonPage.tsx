@@ -83,13 +83,37 @@ const ComparisonPage = () => {
   const { addToCart } = useStore();
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
-  const productIds = searchParams.getAll('id');
+  const productIds = useMemo(() => {
+    const repeated = searchParams.getAll('id');
+    const csv = String(searchParams.get('ids') || '')
+      .split(',')
+      .map((v) => v.trim())
+      .filter(Boolean);
+    return Array.from(new Set([...repeated, ...csv]));
+  }, [searchParams]);
   const MAX_COMPARISON_ITEMS = 2;
   const [showLimitWarning, setShowLimitWarning] = useState(productIds.length > MAX_COMPARISON_ITEMS);
 
   useEffect(() => {
     if (productIds.length > 0) {
-      localStorage.setItem('comparison_product_ids', JSON.stringify(productIds));
+      try {
+        const raw = localStorage.getItem('comparison_product_ids');
+        const saved = raw ? JSON.parse(raw) : [];
+        const savedIds = Array.isArray(saved) ? saved.map(String) : [];
+        const merged = Array.from(new Set([...productIds, ...savedIds])).slice(0, MAX_COMPARISON_ITEMS);
+
+        localStorage.setItem('comparison_product_ids', JSON.stringify(merged));
+
+        // If URL currently carries only one item but we have another remembered item, promote both into URL.
+        if (productIds.length < merged.length) {
+          const params = new URLSearchParams();
+          merged.forEach((id) => params.append('id', id));
+          params.set('ids', merged.join(','));
+          setSearchParams(params);
+        }
+      } catch {
+        localStorage.setItem('comparison_product_ids', JSON.stringify(productIds.slice(0, MAX_COMPARISON_ITEMS)));
+      }
       return;
     }
 
@@ -98,7 +122,9 @@ const ComparisonPage = () => {
       const saved = raw ? JSON.parse(raw) : [];
       if (Array.isArray(saved) && saved.length > 0) {
         const params = new URLSearchParams();
-        saved.slice(0, MAX_COMPARISON_ITEMS).forEach((id: string) => params.append('id', String(id)));
+          const next = Array.from(new Set(saved.map(String).filter(Boolean))).slice(0, MAX_COMPARISON_ITEMS);
+          next.forEach((id: string) => params.append('id', id));
+          params.set('ids', next.join(','));
         setSearchParams(params);
       }
     } catch {
@@ -147,6 +173,7 @@ const ComparisonPage = () => {
     } else {
       const params = new URLSearchParams();
       newIds.forEach((value) => params.append('id', value));
+      params.set('ids', newIds.join(','));
       setSearchParams(params);
       setShowLimitWarning(newIds.length > MAX_COMPARISON_ITEMS);
     }

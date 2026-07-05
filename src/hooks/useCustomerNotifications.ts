@@ -96,7 +96,9 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
   const notificationsQuery = useQuery({
     queryKey: ["customer-notifications", userId, userPhone],
     enabled: !!(userId || userPhone),
-    refetchInterval: 30000,
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: "always",
     queryFn: async (): Promise<CustomerNotification[]> => {
       let query = supabase
         .from("orders")

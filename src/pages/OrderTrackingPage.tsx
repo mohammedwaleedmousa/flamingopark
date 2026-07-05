@@ -37,6 +37,9 @@ const OrderTrackingPage = () => {
   const { data: order, isLoading } = useQuery({
     queryKey: ['tracking-order', selectedOrder],
     enabled: Boolean(selectedOrder),
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: 'always',
     queryFn: async () => {
       const { data, error } = await supabase
         .from('orders')
@@ -51,6 +54,8 @@ const OrderTrackingPage = () => {
   const { data: deliveryCompanyName } = useQuery({
     queryKey: ['tracking-delivery-company', order?.delivery_company_id],
     enabled: Boolean(order?.delivery_company_id),
+    refetchInterval: 60000,
+    refetchOnWindowFocus: true,
     queryFn: async () => {
       const { data, error } = await supabase
         .from('delivery_companies')

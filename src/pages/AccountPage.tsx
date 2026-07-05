@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -19,6 +19,7 @@ import {
 
 const AccountPage = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
@@ -36,6 +37,7 @@ const AccountPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { favorites } = useFavorites();
   const { logout } = useAuthActions();
+  const latestOrderNumber = invoices[0]?.order_number || "";
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
@@ -89,7 +91,34 @@ const AccountPage = () => {
     };
 
     fetchInvoices();
+
+    const intervalId = window.setInterval(fetchInvoices, 15000);
+    const onFocus = () => {
+      fetchInvoices();
+    };
+    const onVisibility = () => {
+      if (document.visibilityState === "visible") fetchInvoices();
+    };
+
+    window.addEventListener("focus", onFocus);
+    document.addEventListener("visibilitychange", onVisibility);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [user?.id, user?.user_metadata?.phone_number]);
+
+  useEffect(() => {
+    if (location.hash !== "#orders") return;
+    const el = document.getElementById("account-orders");
+    if (!el) return;
+    const t = window.setTimeout(() => {
+      el.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+    return () => window.clearTimeout(t);
+  }, [location.hash, invoices.length]);
 
   const resetAddressForm = () => {
     setAddressForm({ label: "", city: "", address: "", notes: "" });
@@ -232,7 +261,7 @@ const AccountPage = () => {
   const mainItems = [
     { to: "/favorites", icon: Heart, label: "المفضلة", desc: `${favorites.length} منتج`, color: "text-primary" },
     { to: "/cart", icon: ShoppingBag, label: "حقيبتي", desc: "عرض السلة الحالية", color: "text-blue-500" },
-    { to: "/account", icon: Package, label: "طلباتي", desc: "سجل الطلبات والفواتير", color: "text-green-500" },
+    { to: "/account#orders", icon: Package, label: "طلباتي", desc: "سجل الطلبات والفواتير", color: "text-green-500" },
   ];
 
   const resolveInvoiceUrl = (raw: string | null) => {
@@ -246,7 +275,13 @@ const AccountPage = () => {
 
   const settingsItems = [
     { to: "/account", icon: Settings, label: "الإعدادات", desc: "تحديث بياناتك الشخصية", color: "text-amber-500" },
-    { to: "/cart", icon: Truck, label: "شحناتي", desc: "تتبع الطلبات الحالية", color: "text-orange-500" },
+    {
+      to: latestOrderNumber ? `/order-tracking?order=${encodeURIComponent(latestOrderNumber)}` : "/account#orders",
+      icon: Truck,
+      label: "شحناتي",
+      desc: latestOrderNumber ? "تتبع آخر شحنة" : "لا توجد شحنات بعد",
+      color: "text-orange-500",
+    },
   ];
 
   const containerVariants = {
@@ -263,6 +298,40 @@ const AccountPage = () => {
   };
 
   const invoiceTotal = invoices.reduce((sum, inv) => sum + Number(inv.total || 0), 0);
+  const shippingStatusMap: Record<string, string> = {
+    pending: "بانتظار التأكيد",
+    confirmed: "تم التأكيد",
+    processing: "قيد التجهيز",
+    shipped: "قيد الشحن",
+    out_for_delivery: "خرج للتسليم",
+    delivered: "تم التسليم",
+    cancelled: "ملغي",
+    canceled: "ملغي",
+  };
+  const shippingProgressMap: Record<string, number> = {
+    pending: 20,
+    confirmed: 35,
+    processing: 55,
+    shipped: 80,
+    out_for_delivery: 90,
+    delivered: 100,
+    cancelled: 0,
+    canceled: 0,
+  };
+  const shippingToneMap: Record<string, string> = {
+    pending: "bg-amber-100 text-amber-700",
+    confirmed: "bg-blue-100 text-blue-700",
+    processing: "bg-indigo-100 text-indigo-700",
+    shipped: "bg-sky-100 text-sky-700",
+    out_for_delivery: "bg-cyan-100 text-cyan-700",
+    delivered: "bg-emerald-100 text-emerald-700",
+    cancelled: "bg-red-100 text-red-700",
+    canceled: "bg-red-100 text-red-700",
+  };
+  const activeShipments = invoices.filter((inv) => {
+    const status = String(inv.status || "").toLowerCase();
+    return !["delivered", "cancelled", "canceled"].includes(status);
+  });
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -310,6 +379,7 @@ const AccountPage = () => {
             initial="hidden"
             animate="visible"
             className="space-y-3 mb-8"
+            id="account-orders"
           >
             <h2 className="font-heading text-lg px-2 text-muted-foreground">سجل فواتيري</h2>
 
@@ -364,6 +434,58 @@ const AccountPage = () => {
                     </div>
                   </div>
                 ))}
+              </div>
+            </div>
+          </motion.div>
+
+          {/* Shipments */}
+          <motion.div
+            variants={containerVariants}
+            initial="hidden"
+            animate="visible"
+            className="space-y-3 mb-8"
+          >
+            <h2 className="font-heading text-lg px-2 text-muted-foreground">شحناتي الحالية</h2>
+            <div className="border border-border rounded-xl bg-card overflow-hidden">
+              <div className="p-4 border-b border-border/60 flex items-center justify-between gap-2">
+                <p className="text-sm font-heading">متابعة الشحن</p>
+                <span className="text-xs text-muted-foreground">{activeShipments.length} شحنة نشطة</span>
+              </div>
+
+              <div className="divide-y divide-border/60">
+                {invoicesLoading && <p className="p-4 text-sm text-muted-foreground">جاري تحميل الشحنات...</p>}
+                {!invoicesLoading && activeShipments.length === 0 && (
+                  <p className="p-4 text-sm text-muted-foreground">لا توجد شحنات جارية الآن</p>
+                )}
+
+                {!invoicesLoading && activeShipments.map((inv) => {
+                  const status = String(inv.status || "").toLowerCase();
+                  const progress = shippingProgressMap[status] ?? 15;
+                  const tone = shippingToneMap[status] || "bg-muted text-muted-foreground";
+                  return (
+                    <div key={`ship-${inv.id}`} className="p-4 flex items-center justify-between gap-3">
+                      <div className="flex-1">
+                        <p className="font-medium text-sm">{inv.order_number}</p>
+                        <div className="mt-1 flex items-center gap-2">
+                          <span className={`text-[11px] px-2 py-0.5 rounded-full ${tone}`}>
+                            {shippingStatusMap[status] || inv.status}
+                          </span>
+                          <span className="text-[11px] text-muted-foreground">{progress}%</span>
+                        </div>
+                        <div className="mt-2 h-1.5 w-full rounded-full bg-muted overflow-hidden">
+                          <div className="h-full bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
+                        </div>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/order-tracking?order=${encodeURIComponent(inv.order_number)}`)}
+                        className="text-xs px-2.5 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        تتبع الآن
+                      </button>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           </motion.div>

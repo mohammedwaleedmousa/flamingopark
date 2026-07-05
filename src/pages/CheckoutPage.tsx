@@ -405,8 +405,10 @@ const CheckoutPage = () => {
       };
       clearCart();
       navigate("/order-confirmation", { state: { orderData } });
-    } catch {
-      toast({ title: "خطأ", description: "حدث خطأ أثناء إرسال الطلب", variant: "destructive" });
+    } catch (error) {
+      console.error("Order submission error:", error);
+      const errorMessage = error instanceof Error ? error.message : "حدث خطأ أثناء إرسال الطلب";
+      toast({ title: "خطأ", description: errorMessage, variant: "destructive" });
       setIsSubmitting(false);
     }
   };

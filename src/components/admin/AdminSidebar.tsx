@@ -25,6 +25,7 @@ const groups: { label: string; items: { title: string; url: string; icon: any }[
       { title: 'لوحة التحكم', url: '/admin', icon: LayoutDashboard },
       { title: 'التحليل المالي', url: '/admin/finance', icon: Wallet },
       { title: 'تحليل العملاء', url: '/admin/customer-intelligence', icon: Brain },
+      { title: 'التحليل الشامل', url: '/admin/analytics-dashboard', icon: BarChart3 },
       { title: 'التقارير والتحليلات', url: '/admin/analytics', icon: BarChart3 },
       { title: 'الإيرادات', url: '/admin/revenue', icon: TrendingUp },
       { title: 'تقرير الأرباح', url: '/admin/profit-report', icon: PieChart },

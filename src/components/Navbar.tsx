@@ -11,6 +11,10 @@ import {
   User,
   CaretLeft,
   SquaresFour,
+  Bell,
+  Info,
+  MapPin,
+  Package,
 } from "phosphor-react";
 import { Globe } from "phosphor-react";
 import { SignOut } from "phosphor-react";
@@ -249,18 +253,23 @@ const Navbar = () => {
                     <Section label="التسوق">
                       <NavItem to="/home" icon={House} label="الرئيسية" />
                       <NavItem to="/categories" icon={SquaresFour} label="جميع الأقسام" />
-                      <NavItem to="/products" icon={Tag} label="جميع المنتجات" />
-                      <NavItem to="/comparison" icon={SquaresFour} label="مقارنة المنتجات" />
-                      <NavItem to="/seasonal-offers" icon={TrendUp} label="العروض الموسمية" />
-                      <NavItem to="/new-arrivals" icon={TrendUp} label="وصل حديثاً" />
+                      <NavItem to="/products" icon={Package} label="جميع المنتجات" />
+                      <NavItem to="/comparison" icon={TrendUp} label="مقارنة المنتجات" />
+                      <NavItem to="/seasonal-offers" icon={Tag} label="العروض الموسمية" />
+                      <NavItem to="/new-arrivals" icon={Package} label="وصل حديثاً" />
                       <NavItem to="/best-sellers" icon={Crown} label="الأكثر مبيعاً" />
-                      
                     </Section>
 
                     <Section label="الحساب">
                       <NavItem to="/cart" icon={ShoppingCart} label="الحقيبة" badge={cartCount || undefined} />
                       <NavItem to="/favorites" icon={Heart} label="المفضلة" badge={favorites.length || undefined} />
                       <NavItem to="/account" icon={User} label="حسابي" />
+                    </Section>
+
+                    <Section label="معلومات">
+                      <NavItem to="/store-info" icon={MapPin} label="معلومات المتجر" />
+                      <NavItem to="/about" icon={Info} label="من نحن" />
+                      <NavItem to="/notifications" icon={Bell} label="الإشعارات" />
                     </Section>
                   </nav>
                 <div className="border-t border-border px-6 py-5 bg-white">

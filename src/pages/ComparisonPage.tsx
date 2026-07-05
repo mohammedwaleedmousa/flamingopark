@@ -84,10 +84,10 @@ const ComparisonPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const navigate = useNavigate();
   const productIds = searchParams.getAll('id');
-  const MAX_COMPARISON_ITEMS = 10;
+  const MAX_COMPARISON_ITEMS = 2;
   const [showLimitWarning, setShowLimitWarning] = useState(productIds.length > MAX_COMPARISON_ITEMS);
 
-  // Limit to max 10 items
+  // Limit to max 2 items
   const limitedProductIds = productIds.slice(0, MAX_COMPARISON_ITEMS);
 
   const { data: products = [], isLoading } = useQuery({
@@ -239,12 +239,11 @@ const ComparisonPage = () => {
               </motion.div>
             )}
 
-            {/* Products Grid */}
-            <div className="overflow-x-auto mb-8">
+            {/* Products Grid - Two columns max */}
+            <div className="mb-8">
               <motion.div
                 layout
-                className="grid gap-4 min-w-full"
-                style={{ gridTemplateColumns: `repeat(${products.length}, minmax(280px, 1fr))` }}
+                className="grid grid-cols-1 md:grid-cols-2 gap-6 auto-rows-max"
               >
                 {/* Product Cards */}
                 {products.map((product, idx) => {
@@ -301,48 +300,48 @@ const ComparisonPage = () => {
 
                         {/* Product Info */}
                         <div className="px-4 py-2 flex-1 flex flex-col">
-                          <h3 className="font-heading text-base line-clamp-2 mb-1">{product.name_ar}</h3>
-                          <p className="text-xs text-muted-foreground mb-1">{product.brand}</p>
+                          <h3 className="font-heading text-lg line-clamp-2 mb-2">{product.name_ar}</h3>
+                          <p className="text-sm text-muted-foreground mb-3">{product.brand}</p>
 
                           {/* Score */}
                           {scoreData && (
-                            <div className="mb-3 flex items-center gap-2">
-                              <div className="flex-1 bg-muted rounded-full h-1.5 overflow-hidden">
+                            <div className="mb-4 flex items-center gap-2">
+                              <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
                                 <div
-                                  className="h-full bg-primary"
+                                  className="h-full bg-gradient-to-r from-primary to-purple-500"
                                   style={{ width: `${scoreData.score}%` }}
                                 />
                               </div>
-                              <span className="text-xs font-bold text-primary">{Math.round(scoreData.score)}</span>
+                              <span className="text-sm font-bold text-primary min-w-fit">{Math.round(scoreData.score)}%</span>
                             </div>
                           )}
 
                           {/* Rating */}
                           {product.rating && (
-                            <div className="flex items-center gap-1 mb-2">
+                            <div className="flex items-center gap-1 mb-3">
                               <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                              <span className="text-xs font-medium">{product.rating.toFixed(1)}</span>
+                              <span className="text-sm font-medium">{product.rating.toFixed(1)}/5</span>
                             </div>
                           )}
 
                           {/* Price */}
                           <div className="flex items-baseline gap-2 mb-3 mt-auto">
-                            <span className="font-heading text-xl text-primary">{Math.round(product.price)}</span>
+                            <span className="font-heading text-2xl text-primary">{Math.round(product.price)}</span>
                             {product.original_price && (
-                              <span className="text-xs line-through text-muted-foreground">
+                              <span className="text-sm line-through text-muted-foreground">
                                 {Math.round(product.original_price)}
                               </span>
                             )}
                           </div>
 
                           {/* Stock Status */}
-                          <div className="mb-3">
+                          <div className="mb-4">
                             {product.in_stock ? (
-                              <span className="text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded">
+                              <span className="text-sm font-medium text-green-600 bg-green-50 px-3 py-1.5 rounded-lg inline-block">
                                 ✓ متوفر
                               </span>
                             ) : (
-                              <span className="text-xs font-medium text-red-600 bg-red-50 px-2 py-1 rounded">
+                              <span className="text-sm font-medium text-red-600 bg-red-50 px-3 py-1.5 rounded-lg inline-block">
                                 ✕ غير متوفر
                               </span>
                             )}
@@ -364,7 +363,7 @@ const ComparisonPage = () => {
                               } as Product, 1);
                             }}
                             disabled={!product.in_stock}
-                            className="btn-unified w-full text-sm py-2 disabled:opacity-50 disabled:cursor-not-allowed gap-2"
+                            className="btn-unified w-full text-sm py-3 disabled:opacity-50 disabled:cursor-not-allowed gap-2"
                           >
                             <ShoppingCart className="w-4 h-4" />
                             {getSiteText(content, 'comparison_add_to_cart', 'أضف للسلة')}
@@ -377,106 +376,96 @@ const ComparisonPage = () => {
               </motion.div>
             </div>
 
-            {/* Specifications Comparison */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="space-y-4"
-            >
-              <h2 className="font-heading text-2xl mb-6 flex items-center gap-2">
-                <TrendingUp className="w-6 h-6 text-primary" />
-                المقارنة التفصيلية
-              </h2>
+            {/* Specifications Comparison - Two column responsive */}
+            {products.length > 0 && (
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                className="space-y-4"
+              >
+                <h2 className="font-heading text-2xl mb-6 flex items-center gap-2">
+                  <TrendingUp className="w-6 h-6 text-primary" />
+                  المقارنة التفصيلية
+                </h2>
 
-              {/* Basic Info */}
-              {[
-                { key: 'brand', label: 'الماركة' },
-                { key: 'category', label: 'الفئة' },
-                { key: 'in_stock', label: 'الحالة' },
-              ].map(spec => (
-                <motion.div key={spec.key} layout>
-                  <div
-                    className="grid gap-4 bg-card rounded-lg p-6 border border-border"
-                    style={{ gridTemplateColumns: `repeat(${products.length}, minmax(200px, 1fr))` }}
-                  >
-                    <div className="font-heading text-foreground text-sm">{spec.label}</div>
-                    {products.map(product => (
-                      <div key={product.id} className="text-sm text-foreground">
-                        {spec.key === 'in_stock' ? (
-                          product.in_stock ? (
-                            <span className="flex items-center gap-2 text-green-600 font-medium">
-                              <Check className="w-4 h-4" /> متوفر
-                            </span>
+                {/* Basic Info */}
+                {[
+                  { key: 'brand', label: 'الماركة' },
+                  { key: 'category', label: 'الفئة' },
+                  { key: 'in_stock', label: 'الحالة' },
+                ].map(spec => (
+                  <motion.div key={spec.key} layout>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-card rounded-lg p-4 md:p-6 border border-border">
+                      <div className="font-heading text-foreground text-sm md:col-span-2">{spec.label}</div>
+                      {products.map(product => (
+                        <div key={product.id} className="text-sm text-foreground bg-muted/30 p-3 rounded">
+                          {spec.key === 'in_stock' ? (
+                            product.in_stock ? (
+                              <span className="flex items-center gap-2 text-green-600 font-medium">
+                                <Check className="w-4 h-4" /> متوفر
+                              </span>
+                            ) : (
+                              <span className="flex items-center gap-2 text-red-600 font-medium">
+                                <X className="w-4 h-4" /> غير متوفر
+                              </span>
+                            )
                           ) : (
-                            <span className="flex items-center gap-2 text-red-600 font-medium">
-                              <X className="w-4 h-4" /> غير متوفر
-                            </span>
-                          )
+                            product[spec.key as keyof typeof product]?.toString() || '-'
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </motion.div>
+                ))}
+
+                {/* Price Comparison */}
+                <motion.div layout>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-card rounded-lg p-4 md:p-6 border border-border">
+                    <div className="font-heading text-foreground text-sm md:col-span-2">السعر الأصلي</div>
+                    {products.map(product => (
+                      <div key={product.id} className="text-sm font-mono text-foreground bg-muted/30 p-3 rounded">
+                        {product.original_price || product.price}
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+
+                {/* Discount Comparison */}
+                <motion.div layout>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-card rounded-lg p-4 md:p-6 border border-border">
+                    <div className="font-heading text-foreground text-sm md:col-span-2">الخصم</div>
+                    {products.map(product => (
+                      <div key={product.id} className="text-sm font-semibold bg-muted/30 p-3 rounded">
+                        {product.discount ? (
+                          <span className="text-green-600">-{product.discount}%</span>
                         ) : (
-                          product[spec.key as keyof typeof product]?.toString() || '-'
+                          <span className="text-muted-foreground">-</span>
                         )}
                       </div>
                     ))}
                   </div>
                 </motion.div>
-              ))}
 
-              {/* Price Comparison */}
-              <motion.div layout>
-                <div
-                  className="grid gap-4 bg-card rounded-lg p-6 border border-border"
-                  style={{ gridTemplateColumns: `repeat(${products.length}, minmax(200px, 1fr))` }}
-                >
-                  <div className="font-heading text-foreground text-sm">السعر الأصلي</div>
-                  {products.map(product => (
-                    <div key={product.id} className="text-sm font-mono text-foreground">
-                      {product.original_price || product.price}
-                    </div>
-                  ))}
-                </div>
+                {/* Rating Comparison */}
+                <motion.div layout>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-card rounded-lg p-4 md:p-6 border border-border">
+                    <div className="font-heading text-foreground text-sm md:col-span-2">التقييم</div>
+                    {products.map(product => (
+                      <div key={product.id} className="text-sm bg-muted/30 p-3 rounded">
+                        {product.rating ? (
+                          <div className="flex items-center gap-1">
+                            <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
+                            <span className="font-medium">{product.rating.toFixed(1)}/5</span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
               </motion.div>
-
-              {/* Discount Comparison */}
-              <motion.div layout>
-                <div
-                  className="grid gap-4 bg-card rounded-lg p-6 border border-border"
-                  style={{ gridTemplateColumns: `repeat(${products.length}, minmax(200px, 1fr))` }}
-                >
-                  <div className="font-heading text-foreground text-sm">الخصم</div>
-                  {products.map(product => (
-                    <div key={product.id} className="text-sm font-semibold">
-                      {product.discount ? (
-                        <span className="text-green-600">-{product.discount}%</span>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-
-              {/* Rating Comparison */}
-              <motion.div layout>
-                <div
-                  className="grid gap-4 bg-card rounded-lg p-6 border border-border"
-                  style={{ gridTemplateColumns: `repeat(${products.length}, minmax(200px, 1fr))` }}
-                >
-                  <div className="font-heading text-foreground text-sm">التقييم</div>
-                  {products.map(product => (
-                    <div key={product.id} className="text-sm">
-                      {product.rating ? (
-                        <div className="flex items-center gap-1">
-                          <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                          <span className="font-medium">{product.rating.toFixed(1)}/5</span>
-                        </div>
-                      ) : (
-                        <span className="text-muted-foreground">-</span>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              </motion.div>
-            </motion.div>
+            )}
           </section>
         )}
       </main>

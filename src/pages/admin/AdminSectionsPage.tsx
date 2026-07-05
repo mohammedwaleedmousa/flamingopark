@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Plus, Pencil, Trash2, GripVertical, LayoutGrid } from 'lucide-react';
 import { toast } from 'sonner';
+import AdminPageHeader from '@/components/admin/AdminPageHeader';
 
 
 interface HomepageSection {
@@ -211,21 +212,26 @@ const AdminSectionsPage = () => {
   };
 
   return (
-    <div className="p-4 md:p-6">
-      <div className="p-4 md:p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <LayoutGrid className="w-6 h-6 text-primary" />
-            <h1 className="text-xl md:text-2xl font-heading text-foreground">أقسام الصفحة الرئيسية</h1>
-          </div>
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogTrigger asChild>
-              <Button onClick={() => resetForm()}>
-                <Plus className="w-4 h-4 ml-2" />
-                إضافة قسم
-              </Button>
-            </DialogTrigger>
-            <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
+    <div className="space-y-6 max-w-[1400px] mx-auto p-4 md:p-6" dir="rtl">
+      <AdminPageHeader
+        category="المحتوى"
+        title="أقسام الصفحة الرئيسية"
+        description={`${sections.length} أقسام نشطة`}
+        actions={[
+          {
+            label: "إضافة قسم",
+            icon: Plus,
+            onClick: () => {
+              resetForm();
+              setIsDialogOpen(true);
+            },
+            variant: "primary",
+          },
+        ]}
+      />
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
               <DialogHeader>
                 <DialogTitle>{editingSection ? 'تعديل القسم' : 'إضافة قسم جديد'}</DialogTitle>
               </DialogHeader>
@@ -359,7 +365,6 @@ const AdminSectionsPage = () => {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
 
         {isLoading ? (
           <div className="text-center py-8">جاري التحميل...</div>
@@ -433,7 +438,6 @@ const AdminSectionsPage = () => {
             </CardContent>
           </Card>
         )}
-      </div>
     </div>
   );
 };

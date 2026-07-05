@@ -253,7 +253,7 @@ const GroupItems = ({
                 end={item.url === '/admin'}
                 onClick={onNav}
                 className={cn(
-                  "relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 ease-out",
+                  "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 ease-out",
                   "focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
 
                   active
@@ -272,10 +272,10 @@ const GroupItems = ({
                 )}
                 <item.icon
                   className={cn(
-                    'shrink-0 transition-all duration-300 ease-out',
+                    'shrink-0 w-5 h-5 transition-all duration-300 ease-out',
                     active
-  ? "text-gold bg-pink-50 rounded-xl p-2"
-  : "text-black/60 group-hover:text-gold group-hover:bg-pink-50 rounded-xl p-2"
+  ? "text-gold"
+  : "text-black/70 group-hover:text-gold"
                   )}
                 />
                 {!collapsed && (

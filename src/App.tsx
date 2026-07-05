@@ -190,7 +190,6 @@ const App = () => {
               <Route path="settings" element={<AdminSettingsPage />} />
               <Route path="finance" element={<AdminFinanceDashboard />} />
               <Route path="customer-intelligence" element={<AdminCustomerIntelligence/>} />
-              <Route path="analytics-dashboard" element={<AdminAnalyticsDashboard/>} />
             </Route>
 
             <Route path="/mohammed" element={<MohammedInvoicesPage />} />

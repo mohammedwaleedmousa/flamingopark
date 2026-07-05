@@ -8,6 +8,7 @@ import { useStore } from "@/store/useStore";
 import SplashScreen from "@/components/SplashScreen";
 import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
+import { DateRangeProvider } from "@/lib/analytics/dateRange";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
@@ -126,11 +127,12 @@ const App = () => {
       {showSplash && (
         <SplashScreen onDone={() => { sessionStorage.setItem("flamingo-splash-seen", "1"); setShowSplash(false); }} />
       )}
-      <BrowserRouter>
-        <ScrollToTop />
-        <AnalyticsTracker />
-        <Suspense fallback={<RouteFallback />}>
-          <Routes>
+      <DateRangeProvider>
+        <BrowserRouter>
+          <ScrollToTop />
+          <AnalyticsTracker />
+          <Suspense fallback={<RouteFallback />}>
+            <Routes>
             <Route path="/" element={<AuthRedirect />} />
             <Route path="/index" element={<AuthRedirect />} />
             <Route path="/index.html" element={<AuthRedirect />} />
@@ -198,9 +200,10 @@ const App = () => {
 
             <Route path="/mohammed" element={<MohammedInvoicesPage />} />
             <Route path="*" element={<NotFound />} />
-          </Routes>
-        </Suspense>
-      </BrowserRouter>
+            </Routes>
+          </Suspense>
+        </BrowserRouter>
+      </DateRangeProvider>
     </TooltipProvider>
   </QueryClientProvider>
 );

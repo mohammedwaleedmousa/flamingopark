@@ -47,20 +47,29 @@ const BrandsStrip = () => {
   }, [brands, country]);
 
   const fallback: BrandViewModel[] = [
-    { id: "fallback-1", name: "Flamingo" },
-    { id: "fallback-2", name: "Luxury gold" },
-    { id: "fallback-3", name: "Modern gold" },
-    { id: "fallback-4", name: "Pearl Collection" },
-    { id: "fallback-5", name: "Heritage" },
+    { id: "fallback-1", name: "Louis Vuitton" },
+    { id: "fallback-2", name: "Gucci" },
+    { id: "fallback-3", name: "Dior" },
+    { id: "fallback-4", name: "Prada" },
+    { id: "fallback-5", name: "Chanel" },
+    { id: "fallback-6", name: "Hermes" },
+    { id: "fallback-7", name: "Burberry" },
+    { id: "fallback-8", name: "Versace" },
+    { id: "fallback-9", name: "Balenciaga" },
+    { id: "fallback-10", name: "Bvlgari" },
   ];
 
-  const renderBrands: BrandViewModel[] =
-    visibleBrands.length > 0
-      ? visibleBrands.map((b) => ({
-          id: b.id,
-          name: b.name,
-        }))
-      : fallback;
+  const dbBrands: BrandViewModel[] = visibleBrands.map((b) => ({
+    id: b.id,
+    name: b.name,
+  }));
+
+  const renderBrands: BrandViewModel[] = (() => {
+    if (dbBrands.length === 0) return fallback;
+    const existing = new Set(dbBrands.map((b) => b.name.trim().toLowerCase()));
+    const missingFamous = fallback.filter((b) => !existing.has(b.name.trim().toLowerCase()));
+    return [...dbBrands, ...missingFamous];
+  })();
 
   const handlePointerDown = (clientX: number) => {
     if (!trackRef.current) return;

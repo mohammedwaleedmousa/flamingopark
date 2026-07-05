@@ -55,8 +55,19 @@ const modeOf = (row: any): CurrencyMode => {
   return "YER_SOUTH";
 };
 
+const SAR_RATE_BY_MODE: Record<CurrencyMode, number> = {
+  SAR: 1,
+  YER_SOUTH: 1 / 410,
+  YER_NORTH: 1 / 140,
+};
+
+const toSar = (amount: number, row: any) => {
+  const mode = modeOf(row);
+  return Number(amount || 0) * (SAR_RATE_BY_MODE[mode] ?? 1);
+};
+
 const fmt = (n: number) => new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 0 }).format(n);
-const currency = "متعدد العملات";
+const currency = "ر.س";
 
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -81,6 +92,52 @@ const AdminDashboard = () => {
     conversion: 0,
   });
 
+  const loadTodayStats = async () => {
+    const dayStart = new Date();
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date();
+    dayEnd.setHours(23, 59, 59, 999);
+
+    const [ordersRes, eventsRes] = await Promise.all([
+      supabase
+        .from("orders")
+        .select("total,status,created_at,country,currency_mode")
+        .gte("created_at", dayStart.toISOString())
+        .lte("created_at", dayEnd.toISOString()),
+      supabase
+        .from("analytics_events")
+        .select("session_id,event_type,created_at")
+        .gte("created_at", dayStart.toISOString())
+        .lte("created_at", dayEnd.toISOString()),
+    ]);
+
+    const ordersRows = ordersRes.error ? [] : (ordersRes.data ?? []);
+    const validOrders = ordersRows.filter((o: any) => {
+      const status = String(o?.status || "").toLowerCase();
+      return status !== "cancelled" && status !== "canceled";
+    });
+
+    const revenue = validOrders.reduce((sum: number, o: any) => sum + toSar(Number(o?.total ?? 0), o), 0);
+    const orders = validOrders.length;
+
+    const eventRows = eventsRes.error ? [] : (eventsRes.data ?? []);
+    const visitorSessions = new Set<string>();
+    const checkoutSessions = new Set<string>();
+
+    for (const ev of eventRows as any[]) {
+      const sid = String(ev?.session_id || "").trim();
+      if (!sid) continue;
+      visitorSessions.add(sid);
+      const type = String(ev?.event_type || "").toLowerCase();
+      if (type === "checkout" || type === "purchase") checkoutSessions.add(sid);
+    }
+
+    const visitors = visitorSessions.size;
+    const conversion = visitors > 0 ? Number(((checkoutSessions.size / visitors) * 100).toFixed(1)) : 0;
+
+    setTodayStats({ revenue, orders, visitors, conversion });
+  };
+
   // Use analytics hooks which respond to the global DateRange
   const rev = useRevenueSummary();
   const ord = useOrdersSummary();
@@ -91,6 +148,12 @@ const AdminDashboard = () => {
   const lowQ = useLowStock();
 
   const revenueByCurrency = rev.data?.byCurrency || {
+    SAR: { revenue: 0, orders: 0 },
+    YER_SOUTH: { revenue: 0, orders: 0 },
+    YER_NORTH: { revenue: 0, orders: 0 },
+  };
+
+  const revenueByCurrencyNative = rev.data?.byCurrencyNative || {
     SAR: { revenue: 0, orders: 0 },
     YER_SOUTH: { revenue: 0, orders: 0 },
     YER_NORTH: { revenue: 0, orders: 0 },
@@ -132,8 +195,24 @@ const AdminDashboard = () => {
     setRecent(recentQ.data ?? []);
     setLowStock(lowQ.data ?? []);
     setPendingCount((recentQ.data ?? []).filter((o: any) => o.status === "pending").length);
-    setTodayStats({ revenue: 0, orders: 0, visitors: 0, conversion: 0 });
   }, [rev.data, ord.data, cust.data, ts.data, profit.data, recentQ.data, lowQ.data]);
+
+  useEffect(() => {
+    let active = true;
+
+    const refresh = async () => {
+      if (!active) return;
+      await loadTodayStats();
+    };
+
+    refresh();
+    const intervalId = window.setInterval(refresh, 15000);
+
+    return () => {
+      active = false;
+      window.clearInterval(intervalId);
+    };
+  }, []);
 
   const kpis = [
     {
@@ -194,6 +273,7 @@ const AdminDashboard = () => {
           <p className="text-xs text-muted-foreground uppercase tracking-wider">لوحة التحكم</p>
           <h1 className="font-heading text-2xl md:text-3xl text-foreground mt-1">نظرة عامة على المتجر</h1>
           <p className="text-sm text-muted-foreground mt-1">أداء آخر 30 يوم مقارنة بالـ 30 السابقة</p>
+          <p className="text-xs text-muted-foreground mt-1">المجاميع العامة موحدة إلى ر.س مع استبعاد الطلبات الملغاة، وبطاقات العملات تعرض القيمة الأصلية مع المعادل بالريال السعودي.</p>
         </div>
         <div className="flex items-center gap-2">
           {/* Analytics Button */}
@@ -286,11 +366,11 @@ const AdminDashboard = () => {
           <div key={mode} className="bg-white border rounded-2xl p-4">
             <p className="text-xs text-muted-foreground">{CURRENCY_META[mode].label}</p>
             <p className="text-lg font-semibold mt-1">
-              {fmt(revenueByCurrency[mode].revenue)} {CURRENCY_META[mode].symbol}
+              {fmt(revenueByCurrencyNative[mode].revenue)} {CURRENCY_META[mode].symbol}
             </p>
-            <p className="text-xs text-muted-foreground mt-1">{fmt(revenueByCurrency[mode].orders)} طلب</p>
+            <p className="text-xs text-muted-foreground mt-1">{fmt(revenueByCurrencyNative[mode].orders)} طلب</p>
             <p className="text-xs text-violet-700 mt-1">
-              صافي الربح: {fmt(profitByCurrency[mode].profit)} {CURRENCY_META[mode].symbol}
+              ما يعادل: {fmt(revenueByCurrency[mode].revenue)} ر.س
             </p>
           </div>
         ))}
@@ -535,7 +615,7 @@ const AdminDashboard = () => {
 
                   {/* amount */}
                   <span className="text-sm font-semibold tabular-nums text-foreground">
-                    {fmt(parseFloat(o.total) || 0)} {CURRENCY_META[modeOf(o)].symbol}
+                    {fmt(toSar(parseFloat(o.total) || 0, o))} ر.س
                   </span>
                 </div>
               </div>

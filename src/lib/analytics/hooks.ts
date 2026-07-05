@@ -4,32 +4,62 @@ import { useDateRange } from "./dateRange";
 
 export function useRevenueSummary() {
   const { range } = useDateRange();
-  return useQuery({ queryKey: ["revenueSummary", range], queryFn: () => api.getRevenueSummary(range.start, range.end) });
+  return useQuery({
+    queryKey: ["revenueSummary", range],
+    queryFn: () => api.getRevenueSummary(range.start, range.end),
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
+  });
 }
 
 export function useOrdersSummary() {
   const { range } = useDateRange();
-  return useQuery({ queryKey: ["ordersSummary", range], queryFn: () => api.getOrdersSummary(range.start, range.end) });
+  return useQuery({
+    queryKey: ["ordersSummary", range],
+    queryFn: () => api.getOrdersSummary(range.start, range.end),
+    refetchInterval: 15000,
+    refetchOnWindowFocus: true,
+  });
 }
 
 export function useCustomersCount() {
   const { range } = useDateRange();
-  return useQuery({ queryKey: ["customersCount", range], queryFn: () => api.getCustomersCount(range.start, range.end) });
+  return useQuery({
+    queryKey: ["customersCount", range],
+    queryFn: () => api.getCustomersCount(range.start, range.end),
+    refetchInterval: 30000,
+    refetchOnWindowFocus: true,
+  });
 }
 
 export function useRevenueTimeseries() {
   const { range } = useDateRange();
-  return useQuery({ queryKey: ["revenueTimeseries", range], queryFn: () => api.getRevenueTimeseries(range.start, range.end) });
+  return useQuery({
+    queryKey: ["revenueTimeseries", range],
+    queryFn: () => api.getRevenueTimeseries(range.start, range.end),
+    refetchInterval: 20000,
+    refetchOnWindowFocus: true,
+  });
 }
 
 export function useProfitSummary() {
   const { range } = useDateRange();
-  return useQuery({ queryKey: ["profitSummary", range], queryFn: () => api.getProfitSummary(range.start, range.end) });
+  return useQuery({
+    queryKey: ["profitSummary", range],
+    queryFn: () => api.getProfitSummary(range.start, range.end),
+    refetchInterval: 20000,
+    refetchOnWindowFocus: true,
+  });
 }
 
 export function useRecentOrders() {
   const { range } = useDateRange();
-  return useQuery({ queryKey: ["recentOrders", range], queryFn: () => api.getRecentOrders(range.start, range.end) });
+  return useQuery({
+    queryKey: ["recentOrders", range],
+    queryFn: () => api.getRecentOrders(range.start, range.end),
+    refetchInterval: 10000,
+    refetchOnWindowFocus: true,
+  });
 }
 
 export function useLowStock() {

@@ -21,6 +21,7 @@ import { Wallet, TrendingUp, TrendingDown, BookOpen, Receipt, ArrowUpRight, Pigg
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
 import { CURRENCY_RATES } from "@/lib/currency";
+import { toast } from "@/hooks/use-toast";
 
 const currency = "ر.س";
 const fmt = (n: number) => new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 0 }).format(n);
@@ -140,6 +141,7 @@ export default function AdminFinanceDashboard() {
     YER_SOUTH: 0,
     YER_NORTH: 0,
   });
+  const [overviewError, setOverviewError] = useState<string | null>(null);
 
   const consolidatedRevenueSAR = useMemo(() => {
     const sar = revenueByCurrency.SAR;
@@ -148,10 +150,28 @@ export default function AdminFinanceDashboard() {
     return sar + southToSar + northToSar;
   }, [revenueByCurrency]);
 
-  useEffect(() => { loadOverview(); }, [rangeMode, range.start, range.end]);
+  useEffect(() => {
+    loadOverview();
+
+    const intervalId = window.setInterval(() => {
+      loadOverview();
+    }, 15000);
+
+    const onFocus = () => {
+      loadOverview();
+    };
+
+    window.addEventListener("focus", onFocus);
+
+    return () => {
+      window.clearInterval(intervalId);
+      window.removeEventListener("focus", onFocus);
+    };
+  }, [rangeMode, range.start, range.end]);
 
   async function loadOverview(){
     setLoadingOverview(true);
+    setOverviewError(null);
     const now = new Date();
 
     // Prefer explicit DateRange from the global picker when provided
@@ -170,109 +190,151 @@ export default function AdminFinanceDashboard() {
     const daysSpan = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
     const monthMode = rangeMode === "12m" || daysSpan > 365;
 
-    const expensesQueryWithMode = supabase
-      .from("expenses")
-      .select("amount,expense_date,category_id,currency_mode")
-      .gte("expense_date", startDate.toISOString())
-      .lte("expense_date", new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString());
-
-    const [ordersRes, expensesRes, refundsRes, txRes] = await Promise.all([
-      supabase.from("orders").select("total,created_at,status,currency_mode,country").gte("created_at", startDate.toISOString()).lte("created_at", new Date(endDate.getTime() + 24*60*60*1000 -1).toISOString()).neq("status", "cancelled"),
-      expensesQueryWithMode,
-      supabase.from("refunds").select("amount,created_at,order_id,orders(currency_mode,country)").gte("created_at", startDate.toISOString()).lte("created_at", new Date(endDate.getTime() + 24*60*60*1000 -1).toISOString()),
-      supabase.from("financial_transactions").select("id,entry_date,description,reference,transaction_lines(debit,credit)").gte("entry_date", startDate.toISOString()).lte("entry_date", endDate.toISOString()).order("entry_date", { ascending: false }).limit(8),
-    ]);
-
-    let expensesData = (expensesRes.data || []) as any[];
-    if (expensesRes.error && String(expensesRes.error.message || "").toLowerCase().includes("currency_mode")) {
-      const fallbackRes = await supabase
+    try {
+      const expensesQueryWithMode = supabase
         .from("expenses")
-        .select("amount,expense_date,category_id")
+        .select("amount,expense_date,category_id,currency_mode")
         .gte("expense_date", startDate.toISOString())
         .lte("expense_date", new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString());
-      expensesData = ((fallbackRes.data || []) as any[]).map((e) => ({ ...e, currency_mode: "SAR" }));
-    }
 
-    const orders = (ordersRes.data || []) as any[];
-    const expenses = expensesData.filter(e => new Date(e.expense_date) >= startDate);
-    const refunds = ((refundsRes.data || []) as any[]).filter(r => new Date(r.created_at) >= startDate);
+      const [ordersRes, expensesRes, refundsRes, txRes] = await Promise.all([
+        supabase
+          .from("orders")
+          .select("total,created_at,status,currency_mode,country")
+          .gte("created_at", startDate.toISOString())
+          .lte("created_at", new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString())
+          .not("status", "in", "(cancelled,canceled)"),
+        expensesQueryWithMode,
+        supabase
+          .from("refunds")
+          .select("amount,created_at,order_id,orders(currency_mode,country)")
+          .gte("created_at", startDate.toISOString())
+          .lte("created_at", new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()),
+        supabase
+          .from("financial_transactions")
+          .select("id,entry_date,description,reference,transaction_lines(debit,credit)")
+          .gte("entry_date", startDate.toISOString())
+          .lte("entry_date", endDate.toISOString())
+          .order("entry_date", { ascending: false })
+          .limit(8),
+      ]);
 
-    const importedEntries = importsInRange.filter((entry) => entry.source === "import");
+      if (ordersRes.error) throw ordersRes.error;
+      if (txRes.error) throw txRes.error;
 
-    const buckets: Record<string, { revenue: number; expenses: number }> = {};
-    const keyOf = (d: Date) => monthMode ? d.toISOString().slice(0,7) : d.toISOString().slice(0,10);
-    const steps = monthMode
-      ? Math.max(1, (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth()) + 1)
-      : daysSpan;
-    for (let i = steps - 1; i >= 0; i--) {
-      const d = new Date(startDate);
-      if (monthMode) d.setMonth(startDate.getMonth() + (steps - 1 - i)); else d.setDate(startDate.getDate() + (steps - 1 - i));
-      buckets[keyOf(d)] = { revenue: 0, expenses: 0 };
-    }
+      let expensesData = (expensesRes.data || []) as any[];
+      if (expensesRes.error && String(expensesRes.error.message || "").toLowerCase().includes("currency_mode")) {
+        const fallbackRes = await supabase
+          .from("expenses")
+          .select("amount,expense_date,category_id")
+          .gte("expense_date", startDate.toISOString())
+          .lte("expense_date", new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString());
+        if (fallbackRes.error) throw fallbackRes.error;
+        expensesData = ((fallbackRes.data || []) as any[]).map((e) => ({ ...e, currency_mode: "SAR" }));
+      } else if (expensesRes.error) {
+        throw expensesRes.error;
+      }
 
-    orders.forEach(o => {
-      const k = keyOf(new Date(o.created_at));
-      if (!buckets[k]) return;
-      const mode = resolveOrderMode(o);
-      buckets[k].revenue += toSAR(parseFloat(o.total) || 0, mode);
-    });
-    expenses.forEach(e => {
-      const k = keyOf(new Date(e.expense_date));
-      if (!buckets[k]) return;
-      buckets[k].expenses += toSAR(parseFloat(e.amount) || 0, resolveExpenseMode(e));
-    });
-    refunds.forEach(r => {
-      const k = keyOf(new Date(r.created_at));
-      if (!buckets[k]) return;
-      const linked = Array.isArray((r as any).orders) ? (r as any).orders[0] : (r as any).orders;
-      const mode = resolveOrderMode({
-        currency_mode: linked?.currency_mode ?? null,
-        country: linked?.country ?? null,
+      let refundsData = (refundsRes.data || []) as any[];
+      if (refundsRes.error) {
+        const fallbackRefunds = await supabase
+          .from("refunds")
+          .select("amount,created_at")
+          .gte("created_at", startDate.toISOString())
+          .lte("created_at", new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString());
+        if (fallbackRefunds.error) throw fallbackRefunds.error;
+        refundsData = fallbackRefunds.data || [];
+      }
+
+      const orders = (ordersRes.data || []) as any[];
+      const expenses = expensesData.filter((e) => new Date(e.expense_date) >= startDate);
+      const refunds = refundsData.filter((r) => new Date(r.created_at) >= startDate);
+
+      const importedEntries = importsInRange.filter((entry) => entry.source === "import");
+
+      const buckets: Record<string, { revenue: number; expenses: number }> = {};
+      const keyOf = (d: Date) => monthMode ? d.toISOString().slice(0,7) : d.toISOString().slice(0,10);
+      const steps = monthMode
+        ? Math.max(1, (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth()) + 1)
+        : daysSpan;
+      for (let i = steps - 1; i >= 0; i--) {
+        const d = new Date(startDate);
+        if (monthMode) d.setMonth(startDate.getMonth() + (steps - 1 - i)); else d.setDate(startDate.getDate() + (steps - 1 - i));
+        buckets[keyOf(d)] = { revenue: 0, expenses: 0 };
+      }
+
+      orders.forEach((o) => {
+        const k = keyOf(new Date(o.created_at));
+        if (!buckets[k]) return;
+        const mode = resolveOrderMode(o);
+        buckets[k].revenue += toSAR(parseFloat(o.total) || 0, mode);
       });
-      buckets[k].expenses += toSAR(parseFloat(r.amount) || 0, mode);
-    });
-    importedEntries.forEach((entry) => {
-      const k = keyOf(new Date(entry.date));
-      if (!buckets[k]) return;
-      if (entry.amount >= 0) buckets[k].revenue += entry.amount;
-      else buckets[k].expenses += Math.abs(entry.amount);
-    });
-
-    const data = Object.entries(buckets).map(([label, v]) => ({
-      label: monthMode ? label.slice(2) : label.slice(5),
-      revenue: Math.round(v.revenue),
-      expenses: Math.round(v.expenses),
-      profit: Math.round(v.revenue - v.expenses),
-    }));
-
-    const importedRevenue = importedEntries.reduce((s, e) => s + (e.amount > 0 ? e.amount : 0), 0);
-    const importedExpenses = importedEntries.reduce((s, e) => s + (e.amount < 0 ? Math.abs(e.amount) : 0), 0);
-
-    const groupedRevenue: Record<CurrencyMode, number> = {
-      SAR: 0,
-      YER_SOUTH: 0,
-      YER_NORTH: 0,
-    };
-    orders.forEach((order) => {
-      const mode = resolveOrderMode(order);
-      groupedRevenue[mode] += parseFloat(order.total) || 0;
-    });
-
-    const sumRev = orders.reduce((s, o) => s + toSAR(parseFloat(o.total) || 0, resolveOrderMode(o)), 0) + importedRevenue;
-    const sumExp = expenses.reduce((s, e) => s + toSAR(parseFloat(e.amount) || 0, resolveExpenseMode(e)), 0) + importedExpenses;
-    const sumRef = refunds.reduce((s, r) => {
-      const linked = Array.isArray((r as any).orders) ? (r as any).orders[0] : (r as any).orders;
-      const mode = resolveOrderMode({
-        currency_mode: linked?.currency_mode ?? null,
-        country: linked?.country ?? null,
+      expenses.forEach((e) => {
+        const k = keyOf(new Date(e.expense_date));
+        if (!buckets[k]) return;
+        buckets[k].expenses += toSAR(parseFloat(e.amount) || 0, resolveExpenseMode(e));
       });
-      return s + toSAR(parseFloat(r.amount) || 0, mode);
-    }, 0);
+      refunds.forEach((r) => {
+        const k = keyOf(new Date(r.created_at));
+        if (!buckets[k]) return;
+        const linked = Array.isArray((r as any).orders) ? (r as any).orders[0] : (r as any).orders;
+        const mode = resolveOrderMode({
+          currency_mode: linked?.currency_mode ?? null,
+          country: linked?.country ?? null,
+        });
+        buckets[k].expenses += toSAR(parseFloat(r.amount) || 0, mode);
+      });
+      importedEntries.forEach((entry) => {
+        const k = keyOf(new Date(entry.date));
+        if (!buckets[k]) return;
+        if (entry.amount >= 0) buckets[k].revenue += entry.amount;
+        else buckets[k].expenses += Math.abs(entry.amount);
+      });
 
-    setSeries(data);
-    setKpis({ revenue: sumRev, expenses: sumExp + sumRef, profit: sumRev - sumExp - sumRef, refunds: sumRef });
-    setRevenueByCurrency(groupedRevenue);
-    setLoadingOverview(false);
+      const data = Object.entries(buckets).map(([label, v]) => ({
+        label: monthMode ? label.slice(2) : label.slice(5),
+        revenue: Math.round(v.revenue),
+        expenses: Math.round(v.expenses),
+        profit: Math.round(v.revenue - v.expenses),
+      }));
+
+      const importedRevenue = importedEntries.reduce((s, e) => s + (e.amount > 0 ? e.amount : 0), 0);
+      const importedExpenses = importedEntries.reduce((s, e) => s + (e.amount < 0 ? Math.abs(e.amount) : 0), 0);
+
+      const groupedRevenue: Record<CurrencyMode, number> = {
+        SAR: 0,
+        YER_SOUTH: 0,
+        YER_NORTH: 0,
+      };
+      orders.forEach((order) => {
+        const mode = resolveOrderMode(order);
+        groupedRevenue[mode] += parseFloat(order.total) || 0;
+      });
+
+      const sumRev = orders.reduce((s, o) => s + toSAR(parseFloat(o.total) || 0, resolveOrderMode(o)), 0) + importedRevenue;
+      const sumExp = expenses.reduce((s, e) => s + toSAR(parseFloat(e.amount) || 0, resolveExpenseMode(e)), 0) + importedExpenses;
+      const sumRef = refunds.reduce((s, r) => {
+        const linked = Array.isArray((r as any).orders) ? (r as any).orders[0] : (r as any).orders;
+        const mode = resolveOrderMode({
+          currency_mode: linked?.currency_mode ?? null,
+          country: linked?.country ?? null,
+        });
+        return s + toSAR(parseFloat(r.amount) || 0, mode);
+      }, 0);
+
+      setSeries(data);
+      setKpis({ revenue: sumRev, expenses: sumExp + sumRef, profit: sumRev - sumExp - sumRef, refunds: sumRef });
+      setRevenueByCurrency(groupedRevenue);
+    } catch (error) {
+      console.error("Finance overview load failed", error);
+      setOverviewError("تعذر تحميل بعض بيانات التحليل المالي. تم عرض البيانات المتاحة.");
+      toast({
+        title: "تنبيه",
+        description: "تعذر تحميل بعض بيانات التحليل المالي، تم إظهار البيانات المتاحة.",
+      });
+    } finally {
+      setLoadingOverview(false);
+    }
   }
 
   const margin = kpis.revenue > 0 ? (kpis.profit / kpis.revenue) * 100 : 0;
@@ -642,6 +704,12 @@ export default function AdminFinanceDashboard() {
                     {alert.level === "high" ? "مرتفع" : alert.level === "medium" ? "متوسط" : "منخفض"}
                   </Badge>
                 </div>
+
+                {overviewError && (
+                  <div className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+                    {overviewError}
+                  </div>
+                )}
                 <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">{alert.details}</p>
               </div>
             ))}

@@ -5,7 +5,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Loader2, TrendingUp, Users, ShoppingCart, Calendar, DollarSign, Search } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, subDays } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
 
@@ -34,8 +34,8 @@ interface RevenueStats {
 const AdminRevenuePage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [dateFrom, setDateFrom] = useState('');
-  const [dateTo, setDateTo] = useState('');
+  const [dateFrom, setDateFrom] = useState(() => format(subDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [dateTo, setDateTo] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [searchQuery, setSearchQuery] = useState('');
 
   useEffect(() => {
@@ -65,7 +65,10 @@ const AdminRevenuePage = () => {
   };
 
   const filteredOrders = useMemo(() => {
-    let filtered = [...orders];
+    let filtered = orders.filter(order => {
+      const status = String(order.status || '').toLowerCase();
+      return status !== 'cancelled' && status !== 'canceled';
+    });
 
     if (dateFrom) {
       filtered = filtered.filter(order => 
@@ -91,21 +94,19 @@ const AdminRevenuePage = () => {
     return filtered;
   }, [orders, dateFrom, dateTo, searchQuery]);
 
-  const stats: RevenueStats = useMemo(() => {
-    const totalRevenue = filteredOrders.reduce((sum, order) => sum + order.total, 0);
-    const totalOrders = filteredOrders.length;
-    const uniqueCustomers = new Set(filteredOrders.map(o => o.customer_phone)).size;
-    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
-
-    return { totalRevenue, totalOrders, uniqueCustomers, averageOrderValue };
-  }, [filteredOrders]);
-
   const modeOf = (order: Order): 'SAR' | 'YER_SOUTH' | 'YER_NORTH' => {
     if (order.currency_mode === 'SAR' || order.currency_mode === 'YER_SOUTH' || order.currency_mode === 'YER_NORTH') {
       return order.currency_mode;
     }
     if (order.country === 'SA') return 'SAR';
     return 'YER_SOUTH';
+  };
+
+  const toSar = (amount: number, order: Order): number => {
+    const mode = modeOf(order);
+    if (mode === 'YER_SOUTH') return Number(amount || 0) / 410;
+    if (mode === 'YER_NORTH') return Number(amount || 0) / 140;
+    return Number(amount || 0);
   };
 
   const modeMeta: Record<'SAR' | 'YER_SOUTH' | 'YER_NORTH', { label: string; symbol: string }> = {
@@ -122,13 +123,36 @@ const AdminRevenuePage = () => {
     };
     for (const order of filteredOrders) {
       const mode = modeOf(order);
+      acc[mode].revenue += toSar(Number(order.total || 0), order);
+      acc[mode].orders += 1;
+    }
+    return acc;
+  }, [filteredOrders]);
+
+  const byCurrencyNative = useMemo(() => {
+    const acc = {
+      SAR: { revenue: 0, orders: 0 },
+      YER_SOUTH: { revenue: 0, orders: 0 },
+      YER_NORTH: { revenue: 0, orders: 0 },
+    };
+    for (const order of filteredOrders) {
+      const mode = modeOf(order);
       acc[mode].revenue += Number(order.total || 0);
       acc[mode].orders += 1;
     }
     return acc;
   }, [filteredOrders]);
 
-  const currency = 'ر.ي';
+  const currency = 'ر.س';
+
+  const stats: RevenueStats = useMemo(() => {
+    const totalRevenue = filteredOrders.reduce((sum, order) => sum + toSar(order.total, order), 0);
+    const totalOrders = filteredOrders.length;
+    const uniqueCustomers = new Set(filteredOrders.map(o => o.customer_phone)).size;
+    const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
+
+    return { totalRevenue, totalOrders, uniqueCustomers, averageOrderValue };
+  }, [filteredOrders]);
 
   const clearFilters = () => {
     setDateFrom('');
@@ -174,7 +198,10 @@ const AdminRevenuePage = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-heading text-foreground">الإيرادات</h1>
+        <div>
+          <h1 className="text-2xl font-heading text-foreground">الإيرادات</h1>
+          <p className="text-xs text-muted-foreground mt-1">الفترة الافتراضية: آخر 30 يوم، مع استبعاد الطلبات الملغاة. الإجمالي العام بالريال السعودي، وتفصيل العملات بالقيم الأصلية مع المعادل.</p>
+        </div>
         <Button onClick={fetchOrders} variant="outline" disabled={isLoading}>
           تحديث
         </Button>
@@ -205,7 +232,8 @@ const AdminRevenuePage = () => {
               <Card key={mode}>
                 <CardContent className="p-4">
                   <p className="text-xs text-muted-foreground">{modeMeta[mode].label}</p>
-                  <p className="text-xl font-bold mt-1">{byCurrency[mode].revenue.toLocaleString()} {modeMeta[mode].symbol}</p>
+                  <p className="text-xl font-bold mt-1">{byCurrencyNative[mode].revenue.toLocaleString()} {modeMeta[mode].symbol}</p>
+                  <p className="text-xs text-muted-foreground">≈ {byCurrency[mode].revenue.toLocaleString()} ر.س</p>
                   <p className="text-xs text-muted-foreground mt-1">{byCurrency[mode].orders} طلب</p>
                 </CardContent>
               </Card>
@@ -306,7 +334,7 @@ const AdminRevenuePage = () => {
                             </span>
                           </TableCell>
                           <TableCell className="font-bold text-primary">
-                            {order.total.toLocaleString()} {modeMeta[modeOf(order)].symbol}
+                            {toSar(order.total, order).toLocaleString()} ر.س
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {format(new Date(order.created_at), 'dd MMM yyyy', { locale: ar })}
@@ -326,10 +354,10 @@ const AdminRevenuePage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    إجمالي الإيرادات - متعدد العملات
+                    إجمالي الإيرادات (محول إلى الريال السعودي)
                   </p>
                   <p className="text-3xl font-bold text-primary mt-1">
-                    {stats.totalRevenue.toLocaleString()}
+                    {stats.totalRevenue.toLocaleString()} ر.س
                   </p>
                 </div>
                 <div className="text-left">

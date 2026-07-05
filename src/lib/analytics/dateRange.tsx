@@ -2,11 +2,14 @@ import React, { createContext, useContext, useState } from "react";
 
 type DateRange = { start: string; end: string };
 
+function toLocalDateInputValue(date: Date) {
+  const offsetMs = date.getTimezoneOffset() * 60000;
+  return new Date(date.getTime() - offsetMs).toISOString().slice(0, 10);
+}
+
 const now = new Date();
-const defaultEnd = now.toISOString().slice(0, 10);
-const defaultStart = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 30)
-  .toISOString()
-  .slice(0, 10);
+const defaultEnd = toLocalDateInputValue(now);
+const defaultStart = toLocalDateInputValue(new Date(now.getTime() - 1000 * 60 * 60 * 24 * 30));
 
 const DateRangeContext = createContext<{
   range: DateRange;

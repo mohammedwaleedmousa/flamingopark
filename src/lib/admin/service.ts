@@ -15,6 +15,11 @@ type AnalyticsEventRow = Database["public"]["Tables"]["analytics_events"]["Row"]
 type CurrencyMode = "SAR" | "YER_SOUTH" | "YER_NORTH";
 
 const currencyModes: CurrencyMode[] = ["SAR", "YER_SOUTH", "YER_NORTH"];
+const SAR_RATE_BY_MODE: Record<CurrencyMode, number> = {
+  SAR: 1,
+  YER_SOUTH: 1 / 410,
+  YER_NORTH: 1 / 140,
+};
 
 function inferCurrencyModeFromOrder(row: any): CurrencyMode {
   const mode = row?.currency_mode;
@@ -29,6 +34,17 @@ function createCurrencyAccumulator<T>(factory: () => T): Record<CurrencyMode, T>
     YER_SOUTH: factory(),
     YER_NORTH: factory(),
   };
+}
+
+function toSarAmount(amount: number, row: any) {
+  const mode = inferCurrencyModeFromOrder(row);
+  const rate = SAR_RATE_BY_MODE[mode] ?? 1;
+  return Number(amount || 0) * rate;
+}
+
+function isMissingColumnError(error: unknown) {
+  const message = String((error as { message?: string })?.message || "");
+  return /column .* does not exist/i.test(message) || /Could not find the '.*' column/i.test(message);
 }
 
 export type DateRange = { start: string; end: string };
@@ -343,41 +359,75 @@ export async function getCustomerByPhone(phone: string) {
 }
 
 export async function getRevenueSummary(startDate: string, endDate: string) {
-  const { data, error } = await supabase
+  const normalized = normalizeRange({ start: startDate, end: endDate });
+  let { data, error } = await supabase
     .from("orders")
-    .select("total, created_at, country, currency_mode")
-    .gte("created_at", startDate)
-    .lte("created_at", endDate);
+    .select("total, status, created_at, country, currency_mode")
+    .gte("created_at", normalized.start)
+    .lte("created_at", normalized.end);
+
+  if (error && isMissingColumnError(error)) {
+    const fallback = await supabase
+      .from("orders")
+      .select("total, status, created_at, country")
+      .gte("created_at", normalized.start)
+      .lte("created_at", normalized.end);
+    data = fallback.data;
+    error = fallback.error;
+  }
   if (error) throw error;
 
   const byCurrency = createCurrencyAccumulator(() => ({ revenue: 0, orders: 0 }));
-  const revenue = (data ?? []).reduce((sum, r) => {
-    const amount = Number(r.total ?? 0);
+  const byCurrencyNative = createCurrencyAccumulator(() => ({ revenue: 0, orders: 0 }));
+  const validRows = (data ?? []).filter((r: any) => {
+    const status = String(r?.status || "").toLowerCase();
+    return status !== "cancelled" && status !== "canceled";
+  });
+
+  const revenue = validRows.reduce((sum, r) => {
+    const amount = toSarAmount(Number(r.total ?? 0), r);
+    const nativeAmount = Number(r.total ?? 0);
     const mode = inferCurrencyModeFromOrder(r);
     byCurrency[mode].revenue += amount;
     byCurrency[mode].orders += 1;
+    byCurrencyNative[mode].revenue += nativeAmount;
+    byCurrencyNative[mode].orders += 1;
     return sum + amount;
   }, 0);
 
-  return { revenue, byCurrency };
+  return { revenue, byCurrency, byCurrencyNative };
 }
 
 export async function getOrdersSummary(startDate: string, endDate: string) {
-  const { data, error } = await supabase
+  const normalized = normalizeRange({ start: startDate, end: endDate });
+  let { data, error } = await supabase
     .from("orders")
-    .select("id, total, created_at, country, currency_mode")
-    .gte("created_at", startDate)
-    .lte("created_at", endDate);
+    .select("id, total, status, created_at, country, currency_mode")
+    .gte("created_at", normalized.start)
+    .lte("created_at", normalized.end);
+
+  if (error && isMissingColumnError(error)) {
+    const fallback = await supabase
+      .from("orders")
+      .select("id, total, status, created_at, country")
+      .gte("created_at", normalized.start)
+      .lte("created_at", normalized.end);
+    data = fallback.data;
+    error = fallback.error;
+  }
   if (error) throw error;
 
-  const rows = data ?? [];
+  const rows = (data ?? []).filter((r: any) => {
+    const status = String(r?.status || "").toLowerCase();
+    return status !== "cancelled" && status !== "canceled";
+  });
   const count = rows.length;
-  const avg = count === 0 ? 0 : rows.reduce((s, o) => s + Number(o.total ?? 0), 0) / count;
+  const avg = count === 0 ? 0 : rows.reduce((s, o) => s + toSarAmount(Number(o.total ?? 0), o), 0) / count;
   const byCurrency = createCurrencyAccumulator(() => ({ orders: 0, revenue: 0, avg: 0 }));
   for (const row of rows) {
     const mode = inferCurrencyModeFromOrder(row);
     byCurrency[mode].orders += 1;
-    byCurrency[mode].revenue += Number(row.total ?? 0);
+    byCurrency[mode].revenue += toSarAmount(Number(row.total ?? 0), row);
   }
   for (const mode of currencyModes) {
     const item = byCurrency[mode];
@@ -388,49 +438,68 @@ export async function getOrdersSummary(startDate: string, endDate: string) {
 }
 
 export async function getCustomersCount(startDate: string, endDate: string) {
+  const normalized = normalizeRange({ start: startDate, end: endDate });
   const { data, error } = await supabase
     .from("customers")
     .select("id, created_at")
-    .gte("created_at", startDate)
-    .lte("created_at", endDate);
+    .gte("created_at", normalized.start)
+    .lte("created_at", normalized.end);
   if (error) throw error;
   return { customers: (data ?? []).length };
 }
 
 export async function getRevenueTimeseries(startDate: string, endDate: string) {
+  const normalized = normalizeRange({ start: startDate, end: endDate });
   const { data, error } = await supabase
     .from("orders")
-    .select("total, created_at")
-    .gte("created_at", startDate)
-    .lte("created_at", endDate)
+    .select("total, status, created_at, country, currency_mode")
+    .gte("created_at", normalized.start)
+    .lte("created_at", normalized.end)
     .order("created_at", { ascending: true });
   if (error) throw error;
 
-  const rows = data ?? [];
+  const rows = (data ?? []).filter((r: any) => {
+    const status = String(r?.status || "").toLowerCase();
+    return status !== "cancelled" && status !== "canceled";
+  });
   const map = new Map<string, number>();
   for (const r of rows) {
     const d = r.created_at?.slice(0, 10) ?? "";
-    map.set(d, (map.get(d) ?? 0) + Number(r.total ?? 0));
+    map.set(d, (map.get(d) ?? 0) + toSarAmount(Number(r.total ?? 0), r));
   }
   return Array.from(map.entries()).map(([date, total]) => ({ date, total }));
 }
 
 export async function getProfitSummary(startDate: string, endDate: string) {
-  const { data: orders, error: ordersError } = await supabase
+  const normalized = normalizeRange({ start: startDate, end: endDate });
+  let { data: orders, error: ordersError } = await supabase
     .from("orders")
-    .select("id, total, items, created_at, country, currency_mode")
-    .gte("created_at", startDate)
-    .lte("created_at", endDate);
+    .select("id, total, items, status, created_at, country, currency_mode")
+    .gte("created_at", normalized.start)
+    .lte("created_at", normalized.end);
+
+  if (ordersError && isMissingColumnError(ordersError)) {
+    const fallback = await supabase
+      .from("orders")
+      .select("id, total, items, status, created_at, country")
+      .gte("created_at", normalized.start)
+      .lte("created_at", normalized.end);
+    orders = fallback.data;
+    ordersError = fallback.error;
+  }
   if (ordersError) throw ordersError;
 
-  const rows = orders ?? [];
+  const rows = (orders ?? []).filter((r: any) => {
+    const status = String(r?.status || "").toLowerCase();
+    return status !== "cancelled" && status !== "canceled";
+  });
   let revenue = 0;
   let totalCost = 0;
   const prodIds = new Set<string>();
   const byCurrency = createCurrencyAccumulator(() => ({ revenue: 0, totalCost: 0, profit: 0 }));
 
   for (const r of rows) {
-    const amount = Number(r.total ?? 0);
+    const amount = toSarAmount(Number(r.total ?? 0), r);
     revenue += amount;
     const mode = inferCurrencyModeFromOrder(r);
     byCurrency[mode].revenue += amount;
@@ -480,13 +549,26 @@ export async function getProfitSummary(startDate: string, endDate: string) {
 }
 
 export async function getRecentOrders(startDate: string, endDate: string, limit = 6) {
-  const { data, error } = await supabase
+  const normalized = normalizeRange({ start: startDate, end: endDate });
+  let { data, error } = await supabase
     .from("orders")
     .select("id,order_number,customer_name,total,status,created_at,country,currency_mode")
-    .gte("created_at", startDate)
-    .lte("created_at", endDate)
+    .gte("created_at", normalized.start)
+    .lte("created_at", normalized.end)
     .order("created_at", { ascending: false })
     .limit(limit);
+
+  if (error && isMissingColumnError(error)) {
+    const fallback = await supabase
+      .from("orders")
+      .select("id,order_number,customer_name,total,status,created_at,country")
+      .gte("created_at", normalized.start)
+      .lte("created_at", normalized.end)
+      .order("created_at", { ascending: false })
+      .limit(limit);
+    data = fallback.data;
+    error = fallback.error;
+  }
   if (error) throw error;
   return data ?? [];
 }

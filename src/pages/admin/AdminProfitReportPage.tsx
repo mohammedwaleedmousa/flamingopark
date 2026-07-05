@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Loader2, TrendingUp, TrendingDown, DollarSign, Calendar, Search, AlertTriangle, Package, BarChart3, RefreshCw } from 'lucide-react';
-import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
+import { format, startOfMonth, endOfMonth, subDays, subMonths } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
 import {
@@ -64,13 +64,18 @@ interface ProfitStats {
 
 const LOW_MARGIN_THRESHOLD = 20; // 20% profit margin threshold
 
+const isMissingColumnError = (error: unknown) => {
+  const message = String((error as { message?: string })?.message || '');
+  return /column .* does not exist/i.test(message) || /Could not find the '.*' column/i.test(message);
+};
+
 const AdminProfitReportPage = () => {
   const SINGLE_COUNTRY = 'GLOBAL';
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [dateFrom, setDateFrom] = useState(() => format(startOfMonth(new Date()), 'yyyy-MM-dd'));
-  const [dateTo, setDateTo] = useState(() => format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+  const [dateFrom, setDateFrom] = useState(() => format(subDays(new Date(), 30), 'yyyy-MM-dd'));
+  const [dateTo, setDateTo] = useState(() => format(new Date(), 'yyyy-MM-dd'));
   const [searchQuery, setSearchQuery] = useState('');
 
   const modeMeta: Record<'SAR' | 'YER_SOUTH' | 'YER_NORTH', { label: string; symbol: string }> = {
@@ -87,6 +92,13 @@ const AdminProfitReportPage = () => {
     return 'YER_SOUTH';
   };
 
+  const toSar = (amount: number, order: Order): number => {
+    const mode = modeOf(order);
+    if (mode === 'YER_SOUTH') return Number(amount || 0) / 410;
+    if (mode === 'YER_NORTH') return Number(amount || 0) / 140;
+    return Number(amount || 0);
+  };
+
   useEffect(() => {
     fetchData();
   }, []);
@@ -94,21 +106,42 @@ const AdminProfitReportPage = () => {
   const fetchData = async () => {
     setIsLoading(true);
     try {
-      const [ordersRes, productsRes] = await Promise.all([
-        supabase
+      const loadOrders = async () => {
+        let ordersRes = await supabase
           .from('orders')
           .select('*, currency_mode')
-          .order('created_at', { ascending: false }),
-        supabase
-          .from('products')
-          .select('id, name, name_ar, price, cost_price, is_active, countries')
-      ]);
+          .order('created_at', { ascending: false });
 
-      if (ordersRes.error) throw ordersRes.error;
-      if (productsRes.error) throw productsRes.error;
+        if (ordersRes.error && isMissingColumnError(ordersRes.error)) {
+          ordersRes = await supabase
+            .from('orders')
+            .select('*')
+            .order('created_at', { ascending: false });
+        }
+
+        if (ordersRes.error) throw ordersRes.error;
+        return ordersRes.data || [];
+      };
+
+      const loadProducts = async () => {
+        let productsRes = await supabase
+          .from('products')
+          .select('id, name, name_ar, price, cost_price, is_active, countries');
+
+        if (productsRes.error && isMissingColumnError(productsRes.error)) {
+          productsRes = await supabase
+            .from('products')
+            .select('id, name, name_ar, price, cost_price, is_active');
+        }
+
+        if (productsRes.error) throw productsRes.error;
+        return productsRes.data || [];
+      };
+
+      const [ordersData, productsData] = await Promise.all([loadOrders(), loadProducts()]);
 
       // Map orders with proper type casting
-      const mappedOrders: Order[] = (ordersRes.data || []).map(order => ({
+      const mappedOrders: Order[] = (ordersData || []).map(order => ({
         ...order,
         items: Array.isArray(order.items) 
           ? (order.items as unknown as OrderItem[])
@@ -118,7 +151,7 @@ const AdminProfitReportPage = () => {
       }));
 
       setOrders(mappedOrders);
-      setProducts(productsRes.data || []);
+      setProducts(productsData as Product[]);
     } catch (error) {
       console.error('Error fetching data:', error);
       toast({
@@ -160,7 +193,7 @@ const AdminProfitReportPage = () => {
 
   const filteredOrders = useMemo(() => {
     let filtered = orders.filter(order => 
-      order.status !== 'cancelled'
+      order.status !== 'cancelled' && order.status !== 'canceled'
     );
 
     if (dateFrom) {
@@ -194,15 +227,17 @@ const AdminProfitReportPage = () => {
     let totalCommission = 0;
 
     filteredOrders.forEach(order => {
-      totalRevenue += order.total;
-      totalDiscount += order.discount_amount || 0;
-      totalCommission += order.beneficiary_commission || 0;
+      totalRevenue += toSar(order.total, order);
+      totalDiscount += toSar(order.discount_amount || 0, order);
+      totalCommission += toSar(order.beneficiary_commission || 0, order);
 
       // Calculate cost from order items
       if (Array.isArray(order.items)) {
         order.items.forEach((item: OrderItem) => {
           // Try to get cost price from the item itself, or from product lookup
-          const costPrice = item.costPrice || productCostLookup[item.id] || item.price * 0.7; // Fallback to 70% of price
+          const itemProductId = (item as any).product_id || item.id;
+          const lookupCost = item.costPrice || productCostLookup[itemProductId];
+          const costPrice = lookupCost ?? toSar(item.price * 0.7, order); // Fallback converts to SAR
           totalCost += costPrice * item.quantity;
         });
       }
@@ -236,12 +271,15 @@ const AdminProfitReportPage = () => {
       let orderCost = 0;
       if (Array.isArray(order.items)) {
         order.items.forEach((item: OrderItem) => {
-          const costPrice = item.costPrice || productCostLookup[item.id] || item.price * 0.7;
+          const itemProductId = (item as any).product_id || item.id;
+          const lookupCost = item.costPrice || productCostLookup[itemProductId];
+          const costPrice = lookupCost ?? toSar(item.price * 0.7, order);
           orderCost += costPrice * item.quantity;
         });
       }
-      const orderProfit = order.total - orderCost - (order.beneficiary_commission || 0);
-      acc[mode].revenue += order.total;
+      const orderRevenueSar = toSar(order.total, order);
+      const orderProfit = orderRevenueSar - orderCost - toSar(order.beneficiary_commission || 0, order);
+      acc[mode].revenue += orderRevenueSar;
       acc[mode].cost += orderCost;
       acc[mode].profit += orderProfit;
       acc[mode].orders += 1;
@@ -249,6 +287,22 @@ const AdminProfitReportPage = () => {
 
     return acc;
   }, [filteredOrders, productCostLookup]);
+
+  const byCurrencyNative = useMemo(() => {
+    const acc = {
+      SAR: { revenue: 0, orders: 0 },
+      YER_SOUTH: { revenue: 0, orders: 0 },
+      YER_NORTH: { revenue: 0, orders: 0 },
+    };
+
+    for (const order of filteredOrders) {
+      const mode = modeOf(order);
+      acc[mode].revenue += Number(order.total || 0);
+      acc[mode].orders += 1;
+    }
+
+    return acc;
+  }, [filteredOrders]);
 
   // Monthly profit data for chart
   const monthlyProfitData = useMemo(() => {
@@ -267,28 +321,30 @@ const AdminProfitReportPage = () => {
     }
 
     orders
-      .filter(o => o.status !== 'cancelled')
+      .filter(o => o.status !== 'cancelled' && o.status !== 'canceled')
       .forEach(order => {
         const key = format(new Date(order.created_at), 'yyyy-MM');
         if (months[key]) {
-          months[key].revenue += order.total;
+          months[key].revenue += toSar(order.total, order);
           
           // Calculate cost
           if (Array.isArray(order.items)) {
             order.items.forEach((item: OrderItem) => {
-              const costPrice = item.costPrice || productCostLookup[item.id] || item.price * 0.7;
+              const itemProductId = (item as any).product_id || item.id;
+              const lookupCost = item.costPrice || productCostLookup[itemProductId];
+              const costPrice = lookupCost ?? toSar(item.price * 0.7, order);
               months[key].cost += costPrice * item.quantity;
             });
           }
           
-          months[key].profit = months[key].revenue - months[key].cost - (order.beneficiary_commission || 0);
+          months[key].profit = months[key].revenue - months[key].cost - toSar(order.beneficiary_commission || 0, order);
         }
       });
 
     return Object.values(months);
   }, [orders, productCostLookup]);
 
-  const currency = 'ر.ي';
+  const currency = 'ر.س';
 
   const setCurrentMonth = () => {
     setDateFrom(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -328,7 +384,7 @@ const AdminProfitReportPage = () => {
       <AdminPageHeader
         category="المالية"
         title="تقرير الأرباح"
-        description="تحليل المبيعات والأرباح الشهرية"
+        description="تحليل المبيعات والأرباح لآخر 30 يوم"
         actions={[
           {
             label: "تحديث",
@@ -338,6 +394,8 @@ const AdminProfitReportPage = () => {
           },
         ]}
       />
+
+      <p className="text-xs text-muted-foreground">يتم استبعاد الطلبات الملغاة من الحساب. صافي الربح والإجمالي العام معروضان بالريال السعودي، مع إظهار تفصيل العملات بالقيمة الأصلية والمعادل.</p>
 
       {/* Low Margin Alert */}
       {lowMarginProducts.length > 0 && (
@@ -438,8 +496,9 @@ const AdminProfitReportPage = () => {
               <Card key={mode}>
                 <CardContent className="p-4">
                   <p className="text-xs text-muted-foreground">{modeMeta[mode].label}</p>
-                  <p className="text-sm mt-1">إيراد: <span className="font-bold">{byCurrencyStats[mode].revenue.toLocaleString()} {modeMeta[mode].symbol}</span></p>
-                  <p className="text-sm">صافي: <span className="font-bold">{byCurrencyStats[mode].profit.toLocaleString()} {modeMeta[mode].symbol}</span></p>
+                  <p className="text-sm mt-1">إيراد أصلي: <span className="font-bold">{byCurrencyNative[mode].revenue.toLocaleString()} {modeMeta[mode].symbol}</span></p>
+                  <p className="text-xs text-muted-foreground">ما يعادل: {byCurrencyStats[mode].revenue.toLocaleString()} ر.س</p>
+                  <p className="text-sm">صافي: <span className="font-bold">{byCurrencyStats[mode].profit.toLocaleString()} ر.س</span></p>
                   <p className="text-xs text-muted-foreground mt-1">{byCurrencyStats[mode].orders} طلب</p>
                 </CardContent>
               </Card>
@@ -602,25 +661,28 @@ const AdminProfitReportPage = () => {
                         let orderCost = 0;
                         if (Array.isArray(order.items)) {
                           order.items.forEach((item: OrderItem) => {
-                            const costPrice = item.costPrice || productCostLookup[item.id] || item.price * 0.7;
+                            const itemProductId = (item as any).product_id || item.id;
+                            const lookupCost = item.costPrice || productCostLookup[itemProductId];
+                            const costPrice = lookupCost ?? toSar(item.price * 0.7, order);
                             orderCost += costPrice * item.quantity;
                           });
                         }
-                        const orderProfit = order.total - orderCost - (order.beneficiary_commission || 0);
-                        const orderMargin = order.total > 0 ? (orderProfit / order.total) * 100 : 0;
+                        const orderRevenueSar = toSar(order.total, order);
+                        const orderProfit = orderRevenueSar - orderCost - toSar(order.beneficiary_commission || 0, order);
+                        const orderMargin = orderRevenueSar > 0 ? (orderProfit / orderRevenueSar) * 100 : 0;
 
                         return (
                           <TableRow key={order.id}>
                             <TableCell className="font-mono text-sm">{order.order_number}</TableCell>
                             <TableCell className="font-medium">{order.customer_name}</TableCell>
                             <TableCell className="text-primary font-bold">
-                              {order.total.toLocaleString()} {modeMeta[modeOf(order)].symbol}
+                              {orderRevenueSar.toLocaleString()} ر.س
                             </TableCell>
                             <TableCell className="text-red-600">
-                              {orderCost.toLocaleString()} {modeMeta[modeOf(order)].symbol}
+                              {orderCost.toLocaleString()} ر.س
                             </TableCell>
                             <TableCell className={orderProfit >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
-                              {orderProfit.toLocaleString()} {modeMeta[modeOf(order)].symbol}
+                              {orderProfit.toLocaleString()} ر.س
                             </TableCell>
                             <TableCell>
                               <Badge variant={orderMargin >= 20 ? 'default' : 'destructive'}>

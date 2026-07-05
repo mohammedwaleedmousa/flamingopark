@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -14,10 +15,11 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Plus, Search, Edit, Trash2, Eye, EyeOff, Package, Loader2, X, Globe2,
+  Plus, Search, Edit, Trash2, Eye, EyeOff, Package, Loader2, X, Globe2, BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AdminPagination } from "@/components/admin/AdminPagination";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useDebounce } from "@/hooks/useDebounce";
 
 interface Product {
@@ -166,23 +168,33 @@ const AdminProductsPage = () => {
   const newProductHref =
     country === "all" ? "/admin/products/new" : `/admin/products/new?country=${country}`;
 
+  // KPI calculations
+  const activeCount = products.filter(p => p.is_active).length;
+  const inStockCount = products.filter(p => p.in_stock).length;
+  const outOfStockCount = products.filter(p => !p.in_stock).length;
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-        <div>
-          <h1 className="font-heading text-2xl md:text-3xl text-foreground">المنتجات</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            <span className="font-medium text-foreground">{total.toLocaleString("ar-EG")}</span> منتج إجمالاً
-          </p>
-        </div>
-        <Button asChild className="btn-gold gap-2 w-full sm:w-auto">
-          <Link to={newProductHref}>
-            <Plus className="w-4 h-4" />
-            إضافة منتج
-          </Link>
-        </Button>
-      </div>
+      <AdminPageHeader
+        category="الكتالوج"
+        title="المنتجات"
+        description={`إدارة ${total.toLocaleString("ar-EG")} منتج`}
+        actions={[
+          {
+            label: "إضافة منتج",
+            icon: Plus,
+            href: newProductHref,
+            variant: "primary",
+          },
+          {
+            label: "التحليلات",
+            icon: BarChart3,
+            href: "/admin/analytics",
+            variant: "outline",
+          },
+        ]}
+      />
 
       {/* Filters bar */}
       <div className="bg-card border border-border rounded-2xl p-3 md:p-4 space-y-3">

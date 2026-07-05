@@ -5,13 +5,10 @@ import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Users, Crown, Sparkles, Activity, Search, MapPin, DownloadCloud } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import * as XLSX from 'xlsx';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, PieChart, Pie, Cell, Legend } from "recharts";
-import { useNavigate } from "react-router-dom";
-import { cn } from "@/lib/utils";
 
 const currency = "ر.ي";
 const fmt = (n: number) => new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 0 }).format(n);
@@ -50,67 +47,11 @@ interface Row {
         const [loadingDetails, setLoadingDetails] = useState(false);
         const [customerPayments, setCustomerPayments] = useState<any[]>([]);
         const [modalVisible, setModalVisible] = useState(false);
-        const navigate = useNavigate();
     const [q, setQ] = useState("");
     const [seg, setSeg] = useState<string>("all");
     const [region, setRegion] = useState<string>("all");
     const [quickFilter, setQuickFilter] = useState("all");
     const { range } = useDateRange();
-    const monthlyData = useMemo(() => {
-    const now = new Date();
-
-    const currentMonth = now.getMonth();
-    const currentYear = now.getFullYear();
-
-    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-    const prevYear = currentMonth === 0 ? currentYear - 1 : currentYear;
-
-    let currentRevenue = 0;
-    let prevRevenue = 0;
-
-    let currentOrders = 0;
-    let prevOrders = 0;
-
-    rows.forEach((r) => {
-        if (!r.last) return;
-
-        const d = new Date(r.last);
-        const month = d.getMonth();
-        const year = d.getFullYear();
-
-        const isCurrent = month === currentMonth && year === currentYear;
-        const isPrev = month === prevMonth && year === prevYear;
-
-        if (isCurrent) {
-        currentRevenue += r.spent;
-        currentOrders += r.orders;
-        }
-
-        if (isPrev) {
-        prevRevenue += r.spent;
-        prevOrders += r.orders;
-        }
-    });
-
-    const revenueChange =
-        prevRevenue === 0
-        ? 100
-        : ((currentRevenue - prevRevenue) / prevRevenue) * 100;
-
-    const orderChange =
-        prevOrders === 0
-        ? 100
-        : ((currentOrders - prevOrders) / prevOrders) * 100;
-
-    return {
-        currentRevenue,
-        prevRevenue,
-        currentOrders,
-        prevOrders,
-        revenueChange,
-        orderChange,
-    };
-    }, [rows]);
     useEffect(() => { load(); }, [range.start, range.end]);
 
     async function load() {
@@ -328,23 +269,6 @@ interface Row {
         const a = document.createElement('a'); a.href = url; a.download = `customers_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(url);
     }
 
-    function exportCustomerPaymentsToExcel() {
-        if (!selectedCustomer) return;
-        const out = customerPayments.map(p => ({
-            id: p.id,
-            date: p.entry_date,
-            description: p.description,
-            reference: p.reference,
-            source_type: p.source_type,
-            source_id: p.source_id,
-        }));
-        const ws = XLSX.utils.json_to_sheet(out);
-        const wb = XLSX.utils.book_new();
-        XLSX.utils.book_append_sheet(wb, ws, "payments");
-        const name = `payments_${selectedCustomer.id || 'customer'}_${new Date().toISOString().slice(0,10)}.xlsx`;
-        XLSX.writeFile(wb, name);
-    }
-
     function exportCustomerOrdersToExcel() {
         if (!selectedCustomer) return;
         const out = customerOrders.map(o => ({
@@ -362,72 +286,6 @@ interface Row {
         const name = `orders_${selectedCustomer.id || 'customer'}_${new Date().toISOString().slice(0,10)}.xlsx`;
         XLSX.writeFile(wb, name);
     }
-    const aiInsight = useMemo(() => {
-    const now = new Date();
-
-    const currentMonth = now.getMonth();
-    const prevMonth = currentMonth === 0 ? 11 : currentMonth - 1;
-
-    let currentRevenue = 0;
-    let prevRevenue = 0;
-
-    let currentVIP = 0;
-    let prevVIP = 0;
-
-    const regionGrowth: Record<string, { current: number; prev: number }> = {};
-
-    rows.forEach((r) => {
-        if (!r.last) return;
-
-        const d = new Date(r.last);
-        const m = d.getMonth();
-
-        const region = r.region || "غير محدد";
-
-        if (!regionGrowth[region]) {
-        regionGrowth[region] = { current: 0, prev: 0 };
-        }
-
-        if (m === currentMonth) {
-        currentRevenue += r.spent;
-        if (r.segment === "VIP") currentVIP += r.spent;
-        regionGrowth[region].current += r.spent;
-        }
-
-        if (m === prevMonth) {
-        prevRevenue += r.spent;
-        if (r.segment === "VIP") prevVIP += r.spent;
-        regionGrowth[region].prev += r.spent;
-        }
-    });
-
-    // أكثر منطقة سببت النمو
-    const topRegion = Object.entries(regionGrowth)
-        .map(([name, v]) => ({
-        name,
-        diff: v.current - v.prev,
-        }))
-        .sort((a, b) => b.diff - a.diff)[0];
-
-    const revenueDiff = currentRevenue - prevRevenue;
-
-    const reason =
-        revenueDiff > 0
-        ? "نمو إيجابي في الإيرادات هذا الشهر"
-        : "انخفاض في الإيرادات مقارنة بالشهر السابق";
-
-    const vipImpact =
-        currentVIP > prevVIP
-        ? "النمو مدفوع من عملاء VIP"
-        : "VIP لم يكن المحرك الرئيسي للنمو";
-
-    return {
-        revenueDiff,
-        topRegion: topRegion?.name || "غير محدد",
-        reason,
-        vipImpact,
-    };
-    }, [rows]);
     const aiEngine = useMemo(() => {
     const now = new Date();
     const currentMonth = now.getMonth();
@@ -503,15 +361,6 @@ interface Row {
         const aov = revenue / Math.max(1, rows.reduce((s, r) => s + r.orders, 0));
         return { total, revenue, vip, aov };
     }, [rows]);
-    const segCounts = useMemo(() => {
-    return {
-        all: rows.length,
-        VIP: rows.filter(r => r.segment === "VIP").length,
-        متوسط: rows.filter(r => r.segment === "متوسط").length,
-        عادي: rows.filter(r => r.segment === "عادي").length,
-    };
-    }, [rows]);
-
     const segData = (["VIP", "متوسط", "عادي"] as Segment[]).map(s => ({
         name: s, value: rows.filter(r => r.segment === s).length,
     }));
@@ -519,10 +368,10 @@ interface Row {
     
 
     const kpis = [
-        { label: "إجمالي العملاء", value: fmt(totals.total), icon: Users, bg: "bg-blue-50", tone: "text-blue-600" },
-        { label: "عملاء VIP", value: fmt(totals.vip), icon: Crown, bg: "bg-violet-50", tone: "text-violet-600" },
-        { label: "متوسط قيمة الطلب", value: `${fmt(totals.aov)} ${currency}`, icon: Activity, bg: "bg-amber-50", tone: "text-amber-600" },
-        { label: "إجمالي الإنفاق", value: `${fmt(totals.revenue)} ${currency}`, icon: Sparkles, bg: "bg-emerald-50", tone: "text-emerald-600" },
+        { label: "إجمالي العملاء", value: fmt(totals.total), icon: Users, bg: "bg-blue-50", tone: "text-blue-600", subtext: "+12% نمو" },
+        { label: "عملاء VIP", value: fmt(totals.vip), icon: Crown, bg: "bg-violet-50", tone: "text-violet-600", subtext: `${((totals.vip / totals.total) * 100).toFixed(1)}% من الإجمالي` },
+        { label: "متوسط قيمة الطلب", value: `${fmt(totals.aov)} ${currency}`, icon: Activity, bg: "bg-amber-50", tone: "text-amber-600", subtext: "المتوسط الحالي" },
+        { label: "إجمالي الإنفاق", value: `${fmt(totals.revenue)} ${currency}`, icon: Sparkles, bg: "bg-emerald-50", tone: "text-emerald-600", subtext: `من ${rows.length} عميل` },
     ];
 
     return (
@@ -537,11 +386,6 @@ interface Row {
                         <h1 className="font-heading text-2xl md:text-3xl">تحليل سلوك العملاء</h1>
                         <p className="text-sm text-muted-foreground mt-1">فهم عميق لسلوك الشراء + تقسيم العملاء حسب القيمة</p>
 
-                        <div className="flex gap-4 mt-4 text-xs">
-                            <div className="px-3 py-1 rounded-full bg-emerald-50 text-emerald-600">+12% نمو العملاء</div>
-                            <div className="px-3 py-1 rounded-full bg-blue-50 text-blue-600">{totals.total} عميل</div>
-                            <div className="px-3 py-1 rounded-full bg-violet-50 text-violet-600">{totals.vip} VIP</div>
-                        </div>
                     </div>
 
                     <div className="flex items-center gap-4">
@@ -551,9 +395,7 @@ interface Row {
 
                         <div className="flex items-center gap-2">
                             <button onClick={load} className="px-4 py-2 rounded-xl text-sm border border-black/10 hover:bg-black/5 transition">تحديث</button>
-                            <button onClick={exportFilteredToExcel} title="تصدير Excel" className="px-3 py-2 rounded-xl text-sm border border-black/10 hover:bg-black/5 flex items-center gap-2"><DownloadCloud className="w-4 h-4" /> تصدير</button>
-                            <button onClick={exportFilteredToCSV} title="تصدير CSV" className="px-3 py-2 rounded-xl text-sm border border-black/10 hover:bg-black/5">CSV</button>
-                            <div className="px-4 py-2 rounded-xl text-sm bg-pink-500 text-white shadow-sm">تحليل مباشر</div>
+                            <button onClick={exportFilteredToExcel} title="تصدير Excel" className="px-3 py-2 rounded-xl text-sm border border-black/10 hover:bg-black/5 flex items-center gap-2"><DownloadCloud className="w-4 h-4" /> Excel</button>
                         </div>
                     </div>
                 </div>
@@ -586,9 +428,12 @@ interface Row {
             {loading ? (
             <Skeleton className="h-8 w-24" />
             ) : (
-            <p className="text-2xl font-bold tracking-tight tabular-nums">
-                {k.value}
-            </p>
+            <>
+                <p className="text-2xl font-bold tracking-tight tabular-nums">
+                    {k.value}
+                </p>
+                {k.subtext && <p className={`text-xs font-medium mt-1 opacity-75 ${k.tone}`}>{k.subtext}</p>}
+            </>
             )}
         </div>
         </Card>
@@ -677,7 +522,7 @@ interface Row {
 
             <div className="p-3 rounded-xl bg-pink-50 border">
             <p className="text-[10px] text-muted-foreground">التوقع القادم</p>
-            <p className="text-sm font-bold text-gold">
+            <p className="text-sm font-bold text-amber-600">
                 {fmt(aiEngine.forecast)} ر.ي
             </p>
             </div>
@@ -752,7 +597,7 @@ interface Row {
         <div className="p-3 rounded-xl bg-pink-50 border border-pink-100">
             <p className="text-[10px] text-muted-foreground">النمو</p>
             <p className={`text-sm font-bold ${
-            aiEngine.growth >= 0 ? "text-gold" : "text-red-500"
+            aiEngine.growth >= 0 ? "text-amber-600" : "text-red-500"
             }`}>
             {aiEngine.growth.toFixed(1)}%
             </p>
@@ -902,6 +747,30 @@ interface Row {
         ))}
     </div>
 
+    {/* QUICK FILTERS */}
+    <div className="flex gap-2 overflow-x-auto pb-1 flex-wrap">
+        {[
+            { key: "all", label: "الكل" },
+            { key: "vip", label: "👑 VIP" },
+            { key: "active", label: "🔥 نشطون" },
+            { key: "inactive", label: "😴 خامل" },
+            { key: "new", label: "✨ جدد" },
+        ].map((f) => (
+            <button
+            key={f.key}
+            onClick={() => setQuickFilter(f.key)}
+            className={`px-3 py-1.5 text-xs rounded-full border whitespace-nowrap transition
+            ${quickFilter === f.key
+                ? "bg-pink-500 text-white border-pink-500"
+                : "bg-white text-gray-600"
+            }
+            `}
+            >
+            {f.label}
+            </button>
+        ))}
+    </div>
+
     <div className="flex gap-2 overflow-x-auto pb-1">
 
     <button
@@ -939,6 +808,7 @@ interface Row {
         setSeg("all");
         setRegion("all");
         setQ("");
+        setQuickFilter("all");
         }}
         className="px-3 py-2 text-xs rounded-lg border bg-white hover:bg-gray-100 text-gray-600"
     >
@@ -959,17 +829,24 @@ interface Row {
                     <th className="text-right p-3 font-medium">إجمالي الإنفاق</th>
                     <th className="text-right p-3 font-medium">متوسط الطلب</th>
                     <th className="text-right p-3 font-medium">آخر شراء</th>
-                    <th className="text-right p-3 font-medium">الشريحة</th>
+                    <th className="text-right p-3 font-medium">الحالة</th>
+                    <th className="text-center p-3 font-medium">إجراءات</th>
                 </tr>
                 </thead>
                 <tbody>
                 {loading && Array.from({ length: 6 }).map((_, i) => (
-                    <tr className="border-t border-black/5 hover:bg-pink-50/30 transition-all duration-150"><td colSpan={7} className="p-3"><Skeleton className="h-5 w-full" /></td></tr>
+                    <tr key={i} className="border-t border-black/5 hover:bg-pink-50/30 transition-all duration-150"><td colSpan={8} className="p-3"><Skeleton className="h-5 w-full" /></td></tr>
                 ))}
                 {!loading && filtered.length === 0 && (
-                    <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">لا يوجد عملاء مطابقين</td></tr>
+                    <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">لا يوجد عملاء مطابقين</td></tr>
                 )}
-                {!loading && filtered.slice(0, 100).map(r => (
+                {!loading && filtered.slice(0, 100).map(r => {
+                    const daysSince = r.last ? (Date.now() - new Date(r.last).getTime()) / 86400000 : 999;
+                    const statusColor = daysSince <= 30 ? "text-green-600" : daysSince <= 90 ? "text-orange-600" : "text-red-600";
+                    const statusEmoji = daysSince <= 30 ? "🔥" : daysSince <= 90 ? "⚠️" : "😴";
+                    const statusLabel = daysSince <= 30 ? "نشط" : daysSince <= 90 ? "خامل" : "خامل جداً";
+                    
+                    return (
                     <tr key={r.id} className="border-t border-black/5 hover:bg-black/[0.02]">
                     <td className="p-3">
                         <div className="flex items-center gap-2">
@@ -988,24 +865,29 @@ interface Row {
                         </div>
                     </td>
                     <td className="p-3">
-                        <div className="flex gap-2">
-                            <Button size="sm" variant="ghost" onClick={() => openDetails(r)}>تفاصيل</Button>
-                        </div>
+                        <span className="px-2 py-1 rounded-md bg-blue-50 text-blue-600 text-xs">📍 {r.region}</span>
                     </td>
-                    <td className="p-3">{r.region}</td>
-                    <td className="p-3 tabular-nums">{r.orders}</td>
-                    <td className="p-3 tabular-nums font-medium">{fmt(r.spent)} {currency}</td>
-                    <td className="p-3 tabular-nums">{fmt(r.aov)} {currency}</td>
+                    <td className="p-3 tabular-nums font-semibold text-center">
+                        <span className="px-2 py-1 rounded-md bg-amber-50 text-amber-600">{r.orders}x</span>
+                    </td>
+                    <td className="p-3 tabular-nums font-bold text-pink-600">{fmt(r.spent)} {currency}</td>
+                    <td className="p-3 tabular-nums text-emerald-600 font-semibold">{fmt(r.aov)} {currency}</td>
                     <td className="p-3 text-xs text-muted-foreground">{r.last ? new Date(r.last).toLocaleDateString("ar-EG") : "—"}</td>
                     <td className="p-3">
-                        <Badge variant="outline" style={{ borderColor: SEG_COLORS[r.segment] + "55", color: SEG_COLORS[r.segment], background: SEG_COLORS[r.segment] + "11" }}>{r.segment}</Badge>
+                        <span className={`px-2 py-1 rounded-full text-xs font-medium whitespace-nowrap ${statusColor === "text-green-600" ? "bg-green-50 text-green-600" : statusColor === "text-orange-600" ? "bg-orange-50 text-orange-600" : "bg-red-50 text-red-600"}`}>
+                            {statusEmoji} {statusLabel}
+                        </span>
+                    </td>
+                    <td className="p-3 text-center">
+                        <Button size="sm" variant="ghost" onClick={() => openDetails(r)}>تفاصيل</Button>
                     </td>
                     </tr>
-                ))}
+                    );
+                })}
                 </tbody>
             </table>
             </div>
-            {filtered.length > 100 && <p className="p-3 text-xs text-center text-muted-foreground border-t border-black/5">يعرض أول 100 من {filtered.length} عميل</p>}
+            {filtered.length > 100 && <p className="p-3 text-xs text-center text-muted-foreground border-t border-black/5 bg-gray-50">يعرض أول 100 من {filtered.length} عميل</p>}
         </Card>
         {/* Customer Details Drawer */}
         {selectedCustomer && (

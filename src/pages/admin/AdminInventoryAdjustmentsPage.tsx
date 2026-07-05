@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
+import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
@@ -69,15 +70,23 @@ export default function AdminInventoryAdjustmentsPage() {
   const damageCount = adjustments.filter(a => a.adjustment_type === 'damage').length;
 
   return (
-    <div className="space-y-6 p-2">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="font-heading text-2xl flex items-center gap-2"><Boxes className="w-6 h-6 text-primary" /> تسوية المخزون</h1>
-          <p className="text-sm text-muted-foreground">جرد، تالف، تحويل — مع تتبع التكلفة</p>
-        </div>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogTrigger asChild><Button><Plus className="w-4 h-4 ml-1" />تسوية جديدة</Button></DialogTrigger>
-          <DialogContent>
+    <div className="space-y-6 max-w-[1400px] mx-auto p-2" dir="rtl">
+      <AdminPageHeader
+        category="الإدارة"
+        title="تسوية المخزون"
+        description="جرد، تالف، تحويل — مع تتبع التكلفة"
+        actions={[
+          {
+            label: "تسوية جديدة",
+            icon: Plus,
+            onClick: () => setOpen(true),
+            variant: "primary",
+          },
+        ]}
+      />
+
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
             <DialogHeader><DialogTitle>تسوية مخزون</DialogTitle></DialogHeader>
             <div className="space-y-3">
               <Select value={form.product_id} onValueChange={v => setForm({ ...form, product_id: v })}>
@@ -97,7 +106,6 @@ export default function AdminInventoryAdjustmentsPage() {
             </div>
           </DialogContent>
         </Dialog>
-      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">إجمالي التسويات</p><p className="text-2xl font-bold mt-1">{adjustments.length}</p></CardContent></Card>

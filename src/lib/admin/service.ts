@@ -566,6 +566,738 @@ export async function deleteFinancialTransaction(id: string) {
   return { id };
 }
 
+// Top Products - أعلى المنتجات مبيعاً
+export async function getTopProducts(startDate: string, endDate: string, limit = 5) {
+  const { data: orders, error } = await supabase
+    .from("orders")
+    .select("items")
+    .gte("created_at", startDate)
+    .lte("created_at", endDate)
+    .neq("status", "cancelled");
+
+  if (error) throw error;
+
+  const productSales = new Map<string, { name: string; sales: number; count: number }>();
+
+  for (const order of orders ?? []) {
+    try {
+      const items = Array.isArray(order.items) ? order.items : JSON.parse(String(order.items || "[]"));
+      for (const item of items) {
+        const key = item.product_id;
+        const existing = productSales.get(key);
+        if (existing) {
+          existing.sales += Number(item.total || item.price * item.quantity);
+          existing.count += item.quantity || 1;
+        } else {
+          productSales.set(key, {
+            name: item.name_ar || item.name || "منتج",
+            sales: Number(item.total || item.price * item.quantity),
+            count: item.quantity || 1,
+          });
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  return Array.from(productSales.entries())
+    .map(([id, data]) => ({ id, ...data }))
+    .sort((a, b) => b.sales - a.sales)
+    .slice(0, limit);
+}
+
+// Orders by Status - توزيع الطلبات
+export async function getOrdersByStatus(startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("status")
+    .gte("created_at", startDate)
+    .lte("created_at", endDate);
+
+  if (error) throw error;
+
+  const statuses: Record<string, number> = {
+    pending: 0,
+    confirmed: 0,
+    processing: 0,
+    shipped: 0,
+    delivered: 0,
+    cancelled: 0,
+  };
+
+  for (const order of data ?? []) {
+    const status = order.status as keyof typeof statuses;
+    if (status in statuses) statuses[status]++;
+  }
+
+  return statuses;
+}
+
+// Conversion Rate - معدل التحويل
+export async function getConversionMetrics(startDate: string, endDate: string) {
+  const [{ data: events }, { data: orders }] = await Promise.all([
+    supabase
+      .from("analytics_events")
+      .select("session_id, event_type")
+      .gte("created_at", startDate)
+      .lte("created_at", endDate),
+    supabase
+      .from("orders")
+      .select("id")
+      .gte("created_at", startDate)
+      .lte("created_at", endDate)
+      .neq("status", "cancelled"),
+  ]);
+
+  const sessions = new Set<string>();
+  const checkoutSessions = new Set<string>();
+
+  for (const event of events ?? []) {
+    sessions.add(event.session_id);
+    if (event.event_type === "checkout" || event.event_type === "purchase") {
+      checkoutSessions.add(event.session_id);
+    }
+  }
+
+  const conversionRate = sessions.size > 0 ? (checkoutSessions.size / sessions.size) * 100 : 0;
+  const ordersCount = orders?.length ?? 0;
+
+  return {
+    totalSessions: sessions.size,
+    conversionRate: parseFloat(conversionRate.toFixed(2)),
+    orderCount: ordersCount,
+    avgOrderValue: ordersCount > 0 ? 0 : 0,
+  };
+}
+
+// Returning Customers - العملاء المتكررين
+export async function getReturningCustomers(startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("customer_phone")
+    .gte("created_at", startDate)
+    .lte("created_at", endDate)
+    .neq("status", "cancelled");
+
+  if (error) throw error;
+
+  const phoneCount = new Map<string, number>();
+  for (const order of data ?? []) {
+    const phone = order.customer_phone;
+    if (phone) phoneCount.set(phone, (phoneCount.get(phone) ?? 0) + 1);
+  }
+
+  let returning = 0;
+  for (const count of phoneCount.values()) {
+    if (count > 1) returning++;
+  }
+
+  return {
+    totalCustomers: phoneCount.size,
+    returningCustomers: returning,
+    returnRate: phoneCount.size > 0 ? parseFloat(((returning / phoneCount.size) * 100).toFixed(2)) : 0,
+  };
+}
+
+// Pending Alerts - التنبيهات المعلقة
+export async function getPendingAlerts() {
+  const [pendingOrders, lowStockProducts, returningOrders] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("id,order_number,customer_name,created_at")
+      .eq("status", "pending")
+      .order("created_at", { ascending: true })
+      .limit(10),
+    supabase
+      .from("products")
+      .select("id,name_ar,in_stock")
+      .eq("in_stock", false)
+      .limit(10),
+    supabase
+      .from("orders")
+      .select("id,order_number,customer_name,created_at,status")
+      .or("status.eq.shipped,status.eq.processing")
+      .order("created_at", { ascending: true })
+      .limit(5),
+  ]);
+
+  return {
+    pendingOrders: pendingOrders.data ?? [],
+    lowStockProducts: lowStockProducts.data ?? [],
+    returningOrders: returningOrders.data ?? [],
+  };
+}
+
+// Category Performance - أداء الفئات
+export async function getCategoryPerformance(startDate: string, endDate: string) {
+  const { data: orders, error: ordersError } = await supabase
+    .from("orders")
+    .select("items")
+    .gte("created_at", startDate)
+    .lte("created_at", endDate)
+    .neq("status", "cancelled");
+
+  if (ordersError) throw ordersError;
+
+  const categoryStats = new Map<string, { sales: number; count: number }>();
+
+  for (const order of orders ?? []) {
+    try {
+      const items = Array.isArray(order.items) ? order.items : JSON.parse(String(order.items || "[]"));
+      for (const item of items) {
+        const category = item.category || "أخرى";
+        const existing = categoryStats.get(category);
+        if (existing) {
+          existing.sales += Number(item.total || item.price * item.quantity);
+          existing.count += item.quantity || 1;
+        } else {
+          categoryStats.set(category, {
+            sales: Number(item.total || item.price * item.quantity),
+            count: item.quantity || 1,
+          });
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  return Array.from(categoryStats.entries())
+    .map(([name, data]) => ({ name, ...data }))
+    .sort((a, b) => b.sales - a.sales);
+}
+
+// ========== 1️⃣ تحسينات التحليل المتقدمة ==========
+
+// Customer Lifetime Value (CLV) - قيمة العميل مدى الحياة
+export async function getCustomerLifetimeValue(startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("customer_phone, total, created_at")
+    .gte("created_at", startDate)
+    .lte("created_at", endDate)
+    .neq("status", "cancelled");
+
+  if (error) throw error;
+
+  const customerLTV = new Map<string, { orders: number; total: number; lastOrder: string }>();
+
+  for (const order of data ?? []) {
+    const phone = order.customer_phone || "unknown";
+    const existing = customerLTV.get(phone);
+    if (existing) {
+      existing.orders += 1;
+      existing.total += Number(order.total || 0);
+      existing.lastOrder = order.created_at;
+    } else {
+      customerLTV.set(phone, {
+        orders: 1,
+        total: Number(order.total || 0),
+        lastOrder: order.created_at,
+      });
+    }
+  }
+
+  return Array.from(customerLTV.entries()).map(([phone, data]) => ({
+    phone,
+    ltv: data.total,
+    orderCount: data.orders,
+    avgOrderValue: data.total / data.orders,
+    lastOrder: data.lastOrder,
+  }));
+}
+
+// Churn Risk Analysis - تحليل مخاطر فقدان العميل
+export async function getChurnRiskAnalysis(startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("customer_phone, customer_name, created_at, total")
+    .gte("created_at", startDate)
+    .lte("created_at", endDate)
+    .neq("status", "cancelled");
+
+  if (error) throw error;
+
+  const now = Date.now();
+  const customerActivity = new Map<
+    string,
+    { name: string; lastOrder: Date; totalSpent: number; orderCount: number }
+  >();
+
+  for (const order of data ?? []) {
+    const phone = order.customer_phone || "unknown";
+    const existing = customerActivity.get(phone);
+    if (existing) {
+      existing.orderCount += 1;
+      existing.totalSpent += Number(order.total || 0);
+      if (new Date(order.created_at) > existing.lastOrder) {
+        existing.lastOrder = new Date(order.created_at);
+      }
+    } else {
+      customerActivity.set(phone, {
+        name: order.customer_name || "عميل",
+        lastOrder: new Date(order.created_at),
+        totalSpent: Number(order.total || 0),
+        orderCount: 1,
+      });
+    }
+  }
+
+  return Array.from(customerActivity.entries()).map(([phone, data]) => {
+    const daysSinceLastOrder = (now - data.lastOrder.getTime()) / 86400000;
+    let riskLevel: "high" | "medium" | "low" = "low";
+
+    if (daysSinceLastOrder > 120) riskLevel = "high";
+    else if (daysSinceLastOrder > 60) riskLevel = "medium";
+
+    return {
+      phone,
+      name: data.name,
+      riskLevel,
+      daysSinceLastOrder,
+      ltv: data.totalSpent,
+      frequency: data.orderCount,
+    };
+  });
+}
+
+// RFM Analysis - Recency, Frequency, Monetary
+export async function getRFMAnalysis(startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("customer_phone, customer_name, created_at, total")
+    .gte("created_at", startDate)
+    .lte("created_at", endDate)
+    .neq("status", "cancelled");
+
+  if (error) throw error;
+
+  const now = new Date();
+  const rfmMap = new Map<
+    string,
+    { name: string; recency: number; frequency: number; monetary: number }
+  >();
+
+  for (const order of data ?? []) {
+    const phone = order.customer_phone || "unknown";
+    const existing = rfmMap.get(phone);
+    const orderDate = new Date(order.created_at);
+    const daysAgo = Math.floor((now.getTime() - orderDate.getTime()) / 86400000);
+
+    if (existing) {
+      existing.frequency += 1;
+      existing.monetary += Number(order.total || 0);
+      existing.recency = Math.min(existing.recency, daysAgo);
+    } else {
+      rfmMap.set(phone, {
+        name: order.customer_name || "عميل",
+        recency: daysAgo,
+        frequency: 1,
+        monetary: Number(order.total || 0),
+      });
+    }
+  }
+
+  // Calculate RFM scores (1-5)
+  const entries = Array.from(rfmMap.entries());
+  const recencies = entries.map((e) => e[1].recency).sort((a, b) => a - b);
+  const frequencies = entries.map((e) => e[1].frequency).sort((a, b) => b - a);
+  const monetaries = entries.map((e) => e[1].monetary).sort((a, b) => b - a);
+
+  const getPercentile = (val: number, arr: number[], ascending = true) => {
+    const sorted = ascending ? arr : arr.reverse();
+    const index = sorted.findIndex((v) => v >= val);
+    return Math.ceil(((index + 1) / arr.length) * 5) || 1;
+  };
+
+  return entries.map(([phone, data]) => ({
+    phone,
+    name: data.name,
+    recencyScore: 6 - getPercentile(data.recency, recencies),
+    frequencyScore: getPercentile(data.frequency, frequencies, false),
+    monetaryScore: getPercentile(data.monetary, monetaries, false),
+    rfmScore: 0, // Will be calculated as avg
+  })).map((item) => ({
+    ...item,
+    rfmScore: Math.round((item.recencyScore + item.frequencyScore + item.monetaryScore) / 3),
+  }));
+}
+
+// Cohort Analysis - تجميع العملاء حسب فترة الانضمام
+export async function getCohortAnalysis(startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("customer_phone, customer_name, created_at, total")
+    .gte("created_at", startDate)
+    .lte("created_at", endDate);
+
+  if (error) throw error;
+
+  const cohortMap = new Map<string, Map<string, { orders: number; revenue: number }>>();
+  
+  for (const order of data ?? []) {
+    const orderDate = new Date(order.created_at);
+    const cohortMonth = `${orderDate.getFullYear()}-${String(orderDate.getMonth() + 1).padStart(2, "0")}`;
+    
+    if (!cohortMap.has(cohortMonth)) {
+      cohortMap.set(cohortMonth, new Map());
+    }
+
+    const cohortData = cohortMap.get(cohortMonth)!;
+    const current = cohortData.get(cohortMonth) || { orders: 0, revenue: 0 };
+    current.orders += 1;
+    current.revenue += Number(order.total || 0);
+    cohortData.set(cohortMonth, current);
+  }
+
+  return Array.from(cohortMap.entries()).map(([month, data]) => ({
+    month,
+    totalOrders: Array.from(data.values()).reduce((sum, d) => sum + d.orders, 0),
+    totalRevenue: Array.from(data.values()).reduce((sum, d) => sum + d.revenue, 0),
+  }));
+}
+
+// ========== 2️⃣ الرسوم البيانية المتقدمة ==========
+
+// Customer Journey Map - مسار رحلة العميل
+export async function getCustomerJourney(phone: string, startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("id, order_number, created_at, status, total, items")
+    .eq("customer_phone", phone)
+    .gte("created_at", startDate)
+    .lte("created_at", endDate)
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+
+  return (data ?? []).map((order, index) => ({
+    step: index + 1,
+    date: order.created_at,
+    orderId: order.order_number || order.id,
+    status: order.status,
+    total: order.total,
+    itemCount: Array.isArray(order.items) ? order.items.length : 0,
+  }));
+}
+
+// Funnel Chart Data - مسار التحويل
+export async function getFunnelData(startDate: string, endDate: string) {
+  const { data: events, error } = await supabase
+    .from("analytics_events")
+    .select("session_id, event_type")
+    .gte("created_at", startDate)
+    .lte("created_at", endDate);
+
+  if (error) throw error;
+
+  const visitors = new Set<string>();
+  const browsers = new Set<string>();
+  const cartAdds = new Set<string>();
+  const checkouts = new Set<string>();
+  const purchases = new Set<string>();
+
+  for (const event of events ?? []) {
+    visitors.add(event.session_id);
+    if (event.event_type === "browse") browsers.add(event.session_id);
+    if (event.event_type === "add_to_cart") cartAdds.add(event.session_id);
+    if (event.event_type === "checkout") checkouts.add(event.session_id);
+    if (event.event_type === "purchase") purchases.add(event.session_id);
+  }
+
+  return [
+    { name: "زوار", value: visitors.size, percentage: 100 },
+    { name: "مصفحون", value: browsers.size, percentage: (browsers.size / visitors.size) * 100 },
+    { name: "أضيفوا للسلة", value: cartAdds.size, percentage: (cartAdds.size / visitors.size) * 100 },
+    { name: "الدفع", value: checkouts.size, percentage: (checkouts.size / visitors.size) * 100 },
+    { name: "مشتريات", value: purchases.size, percentage: (purchases.size / visitors.size) * 100 },
+  ];
+}
+
+// Retention Cohort - الاحتفاظ بالعملاء
+export async function getRetentionCohort(startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("customer_phone, created_at")
+    .gte("created_at", startDate)
+    .lte("created_at", endDate)
+    .neq("status", "cancelled")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+
+  const firstOrderMonth = new Map<string, string>();
+  const monthlyOrders = new Map<string, Set<string>>();
+
+  for (const order of data ?? []) {
+    const phone = order.customer_phone || "unknown";
+    const date = new Date(order.created_at);
+    const month = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
+
+    if (!firstOrderMonth.has(phone)) {
+      firstOrderMonth.set(phone, month);
+    }
+
+    if (!monthlyOrders.has(month)) {
+      monthlyOrders.set(month, new Set());
+    }
+    monthlyOrders.get(month)!.add(phone);
+  }
+
+  const cohorts = new Map<string, Map<number, number>>();
+  for (const [phone, firstMonth] of firstOrderMonth.entries()) {
+    if (!cohorts.has(firstMonth)) {
+      cohorts.set(firstMonth, new Map());
+    }
+    const cohort = cohorts.get(firstMonth)!;
+    for (const [month, customers] of monthlyOrders.entries()) {
+      if (customers.has(phone)) {
+        const monthDiff = Math.floor(
+          (new Date(month).getTime() - new Date(firstMonth).getTime()) / (30 * 24 * 60 * 60 * 1000)
+        );
+        cohort.set(monthDiff, (cohort.get(monthDiff) || 0) + 1);
+      }
+    }
+  }
+
+  return Array.from(cohorts.entries()).map(([month, data]) => ({
+    cohortMonth: month,
+    month0: data.get(0) || 0,
+    month1: data.get(1) || 0,
+    month2: data.get(2) || 0,
+    month3: data.get(3) || 0,
+    month6: data.get(6) || 0,
+  }));
+}
+
+// ========== 3️⃣ التنبيهات والتوصيات ==========
+
+// VIP Risk Alerts - تنبيهات عملاء VIP عالية المخاطر
+export async function getVIPRiskAlerts(startDate: string, endDate: string) {
+  const churnData = await getChurnRiskAnalysis(startDate, endDate);
+  const now = Date.now();
+
+  return churnData
+    .filter((customer) => {
+      // VIP: spent >= 8000 or >= 6 orders
+      const isVIP = customer.ltv >= 8000 || customer.frequency >= 6;
+      return isVIP && customer.riskLevel === "high";
+    })
+    .map((customer) => ({
+      ...customer,
+      recommendation: `عميل VIP عالي الخطورة: ${customer.name} - لم يشتري منذ ${Math.floor(customer.daysSinceLastOrder)} يوم`,
+    }));
+}
+
+// Upsell Opportunities - فرص البيع الإضافي
+export async function getUpsellOpportunities(startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("customer_phone, customer_name, total, items")
+    .gte("created_at", startDate)
+    .lte("created_at", endDate)
+    .neq("status", "cancelled");
+
+  if (error) throw error;
+
+  const customerStats = new Map<
+    string,
+    { name: string; avgOrder: number; orders: number; potentialUpsell: boolean }
+  >();
+
+  for (const order of data ?? []) {
+    const phone = order.customer_phone || "unknown";
+    const existing = customerStats.get(phone);
+    const total = Number(order.total || 0);
+
+    if (existing) {
+      existing.orders += 1;
+      existing.avgOrder = (existing.avgOrder * (existing.orders - 1) + total) / existing.orders;
+    } else {
+      customerStats.set(phone, {
+        name: order.customer_name || "عميل",
+        avgOrder: total,
+        orders: 1,
+        potentialUpsell: false,
+      });
+    }
+  }
+
+  return Array.from(customerStats.entries())
+    .map(([phone, data]) => ({
+      phone,
+      name: data.name,
+      avgOrder: data.avgOrder,
+      orders: data.orders,
+      upsellOpportunity: data.orders >= 2 && data.avgOrder < 5000,
+      suggestion: data.orders >= 2 ? "عرض منتجات متقدمة أو حزم" : "حث على الشراء الثاني",
+    }))
+    .filter((c) => c.upsellOpportunity);
+}
+
+// ========== 4️⃣ الإحصائيات المتقدمة ==========
+
+// Year-over-Year Comparison
+export async function getYearOverYearComparison(startDate: string, endDate: string) {
+  const currentDate = new Date(endDate);
+  const prevYear = new Date(currentDate);
+  prevYear.setFullYear(prevYear.getFullYear() - 1);
+
+  const prevStart = new Date(startDate);
+  prevStart.setFullYear(prevStart.getFullYear() - 1);
+
+  const [currentData, prevData] = await Promise.all([
+    supabase
+      .from("orders")
+      .select("total, created_at, status")
+      .gte("created_at", startDate)
+      .lte("created_at", endDate),
+    supabase
+      .from("orders")
+      .select("total, created_at, status")
+      .gte("created_at", prevStart.toISOString())
+      .lte("created_at", prevYear.toISOString()),
+  ]);
+
+  const current = {
+    revenue: (currentData.data ?? [])
+      .filter((o: any) => o.status !== "cancelled")
+      .reduce((sum, o: any) => sum + Number(o.total || 0), 0),
+    orders: (currentData.data ?? []).filter((o: any) => o.status !== "cancelled").length,
+  };
+
+  const prev = {
+    revenue: (prevData.data ?? [])
+      .filter((o: any) => o.status !== "cancelled")
+      .reduce((sum, o: any) => sum + Number(o.total || 0), 0),
+    orders: (prevData.data ?? []).filter((o: any) => o.status !== "cancelled").length,
+  };
+
+  return {
+    current,
+    previous: prev,
+    revenueGrowth: prev.revenue > 0 ? ((current.revenue - prev.revenue) / prev.revenue) * 100 : 0,
+    orderGrowth: prev.orders > 0 ? ((current.orders - prev.orders) / prev.orders) * 100 : 0,
+  };
+}
+
+// Sales Forecast - التنبؤ بالمبيعات
+export async function getSalesForecast(startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("total, created_at")
+    .gte("created_at", startDate)
+    .lte("created_at", endDate)
+    .neq("status", "cancelled")
+    .order("created_at", { ascending: true });
+
+  if (error) throw error;
+
+  const dailyRevenue = new Map<string, number>();
+  for (const order of data ?? []) {
+    const date = order.created_at.slice(0, 10);
+    dailyRevenue.set(date, (dailyRevenue.get(date) || 0) + Number(order.total || 0));
+  }
+
+  const revenues = Array.from(dailyRevenue.values());
+  const avgDaily = revenues.reduce((a, b) => a + b, 0) / Math.max(1, revenues.length);
+
+  // Simple trend: forecast next 7 days
+  const trend = revenues.length > 7
+    ? (revenues.slice(-7).reduce((a, b) => a + b, 0) / 7 - avgDaily) / avgDaily
+    : 0;
+
+  return {
+    avgDailyRevenue: avgDaily,
+    trend,
+    forecast7Days: avgDaily * 7 * (1 + trend),
+    forecast30Days: avgDaily * 30 * (1 + trend),
+  };
+}
+
+// Basket Analysis - تحليل السلة
+export async function getBasketAnalysis(startDate: string, endDate: string) {
+  const { data, error } = await supabase
+    .from("orders")
+    .select("items")
+    .gte("created_at", startDate)
+    .lte("created_at", endDate)
+    .neq("status", "cancelled");
+
+  if (error) throw error;
+
+  const productPairs = new Map<string, number>();
+
+  for (const order of data ?? []) {
+    try {
+      const items = Array.isArray(order.items) ? order.items : JSON.parse(String(order.items || "[]"));
+      const productIds = items.map((item: any) => item.product_id || item.id).filter(Boolean);
+
+      for (let i = 0; i < productIds.length; i++) {
+        for (let j = i + 1; j < productIds.length; j++) {
+          const pair = [productIds[i], productIds[j]].sort().join("__");
+          productPairs.set(pair, (productPairs.get(pair) || 0) + 1);
+        }
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  return Array.from(productPairs.entries())
+    .map(([pair, count]) => ({
+      products: pair.split("__"),
+      frequency: count,
+    }))
+    .sort((a, b) => b.frequency - a.frequency)
+    .slice(0, 10);
+}
+
+// ========== 5️⃣ التقارير المتقدمة ==========
+
+// Comprehensive Report Data - بيانات التقرير الشامل
+export async function getComprehensiveReport(startDate: string, endDate: string) {
+  const [
+    ltvData,
+    churnData,
+    rfmData,
+    forecast,
+    basketData,
+    yoy,
+    funnelData,
+  ] = await Promise.all([
+    getCustomerLifetimeValue(startDate, endDate),
+    getChurnRiskAnalysis(startDate, endDate),
+    getRFMAnalysis(startDate, endDate),
+    getSalesForecast(startDate, endDate),
+    getBasketAnalysis(startDate, endDate),
+    getYearOverYearComparison(startDate, endDate),
+    getFunnelData(startDate, endDate),
+  ]);
+
+  return {
+    generated: new Date().toISOString(),
+    dateRange: { start: startDate, end: endDate },
+    ltv: {
+      avgLTV: ltvData.reduce((sum, c) => sum + c.ltv, 0) / Math.max(1, ltvData.length),
+      topCustomers: ltvData.sort((a, b) => b.ltv - a.ltv).slice(0, 10),
+    },
+    churn: {
+      highRiskCount: churnData.filter((c) => c.riskLevel === "high").length,
+      atRiskCustomers: churnData.filter((c) => c.riskLevel !== "low"),
+    },
+    rfm: {
+      avgScore: rfmData.reduce((sum, c) => sum + c.rfmScore, 0) / Math.max(1, rfmData.length),
+      topTier: rfmData.filter((c) => c.rfmScore >= 4),
+    },
+    forecast,
+    basket: basketData,
+    yoy,
+    funnel: funnelData,
+  };
+}
+
 export function invalidateAdminQueries(queryClient: QueryClient) {
   queryClient.invalidateQueries({
     predicate: (query) => {
@@ -580,6 +1312,25 @@ export function invalidateAdminQueries(queryClient: QueryClient) {
           "profitSummary",
           "recentOrders",
           "lowStock",
+          "topProducts",
+          "ordersByStatus",
+          "conversionMetrics",
+          "returningCustomers",
+          "pendingAlerts",
+          "categoryPerformance",
+          "customerLTV",
+          "churnRisk",
+          "rfmAnalysis",
+          "cohortAnalysis",
+          "customerJourney",
+          "funnelData",
+          "retentionCohort",
+          "vipRiskAlerts",
+          "upsellOpportunities",
+          "yoyComparison",
+          "salesForecast",
+          "basketAnalysis",
+          "comprehensiveReport",
         ].includes(root);
       }
       return false;

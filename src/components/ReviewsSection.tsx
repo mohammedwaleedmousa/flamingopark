@@ -1,9 +1,10 @@
 import { motion } from 'framer-motion';
 import { useQuery } from '@tanstack/react-query';
-import { Star, ArrowLeft } from 'lucide-react';
+import { Star, ArrowLeft, MessageSquare } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/store/useStore';
+import { useSiteContent, getSiteText } from '@/hooks/useSiteContent';
 import { Button } from '@/components/ui/button';
 
 interface Review {
@@ -16,6 +17,7 @@ interface Review {
 }
 
 const ReviewsSection = () => {
+  const { data: content } = useSiteContent('reviews_section_');
   const { country } = useStore();
 
   const { data: reviews = [] } = useQuery({
@@ -102,7 +104,7 @@ const ReviewsSection = () => {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mt-10"
+          className="text-center mt-10 space-y-4"
         >
           <Link to="/reviews">
             <Button variant="outline" className="gap-2 border-gold text-gold hover:bg-gold hover:text-secondary">
@@ -110,6 +112,21 @@ const ReviewsSection = () => {
               <ArrowLeft className="w-4 h-4" />
             </Button>
           </Link>
+
+          <div>
+            <p className="text-muted-foreground mb-3">
+              {getSiteText(content, 'share_experience', 'شارك تجربتك معنا')}
+            </p>
+            <Link to="/reviews">
+              <Button 
+                variant="default"
+                className="gap-2 bg-gold hover:bg-gold/90 text-secondary"
+              >
+                <MessageSquare className="w-4 h-4" />
+                {getSiteText(content, 'write_review', 'اكتب تقييماً')}
+              </Button>
+            </Link>
+          </div>
         </motion.div>
       </div>
     </section>

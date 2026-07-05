@@ -8,7 +8,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Switch } from '@/components/ui/switch';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Edit, Trash2, Upload, X, Loader2, Settings, Tag, Package, Search, Timer, GripVertical, ChevronUp, ChevronDown } from 'lucide-react';
+import { Plus, Edit, Trash2, Upload, X, Loader2, Settings, Tag, Package, Search, Timer, GripVertical, ChevronUp, ChevronDown, TicketSlash } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import AdminPageHeader from '@/components/admin/AdminPageHeader';
 
 interface Offer {
   id: string;
@@ -387,14 +388,26 @@ const AdminOffersPage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="font-heading text-3xl text-foreground">إدارة العروض</h1>
-        <Button onClick={() => openDialog()} className="btn-gold gap-2">
-          <Plus className="w-4 h-4" />
-          إضافة عرض
-        </Button>
-      </div>
+    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
+      <AdminPageHeader
+        category="التسويق"
+        title="العروض"
+        description={`إدارة ${offers.length} عرض`}
+        actions={[
+          {
+            label: "إضافة عرض",
+            icon: Plus,
+            onClick: () => openDialog(),
+            variant: "primary",
+          },
+          {
+            label: "الكوبونات",
+            icon: TicketSlash,
+            href: "/admin/coupons",
+            variant: "outline",
+          },
+        ]}
+      />
 
       <Tabs defaultValue="offers" className="w-full">
         <TabsList className="grid w-full grid-cols-2 max-w-md">

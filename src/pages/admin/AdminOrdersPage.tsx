@@ -14,10 +14,11 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Eye, MessageCircle, Search, ShoppingCart, X, Phone, MapPin, Package,
-  Trash2, Loader2, Globe2,
+  Trash2, Loader2, Globe2, TrendingUp, BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AdminPagination } from "@/components/admin/AdminPagination";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useDebounce } from "@/hooks/useDebounce";
 
 interface Order {
@@ -130,15 +131,26 @@ const AdminOrdersPage = () => {
   };
 
   return (
-    <div className="space-y-5">
-      <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
-        <div>
-          <h1 className="font-heading text-2xl md:text-3xl text-foreground">الطلبات</h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            <span className="font-medium text-foreground">{total.toLocaleString("ar-EG")}</span> طلب إجمالاً
-          </p>
-        </div>
-      </div>
+    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
+      <AdminPageHeader
+        category="إدارة المبيعات"
+        title="الطلبات"
+        description={`إدارة ${total.toLocaleString("ar-EG")} طلب`}
+        actions={[
+          {
+            label: "عرض التحليلات",
+            icon: BarChart3,
+            href: "/admin/analytics",
+            variant: "primary",
+          },
+          {
+            label: "تقرير الإيرادات",
+            icon: TrendingUp,
+            href: "/admin/revenue",
+            variant: "outline",
+          },
+        ]}
+      />
 
       {/* Filters */}
       <div className="bg-card border border-border rounded-2xl p-3 md:p-4 space-y-3">

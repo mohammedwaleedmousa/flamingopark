@@ -13,6 +13,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Star, Check, X } from "lucide-react";
 import { format } from "date-fns";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { ar } from "date-fns/locale";
 
 interface Review {
@@ -168,11 +169,17 @@ const AdminReviewsPage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">إدارة التقييمات</h1>
-        <div className="flex gap-4">
-          <Select value={filterCountry} onValueChange={setFilterCountry}>
+    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
+      <AdminPageHeader
+        category="المحتوى"
+        title="التقييمات"
+        description={`إدارة ${reviews.length} تقييم`}
+        actions={[]}
+      />
+
+      {/* Filters */}
+      <div className="flex items-center gap-2 flex-wrap">
+        <Select value={filterCountry} onValueChange={setFilterCountry}>
             <SelectTrigger className="w-32">
               <SelectValue placeholder="الدولة" />
             </SelectTrigger>
@@ -285,7 +292,6 @@ const AdminReviewsPage = () => {
               </form>
             </DialogContent>
           </Dialog>
-        </div>
       </div>
 
       <Table>

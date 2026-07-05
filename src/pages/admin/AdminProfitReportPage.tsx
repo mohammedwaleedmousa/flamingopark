@@ -6,7 +6,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Loader2, TrendingUp, TrendingDown, DollarSign, Calendar, Search, AlertTriangle, Package, BarChart3 } from 'lucide-react';
+import { Loader2, TrendingUp, TrendingDown, DollarSign, Calendar, Search, AlertTriangle, Package, BarChart3, RefreshCw } from 'lucide-react';
 import { format, startOfMonth, endOfMonth, subMonths } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
@@ -16,6 +16,7 @@ import {
   ChartTooltipContent,
 } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
+import AdminPageHeader from '@/components/admin/AdminPageHeader';
 
 interface OrderItem {
   id: string;
@@ -285,16 +286,20 @@ const AdminProfitReportPage = () => {
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-heading text-foreground">تقرير الأرباح</h1>
-          <p className="text-sm text-muted-foreground">تحليل المبيعات والأرباح الشهرية</p>
-        </div>
-        <Button onClick={fetchData} variant="outline" disabled={isLoading}>
-          تحديث
-        </Button>
-      </div>
+    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
+      <AdminPageHeader
+        category="المالية"
+        title="تقرير الأرباح"
+        description="تحليل المبيعات والأرباح الشهرية"
+        actions={[
+          {
+            label: "تحديث",
+            icon: RefreshCw,
+            onClick: fetchData,
+            variant: "secondary",
+          },
+        ]}
+      />
 
       {/* Low Margin Alert */}
       {lowMarginProducts.length > 0 && (

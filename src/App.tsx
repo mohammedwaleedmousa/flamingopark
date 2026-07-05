@@ -49,6 +49,8 @@ const AdminCustomersPage = lazy(() => import("./pages/admin/AdminCustomersPage")
 const AdminBannersPage = lazy(() => import("./pages/admin/AdminBannersPage"));
 const AdminSettingsPage = lazy(() => import("./pages/admin/AdminSettingsPage"));
 const AdminBrandsPage = lazy(() => import("./pages/admin/AdminBrandsPage"));
+const AdminBrandCategoryMapPage = lazy(() => import("./pages/admin/AdminBrandCategoryMapPage"));
+const AdminCatalogWorkflowPage = lazy(() => import("./pages/admin/AdminCatalogWorkflowPage"));
 const AdminCategoriesPage = lazy(() => import("./pages/admin/AdminCategoriesPage"));
 const AdminDeliveryPage = lazy(() => import("./pages/admin/AdminDeliveryPage"));
 const AdminReviewsPage = lazy(() => import("./pages/admin/AdminReviewsPage"));
@@ -175,6 +177,8 @@ const App = () => {
               <Route path="customers" element={<AdminCustomersPage />} />
               <Route path="banners" element={<AdminBannersPage />} />
               <Route path="brands" element={<AdminBrandsPage />} />
+              <Route path="brand-category-map" element={<AdminBrandCategoryMapPage />} />
+              <Route path="catalog-workflow" element={<AdminCatalogWorkflowPage />} />
               <Route path="categories" element={<AdminCategoriesPage />} />
               <Route path="delivery" element={<AdminDeliveryPage />} />
               <Route path="cod-regions" element={<AdminCODRegionsPage />} />

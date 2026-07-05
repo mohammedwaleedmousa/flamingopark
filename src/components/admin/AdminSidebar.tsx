@@ -3,7 +3,7 @@ import {
   Settings, LogOut, Grid3X3, LayoutGrid, FileText, Receipt, MapPin,
   TrendingUp, Percent, Ticket, QrCode, PieChart, BarChart3, ShieldAlert,
   BookOpen, RotateCcw, Wallet, Boxes, LogIn,
-  ChevronDown, Brain,
+    ChevronDown, Brain, Link2, ListChecks,
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -51,9 +51,11 @@ const groups: { label: string; items: { title: string; url: string; icon: any }[
   {
     label: 'الكتالوج',
     items: [
+      { title: 'دليل العمل السريع', url: '/admin/catalog-workflow', icon: ListChecks },
       { title: 'المنتجات', url: '/admin/products', icon: Package },
       { title: 'الفئات', url: '/admin/categories', icon: Grid3X3 },
       { title: 'الماركات', url: '/admin/brands', icon: Tag },
+      { title: 'ربط ماركات-أقسام', url: '/admin/brand-category-map', icon: Link2 },
       { title: 'الأقسام', url: '/admin/sections', icon: LayoutGrid },
     ],
   },

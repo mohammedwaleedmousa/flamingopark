@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
 import { Slider } from "@/components/ui/slider";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Pencil, Trash2, Upload, Grid3X3, Search, Loader2, X, ZoomIn, Move } from "lucide-react";
@@ -18,6 +19,7 @@ interface Category {
   name: string;
   name_ar: string;
   slug: string;
+  parent_id: string | null;
   image_url: string | null;
   is_active: boolean | null;
   sort_order: number | null;
@@ -34,6 +36,7 @@ const AdminCategoriesPage = () => {
     name: "",
     name_ar: "",
     slug: "",
+    parent_id: "",
     image_url: "",
     is_active: true,
     sort_order: 0,
@@ -66,6 +69,7 @@ const AdminCategoriesPage = () => {
             name_ar: data.name_ar,
             slug,
             image_url: data.image_url || null,
+            parent_id: data.parent_id || null,
             is_active: data.is_active,
             sort_order: data.sort_order,
             countries: data.countries,
@@ -83,6 +87,7 @@ const AdminCategoriesPage = () => {
             name_ar: data.name_ar,
             slug,
             image_url: data.image_url || null,
+            parent_id: data.parent_id || null,
             is_active: data.is_active,
             sort_order: data.sort_order,
             countries: data.countries,
@@ -152,6 +157,7 @@ const AdminCategoriesPage = () => {
       name: "",
       name_ar: "",
       slug: "",
+      parent_id: "",
       image_url: "",
       is_active: true,
       sort_order: 0,
@@ -170,6 +176,7 @@ const AdminCategoriesPage = () => {
       name: category.name,
       name_ar: category.name_ar,
       slug: category.slug,
+      parent_id: category.parent_id || "",
       image_url: category.image_url || "",
       is_active: category.is_active ?? true,
       sort_order: category.sort_order ?? 0,
@@ -198,6 +205,10 @@ const AdminCategoriesPage = () => {
 
   const filteredCategories =
     categories?.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.name_ar.includes(search)) || [];
+
+  const categoryNameById = new Map((categories || []).map((c) => [c.id, c.name_ar]));
+
+  const parentOptions = (categories || []).filter((c) => c.id !== editingCategory?.id);
 
   const stats = {
     total: categories?.length || 0,
@@ -297,6 +308,9 @@ const AdminCategoriesPage = () => {
                 </div>
                 <p className="text-sm text-muted-foreground">{category.name}</p>
                 <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
+                  <span>{category.parent_id ? `فرعي تحت: ${categoryNameById.get(category.parent_id) || "-"}` : "قسم رئيسي"}</span>
+                </div>
+                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                   <span>الترتيب: {category.sort_order}</span>
                 </div>
               </div>
@@ -345,6 +359,7 @@ const AdminCategoriesPage = () => {
               <th className="text-right p-4 font-heading text-sm">الصورة</th>
               <th className="text-right p-4 font-heading text-sm">الاسم (عربي)</th>
               <th className="text-right p-4 font-heading text-sm">الاسم (إنجليزي)</th>
+              <th className="text-right p-4 font-heading text-sm">النوع</th>
               <th className="text-right p-4 font-heading text-sm">الترتيب</th>
               <th className="text-right p-4 font-heading text-sm">الحالة</th>
               <th className="text-right p-4 font-heading text-sm">إجراءات</th>
@@ -368,6 +383,9 @@ const AdminCategoriesPage = () => {
                 </td>
                 <td className="p-4 font-heading">{category.name_ar}</td>
                 <td className="p-4 text-muted-foreground">{category.name}</td>
+                <td className="p-4 text-muted-foreground">
+                  {category.parent_id ? `فرعي (${categoryNameById.get(category.parent_id) || "-"})` : "رئيسي"}
+                </td>
                 <td className="p-4 text-muted-foreground">{category.sort_order}</td>
                 <td className="p-4">
                   <Switch
@@ -398,7 +416,7 @@ const AdminCategoriesPage = () => {
             ))}
             {filteredCategories.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-12 text-center text-muted-foreground">
+                <td colSpan={7} className="p-12 text-center text-muted-foreground">
                   <Grid3X3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>لا توجد فئات</p>
                 </td>
@@ -455,6 +473,26 @@ const AdminCategoriesPage = () => {
                     placeholder="watches"
                     dir="ltr"
                   />
+                </div>
+
+                <div className="space-y-2">
+                  <Label>القسم الأب (اختياري)</Label>
+                  <Select
+                    value={formData.parent_id || "none"}
+                    onValueChange={(value) => setFormData({ ...formData, parent_id: value === "none" ? "" : value })}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="قسم رئيسي (بدون أب)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="none">قسم رئيسي (بدون أب)</SelectItem>
+                      {parentOptions.map((c) => (
+                        <SelectItem key={c.id} value={c.id}>
+                          {c.name_ar}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 <div className="space-y-2">

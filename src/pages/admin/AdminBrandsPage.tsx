@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -26,6 +27,17 @@ interface Brand {
   sort_order: number | null;
 }
 
+interface Category {
+  id: string;
+  name_ar: string;
+  parent_id: string | null;
+}
+
+interface BrandCategoryRow {
+  brand_id: string;
+  category_id: string;
+}
+
 const AdminBrandsPage = () => {
   const SINGLE_COUNTRY = 'GLOBAL';
   const queryClient = useQueryClient();
@@ -39,6 +51,7 @@ const AdminBrandsPage = () => {
     is_active: true,
     sort_order: 0,
   });
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const [uploading, setUploading] = useState(false);
 
   const { data: brands, isLoading } = useQuery({
@@ -53,10 +66,44 @@ const AdminBrandsPage = () => {
     },
   });
 
+  const { data: categories = [] } = useQuery({
+    queryKey: ['admin-categories-for-brands'],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('categories')
+        .select('id,name_ar,parent_id')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+      if (error) throw error;
+      return (data || []) as Category[];
+    },
+  });
+
+  const { data: brandCategoryRows = [] } = useQuery({
+    queryKey: ['admin-brand-categories'],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('brand_categories')
+        .select('brand_id,category_id');
+      if (error) throw error;
+      return (data || []) as BrandCategoryRow[];
+    },
+  });
+
+  const brandToCategoryIds = brandCategoryRows.reduce<Record<string, string[]>>((acc, row) => {
+    if (!acc[row.brand_id]) acc[row.brand_id] = [];
+    acc[row.brand_id].push(row.category_id);
+    return acc;
+  }, {});
+
+  const categoryById = new Map(categories.map((c) => [c.id, c]));
+
   const saveMutation = useMutation({
-    mutationFn: async (data: typeof formData & { id?: string }) => {
+    mutationFn: async (data: typeof formData & { id?: string; category_ids: string[] }) => {
       console.log('Saving brand:', data);
-      
+
+      let brandId = data.id;
+
       if (data.id) {
         const { data: result, error } = await supabase
           .from('brands')
@@ -69,9 +116,10 @@ const AdminBrandsPage = () => {
           })
           .eq('id', data.id)
           .select();
-        
+
         console.log('Update result:', result, 'Error:', error);
         if (error) throw error;
+        brandId = result?.[0]?.id || data.id;
       } else {
         const { data: result, error } = await supabase
           .from('brands')
@@ -83,13 +131,34 @@ const AdminBrandsPage = () => {
             sort_order: data.sort_order,
           })
           .select();
-        
+
         console.log('Insert result:', result, 'Error:', error);
         if (error) throw error;
+        brandId = result?.[0]?.id;
+      }
+
+      if (!brandId) throw new Error('تعذر تحديد الماركة لحفظ ربط الأقسام');
+
+      const { error: clearError } = await (supabase as any)
+        .from('brand_categories')
+        .delete()
+        .eq('brand_id', brandId);
+      if (clearError) throw clearError;
+
+      if (data.category_ids.length > 0) {
+        const payload = data.category_ids.map((categoryId) => ({
+          brand_id: brandId,
+          category_id: categoryId,
+        }));
+        const { error: linkError } = await (supabase as any)
+          .from('brand_categories')
+          .insert(payload);
+        if (linkError) throw linkError;
       }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['admin-brands'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-brand-categories'] });
       toast({ title: editingBrand ? 'تم تحديث الماركة' : 'تم إضافة الماركة' });
       resetForm();
     },
@@ -157,6 +226,7 @@ const AdminBrandsPage = () => {
       is_active: true,
       sort_order: 0,
     });
+    setSelectedCategoryIds([]);
     setEditingBrand(null);
     setIsDialogOpen(false);
   };
@@ -170,6 +240,7 @@ const AdminBrandsPage = () => {
       is_active: brand.is_active ?? true,
       sort_order: brand.sort_order ?? 0,
     });
+    setSelectedCategoryIds(brandToCategoryIds[brand.id] || []);
     setIsDialogOpen(true);
   };
 
@@ -178,6 +249,7 @@ const AdminBrandsPage = () => {
     saveMutation.mutate({
       ...formData,
       id: editingBrand?.id,
+      category_ids: selectedCategoryIds,
     });
   };
 
@@ -284,6 +356,8 @@ const AdminBrandsPage = () => {
                 </div>
                 <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                   <span>الترتيب: {brand.sort_order}</span>
+                    <span>•</span>
+                    <span>الأقسام: {(brandToCategoryIds[brand.id] || []).length}</span>
                 </div>
               </div>
             </div>
@@ -335,6 +409,7 @@ const AdminBrandsPage = () => {
             <tr>
               <th className="text-right p-4 font-heading text-sm">الشعار</th>
               <th className="text-right p-4 font-heading text-sm">الاسم</th>
+              <th className="text-right p-4 font-heading text-sm">الأقسام</th>
               <th className="text-right p-4 font-heading text-sm">الترتيب</th>
               <th className="text-right p-4 font-heading text-sm">الحالة</th>
               <th className="text-right p-4 font-heading text-sm">إجراءات</th>
@@ -357,6 +432,7 @@ const AdminBrandsPage = () => {
                   )}
                 </td>
                 <td className="p-4 font-heading">{brand.name}</td>
+                <td className="p-4 text-muted-foreground">{(brandToCategoryIds[brand.id] || []).length}</td>
                 <td className="p-4 text-muted-foreground">{brand.sort_order}</td>
                 <td className="p-4">
                   <Switch
@@ -394,7 +470,7 @@ const AdminBrandsPage = () => {
             ))}
             {filteredBrands.length === 0 && (
               <tr>
-                <td colSpan={5} className="p-12 text-center text-muted-foreground">
+                <td colSpan={6} className="p-12 text-center text-muted-foreground">
                   <Tag className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>لا توجد ماركات</p>
                 </td>
@@ -471,6 +547,37 @@ const AdminBrandsPage = () => {
                 <div className="space-y-2">
                   <Label>النطاق</Label>
                   <p className="text-sm text-muted-foreground">هذه الماركة تعمل على المتجر الموحد</p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label>الأقسام المرتبطة</Label>
+                  <div className="max-h-48 overflow-auto rounded-lg border border-border p-2 space-y-2 bg-background">
+                    {categories.map((category) => {
+                      const parent = category.parent_id ? categoryById.get(category.parent_id) : null;
+                      const checked = selectedCategoryIds.includes(category.id);
+                      return (
+                        <label key={category.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                          <Checkbox
+                            checked={checked}
+                            onCheckedChange={(value) => {
+                              if (value) {
+                                setSelectedCategoryIds((prev) => (prev.includes(category.id) ? prev : [...prev, category.id]));
+                              } else {
+                                setSelectedCategoryIds((prev) => prev.filter((id) => id !== category.id));
+                              }
+                            }}
+                          />
+                          <span>
+                            {parent ? `${parent.name_ar} / ${category.name_ar}` : category.name_ar}
+                          </span>
+                        </label>
+                      );
+                    })}
+                    {categories.length === 0 && (
+                      <p className="text-xs text-muted-foreground">لا توجد أقسام فعالة حالياً</p>
+                    )}
+                  </div>
+                  <p className="text-xs text-muted-foreground">اختيار الأقسام هنا يحدد أين تظهر هذه الماركة في صفحة الأقسام.</p>
                 </div>
 
                 <div className="space-y-2">

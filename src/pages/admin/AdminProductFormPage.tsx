@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -25,7 +25,12 @@ interface Category {
   name: string;
   name_ar: string;
   slug: string;
+  parent_id: string | null;
   is_active: boolean | null;
+}
+
+interface BrandCategoryRow {
+  brand_id: string;
 }
 
 interface Accessory {
@@ -84,6 +89,7 @@ const AdminProductFormPage = () => {
   const [newAccessory, setNewAccessory] = useState({ name: '', name_ar: '', price: '', image_url: '', description: '', description_ar: '' });
   const [newFeature, setNewFeature] = useState({ icon: 'truck', title: '', desc: '' });
   const [uploadingAccessoryImage, setUploadingAccessoryImage] = useState(false);
+  const [selectedParentSlug, setSelectedParentSlug] = useState('');
 
   // Fetch all homepage sections
   const { data: sections = [] } = useQuery({
@@ -104,7 +110,7 @@ const AdminProductFormPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('categories')
-        .select('id, name, name_ar, slug, is_active')
+        .select('id, name, name_ar, slug, parent_id, is_active')
         .eq('is_active', true)
         .order('sort_order', { ascending: true });
       if (error) throw error;
@@ -126,9 +132,65 @@ const AdminProductFormPage = () => {
     },
   });
 
+  const selectedCategory = categories.find((c) => c.slug === formData.category) || null;
+
+  const { data: mappedBrandRows = [] } = useQuery({
+    queryKey: ['category-brand-links', selectedCategory?.id],
+    enabled: !!selectedCategory,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from('brand_categories')
+        .select('brand_id')
+        .eq('category_id', selectedCategory!.id);
+      if (error) throw error;
+      return (data || []) as BrandCategoryRow[];
+    },
+  });
+
+  const mappedBrandIds = useMemo(() => new Set(mappedBrandRows.map((r) => r.brand_id)), [mappedBrandRows]);
+
+  const filteredBrands = useMemo(() => {
+    if (mappedBrandIds.size === 0) return brands;
+    return brands.filter((b: any) => mappedBrandIds.has(b.id));
+  }, [brands, mappedBrandIds]);
+
   useEffect(() => {
     if (isEditing) fetchProduct();
   }, [id]);
+
+  useEffect(() => {
+    if (!categories.length || !formData.category) return;
+    const category = categories.find((c) => c.slug === formData.category);
+    if (!category) return;
+
+    if (category.parent_id) {
+      const parent = categories.find((c) => c.id === category.parent_id);
+      setSelectedParentSlug(parent?.slug || '');
+    } else {
+      setSelectedParentSlug(category.slug);
+    }
+  }, [categories, formData.category]);
+
+  useEffect(() => {
+    if (!formData.brand) return;
+    if (filteredBrands.length === 0) return;
+    const exists = filteredBrands.some((b: any) => b.name?.trim() === formData.brand);
+    if (!exists) {
+      setFormData((prev) => ({ ...prev, brand: filteredBrands[0].name?.trim() || '' }));
+    }
+  }, [filteredBrands, formData.brand]);
+
+  const parentCategories = useMemo(() => categories.filter((c) => !c.parent_id), [categories]);
+
+  const selectedParentCategory = useMemo(
+    () => parentCategories.find((c) => c.slug === selectedParentSlug) || null,
+    [parentCategories, selectedParentSlug],
+  );
+
+  const subCategoriesForSelectedParent = useMemo(() => {
+    if (!selectedParentCategory) return [];
+    return categories.filter((c) => c.parent_id === selectedParentCategory.id);
+  }, [categories, selectedParentCategory]);
 
   const fetchProduct = async () => {
     setIsLoading(true);
@@ -320,7 +382,7 @@ const AdminProductFormPage = () => {
         <div className="bg-card border border-border rounded p-6 space-y-4">
           <h2 className="font-heading text-lg text-foreground">المعلومات الأساسية</h2>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
               <label className="block text-sm font-body text-muted-foreground mb-2">الاسم (إنجليزي)</label>
               <Input
@@ -423,16 +485,24 @@ const AdminProductFormPage = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-body text-muted-foreground mb-2">التصنيف *</label>
+              <label className="block text-sm font-body text-muted-foreground mb-2">القسم الرئيسي *</label>
               <Select
-                value={formData.category}
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
+                value={selectedParentSlug}
+                onValueChange={(value) => {
+                  setSelectedParentSlug(value);
+                  const nextParent = parentCategories.find((c) => c.slug === value);
+                  const children = nextParent ? categories.filter((c) => c.parent_id === nextParent.id) : [];
+                  setFormData({
+                    ...formData,
+                    category: children.length ? children[0].slug : value,
+                  });
+                }}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر التصنيف" />
+                  <SelectValue placeholder="اختر القسم الرئيسي" />
                 </SelectTrigger>
                 <SelectContent>
-                  {categories.map((cat) => (
+                  {parentCategories.map((cat) => (
                     <SelectItem key={cat.id} value={cat.slug}>
                       {cat.name_ar} ({cat.name})
                     </SelectItem>
@@ -440,6 +510,30 @@ const AdminProductFormPage = () => {
                 </SelectContent>
               </Select>
             </div>
+
+            <div>
+              <label className="block text-sm font-body text-muted-foreground mb-2">القسم الفرعي</label>
+              <Select
+                value={formData.category}
+                onValueChange={(value) => setFormData({ ...formData, category: value })}
+                disabled={subCategoriesForSelectedParent.length === 0}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder={subCategoriesForSelectedParent.length ? 'اختر القسم الفرعي' : 'لا توجد أقسام فرعية'} />
+                </SelectTrigger>
+                <SelectContent>
+                  {subCategoriesForSelectedParent.map((cat) => (
+                    <SelectItem key={cat.id} value={cat.slug}>
+                      {cat.name_ar} ({cat.name})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                إذا لم توجد أقسام فرعية سيتم حفظ المنتج مباشرة داخل القسم الرئيسي.
+              </p>
+            </div>
+
             <div>
               <label className="block text-sm font-body text-muted-foreground mb-2">الماركة *</label>
               <Select
@@ -450,13 +544,18 @@ const AdminProductFormPage = () => {
                   <SelectValue placeholder="اختر الماركة" />
                 </SelectTrigger>
                 <SelectContent>
-                  {brands.map((brand) => (
+                  {filteredBrands.map((brand: any) => (
                     <SelectItem key={brand.id} value={brand.name.trim()}>
                       {brand.name.trim()}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
+              <p className="text-xs text-muted-foreground mt-1">
+                {mappedBrandIds.size > 0
+                  ? 'يتم عرض الماركات المربوطة بهذا القسم فقط.'
+                  : 'لا يوجد ربط محدد للقسم، لذلك تظهر كل الماركات.'}
+              </p>
             </div>
           </div>
 

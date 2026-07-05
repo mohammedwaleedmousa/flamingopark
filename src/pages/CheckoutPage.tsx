@@ -66,6 +66,7 @@ interface CODRegion {
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { country, customer, cart, getCartTotal, clearCart, currencyMode } = useStore();
+  const isGuestLike = !customer || customer.id === "guest";
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "bank">("cod");
   const [selectedDelivery, setSelectedDelivery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("");
@@ -106,14 +107,14 @@ const CheckoutPage = () => {
       setSelectedAddressId(def.id);
       setFormData((prev) => ({
         ...prev,
-        name: customer?.id === "guest" ? String(def.name || prev.name || "") : prev.name,
-        phone: customer?.id === "guest" ? String(def.phone || prev.phone || "") : prev.phone,
+        name: isGuestLike ? String(def.name || prev.name || "") : prev.name,
+        phone: isGuestLike ? String(def.phone || prev.phone || "") : prev.phone,
         city: def.city,
         address: def.address,
         notes: def.notes || "",
       }));
     }
-  }, [addressOwnerKey, customer?.id]);
+  }, [addressOwnerKey, isGuestLike]);
 
   const saveCustomerInfo = () => {
     const now = Date.now();
@@ -144,8 +145,8 @@ const CheckoutPage = () => {
     }
     setFormData((prev) => ({
       ...prev,
-      name: customer?.id === "guest" ? String(chosen.name || prev.name || "") : prev.name,
-      phone: customer?.id === "guest" ? String(chosen.phone || prev.phone || "") : prev.phone,
+      name: isGuestLike ? String(chosen.name || prev.name || "") : prev.name,
+      phone: isGuestLike ? String(chosen.phone || prev.phone || "") : prev.phone,
       city: chosen.city,
       address: chosen.address,
       notes: chosen.notes || "",
@@ -437,12 +438,11 @@ const CheckoutPage = () => {
     // Prevent double submission
     if (isSubmitting) return;
     
-    // For guest users, validate name and phone
-    const isGuest = customer?.id === "guest";
-    const customerName = isGuest ? formData.name : customer?.name;
-    const customerPhone = isGuest ? formData.phone : customer?.phone;
-    
-    if (isGuest && (!formData.name.trim() || !formData.phone.trim())) {
+    // Treat missing customer profile as guest-like to avoid empty order identity fields.
+    const customerName = String(customer?.name || formData.name || "").trim();
+    const customerPhone = String(customer?.phone || formData.phone || "").trim();
+
+    if (isGuestLike && (!customerName || !customerPhone)) {
       return toast({ title: "خطأ", description: "يرجى إدخال الاسم ورقم الهاتف", variant: "destructive" });
     }
 
@@ -493,8 +493,8 @@ const CheckoutPage = () => {
     try {
       const orderPayload: Record<string, unknown> = {
         order_number: orderNumber,
-        customer_name: customer?.name || formData.name || "عميل",
-        customer_phone: customer?.phone || formData.phone || "",
+        customer_name: customerName || "عميل",
+        customer_phone: customerPhone,
         customer_address: formData.address || "-",
         customer_city: formData.city || "",
         customer_notes: formData.notes || null,
@@ -598,7 +598,7 @@ const CheckoutPage = () => {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-body text-muted-foreground mb-2">الاسم الكامل *</label>
-                      {customer?.id === "guest" ? (
+                      {isGuestLike ? (
                         <Input
                           value={formData.name}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -617,7 +617,7 @@ const CheckoutPage = () => {
                     </div>
                     <div>
                       <label className="block text-sm font-body text-muted-foreground mb-2">رقم الهاتف *</label>
-                      {customer?.id === "guest" ? (
+                      {isGuestLike ? (
                         <Input
                           value={formData.phone}
                           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}

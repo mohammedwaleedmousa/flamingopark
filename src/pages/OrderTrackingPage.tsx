@@ -1,11 +1,13 @@
 import { motion } from 'framer-motion';
-import { Package, CheckCircle2, Truck, MapPin, Clock, Phone, MessageCircle } from 'lucide-react';
+import { Package, CheckCircle2, Truck, MapPin, Clock, Phone, MessageCircle, XCircle } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import { Button } from '@/components/ui/button';
-import { useState } from 'react';
+import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { supabase } from '@/integrations/supabase/client';
 
 interface TrackingStep {
   title: string;
@@ -17,60 +19,135 @@ interface TrackingStep {
   icon: typeof Package;
 }
 
+const normalizeStatus = (raw: string) => {
+  const s = String(raw || '').toLowerCase();
+  if (['pending', 'new'].includes(s)) return 'pending';
+  if (['confirmed', 'paid'].includes(s)) return 'confirmed';
+  if (['processing', 'preparing', 'ready_for_shipping'].includes(s)) return 'processing';
+  if (['shipped', 'out_for_delivery', 'in_transit'].includes(s)) return 'shipped';
+  if (['delivered', 'completed'].includes(s)) return 'delivered';
+  if (['cancelled', 'canceled'].includes(s)) return 'cancelled';
+  return 'pending';
+};
+
 const OrderTrackingPage = () => {
   const [searchParams] = useSearchParams();
-  const orderFromQuery = searchParams.get('order');
-  const [selectedOrder] = useState(orderFromQuery || 'ORD-1735683676054');
+  const selectedOrder = searchParams.get('order')?.trim() || '';
 
-  const trackingSteps: TrackingStep[] = [
-    {
-      title: 'تم استقبال الطلب',
-      description: 'تم استقبال طلبك برقم ORD-1735683676054',
-      date: '2025-01-01',
-      time: '14:30',
-      completed: true,
-      active: false,
-      icon: Package
+  const { data: order, isLoading } = useQuery({
+    queryKey: ['tracking-order', selectedOrder],
+    enabled: Boolean(selectedOrder),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('orders')
+        .select('id, order_number, customer_phone, customer_address, customer_notes, delivery_company_id, status, created_at')
+        .eq('order_number', selectedOrder)
+        .maybeSingle();
+      if (error) throw error;
+      return data;
     },
-    {
-      title: 'جاري المعالجة',
-      description: 'نحن نجهز طلبك للشحن',
-      date: '2025-01-02',
-      time: '09:15',
-      completed: true,
-      active: false,
-      icon: Clock
+  });
+
+  const { data: deliveryCompanyName } = useQuery({
+    queryKey: ['tracking-delivery-company', order?.delivery_company_id],
+    enabled: Boolean(order?.delivery_company_id),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('delivery_companies')
+        .select('name')
+        .eq('id', order!.delivery_company_id)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.name || '—';
     },
-    {
-      title: 'تم التسليم للمندوب',
-      description: 'تسليم الطلب إلى شركة التوصيل',
-      date: '2025-01-02',
-      time: '16:45',
-      completed: true,
-      active: false,
-      icon: Truck
-    },
-    {
-      title: 'قيد التوصيل',
-      description: 'الطلب في الطريق إليك',
-      date: '2025-01-03',
-      time: '11:20',
-      completed: true,
-      active: true,
-      icon: MapPin
-    },
-    {
-      title: 'تم التسليم',
-      description: 'سيتم تسليم الطلب إليك قريباً',
-      completed: false,
-      active: false,
-      icon: CheckCircle2
+  });
+
+  const statusSteps = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'] as const;
+  const statusLabelMap: Record<string, string> = {
+    pending: 'تم استقبال الطلب',
+    confirmed: 'تم تأكيد الطلب',
+    processing: 'جاري المعالجة',
+    shipped: 'قيد التوصيل',
+    delivered: 'تم التسليم',
+    cancelled: 'ملغي',
+  };
+
+  const normalizedStatus = normalizeStatus(String(order?.status || 'pending'));
+  const isCancelled = normalizedStatus === 'cancelled';
+
+  const activeIndex = useMemo(() => {
+    const idx = statusSteps.findIndex((s) => s === normalizedStatus);
+    if (idx >= 0) return idx;
+    if (normalizedStatus === 'cancelled') return 0;
+    return 0;
+  }, [normalizedStatus]);
+
+  const trackingSteps: TrackingStep[] = useMemo(() => {
+    const createdDate = order?.created_at ? new Date(order.created_at) : null;
+    const steps: TrackingStep[] = [
+      {
+        title: 'تم استقبال الطلب',
+        description: `تم استقبال طلبك برقم ${order?.order_number || selectedOrder || '—'}`,
+        date: createdDate ? createdDate.toLocaleDateString('ar-EG') : undefined,
+        time: createdDate ? createdDate.toLocaleTimeString('ar-EG', { hour: '2-digit', minute: '2-digit' }) : undefined,
+        completed: activeIndex >= 0,
+        active: activeIndex === 0 && !isCancelled,
+        icon: Package,
+      },
+      {
+        title: 'تم تأكيد الطلب',
+        description: 'تمت مراجعة الطلب وتأكيده',
+        completed: !isCancelled && activeIndex >= 1,
+        active: !isCancelled && activeIndex === 1,
+        icon: CheckCircle2,
+      },
+      {
+        title: 'جاري المعالجة',
+        description: 'نحن نجهز طلبك للشحن',
+        completed: !isCancelled && activeIndex >= 2,
+        active: !isCancelled && activeIndex === 2,
+        icon: Clock,
+      },
+      {
+        title: 'تم التسليم للمندوب',
+        description: 'تسليم الطلب إلى شركة التوصيل',
+        completed: !isCancelled && activeIndex >= 3,
+        active: !isCancelled && activeIndex === 3,
+        icon: Truck,
+      },
+      {
+        title: 'تم التسليم',
+        description: 'تم تسليم الطلب بنجاح',
+        completed: !isCancelled && activeIndex >= 4,
+        active: !isCancelled && activeIndex === 4,
+        icon: MapPin,
+      },
+    ];
+
+    if (isCancelled) {
+      steps.splice(1, 0, {
+        title: 'تم إلغاء الطلب',
+        description: 'تم إلغاء الطلب ولن يتم شحنه.',
+        completed: true,
+        active: true,
+        icon: XCircle,
+      });
     }
-  ];
+    return steps;
+  }, [activeIndex, isCancelled, order?.created_at, order?.order_number, selectedOrder]);
 
   const handleContact = () => {
     window.open('https://wa.me/967782676054?text=مرحباً، أحتاج للاستعلام عن طلبي', '_blank');
   };
+
+  const statusText = statusLabelMap[normalizedStatus] || 'تم استقبال الطلب';
+  const statusTone = isCancelled
+    ? { dot: 'bg-destructive', text: 'text-destructive' }
+    : normalizedStatus === 'delivered'
+      ? { dot: 'bg-green-500', text: 'text-green-600' }
+      : normalizedStatus === 'shipped'
+        ? { dot: 'bg-blue-500', text: 'text-blue-600' }
+        : { dot: 'bg-yellow-500', text: 'text-yellow-600' };
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -101,6 +178,24 @@ const OrderTrackingPage = () => {
         </motion.section>
 
         <div className="container mx-auto px-4 py-12">
+          {!selectedOrder && (
+            <div className="max-w-2xl mx-auto mb-8 bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-700 text-sm">
+              لم يتم تمرير رقم طلب. افتح صفحة التتبع من سجل الفواتير في حسابك.
+            </div>
+          )}
+
+          {isLoading && (
+            <div className="max-w-2xl mx-auto mb-8 bg-card border border-border rounded-xl p-4 text-sm text-muted-foreground">
+              جاري تحميل بيانات الطلب...
+            </div>
+          )}
+
+          {!isLoading && selectedOrder && !order && (
+            <div className="max-w-2xl mx-auto mb-8 bg-destructive/10 border border-destructive/30 rounded-xl p-4 text-destructive text-sm">
+              لم يتم العثور على طلب بهذا الرقم: {selectedOrder}
+            </div>
+          )}
+
           {/* Order Info */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -111,17 +206,17 @@ const OrderTrackingPage = () => {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
               <div>
                 <p className="text-sm text-muted-foreground mb-1">رقم الطلب</p>
-                <p className="font-heading text-lg text-gold">{selectedOrder}</p>
+                <p className="font-heading text-lg text-gold">{order?.order_number || selectedOrder || '—'}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground mb-1">تاريخ الطلب</p>
-                <p className="font-body text-foreground">2025-01-01</p>
+                <p className="font-body text-foreground">{order?.created_at ? new Date(order.created_at).toLocaleDateString('ar-EG') : '—'}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground mb-1">الحالة</p>
                 <div className="flex items-center gap-2">
-                  <div className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-                  <p className="font-body text-yellow-600">قيد التوصيل</p>
+                  <div className={`w-2 h-2 rounded-full ${statusTone.dot} ${isCancelled ? '' : 'animate-pulse'}`} />
+                  <p className={`font-body ${statusTone.text}`}>{statusText}</p>
                 </div>
               </div>
             </div>
@@ -136,7 +231,7 @@ const OrderTrackingPage = () => {
           >
             <div className="relative">
               {/* Timeline line */}
-              <div className="absolute right-6 top-8 bottom-0 w-0.5 bg-gradient-to-b from-gold via-gold/50 to-muted" />
+              <div className={`absolute right-6 top-8 bottom-0 w-0.5 ${isCancelled ? 'bg-gradient-to-b from-destructive via-destructive/50 to-muted' : 'bg-gradient-to-b from-gold via-gold/50 to-muted'}`} />
 
               {/* Steps */}
               <div className="space-y-6">
@@ -154,11 +249,13 @@ const OrderTrackingPage = () => {
                       {/* Icon */}
                       <div className="flex flex-col items-center">
                         <motion.div
-                          animate={step.active ? { scale: [1, 1.2, 1] } : {}}
+                          animate={step.active && !isCancelled ? { scale: [1, 1.2, 1] } : {}}
                           transition={{ duration: 2, repeat: Infinity }}
                           className={`w-12 h-12 rounded-full flex items-center justify-center relative z-10 flex-shrink-0 ${
                             step.completed || step.active
-                              ? 'bg-gold text-white'
+                              ? isCancelled && step.title.includes('إلغاء')
+                                ? 'bg-destructive text-white'
+                                : 'bg-gold text-white'
                               : 'bg-muted text-muted-foreground'
                           }`}
                         >
@@ -205,7 +302,7 @@ const OrderTrackingPage = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">عنوان التسليم</p>
-                  <p className="text-foreground font-body">صنعاء - الحي القديم - الشارع الرئيسي</p>
+                  <p className="text-foreground font-body">{order?.customer_address || '—'}</p>
                 </div>
               </div>
               <div className="flex gap-4">
@@ -214,7 +311,7 @@ const OrderTrackingPage = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">رقم التواصل</p>
-                  <p className="text-foreground font-body">+967 77 1234 567</p>
+                  <p className="text-foreground font-body">{order?.customer_phone || '—'}</p>
                 </div>
               </div>
               <div className="flex gap-4">
@@ -223,7 +320,7 @@ const OrderTrackingPage = () => {
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">شركة التوصيل</p>
-                  <p className="text-foreground font-body">فاست كوريير</p>
+                  <p className="text-foreground font-body">{deliveryCompanyName || '—'}</p>
                 </div>
               </div>
             </div>

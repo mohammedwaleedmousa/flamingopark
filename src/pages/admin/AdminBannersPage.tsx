@@ -12,7 +12,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import AdminPageHeader from '@/components/admin/AdminPageHeader';
 
 interface Banner {
   id: string;
@@ -245,20 +244,14 @@ const AdminBannersPage = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
-      <AdminPageHeader
-        category="المحتوى"
-        title="البانرات"
-        description={`إدارة ${banners.length} بانر`}
-        actions={[
-          {
-            label: "إضافة بانر",
-            icon: Plus,
-            onClick: () => openDialog(),
-            variant: "primary",
-          },
-        ]}
-      />
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="font-heading text-3xl text-foreground">البانرات</h1>
+        <Button onClick={() => openDialog()} className="btn-gold gap-2">
+          <Plus className="w-4 h-4" />
+          إضافة بانر
+        </Button>
+      </div>
 
       <div className="space-y-4">
         {banners.map((banner, index) => (

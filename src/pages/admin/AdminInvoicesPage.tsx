@@ -9,7 +9,6 @@ import { Search, FileText, ExternalLink, Trash2, Calendar, Loader2, Printer, Eye
 import { toast } from '@/hooks/use-toast';
 import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
-import AdminPageHeader from '@/components/admin/AdminPageHeader';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -264,29 +263,19 @@ const AdminInvoicesPage = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
-      <AdminPageHeader
-        category="المالية"
-        title="إدارة الفواتير"
-        description={`${invoices.length} فاتورة`}
-        actions={[
-          {
-            label: "فاتورة جديدة",
-            icon: Plus,
-            onClick: () => setShowNewInvoice(true),
-            variant: "primary",
-          },
-          {
-            label: "تحديث",
-            icon: Search,
-            onClick: () => { 
-              fetchInvoices(); 
-              fetchOrders(); 
-            },
-            variant: "secondary",
-          },
-        ]}
-      />
+    <div className="space-y-6">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <h1 className="text-2xl font-heading text-foreground">إدارة الفواتير</h1>
+        <div className="flex items-center gap-2">
+          <Button onClick={() => setShowNewInvoice(true)} className="gap-2">
+            <Plus className="w-4 h-4" />
+            فاتورة جديدة
+          </Button>
+          <Button onClick={() => { fetchInvoices(); fetchOrders(); }} variant="outline" disabled={isLoading || isLoadingOrders}>
+            {(isLoading || isLoadingOrders) ? <Loader2 className="w-4 h-4 animate-spin" /> : 'تحديث'}
+          </Button>
+        </div>
+      </div>
 
       {/* Filters */}
       <Card>

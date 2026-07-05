@@ -10,7 +10,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Wallet, Plus, Trash2, ArrowRightLeft } from 'lucide-react';
-import AdminPageHeader from '@/components/admin/AdminPageHeader';
 
 interface Method { id: string; code: string; name: string; name_ar: string; type: string; is_active: boolean; sort_order: number; }
 interface Settlement {
@@ -63,27 +62,20 @@ export default function AdminPaymentMethodsPage() {
   }
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto p-2" dir="rtl">
-      <AdminPageHeader
-        category="الإدارة"
-        title="طرق الدفع والتسويات"
-        description="إدارة طرق الدفع المتعددة وتسوية الحسابات"
-        actions={[
-          {
-            label: "طريقة دفع جديدة",
-            icon: Plus,
-            onClick: () => setOpen(true),
-            variant: "primary",
-          },
-        ]}
-      />
+    <div className="space-y-6 p-2">
+      <div>
+        <h1 className="font-heading text-2xl flex items-center gap-2"><Wallet className="w-6 h-6 text-primary" /> طرق الدفع والتسويات</h1>
+        <p className="text-sm text-muted-foreground">إدارة طرق الدفع المتعددة وتسوية الحسابات</p>
+      </div>
 
       <Tabs defaultValue="methods">
         <TabsList><TabsTrigger value="methods">طرق الدفع</TabsTrigger><TabsTrigger value="settlements">التسويات</TabsTrigger></TabsList>
 
         <TabsContent value="methods" className="space-y-4">
-          <Dialog open={open} onOpenChange={setOpen}>
-            <DialogContent>
+          <div className="flex justify-end">
+            <Dialog open={open} onOpenChange={setOpen}>
+              <DialogTrigger asChild><Button><Plus className="w-4 h-4 ml-1" />طريقة دفع</Button></DialogTrigger>
+              <DialogContent>
                 <DialogHeader><DialogTitle>إضافة طريقة دفع</DialogTitle></DialogHeader>
                 <div className="space-y-3">
                   <Input placeholder="الكود (مثل visa)" value={form.code} onChange={e => setForm({ ...form, code: e.target.value })} />
@@ -102,7 +94,7 @@ export default function AdminPaymentMethodsPage() {
                 </div>
               </DialogContent>
             </Dialog>
-
+          </div>
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3">
             {methods.map(m => (
               <Card key={m.id}>

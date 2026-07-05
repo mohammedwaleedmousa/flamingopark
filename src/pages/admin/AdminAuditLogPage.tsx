@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Loader2, ShieldAlert, Download } from 'lucide-react';
 import { useDebounce } from '@/hooks/useDebounce';
 import AdminPagination from '@/components/admin/AdminPagination';
-import AdminPageHeader from '@/components/admin/AdminPageHeader';
 
 const PAGE_SIZE = 30;
 
@@ -77,20 +76,19 @@ const AdminAuditLogPage = () => {
   };
 
   return (
-    <div className="space-y-5 max-w-[1400px] mx-auto" dir="rtl">
-      <AdminPageHeader
-        category="الإدارة"
-        title="سجلّ التدقيق"
-        description="جميع العمليات الإدارية الحساسة"
-        actions={[
-          {
-            label: "تصدير CSV",
-            icon: Download,
-            onClick: exportCSV,
-            variant: "outline",
-          },
-        ]}
-      />
+    <div className="space-y-5">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="font-heading text-2xl md:text-3xl text-foreground flex items-center gap-2">
+            <ShieldAlert className="w-6 h-6 text-primary" />
+            سجلّ التدقيق
+          </h1>
+          <p className="text-muted-foreground text-sm mt-1">جميع العمليات الإدارية الحساسة</p>
+        </div>
+        <Button variant="outline" onClick={exportCSV} className="gap-2">
+          <Download className="w-4 h-4" /> تصدير CSV
+        </Button>
+      </div>
 
       <Input
         placeholder="بحث (إجراء، نوع، بريد الفاعل)..."

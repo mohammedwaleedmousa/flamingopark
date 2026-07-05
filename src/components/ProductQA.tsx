@@ -25,7 +25,7 @@ interface ProductQA {
 
 export const ProductQA = ({ productId }: { productId: string }) => {
   const { data: content } = useSiteContent('product_qa_');
-  const { user } = useStore();
+  const { customer } = useStore();
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [newQuestion, setNewQuestion] = useState('');
   const [loading, setLoading] = useState(false);
@@ -34,19 +34,25 @@ export const ProductQA = ({ productId }: { productId: string }) => {
   const { data: questions = [], refetch } = useQuery({
     queryKey: ['product-questions', productId],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('product_questions')
-        .select('*')
-        .eq('product_id', productId)
-        .order('helpful_count', { ascending: false });
-      return error ? [] : (data || []);
+      try {
+        const { data, error } = await supabase
+          .from('product_questions')
+          .select('*')
+          .eq('product_id', productId)
+          .order('helpful_count', { ascending: false });
+        return error ? [] : ((data || []) as Question[]);
+      } catch {
+        return [];
+      }
     },
   });
 
   const handleAskQuestion = useCallback(async () => {
-    if (!newQuestion.trim()) {
+    if (!newQuestion.trim() || !customer) {
       toast({
-        title: getSiteText(content, 'qa_error_empty', 'الحقل مطلوب'),
+        title: !customer 
+          ? getSiteText(content, 'qa_login_required', 'يجب تسجيل الدخول أولاً')
+          : getSiteText(content, 'qa_error_empty', 'الحقل مطلوب'),
         variant: 'destructive',
       });
       return;
@@ -58,7 +64,7 @@ export const ProductQA = ({ productId }: { productId: string }) => {
         product_id: productId,
         content: newQuestion,
         content_ar: newQuestion,
-        author: user?.email || 'Guest',
+        author: customer?.name || customer?.phone || 'Guest',
         helpful_count: 0,
       });
 
@@ -78,7 +84,7 @@ export const ProductQA = ({ productId }: { productId: string }) => {
     } finally {
       setLoading(false);
     }
-  }, [newQuestion, productId, user, refetch, content]);
+  }, [newQuestion, productId, customer, refetch, content]);
 
   const handleHelpful = useCallback(async (questionId: string) => {
     if (myHelpful.has(questionId)) return;
@@ -89,7 +95,7 @@ export const ProductQA = ({ productId }: { productId: string }) => {
 
       const { error } = await supabase
         .from('product_questions')
-        .update({ helpful_count: current.helpful_count + 1 })
+        .update({ helpful_count: (current.helpful_count || 0) + 1 })
         .eq('id', questionId);
 
       if (error) throw error;

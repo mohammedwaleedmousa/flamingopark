@@ -491,14 +491,21 @@ const OffersPage = () => {
 
                     {/* Offer Products */}
                     {offerLinkedProducts.length > 0 ? (
-                      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
-                        {offerLinkedProducts.map((product, index) => (
-                          <ProductCard key={product.id} product={product} index={index} />
-                        ))}
-                      </div>
-                    ) : offer.product_ids && offer.product_ids.length > 0 ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        جاري تحميل المنتجات...
+                      <div className="mt-8">
+                        <h3 className="font-heading text-lg mb-4">المنتجات المتضمنة</h3>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                          {offerLinkedProducts.map((product, idx) => (
+                            <motion.div
+                              key={product.id}
+                              initial={{ opacity: 0, y: 20 }}
+                              whileInView={{ opacity: 1, y: 0 }}
+                              transition={{ delay: idx * 0.05 }}
+                              viewport={{ once: true }}
+                            >
+                              <ProductCard product={product} />
+                            </motion.div>
+                          ))}
+                        </div>
                       </div>
                     ) : null}
                   </div>

@@ -42,7 +42,7 @@ export const useFavorites = create<FavoritesState>()(
       },
     }),
     {
-      name: 'ermgold-favorites',
+      name: 'flamingopark-favorites',
     }
   )
 );

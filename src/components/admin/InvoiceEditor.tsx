@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Save, Printer, X, Pencil, Download } from "lucide-react";
 // Use public path for static assets that live in /public
-const ermgoldLogo = "/icons/flamingo.jpeg";
+const flamingoLogo = "/icons/flamingo.jpeg";
 
 interface SelectedAccessory {
   name: string;
@@ -261,13 +261,13 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
         <div className="flex-1 overflow-y-auto p-4">
           <div 
             ref={invoiceRef} 
-            className="bg-white border-2 border-amber-500 rounded-lg p-6 md:p-8 space-y-6"
+            className="bg-white border-2 border-primary rounded-lg p-6 md:p-8 space-y-6"
             id="admin-invoice"
           >
             {/* Invoice Header */}
             <div className="flex items-center justify-between pb-4 border-b border-gray-200">
               <div>
-                <img src={ermgoldLogo} alt="Flamingo" className="h-16 w-auto object-contain" />
+                <img src={flamingoLogo} alt="Flamingo" className="h-16 w-auto object-contain" />
                 <p className="text-sm text-gray-500 mt-1">فاتورة طلب</p>
               </div>
               <div className="text-left">
@@ -386,7 +386,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                         )}
                       </div>
                       {!isEditing && (
-                        <span className="font-heading text-amber-600">
+                        <span className="font-heading text-primary">
                           {(item.price * item.quantity).toFixed(2)} {currency}
                         </span>
                       )}
@@ -411,7 +411,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                               <div className="text-xs">
                                 <span className="text-gray-700">{acc.name_ar || acc.name}</span>
                                 <span className="text-gray-500 mx-1">×{acc.quantity}</span>
-                                <span className="text-amber-600">+{(acc.price * acc.quantity).toFixed(0)}</span>
+                                <span className="text-primary">+{(acc.price * acc.quantity).toFixed(0)}</span>
                               </div>
                             </div>
                           ))}
@@ -461,7 +461,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
               <div className="h-px bg-gray-200 my-2" />
               <div className="flex justify-between font-heading text-lg">
                 <span className="text-gray-900">الإجمالي</span>
-                <span className="text-amber-600">{calculatedTotals.total.toFixed(2)} {currency}</span>
+                <span className="text-primary">{calculatedTotals.total.toFixed(2)} {currency}</span>
               </div>
               <div className="flex justify-between text-sm font-body pt-2">
                 <span className="text-gray-500">طريقة الدفع</span>

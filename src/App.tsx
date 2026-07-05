@@ -65,7 +65,19 @@ const AdminPaymentMethodsPage = lazy(() => import("./pages/admin/AdminPaymentMet
 const AdminInventoryAdjustmentsPage = lazy(() => import("./pages/admin/AdminInventoryAdjustmentsPage"));
 const MohammedInvoicesPage = lazy(() => import("./pages/MohammedInvoicesPage"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for 5 minutes
+      gcTime: 30 * 60 * 1000, // 30 minutes - keep unused data in cache for 30 minutes
+      retry: 2, // retry failed requests 2 times
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // exponential backoff
+      refetchOnWindowFocus: false, // don't refetch when user returns to window
+      refetchOnMount: false, // don't refetch when component mounts if data is fresh
+      refetchOnReconnect: true, // refetch when connection is restored
+    },
+  },
+});
 
 const RouteFallback = () => <LoadingScreen />;
 

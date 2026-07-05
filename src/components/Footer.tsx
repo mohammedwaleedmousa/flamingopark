@@ -73,7 +73,7 @@ const Footer = () => {
                 className="h-20 md:h-10 w-auto object-contain pr-8"
               />
             </Link>
-            <p className="mt-5 text-xs text-muted-foreground leading-relaxed">
+            <p className="mt-5 text-xs text-muted-foreground leading-relaxed break-words overflow-wrap-break-word">
               متجر أزياء يجمع بين الحرفة الفاخرة والروح المعاصرة.
             </p>
             <div className="flex items-center gap-3 mt-6">
@@ -123,11 +123,11 @@ const Footer = () => {
 
           {cols.map((col) => (
             <div key={col.title}>
-              <h3 className="text-[10px] tracking-[0.35em] uppercase text-foreground mb-5">{col.title}</h3>
+              <h3 className="text-[10px] tracking-[0.35em] uppercase text-foreground mb-5 break-words overflow-wrap-break-word whitespace-normal">{col.title}</h3>
               <ul className="space-y-3">
                 {col.links.map((l) => (
                   <li key={l.label}>
-                    <Link to={l.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    <Link to={l.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors break-words overflow-wrap-break-word">
                       {l.label}
                     </Link>
                   </li>

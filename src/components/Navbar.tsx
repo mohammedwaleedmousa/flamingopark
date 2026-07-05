@@ -131,9 +131,34 @@ const Navbar = () => {
   ];
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => setUser(data.session?.user ?? null));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => setUser(s?.user ?? null));
-    return () => sub.subscription.unsubscribe();
+    // Get initial session and verify it's valid
+    supabase.auth.getSession().then(({ data, error }) => {
+      if (error) {
+        console.error("Session error:", error);
+        setUser(null);
+      } else {
+        // Verify the session is still active
+        if (data.session?.user) {
+          // Session is valid, set the user
+          setUser(data.session?.user ?? null);
+        } else {
+          setUser(null);
+        }
+      }
+    });
+
+    // Listen for auth state changes
+    const { data: subscription } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event);
+      if (session?.user) {
+        // Session is valid, update user
+        setUser(session.user);
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription?.subscription.unsubscribe();
   }, []);
 
   const { data: categories = [] } = useQuery({
@@ -225,7 +250,6 @@ const Navbar = () => {
                       <NavItem to="/home" icon={House} label="الرئيسية" />
                       <NavItem to="/categories" icon={SquaresFour} label="جميع الأقسام" />
                       <NavItem to="/products" icon={Tag} label="جميع المنتجات" />
-                      <NavItem to="/search" icon={MagnifyingGlass} label="بحث متقدم" />
                       <NavItem to="/comparison" icon={SquaresFour} label="مقارنة المنتجات" />
                       <NavItem to="/seasonal-offers" icon={TrendUp} label="العروض الموسمية" />
                       <NavItem to="/new-arrivals" icon={TrendUp} label="وصل حديثاً" />

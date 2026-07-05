@@ -411,7 +411,6 @@
   }
 
   /* Flamingo wordmark — Dior-style serif */
-  .logo-ermgold,
   .logo-flamingo {
     font-family: "Playfair Display", "Cormorant Garamond", serif;
     font-weight: 500;
@@ -550,5 +549,56 @@
     100% {
       transform: scale(1);
     }
+  }
+
+  /* Arabic text wrapping fixes for iOS/iPhone */
+  .break-words {
+    word-break: break-word;
+    overflow-wrap: break-word;
+    -webkit-hyphens: auto;
+    hyphens: auto;
+    -webkit-line-clamp: unset;
+  }
+
+  .overflow-wrap-break-word {
+    overflow-wrap: break-word;
+    word-break: break-word;
+  }
+
+  .whitespace-normal {
+    white-space: normal;
+  }
+
+  /* Mobile-specific optimizations */
+  @media (max-width: 640px) {
+    /* Ensure text doesn't get cut off on mobile */
+    body {
+      -webkit-user-select: text;
+      -webkit-touch-callout: none;
+    }
+
+    /* Fix Arabic text rendering on iPhone */
+    *[lang="ar"],
+    [dir="rtl"] {
+      word-break: break-word;
+      overflow-wrap: break-word;
+      -webkit-text-size-adjust: 100%;
+    }
+
+    /* Prevent zoom on input focus */
+    input,
+    select,
+    textarea {
+      font-size: 16px !important;
+    }
+  }
+
+  /* Additional text wrapping utilities */
+  .text-wrap-balance {
+    text-wrap: balance;
+  }
+
+  .text-wrap-pretty {
+    text-wrap: pretty;
   }
 }

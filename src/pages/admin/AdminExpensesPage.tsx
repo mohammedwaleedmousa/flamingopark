@@ -14,6 +14,7 @@ interface Category { id: string; name_ar: string; }
 interface Method { id: string; name_ar: string; }
 interface Expense {
   id: string; expense_date: string; amount: number; description: string; vendor: string | null;
+  currency_mode: 'SAR' | 'YER_SOUTH' | 'YER_NORTH' | null;
   category_id: string | null; payment_method_id: string | null;
   expense_categories: { name_ar: string } | null;
   payment_methods: { name_ar: string } | null;
@@ -25,7 +26,7 @@ export default function AdminExpensesPage() {
   const [methods, setMethods] = useState<Method[]>([]);
   const [loading, setLoading] = useState(true);
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ expense_date: new Date().toISOString().slice(0, 10), category_id: '', amount: '', description: '', vendor: '', payment_method_id: '', notes: '' });
+  const [form, setForm] = useState({ expense_date: new Date().toISOString().slice(0, 10), category_id: '', amount: '', description: '', vendor: '', payment_method_id: '', notes: '', currency_mode: 'SAR' as 'SAR' | 'YER_SOUTH' | 'YER_NORTH' });
 
   useEffect(() => { fetchAll(); }, []);
   async function fetchAll() {
@@ -46,10 +47,11 @@ export default function AdminExpensesPage() {
       expense_date: form.expense_date, amount: Number(form.amount), description: form.description,
       vendor: form.vendor || null, category_id: form.category_id || null,
       payment_method_id: form.payment_method_id || null, notes: form.notes || null,
+      currency_mode: form.currency_mode,
     });
     if (error) return toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
     toast({ title: 'تم حفظ المصروف' }); setOpen(false);
-    setForm({ expense_date: new Date().toISOString().slice(0, 10), category_id: '', amount: '', description: '', vendor: '', payment_method_id: '', notes: '' });
+    setForm({ expense_date: new Date().toISOString().slice(0, 10), category_id: '', amount: '', description: '', vendor: '', payment_method_id: '', notes: '', currency_mode: 'SAR' });
     fetchAll();
   }
   async function del(id: string) {
@@ -84,6 +86,14 @@ export default function AdminExpensesPage() {
                 <Input type="date" value={form.expense_date} onChange={e => setForm({ ...form, expense_date: e.target.value })} />
                 <Input type="number" step="0.01" placeholder="المبلغ *" value={form.amount} onChange={e => setForm({ ...form, amount: e.target.value })} />
               </div>
+              <Select value={form.currency_mode} onValueChange={(v: 'SAR' | 'YER_SOUTH' | 'YER_NORTH') => setForm({ ...form, currency_mode: v })}>
+                <SelectTrigger><SelectValue placeholder="عملة المصروف" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="SAR">ريال سعودي (SAR)</SelectItem>
+                  <SelectItem value="YER_SOUTH">ريال يمني - جنوب</SelectItem>
+                  <SelectItem value="YER_NORTH">ريال يمني - شمال</SelectItem>
+                </SelectContent>
+              </Select>
               <Input placeholder="الوصف *" value={form.description} onChange={e => setForm({ ...form, description: e.target.value })} />
               <div className="grid grid-cols-2 gap-3">
                 <Select value={form.category_id} onValueChange={v => setForm({ ...form, category_id: v })}>
@@ -119,7 +129,7 @@ export default function AdminExpensesPage() {
                   <div className="w-9 h-9 rounded-lg bg-rose-50 text-rose-600 flex items-center justify-center"><TrendingDown className="w-4 h-4" /></div>
                   <div className="flex-1 min-w-[180px]">
                     <p className="font-medium text-sm">{e.description}</p>
-                    <p className="text-xs text-muted-foreground">{e.expense_date} • {e.expense_categories?.name_ar || '—'} {e.vendor && `• ${e.vendor}`} {e.payment_methods?.name_ar && `• ${e.payment_methods.name_ar}`}</p>
+                    <p className="text-xs text-muted-foreground">{e.expense_date} • {e.expense_categories?.name_ar || '—'} • {e.currency_mode === 'SAR' ? 'SAR' : e.currency_mode === 'YER_NORTH' ? 'YER(N)' : 'YER(S)'} {e.vendor && `• ${e.vendor}`} {e.payment_methods?.name_ar && `• ${e.payment_methods.name_ar}`}</p>
                   </div>
                   <div className="text-left"><p className="font-bold">{Number(e.amount).toFixed(2)}</p></div>
                   <Button size="icon" variant="ghost" onClick={() => del(e.id)}><Trash2 className="w-4 h-4 text-destructive" /></Button>

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { DateRangePicker, useDateRange } from "@/lib/analytics/dateRange";
 import {
   loadImportedEntries,
@@ -20,11 +20,73 @@ import * as XLSX from "xlsx";
 import { Wallet, TrendingUp, TrendingDown, BookOpen, Receipt, ArrowUpRight, PiggyBank, DownloadCloud, UploadCloud, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
+import { CURRENCY_RATES } from "@/lib/currency";
 
-const currency = "ر.ي";
+const currency = "ر.س";
 const fmt = (n: number) => new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 0 }).format(n);
 
 type Range = "7d" | "30d" | "12m";
+type CurrencyMode = "SAR" | "YER_SOUTH" | "YER_NORTH";
+
+type FinanceAlert = {
+  id: string;
+  level: "high" | "medium" | "low";
+  title: string;
+  details: string;
+};
+
+const currencyMeta: Record<CurrencyMode, { label: string; symbol: string }> = {
+  SAR: { label: "الإيرادات - ريال سعودي", symbol: "ر.س" },
+  YER_SOUTH: { label: "الإيرادات - ريال يمني (جنوب)", symbol: "ر.ي" },
+  YER_NORTH: { label: "الإيرادات - ريال يمني (شمال)", symbol: "ر.ي" },
+};
+
+const resolveOrderMode = (order: { currency_mode?: string | null; country?: string | null }): CurrencyMode => {
+  if (order.currency_mode === "SAR" || order.currency_mode === "YER_SOUTH" || order.currency_mode === "YER_NORTH") {
+    return order.currency_mode;
+  }
+  if (order.country === "SA") return "SAR";
+  return "YER_SOUTH";
+};
+
+const toSAR = (amount: number, mode: CurrencyMode) => {
+  if (mode === "SAR") return amount;
+  return amount / CURRENCY_RATES[mode].rate;
+};
+
+const resolveExpenseMode = (expense: { currency_mode?: string | null }): CurrencyMode => {
+  if (expense.currency_mode === "SAR" || expense.currency_mode === "YER_SOUTH" || expense.currency_mode === "YER_NORTH") {
+    return expense.currency_mode;
+  }
+  return "SAR";
+};
+
+const toDayStart = (d: Date) => {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+};
+
+const toDayEnd = (d: Date) => {
+  const x = new Date(d);
+  x.setHours(23, 59, 59, 999);
+  return x;
+};
+
+const asNum = (v: unknown) => {
+  const n = typeof v === "number" ? v : Number(v ?? 0);
+  return Number.isFinite(n) ? n : 0;
+};
+
+const isIncomeType = (type: string) => {
+  const t = type.trim().toLowerCase();
+  return ["income", "in", "revenue", "credit", "دخل", "ايراد", "إيراد"].includes(t);
+};
+
+const isExpenseType = (type: string) => {
+  const t = type.trim().toLowerCase();
+  return ["expense", "out", "cost", "debit", "مصروف", "نفقة", "expense"].includes(t);
+};
 
 export default function AdminFinanceDashboard() {
   const { range } = useDateRange();
@@ -39,12 +101,28 @@ export default function AdminFinanceDashboard() {
   const txQ = useQuery({ queryKey: ["finance_tx", range], queryFn: () => getFinancialTransactionsEntries(range.start, range.end) });
 
   // combined ledger and totals
-  const [ledger, setLedger] = useState<LedgerEntry[]>([]);
-  useEffect(() => {
-    const merged: LedgerEntry[] = [ ...(ordersQ.data ?? []), ...(expensesQ.data ?? []), ...(txQ.data ?? []), ...imports ];
-    merged.sort((a,b) => new Date(a.date).getTime() - new Date(b.date).getTime());
-    setLedger(merged);
-  }, [ordersQ.data, expensesQ.data, txQ.data, imports]);
+  const rangeStartIso = useMemo(() => toDayStart(new Date(range.start)).toISOString(), [range.start]);
+  const rangeEndIso = useMemo(() => toDayEnd(new Date(range.end)).toISOString(), [range.end]);
+
+  const importsInRange = useMemo(() => {
+    const startTs = new Date(rangeStartIso).getTime();
+    const endTs = new Date(rangeEndIso).getTime();
+    return imports.filter((e) => {
+      const ts = new Date(e.date).getTime();
+      return ts >= startTs && ts <= endTs;
+    });
+  }, [imports, rangeStartIso, rangeEndIso]);
+
+  const ledger = useMemo(() => {
+    const merged: LedgerEntry[] = [
+      ...(ordersQ.data ?? []),
+      ...(expensesQ.data ?? []),
+      ...(txQ.data ?? []),
+      ...importsInRange,
+    ];
+    merged.sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return merged;
+  }, [ordersQ.data, expensesQ.data, txQ.data, importsInRange]);
 
   const totals = ledger.reduce((acc, e) => {
     if (e.amount > 0) acc.revenue += e.amount; else acc.expenses += Math.abs(e.amount);
@@ -57,6 +135,18 @@ export default function AdminFinanceDashboard() {
   const [loadingOverview, setLoadingOverview] = useState(false);
   const [series, setSeries] = useState<any[]>([]);
   const [kpis, setKpis] = useState({ revenue: 0, expenses: 0, profit: 0, refunds: 0 });
+  const [revenueByCurrency, setRevenueByCurrency] = useState<Record<CurrencyMode, number>>({
+    SAR: 0,
+    YER_SOUTH: 0,
+    YER_NORTH: 0,
+  });
+
+  const consolidatedRevenueSAR = useMemo(() => {
+    const sar = revenueByCurrency.SAR;
+    const southToSar = revenueByCurrency.YER_SOUTH / CURRENCY_RATES.YER_SOUTH.rate;
+    const northToSar = revenueByCurrency.YER_NORTH / CURRENCY_RATES.YER_NORTH.rate;
+    return sar + southToSar + northToSar;
+  }, [revenueByCurrency]);
 
   useEffect(() => { loadOverview(); }, [rangeMode, range.start, range.end]);
 
@@ -68,40 +158,85 @@ export default function AdminFinanceDashboard() {
     let startDate: Date;
     let endDate: Date;
     if (range && range.start && range.end) {
-      startDate = new Date(range.start);
-      endDate = new Date(range.end);
+      startDate = toDayStart(new Date(range.start));
+      endDate = toDayEnd(new Date(range.end));
     } else {
       const days = rangeMode === "7d" ? 7 : rangeMode === "30d" ? 30 : 365;
-      endDate = new Date(now);
-      startDate = new Date(now);
+      endDate = toDayEnd(new Date(now));
+      startDate = toDayStart(new Date(now));
       startDate.setDate(now.getDate() - days);
     }
 
     const daysSpan = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
     const monthMode = rangeMode === "12m" || daysSpan > 365;
 
+    const expensesQueryWithMode = supabase
+      .from("expenses")
+      .select("amount,expense_date,category_id,currency_mode")
+      .gte("expense_date", startDate.toISOString())
+      .lte("expense_date", new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString());
+
     const [ordersRes, expensesRes, refundsRes, txRes] = await Promise.all([
-      supabase.from("orders").select("total,created_at,status").gte("created_at", startDate.toISOString()).lte("created_at", new Date(endDate.getTime() + 24*60*60*1000 -1).toISOString()).neq("status", "cancelled"),
-      supabase.from("expenses").select("amount,expense_date,category_id").gte("expense_date", startDate.toISOString()).lte("expense_date", new Date(endDate.getTime() + 24*60*60*1000 -1).toISOString()),
-      supabase.from("refunds").select("amount,created_at").gte("created_at", startDate.toISOString()).lte("created_at", new Date(endDate.getTime() + 24*60*60*1000 -1).toISOString()),
-      supabase.from("financial_transactions").select("id,entry_date,description,reference,transaction_lines(debit,credit)").order("entry_date", { ascending: false }).limit(8),
+      supabase.from("orders").select("total,created_at,status,currency_mode,country").gte("created_at", startDate.toISOString()).lte("created_at", new Date(endDate.getTime() + 24*60*60*1000 -1).toISOString()).neq("status", "cancelled"),
+      expensesQueryWithMode,
+      supabase.from("refunds").select("amount,created_at,order_id,orders(currency_mode,country)").gte("created_at", startDate.toISOString()).lte("created_at", new Date(endDate.getTime() + 24*60*60*1000 -1).toISOString()),
+      supabase.from("financial_transactions").select("id,entry_date,description,reference,transaction_lines(debit,credit)").gte("entry_date", startDate.toISOString()).lte("entry_date", endDate.toISOString()).order("entry_date", { ascending: false }).limit(8),
     ]);
 
+    let expensesData = (expensesRes.data || []) as any[];
+    if (expensesRes.error && String(expensesRes.error.message || "").toLowerCase().includes("currency_mode")) {
+      const fallbackRes = await supabase
+        .from("expenses")
+        .select("amount,expense_date,category_id")
+        .gte("expense_date", startDate.toISOString())
+        .lte("expense_date", new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString());
+      expensesData = ((fallbackRes.data || []) as any[]).map((e) => ({ ...e, currency_mode: "SAR" }));
+    }
+
     const orders = (ordersRes.data || []) as any[];
-    const expenses = ((expensesRes.data || []) as any[]).filter(e => new Date(e.expense_date) >= startDate);
+    const expenses = expensesData.filter(e => new Date(e.expense_date) >= startDate);
     const refunds = ((refundsRes.data || []) as any[]).filter(r => new Date(r.created_at) >= startDate);
+
+    const importedEntries = importsInRange.filter((entry) => entry.source === "import");
 
     const buckets: Record<string, { revenue: number; expenses: number }> = {};
     const keyOf = (d: Date) => monthMode ? d.toISOString().slice(0,7) : d.toISOString().slice(0,10);
-    const steps = monthMode ? 12 : daysSpan;
+    const steps = monthMode
+      ? Math.max(1, (endDate.getFullYear() - startDate.getFullYear()) * 12 + (endDate.getMonth() - startDate.getMonth()) + 1)
+      : daysSpan;
     for (let i = steps - 1; i >= 0; i--) {
-      const d = new Date(now);
-      if (monthMode) d.setMonth(now.getMonth() - i); else d.setDate(now.getDate() - i);
+      const d = new Date(startDate);
+      if (monthMode) d.setMonth(startDate.getMonth() + (steps - 1 - i)); else d.setDate(startDate.getDate() + (steps - 1 - i));
       buckets[keyOf(d)] = { revenue: 0, expenses: 0 };
     }
 
-    orders.forEach(o => { const k = keyOf(new Date(o.created_at)); if (buckets[k]) buckets[k].revenue += parseFloat(o.total) || 0; });
-    expenses.forEach(e => { const k = keyOf(new Date(e.expense_date)); if (buckets[k]) buckets[k].expenses += parseFloat(e.amount) || 0; });
+    orders.forEach(o => {
+      const k = keyOf(new Date(o.created_at));
+      if (!buckets[k]) return;
+      const mode = resolveOrderMode(o);
+      buckets[k].revenue += toSAR(parseFloat(o.total) || 0, mode);
+    });
+    expenses.forEach(e => {
+      const k = keyOf(new Date(e.expense_date));
+      if (!buckets[k]) return;
+      buckets[k].expenses += toSAR(parseFloat(e.amount) || 0, resolveExpenseMode(e));
+    });
+    refunds.forEach(r => {
+      const k = keyOf(new Date(r.created_at));
+      if (!buckets[k]) return;
+      const linked = Array.isArray((r as any).orders) ? (r as any).orders[0] : (r as any).orders;
+      const mode = resolveOrderMode({
+        currency_mode: linked?.currency_mode ?? null,
+        country: linked?.country ?? null,
+      });
+      buckets[k].expenses += toSAR(parseFloat(r.amount) || 0, mode);
+    });
+    importedEntries.forEach((entry) => {
+      const k = keyOf(new Date(entry.date));
+      if (!buckets[k]) return;
+      if (entry.amount >= 0) buckets[k].revenue += entry.amount;
+      else buckets[k].expenses += Math.abs(entry.amount);
+    });
 
     const data = Object.entries(buckets).map(([label, v]) => ({
       label: monthMode ? label.slice(2) : label.slice(5),
@@ -110,16 +245,123 @@ export default function AdminFinanceDashboard() {
       profit: Math.round(v.revenue - v.expenses),
     }));
 
-    const sumRev = orders.reduce((s, o) => s + (parseFloat(o.total) || 0), 0);
-    const sumExp = expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0);
-    const sumRef = refunds.reduce((s, r) => s + (parseFloat(r.amount) || 0), 0);
+    const importedRevenue = importedEntries.reduce((s, e) => s + (e.amount > 0 ? e.amount : 0), 0);
+    const importedExpenses = importedEntries.reduce((s, e) => s + (e.amount < 0 ? Math.abs(e.amount) : 0), 0);
+
+    const groupedRevenue: Record<CurrencyMode, number> = {
+      SAR: 0,
+      YER_SOUTH: 0,
+      YER_NORTH: 0,
+    };
+    orders.forEach((order) => {
+      const mode = resolveOrderMode(order);
+      groupedRevenue[mode] += parseFloat(order.total) || 0;
+    });
+
+    const sumRev = orders.reduce((s, o) => s + toSAR(parseFloat(o.total) || 0, resolveOrderMode(o)), 0) + importedRevenue;
+    const sumExp = expenses.reduce((s, e) => s + toSAR(parseFloat(e.amount) || 0, resolveExpenseMode(e)), 0) + importedExpenses;
+    const sumRef = refunds.reduce((s, r) => {
+      const linked = Array.isArray((r as any).orders) ? (r as any).orders[0] : (r as any).orders;
+      const mode = resolveOrderMode({
+        currency_mode: linked?.currency_mode ?? null,
+        country: linked?.country ?? null,
+      });
+      return s + toSAR(parseFloat(r.amount) || 0, mode);
+    }, 0);
 
     setSeries(data);
-    setKpis({ revenue: sumRev, expenses: sumExp, profit: sumRev - sumExp - sumRef, refunds: sumRef });
+    setKpis({ revenue: sumRev, expenses: sumExp + sumRef, profit: sumRev - sumExp - sumRef, refunds: sumRef });
+    setRevenueByCurrency(groupedRevenue);
     setLoadingOverview(false);
   }
 
   const margin = kpis.revenue > 0 ? (kpis.profit / kpis.revenue) * 100 : 0;
+
+  const financeAlerts = useMemo<FinanceAlert[]>(() => {
+    const alerts: FinanceAlert[] = [];
+    const points = series ?? [];
+    const last = points[points.length - 1];
+    const prev = points[points.length - 2];
+
+    if (kpis.revenue > 0) {
+      const refundRate = (kpis.refunds / kpis.revenue) * 100;
+      if (refundRate >= 15) {
+        alerts.push({
+          id: "refund-rate-high",
+          level: "high",
+          title: "معدل مرتجعات مرتفع",
+          details: `المرتجعات تمثل ${refundRate.toFixed(1)}% من الإيرادات خلال الفترة الحالية.`,
+        });
+      } else if (refundRate >= 8) {
+        alerts.push({
+          id: "refund-rate-medium",
+          level: "medium",
+          title: "معدل مرتجعات يحتاج متابعة",
+          details: `المرتجعات عند ${refundRate.toFixed(1)}% من الإيرادات.`,
+        });
+      }
+    }
+
+    if (last && prev && prev.expenses > 0) {
+      const expenseJump = ((last.expenses - prev.expenses) / prev.expenses) * 100;
+      if (expenseJump >= 35) {
+        alerts.push({
+          id: "expenses-jump",
+          level: "high",
+          title: "قفزة كبيرة في المصروفات",
+          details: `المصروفات ارتفعت ${expenseJump.toFixed(1)}% مقارنة بالفترة السابقة.`,
+        });
+      } else if (expenseJump >= 20) {
+        alerts.push({
+          id: "expenses-rise",
+          level: "medium",
+          title: "ارتفاع ملحوظ في المصروفات",
+          details: `المصروفات ارتفعت ${expenseJump.toFixed(1)}% عن الفترة السابقة.`,
+        });
+      }
+    }
+
+    const negativeStreak = [...points]
+      .reverse()
+      .reduce((streak, point) => (streak >= 0 && point.profit < 0 ? streak + 1 : point.profit < 0 ? 1 : -1), 0);
+
+    if (negativeStreak >= 3) {
+      alerts.push({
+        id: "negative-streak",
+        level: "high",
+        title: "خسائر متتالية",
+        details: `هناك ${negativeStreak} فترات متتالية بصافي ربح سلبي.`,
+      });
+    }
+
+    if (margin < 5 && kpis.revenue > 0) {
+      alerts.push({
+        id: "low-margin",
+        level: "medium",
+        title: "هامش ربح منخفض",
+        details: `هامش الربح الحالي ${margin.toFixed(1)}% وهو أقل من الحد الآمن.`,
+      });
+    }
+
+    if (ledger.length > 0) {
+      const largeOutflows = ledger
+        .filter((entry) => entry.amount < 0)
+        .map((entry) => Math.abs(entry.amount))
+        .sort((a, b) => b - a)
+        .slice(0, 3);
+      const avgOutflow = largeOutflows.length ? largeOutflows.reduce((s, n) => s + n, 0) / largeOutflows.length : 0;
+      if (avgOutflow > 0 && Math.abs(totals.net) > avgOutflow * 2) {
+        alerts.push({
+          id: "net-volatility",
+          level: "low",
+          title: "تذبذب في صافي التدفق",
+          details: "صافي الفترة متذبذب مقارنة بأكبر الحركات الخارجة، راجع القيود الكبيرة.",
+        });
+      }
+    }
+
+    return alerts.slice(0, 4);
+  }, [kpis.revenue, kpis.refunds, kpis.profit, margin, series, ledger, totals.net]);
 
   const options: { value: Range; label: string }[] = [
     { value: "7d", label: "7 أيام" },
@@ -139,21 +381,37 @@ export default function AdminFinanceDashboard() {
       for (const r of rows) {
         const date = r.date || r.Date || r.Datum;
         const desc = r.description || r.Description || r.desc || "";
-        const type = (r.type || r.Type || r.TypeOf || "").toString().toLowerCase();
-        const amount = Number(r.amount || r.Amount || r.Amt || 0);
-        if (!date || !type || isNaN(amount)) continue;
+        const type = (r.type || r.Type || r.TypeOf || "").toString();
+        const amount = asNum(r.amount || r.Amount || r.Amt || r.value || r.Value || 0);
+        if (!date || isNaN(amount)) continue;
+
+        const typedIncome = isIncomeType(type);
+        const typedExpense = isExpenseType(type);
+        const fallbackIncome = !typedIncome && !typedExpense && amount >= 0;
+        const isIncome = typedIncome || fallbackIncome;
+
+        const signedAmount = isIncome ? Math.abs(amount) : -Math.abs(amount);
         const entry: LedgerEntry = {
           id: `import-${Date.now()}-${Math.random().toString(36).slice(2,8)}`,
           date: new Date(date).toISOString(),
-          type: type === 'income' || type === 'in' ? 'income' : 'expense',
+          type: isIncome ? 'income' : 'expense',
           category: 'import',
-          amount: type === 'income' || type === 'in' ? amount : -Math.abs(amount),
+          amount: signedAmount,
           source: 'import',
           description: desc,
         };
         parsed.push(entry);
       }
-      const all = [...imports, ...parsed];
+
+      const seen = new Set(imports.map((x) => `${new Date(x.date).toISOString()}|${x.amount}|${x.description ?? ""}|${x.source ?? ""}`));
+      const uniqueParsed = parsed.filter((x) => {
+        const sig = `${new Date(x.date).toISOString()}|${x.amount}|${x.description ?? ""}|${x.source ?? ""}`;
+        if (seen.has(sig)) return false;
+        seen.add(sig);
+        return true;
+      });
+
+      const all = [...imports, ...uniqueParsed];
       setImports(all);
       saveImportedEntries(all);
     };
@@ -232,9 +490,8 @@ export default function AdminFinanceDashboard() {
         </div>
       </header>
 
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+      <section className="grid grid-cols-2 lg:grid-cols-3 gap-4">
         {[
-          { label: "إجمالي الإيرادات", value: kpis.revenue, icon: TrendingUp, tone: "text-emerald-600", bg: "bg-emerald-50" },
           { label: "إجمالي المصروفات", value: kpis.expenses, icon: TrendingDown, tone: "text-rose-600", bg: "bg-rose-50" },
           { label: "صافي الربح", value: kpis.profit, icon: Wallet, tone: "text-violet-600", bg: "bg-violet-50" },
           { label: "المرتجعات", value: kpis.refunds, icon: ArrowUpRight, tone: "text-amber-600", bg: "bg-amber-50" },
@@ -255,6 +512,39 @@ export default function AdminFinanceDashboard() {
             )}
           </Card>
         ))}
+      </section>
+
+      <section className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        {(["SAR", "YER_SOUTH", "YER_NORTH"] as const).map((mode) => (
+          <Card key={mode} className="relative p-5 rounded-2xl border-0 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group">
+            <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
+            <p className="text-xs text-muted-foreground mt-1">{currencyMeta[mode].label}</p>
+            {loadingOverview ? (
+              <Skeleton className="h-7 w-28 mt-3" />
+            ) : (
+              <div className="relative z-10 mt-2">
+                <p className="text-2xl md:text-3xl font-semibold tracking-tight tabular-nums text-foreground">{fmt(revenueByCurrency[mode])}</p>
+                <p className="text-xs text-muted-foreground mt-1">{currencyMeta[mode].symbol}</p>
+              </div>
+            )}
+          </Card>
+        ))}
+
+        <Card className="relative p-5 rounded-2xl border-0 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group">
+          <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
+          <p className="text-xs text-muted-foreground mt-1">الإجمالي الموحّد (محول إلى ريال سعودي)</p>
+          {loadingOverview ? (
+            <Skeleton className="h-7 w-28 mt-3" />
+          ) : (
+            <div className="relative z-10 mt-2">
+              <p className="text-2xl md:text-3xl font-semibold tracking-tight tabular-nums text-foreground">{fmt(consolidatedRevenueSAR)}</p>
+              <p className="text-xs text-muted-foreground mt-1">ر.س</p>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                الأسعار المستخدمة: 1 ر.س = {CURRENCY_RATES.YER_SOUTH.rate} ر.ي (جنوب) و {CURRENCY_RATES.YER_NORTH.rate} ر.ي (شمال)
+              </p>
+            </div>
+          )}
+        </Card>
       </section>
 
       <section className="grid lg:grid-cols-3 gap-4">
@@ -333,6 +623,27 @@ export default function AdminFinanceDashboard() {
                 <span className="flex items-center gap-2 text-sm"><l.icon className="w-4 h-4 text-muted-foreground" />{l.label}</span>
                 <ArrowUpRight className="w-3.5 h-3.5 text-muted-foreground" />
               </Link>
+            ))}
+          </div>
+
+          <div className="mt-4 pt-4 border-t border-black/5 space-y-2">
+            <div className="flex items-center justify-between">
+              <h3 className="text-sm font-medium">تنبيهات ذكية</h3>
+              <Badge variant="outline">{financeAlerts.length}</Badge>
+            </div>
+            {financeAlerts.length === 0 && (
+              <p className="text-xs text-muted-foreground">لا توجد تنبيهات حرجة حالياً.</p>
+            )}
+            {financeAlerts.map((alert) => (
+              <div key={alert.id} className="rounded-lg border border-black/5 p-2.5 bg-white/60">
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-xs font-medium truncate">{alert.title}</p>
+                  <Badge variant={alert.level === "high" ? "destructive" : "secondary"}>
+                    {alert.level === "high" ? "مرتفع" : alert.level === "medium" ? "متوسط" : "منخفض"}
+                  </Badge>
+                </div>
+                <p className="text-[11px] text-muted-foreground mt-1 leading-relaxed">{alert.details}</p>
+              </div>
             ))}
           </div>
         </Card>

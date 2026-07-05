@@ -514,6 +514,7 @@ export type Database = {
           category_id: string | null
           created_at: string
           created_by: string | null
+          currency_mode: string | null
           description: string
           expense_date: string
           id: string
@@ -528,6 +529,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           created_by?: string | null
+          currency_mode?: string | null
           description: string
           expense_date?: string
           id?: string
@@ -542,6 +544,7 @@ export type Database = {
           category_id?: string | null
           created_at?: string
           created_by?: string | null
+          currency_mode?: string | null
           description?: string
           expense_date?: string
           id?: string

@@ -4,11 +4,10 @@ import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
-import { Plus, Edit, Trash2, Loader2, Percent, Banknote, Copy, BarChart3 } from 'lucide-react';
+import { Plus, Edit, Trash2, Loader2, Percent, Banknote, Copy } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
-import AdminPageHeader from '@/components/admin/AdminPageHeader';
 
 interface Coupon {
   id: string;
@@ -216,26 +215,14 @@ const AdminCouponsPage = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
-      <AdminPageHeader
-        category="التسويق"
-        title="الكوبونات"
-        description={`إدارة ${coupons.length} كوبون نشط`}
-        actions={[
-          {
-            label: "إضافة كوبون",
-            icon: Plus,
-            onClick: () => openDialog(),
-            variant: "primary",
-          },
-          {
-            label: "التقارير",
-            icon: BarChart3,
-            href: "/admin/analytics",
-            variant: "outline",
-          },
-        ]}
-      />
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <h1 className="font-heading text-3xl text-foreground">إدارة الكوبونات</h1>
+        <Button onClick={() => openDialog()} className="btn-gold gap-2">
+          <Plus className="w-4 h-4" />
+          إضافة كوبون
+        </Button>
+      </div>
 
       {/* Coupon Stats Report */}
       {couponStats.length > 0 && (

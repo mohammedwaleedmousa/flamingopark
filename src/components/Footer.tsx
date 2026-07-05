@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { FaInstagram, FaWhatsapp, FaFacebookF, FaSnapchatGhost } from "react-icons/fa";
-import { ArrowUp } from "lucide-react";
-import NewsletterSubscription from "./NewsletterSubscription";
+import { Instagram, Mail, ArrowUp } from "lucide-react";
 
 const cols: { title: string; links: { label: string; href: string }[] }[] = [
   {
@@ -38,12 +37,29 @@ const Footer = () => {
     <footer className="bg-background text-foreground border-t border-border">
       {/* Newsletter */}
       <section className="border-b border-border">
-        <NewsletterSubscription 
-          className="bg-background"
-          variant="full"
-          title="انضم/ي إلى عالم فلامنجو"
-          description="احصل/ي على آخر إصداراتنا وقصص الموضة الحصرية مباشرةً في بريدك."
-        />
+        <div className="container mx-auto px-6 py-20 md:py-28 text-center max-w-2xl">
+          <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-5">النشرة البريدية</p>
+          <h2 className="font-heading text-3xl md:text-5xl leading-tight mb-6">
+            انضم/ي إلى عالم فلامنجو
+          </h2>
+          <p className="text-sm text-muted-foreground mb-10 leading-relaxed">
+            احصل/ي على آخر إصداراتنا وقصص الموضة الحصرية مباشرةً في بريدك.
+          </p>
+          <form className="flex flex-col sm:flex-row gap-3 max-w-md mx-auto">
+            <input
+              type="email"
+              placeholder="your@email.com"
+              className="flex-1 bg-transparent border-b border-border px-2 py-3 text-sm focus:outline-none focus:border-foreground"
+              dir="ltr"
+            />
+            <button
+              type="button"
+              className="bg-foreground text-background text-[11px] tracking-[0.3em] uppercase px-8 py-3 hover:bg-foreground/90 transition-colors"
+            >
+              إشتراك
+            </button>
+          </form>
+        </div>
       </section>
 
       {/* Link columns */}

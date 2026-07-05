@@ -1,8 +1,7 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown, MessageCircle, ThumbsUp, Send, AlertCircle, LogIn } from 'lucide-react';
-import { Link } from 'react-router-dom';
+import { ChevronDown, MessageCircle, ThumbsUp, Send } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/store/useStore';
 import { useSiteContent, getSiteText } from '@/hooks/useSiteContent';
@@ -31,34 +30,6 @@ export const ProductQA = ({ productId }: { productId: string }) => {
   const [newQuestion, setNewQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [myHelpful, setMyHelpful] = useState<Set<string>>(new Set());
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [authChecking, setAuthChecking] = useState(true);
-
-  // Check Supabase authentication state
-  useEffect(() => {
-    const checkAuth = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setIsAuthenticated(!!session?.user);
-      } catch (error) {
-        console.error('Error checking auth:', error);
-        setIsAuthenticated(false);
-      } finally {
-        setAuthChecking(false);
-      }
-    };
-
-    checkAuth();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session?.user);
-    });
-
-    return () => {
-      subscription?.unsubscribe();
-    };
-  }, []);
 
   const { data: questions = [], refetch } = useQuery({
     queryKey: ['product-questions', productId],
@@ -77,19 +48,11 @@ export const ProductQA = ({ productId }: { productId: string }) => {
   });
 
   const handleAskQuestion = useCallback(async () => {
-    // Check Supabase auth first
-    if (!isAuthenticated) {
+    if (!newQuestion.trim() || !customer) {
       toast({
-        title: getSiteText(content, 'qa_login_required', 'يجب تسجيل الدخول أولاً'),
-        description: getSiteText(content, 'qa_login_description', 'يرجى تسجيل الدخول لطرح سؤال'),
-        variant: 'destructive',
-      });
-      return;
-    }
-
-    if (!newQuestion.trim()) {
-      toast({
-        title: getSiteText(content, 'qa_error_empty', 'الحقل مطلوب'),
+        title: !customer 
+          ? getSiteText(content, 'qa_login_required', 'يجب تسجيل الدخول أولاً')
+          : getSiteText(content, 'qa_error_empty', 'الحقل مطلوب'),
         variant: 'destructive',
       });
       return;
@@ -97,23 +60,11 @@ export const ProductQA = ({ productId }: { productId: string }) => {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast({
-          title: getSiteText(content, 'qa_session_expired', 'انتهت جلستك'),
-          description: getSiteText(content, 'qa_login_again', 'يرجى تسجيل الدخول مرة أخرى'),
-          variant: 'destructive',
-        });
-        setIsAuthenticated(false);
-        return;
-      }
-
       const { error } = await supabase.from('product_questions').insert({
         product_id: productId,
         content: newQuestion,
         content_ar: newQuestion,
-        author: customer?.name || customer?.phone || user.email || 'Guest',
+        author: customer?.name || customer?.phone || 'Guest',
         helpful_count: 0,
       });
 
@@ -126,16 +77,14 @@ export const ProductQA = ({ productId }: { productId: string }) => {
       setNewQuestion('');
       refetch();
     } catch (error) {
-      console.error('Error asking question:', error);
       toast({
         title: getSiteText(content, 'qa_error', 'حدث خطأ'),
-        description: getSiteText(content, 'qa_error_desc', 'يرجى المحاولة مرة أخرى لاحقاً'),
         variant: 'destructive',
       });
     } finally {
       setLoading(false);
     }
-  }, [newQuestion, productId, customer, refetch, content, isAuthenticated]);
+  }, [newQuestion, productId, customer, refetch, content]);
 
   const handleHelpful = useCallback(async (questionId: string) => {
     if (myHelpful.has(questionId)) return;
@@ -169,39 +118,17 @@ export const ProductQA = ({ productId }: { productId: string }) => {
         <h3 className="font-heading text-lg mb-4">
           {getSiteText(content, 'qa_ask_question', 'اسأل سؤالك')}
         </h3>
-
-        {!isAuthenticated && !authChecking && (
-          <div className="mb-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-3">
-            <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
-            <div className="flex-1">
-              <p className="text-sm font-medium text-destructive">
-                {getSiteText(content, 'qa_auth_required', 'تسجيل الدخول مطلوب')}
-              </p>
-              <p className="text-sm text-destructive/80 mt-1">
-                {getSiteText(content, 'qa_auth_message', 'يجب أن تكون مسجلاً للدخول لطرح أسئلة')}
-              </p>
-              <Link to="/auth">
-                <button className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 text-sm font-medium transition">
-                  <LogIn className="w-4 h-4" />
-                  {getSiteText(content, 'qa_go_to_login', 'اذهب إلى تسجيل الدخول')}
-                </button>
-              </Link>
-            </div>
-          </div>
-        )}
-
-        <div className={`flex gap-3 ${!isAuthenticated || authChecking ? 'opacity-60 pointer-events-none' : ''}`}>
+        <div className="flex gap-3">
           <textarea
             value={newQuestion}
             onChange={(e) => setNewQuestion(e.target.value)}
             placeholder={getSiteText(content, 'qa_placeholder', 'ماذا تريد أن تعرف عن هذا المنتج؟')}
-            disabled={!isAuthenticated || authChecking}
-            className="flex-1 px-4 py-2 rounded-lg border border-border bg-background resize-none min-h-20 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="flex-1 px-4 py-2 rounded-lg border border-border bg-background resize-none min-h-20"
           />
           <button
             onClick={handleAskQuestion}
-            disabled={loading || !isAuthenticated || authChecking}
-            className="btn-unified flex items-center gap-2 self-end disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={loading}
+            className="btn-unified flex items-center gap-2 self-end"
           >
             <Send className="w-4 h-4" />
             {getSiteText(content, 'qa_send', 'أرسل')}

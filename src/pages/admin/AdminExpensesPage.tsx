@@ -8,7 +8,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Receipt, Plus, Trash2, TrendingDown } from 'lucide-react';
-import AdminPageHeader from '@/components/admin/AdminPageHeader';
 
 interface Category { id: string; name_ar: string; }
 interface Method { id: string; name_ar: string; }
@@ -61,22 +60,14 @@ export default function AdminExpensesPage() {
   const thisMonth = expenses.filter(e => e.expense_date.startsWith(new Date().toISOString().slice(0, 7))).reduce((s, e) => s + Number(e.amount), 0);
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto p-2" dir="rtl">
-      <AdminPageHeader
-        category="المالية"
-        title="المصروفات التشغيلية"
-        description="إيجار، رواتب، تسويق، مرافق..."
-        actions={[
-          {
-            label: "مصروف جديد",
-            icon: Plus,
-            onClick: () => setOpen(true),
-            variant: "primary",
-          },
-        ]}
-      />
-
-      <Dialog open={open} onOpenChange={setOpen}>
+    <div className="space-y-6 p-2">
+      <div className="flex items-center justify-between flex-wrap gap-3">
+        <div>
+          <h1 className="font-heading text-2xl flex items-center gap-2"><Receipt className="w-6 h-6 text-primary" /> المصروفات التشغيلية</h1>
+          <p className="text-sm text-muted-foreground">إيجار، رواتب، تسويق، مرافق...</p>
+        </div>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogTrigger asChild><Button><Plus className="w-4 h-4 ml-1" />مصروف جديد</Button></DialogTrigger>
           <DialogContent>
             <DialogHeader><DialogTitle>إضافة مصروف</DialogTitle></DialogHeader>
             <div className="space-y-3">
@@ -101,6 +92,7 @@ export default function AdminExpensesPage() {
             </div>
           </DialogContent>
         </Dialog>
+      </div>
 
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <Card><CardContent className="p-4"><p className="text-xs text-muted-foreground">إجمالي السجلات</p><p className="text-2xl font-bold mt-1">{expenses.length}</p></CardContent></Card>

@@ -8,6 +8,8 @@ import { useStore } from "@/store/useStore";
 import SplashScreen from "@/components/SplashScreen";
 import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
+import AdminCustomerIntelligence from "./pages/admin/AdminCustomerIntelligence";
+import AdminFinanceDashboard from "./pages/admin/AdminFinanceDashboard";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
@@ -31,9 +33,6 @@ const SeasonalOffersPage = lazy(() => import("./pages/SeasonalOffersPage"));
 const CartPage = lazy(() => import("./pages/CartPage"));
 const AccountPage = lazy(() => import("./pages/AccountPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
-const StoreInfoPage = lazy(() => import("./pages/StoreInfoPage"));
-const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
-const OrderTrackingPage = lazy(() => import("./pages/OrderTrackingPage"));
 
 // Admin pages
 const AdminLoginPage = lazy(() => import("./pages/admin/AdminLoginPage"));
@@ -64,9 +63,6 @@ const AdminRefundsPage = lazy(() => import("./pages/admin/AdminRefundsPage"));
 const AdminExpensesPage = lazy(() => import("./pages/admin/AdminExpensesPage"));
 const AdminPaymentMethodsPage = lazy(() => import("./pages/admin/AdminPaymentMethodsPage"));
 const AdminInventoryAdjustmentsPage = lazy(() => import("./pages/admin/AdminInventoryAdjustmentsPage"));
-const AdminFinanceDashboard = lazy(() => import("./pages/admin/AdminFinanceDashboard"));
-const AdminCustomerIntelligence = lazy(() => import("./pages/admin/AdminCustomerIntelligence"));
-const AdminAnalyticsDashboard = lazy(() => import("./pages/admin/AdminAnalyticsDashboard"));
 const MohammedInvoicesPage = lazy(() => import("./pages/MohammedInvoicesPage"));
 
 const queryClient = new QueryClient({
@@ -155,9 +151,6 @@ const App = () => {
             <Route path="/reviews" element={<ProtectedRoute><ReviewsPage /></ProtectedRoute>} />
             <Route path="/favorites" element={<ProtectedRoute><FavoritesPage /></ProtectedRoute>} />
             <Route path="/qr-code" element={<QRCodePage />} />
-            <Route path="/store-info" element={<ProtectedRoute><StoreInfoPage /></ProtectedRoute>} />
-            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-            <Route path="/order-tracking" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route path="/admin" element={<AdminLayout />}>
@@ -188,8 +181,8 @@ const App = () => {
               <Route path="payment-methods" element={<AdminPaymentMethodsPage />} />
               <Route path="inventory-adjustments" element={<AdminInventoryAdjustmentsPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
-              <Route path="finance" element={<AdminFinanceDashboard />} />
-              <Route path="customer-intelligence" element={<AdminCustomerIntelligence/>} />
+              <Route path="/admin/finance" element={<AdminFinanceDashboard />} />
+              <Route path="/admin/customer-intelligence" element={<AdminCustomerIntelligence/>} />
             </Route>
 
             <Route path="/mohammed" element={<MohammedInvoicesPage />} />

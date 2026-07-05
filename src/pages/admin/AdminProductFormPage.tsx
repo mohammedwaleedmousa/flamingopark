@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
@@ -44,9 +44,8 @@ interface ProductFeature {
 }
 
 const AdminProductFormPage = () => {
+  const SINGLE_COUNTRY = 'GLOBAL';
   const { id } = useParams();
-  const [searchParams] = useSearchParams();
-  const countryFromUrl = searchParams.get('country') as 'SA' | 'YE' | null;
   const navigate = useNavigate();
   const isEditing = Boolean(id);
   const [isLoading, setIsLoading] = useState(false);
@@ -68,7 +67,7 @@ const AdminProductFormPage = () => {
     is_featured: false,
     is_best_seller: false,
     is_active: true,
-    countries: countryFromUrl ? [countryFromUrl] : ['SA', 'YE'] as string[],
+    countries: [SINGLE_COUNTRY] as string[],
     images: [] as string[],
     section_ids: [] as string[],
     has_sizes: false,
@@ -159,7 +158,7 @@ const AdminProductFormPage = () => {
         is_featured: data.is_featured ?? false,
         is_best_seller: data.is_best_seller ?? false,
         is_active: data.is_active ?? true,
-        countries: data.countries || ['SA', 'YE'],
+        countries: data.countries || [SINGLE_COUNTRY],
         images: data.images || [],
         section_ids: (data as any).section_ids || [],
         has_sizes: (data as any).has_sizes ?? false,
@@ -227,15 +226,6 @@ const AdminProductFormPage = () => {
       newImages.splice(toIndex, 0, movedImage);
       return { ...prev, images: newImages };
     });
-  };
-
-  const toggleCountry = (country: string) => {
-    setFormData(prev => ({
-      ...prev,
-      countries: prev.countries.includes(country)
-        ? prev.countries.filter(c => c !== country)
-        : [...prev.countries, country],
-    }));
   };
 
   const toggleSection = (sectionId: string) => {
@@ -656,23 +646,8 @@ const AdminProductFormPage = () => {
           </div>
 
           <div>
-            <label className="block text-sm font-body text-muted-foreground mb-2">البلدان</label>
-            <div className="flex gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Checkbox
-                  checked={formData.countries.includes('SA')}
-                  onCheckedChange={() => toggleCountry('SA')}
-                />
-                <span className="text-sm">🇸🇦 السعودية</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Checkbox
-                  checked={formData.countries.includes('YE')}
-                  onCheckedChange={() => toggleCountry('YE')}
-                />
-                <span className="text-sm">🇾🇪 اليمن</span>
-              </label>
-            </div>
+            <label className="block text-sm font-body text-muted-foreground mb-2">النطاق</label>
+            <p className="text-sm text-muted-foreground">المنتج سيظهر في المتجر الموحد</p>
           </div>
 
           {/* Sections */}

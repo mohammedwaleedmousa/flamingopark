@@ -5,13 +5,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
-  Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
-} from "@/components/ui/select";
-import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, MessageCircle, Trash2, Users, Loader2, X, Globe2, Wallet, BarChart3, FileText } from "lucide-react";
+import { Search, MessageCircle, Trash2, Users, Loader2, X, Wallet, BarChart3, FileText } from "lucide-react";
 import { useCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { AdminPagination } from "@/components/admin/AdminPagination";
@@ -38,14 +35,13 @@ const AdminCustomersPage = () => {
 
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 350);
-  const [countryFilter, setCountryFilter] = useState<string>("all");
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ id?: string; bulk?: boolean } | null>(null);
 
-  useEffect(() => { setPage(1); }, [search, countryFilter]);
-  useEffect(() => { fetchCustomers(); /* eslint-disable-next-line */ }, [search, countryFilter, page]);
+  useEffect(() => { setPage(1); }, [search]);
+  useEffect(() => { fetchCustomers(); /* eslint-disable-next-line */ }, [search, page]);
 
   const fetchCustomers = async () => {
     setIsLoading(true);
@@ -55,7 +51,6 @@ const AdminCustomersPage = () => {
       const t = `%${search.trim()}%`;
       q = q.or(`name.ilike.${t},phone.ilike.${t}`);
     }
-    if (countryFilter !== "all") q = q.eq("country", countryFilter);
     const from = (page - 1) * PAGE_SIZE;
     const { data, count, error } = await q.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
     if (error) toast({ title: "خطأ", description: "فشل تحميل العملاء", variant: "destructive" });
@@ -106,8 +101,7 @@ const AdminCustomersPage = () => {
   const openWhatsApp = (c: Customer) => {
     let p = c.phone.replace(/\D/g, "");
     if (p.startsWith("0")) p = p.substring(1);
-    if (c.country === "YE" && !p.startsWith("967")) p = "967" + p;
-    if (c.country === "SA" && !p.startsWith("966")) p = "966" + p;
+    if (!p.startsWith("967")) p = "967" + p;
     window.open(`https://wa.me/${p}?text=${encodeURIComponent(`مرحباً ${c.name}`)}`, "_blank");
   };
 
@@ -157,14 +151,6 @@ const AdminCustomersPage = () => {
               </button>
             )}
           </div>
-          <Select value={countryFilter} onValueChange={setCountryFilter}>
-            <SelectTrigger className="w-full md:w-40"><Globe2 className="w-3.5 h-3.5 ml-1" /><SelectValue placeholder="البلد" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">كل الدول</SelectItem>
-              <SelectItem value="SA">🇸🇦 السعودية</SelectItem>
-              <SelectItem value="YE">🇾🇪 اليمن</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         {selected.size > 0 && (
@@ -205,12 +191,12 @@ const AdminCustomersPage = () => {
                   <td className="p-3"><Checkbox checked={selected.has(c.id)} onCheckedChange={() => toggleSelect(c.id)} /></td>
                   <td className="p-3 text-sm font-body">{c.name}</td>
                   <td className="p-3 font-mono text-xs" dir="ltr">{c.phone}</td>
-                  <td className="p-3 text-sm">{c.country === "SA" ? "🇸🇦 السعودية" : c.country === "YE" ? "🇾🇪 اليمن" : c.country}</td>
+                  <td className="p-3 text-sm">المتجر الموحد</td>
                   <td className="p-3 text-sm font-semibold text-primary">
                     <span className="inline-flex items-center gap-1"><Wallet className="w-3.5 h-3.5 opacity-60" />{format(spendMap[c.phone]?.total || 0)}</span>
                   </td>
                   <td className="p-3 text-xs">{spendMap[c.phone]?.count || 0}</td>
-                  <td className="p-3 text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString("ar-SA")}</td>
+                  <td className="p-3 text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString("ar")}</td>
                   <td className="p-3">
                     <div className="flex gap-1">
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => openWhatsApp(c)}><MessageCircle className="w-4 h-4" /></Button>

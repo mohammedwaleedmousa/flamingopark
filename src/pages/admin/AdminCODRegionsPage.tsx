@@ -17,11 +17,11 @@ interface CODRegion {
 }
 
 const AdminCODRegionsPage = () => {
+  const SINGLE_COUNTRY = 'GLOBAL';
   const [regions, setRegions] = useState<CODRegion[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [countryFilter, setCountryFilter] = useState<'all' | 'SA' | 'YE'>('all');
-  const [newRegion, setNewRegion] = useState({ country: 'SA', region_name: '', region_name_ar: '' });
+  const [newRegion, setNewRegion] = useState({ country: SINGLE_COUNTRY, region_name: '', region_name_ar: '' });
 
   useEffect(() => {
     fetchRegions();
@@ -31,7 +31,6 @@ const AdminCODRegionsPage = () => {
     const { data, error } = await supabase
       .from('cod_regions')
       .select('*')
-      .order('country', { ascending: true })
       .order('region_name_ar', { ascending: true });
 
     if (error) {
@@ -58,7 +57,7 @@ const AdminCODRegionsPage = () => {
       toast({ title: 'خطأ', description: 'فشل في إضافة المنطقة', variant: 'destructive' });
     } else {
       toast({ title: 'تم', description: 'تمت إضافة المنطقة بنجاح' });
-      setNewRegion({ country: 'SA', region_name: '', region_name_ar: '' });
+      setNewRegion({ country: SINGLE_COUNTRY, region_name: '', region_name_ar: '' });
       fetchRegions();
     }
   };
@@ -92,14 +91,13 @@ const AdminCODRegionsPage = () => {
 
   const filteredRegions = regions.filter(r => {
     const matchesSearch = r.region_name_ar.includes(search) || r.region_name.toLowerCase().includes(search.toLowerCase());
-    const matchesCountry = countryFilter === 'all' || r.country === countryFilter;
-    return matchesSearch && matchesCountry;
+    return matchesSearch;
   });
 
   const stats = {
     total: regions.length,
-    sa: regions.filter(r => r.country === 'SA').length,
-    ye: regions.filter(r => r.country === 'YE').length,
+    active: regions.filter(r => r.is_active).length,
+    inactive: regions.filter(r => !r.is_active).length,
   };
 
   return (
@@ -121,23 +119,14 @@ const AdminCODRegionsPage = () => {
       {/* Stats Cards */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'الكل', value: stats.total, filter: 'all' as const },
-          { label: '🇸🇦 السعودية', value: stats.sa, filter: 'SA' as const },
-          { label: '🇾🇪 اليمن', value: stats.ye, filter: 'YE' as const },
+          { label: 'إجمالي المناطق', value: stats.total },
+          { label: 'مفعلة', value: stats.active },
+          { label: 'معطلة', value: stats.inactive },
         ].map((stat) => (
-          <button
-            key={stat.filter}
-            onClick={() => setCountryFilter(stat.filter)}
-            className={cn(
-              "p-4 rounded-xl text-center transition-all border",
-              countryFilter === stat.filter 
-                ? 'bg-primary/10 border-primary text-primary ring-2 ring-offset-2 ring-primary' 
-                : 'bg-card border-border'
-            )}
-          >
+          <div key={stat.label} className={cn("p-4 rounded-xl text-center transition-all border bg-card border-border")}>
             <p className="text-2xl font-heading">{stat.value}</p>
             <p className="text-xs">{stat.label}</p>
-          </button>
+          </div>
         ))}
       </div>
 
@@ -147,15 +136,7 @@ const AdminCODRegionsPage = () => {
           <Plus className="w-5 h-5 text-primary" />
           إضافة منطقة جديدة
         </h2>
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-3">
-          <select
-            value={newRegion.country}
-            onChange={(e) => setNewRegion({ ...newRegion, country: e.target.value })}
-            className="h-10 px-3 rounded-md border border-input bg-background text-sm"
-          >
-            <option value="SA">🇸🇦 السعودية</option>
-            <option value="YE">🇾🇪 اليمن</option>
-          </select>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <Input
             value={newRegion.region_name_ar}
             onChange={(e) => setNewRegion({ ...newRegion, region_name_ar: e.target.value })}
@@ -203,7 +184,7 @@ const AdminCODRegionsPage = () => {
               <div>
                 <p className="font-heading text-foreground">{region.region_name_ar}</p>
                 <p className="text-xs text-muted-foreground">
-                  {region.country === 'SA' ? '🇸🇦' : '🇾🇪'} {region.region_name}
+                  {region.region_name}
                 </p>
               </div>
             </div>

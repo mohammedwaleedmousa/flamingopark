@@ -219,7 +219,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
   };
 
   const displayOrder = isEditing ? editedOrder : order;
-  const currency = displayOrder?.country === "SA" ? "ريال" : "ريال";
+  const currency = "ريال";
 
   if (!displayOrder) return null;
 
@@ -273,7 +273,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
               <div className="text-left">
                 <span className="font-mono text-sm text-gray-900 font-bold">{displayOrder.order_number}</span>
                 <p className="text-xs text-gray-500">
-                  {new Date(displayOrder.created_at).toLocaleDateString('ar-SA', {
+                  {new Date(displayOrder.created_at).toLocaleDateString('ar', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',

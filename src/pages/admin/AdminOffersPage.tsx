@@ -64,6 +64,7 @@ interface Product {
 }
 
 const AdminOffersPage = () => {
+  const SINGLE_COUNTRY = 'GLOBAL';
   const [offers, setOffers] = useState<Offer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [settings, setSettings] = useState<OffersSettings | null>(null);
@@ -87,7 +88,7 @@ const AdminOffersPage = () => {
     discount_percentage: 0,
     start_date: '',
     end_date: '',
-    countries: ['SA', 'YE'] as string[],
+    countries: [SINGLE_COUNTRY] as string[],
     is_active: true,
     is_featured: false,
     sort_order: 0,
@@ -141,7 +142,7 @@ const AdminOffersPage = () => {
           promo_banner_text: 'استخدم كود gold50 للحصول على خصم إضافي',
           show_countdown: true,
           show_promo_banner: true,
-          countries: ['SA', 'YE'],
+          countries: [SINGLE_COUNTRY],
         })
         .select()
         .single();
@@ -164,7 +165,7 @@ const AdminOffersPage = () => {
       discount_percentage: 0,
       start_date: '',
       end_date: '',
-      countries: ['SA', 'YE'],
+      countries: [SINGLE_COUNTRY],
       is_active: true,
       is_featured: false,
       sort_order: offers.length,
@@ -191,7 +192,7 @@ const AdminOffersPage = () => {
         discount_percentage: offer.discount_percentage || 0,
         start_date: offer.start_date ? offer.start_date.split('T')[0] : '',
         end_date: offer.end_date ? offer.end_date.split('T')[0] : '',
-        countries: offer.countries || ['SA', 'YE'],
+        countries: offer.countries || [SINGLE_COUNTRY],
         is_active: offer.is_active ?? true,
         is_featured: offer.is_featured ?? false,
         sort_order: offer.sort_order || 0,
@@ -292,15 +293,6 @@ const AdminOffersPage = () => {
     }
   };
 
-  const toggleCountry = (country: string) => {
-    setFormData(prev => ({
-      ...prev,
-      countries: prev.countries.includes(country)
-        ? prev.countries.filter(c => c !== country)
-        : [...prev.countries, country],
-    }));
-  };
-
   const toggleProduct = (productId: string) => {
     setFormData(prev => ({
       ...prev,
@@ -350,7 +342,7 @@ const AdminOffersPage = () => {
           promo_banner_text: settings.promo_banner_text,
           show_countdown: settings.show_countdown,
           show_promo_banner: settings.show_promo_banner,
-          countries: settings.countries,
+          countries: [SINGLE_COUNTRY],
         })
         .eq('id', settings.id);
 
@@ -365,7 +357,7 @@ const AdminOffersPage = () => {
 
   const formatDate = (dateStr: string | null) => {
     if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('ar-SA');
+    return new Date(dateStr).toLocaleDateString('ar');
   };
 
   const isOfferExpired = (endDate: string | null) => {
@@ -499,11 +491,7 @@ const AdminOffersPage = () => {
                               ينتهي: {formatDate(offer.end_date)}
                             </span>
                           )}
-                          <span className="flex gap-1">
-                            {offer.countries?.map(c => (
-                              <span key={c}>{c === 'SA' ? '🇸🇦' : '🇾🇪'}</span>
-                            ))}
-                          </span>
+                          <span className="text-xs">المتجر الموحد</span>
                         </div>
                       </div>
 
@@ -573,33 +561,8 @@ const AdminOffersPage = () => {
               </div>
 
               <div>
-                <label className="block text-sm text-muted-foreground mb-2">الدول المستهدفة</label>
-                <div className="flex gap-4">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox
-                      checked={settings.countries?.includes('SA')}
-                      onCheckedChange={(checked) => {
-                        const newCountries = checked 
-                          ? [...(settings.countries || []), 'SA']
-                          : (settings.countries || []).filter(c => c !== 'SA');
-                        setSettings({ ...settings, countries: newCountries });
-                      }}
-                    />
-                    <span>🇸🇦 السعودية</span>
-                  </label>
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <Checkbox
-                      checked={settings.countries?.includes('YE')}
-                      onCheckedChange={(checked) => {
-                        const newCountries = checked 
-                          ? [...(settings.countries || []), 'YE']
-                          : (settings.countries || []).filter(c => c !== 'YE');
-                        setSettings({ ...settings, countries: newCountries });
-                      }}
-                    />
-                    <span>🇾🇪 اليمن</span>
-                  </label>
-                </div>
+                <label className="block text-sm text-muted-foreground mb-2">النطاق</label>
+                <p className="text-sm">الإعدادات تعمل على المتجر الموحد</p>
               </div>
 
               <div className="flex items-center gap-6">
@@ -696,7 +659,7 @@ const AdminOffersPage = () => {
                   </button>
                 </div>
               ) : (
-                <label className="block w-full h-32 border-2 border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-gold transition-colors">
+                <label className="w-full h-32 border-2 border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-gold transition-colors">
                   {isUploading ? (
                     <Loader2 className="w-8 h-8 text-gold animate-spin" />
                   ) : (
@@ -827,7 +790,7 @@ const AdminOffersPage = () => {
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{product.name_ar}</p>
                             <p className="text-xs text-muted-foreground">
-                              {product.price} ر.س
+                              {product.price} ر.ي
                               {product.discount && product.discount > 0 && (
                                 <span className="text-destructive mr-2">(-{product.discount}%)</span>
                               )}
@@ -851,20 +814,7 @@ const AdminOffersPage = () => {
             </div>
 
             <div className="flex flex-wrap gap-4">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Checkbox
-                  checked={formData.countries.includes('SA')}
-                  onCheckedChange={() => toggleCountry('SA')}
-                />
-                <span className="text-sm">🇸🇦 السعودية</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Checkbox
-                  checked={formData.countries.includes('YE')}
-                  onCheckedChange={() => toggleCountry('YE')}
-                />
-                <span className="text-sm">🇾🇪 اليمن</span>
-              </label>
+              <span className="text-sm text-muted-foreground">النطاق: المتجر الموحد</span>
               <label className="flex items-center gap-2 cursor-pointer">
                 <Checkbox
                   checked={formData.is_active}

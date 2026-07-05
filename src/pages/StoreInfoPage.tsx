@@ -14,7 +14,7 @@ const StoreInfoPage = () => {
       const { data } = await supabase
         .from('site_settings')
         .select('key, value')
-        .in('key', ['store_info', 'whatsapp_ye', 'whatsapp_sa']);
+        .in('key', ['store_info', 'whatsapp', 'whatsapp_ye', 'whatsapp_sa']);
       
       let storeData: any = {};
       data?.forEach(item => {
@@ -24,6 +24,8 @@ const StoreInfoPage = () => {
           } catch {
             storeData = { name: 'Flamingo Park' };
           }
+        } else if (item.key === 'whatsapp') {
+          storeData.whatsapp = item.value;
         } else if (item.key === 'whatsapp_ye') {
           storeData.whatsapp_ye = item.value;
         } else if (item.key === 'whatsapp_sa') {
@@ -39,8 +41,8 @@ const StoreInfoPage = () => {
       icon: Phone,
       title: 'رقم الهاتف',
       content: [
-        { label: 'السعودية', value: storeInfo?.phone_sa || '+966123456789' },
-        { label: 'اليمن', value: storeInfo?.phone_ye || '+967123456789' }
+        { label: 'الهاتف الرئيسي', value: storeInfo?.phone_ye || storeInfo?.phone_sa || '+967123456789' },
+        { label: 'هاتف إضافي', value: storeInfo?.phone_sa || storeInfo?.phone_ye || '+966123456789' }
       ]
     },
     {
@@ -79,6 +81,8 @@ const StoreInfoPage = () => {
   const handleWhatsApp = (number: string) => {
     window.open(`https://wa.me/${number}?text=مرحباً بك في فلامينجو بارك`, '_blank');
   };
+
+  const whatsappNumber = storeInfo?.whatsapp || storeInfo?.whatsapp_ye || storeInfo?.whatsapp_sa;
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -200,20 +204,12 @@ const StoreInfoPage = () => {
               تواصل معنا عبر WhatsApp للإجابة السريعة على جميع أسئلتك
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              {storeInfo?.whatsapp_ye && (
+              {whatsappNumber && (
                 <Button
-                  onClick={() => handleWhatsApp(storeInfo.whatsapp_ye)}
+                  onClick={() => handleWhatsApp(whatsappNumber)}
                   className="btn-gold px-8 py-3 rounded-lg"
                 >
-                  WhatsApp اليمن
-                </Button>
-              )}
-              {storeInfo?.whatsapp_sa && (
-                <Button
-                  onClick={() => handleWhatsApp(storeInfo.whatsapp_sa)}
-                  className="btn-gold px-8 py-3 rounded-lg"
-                >
-                  WhatsApp السعودية
+                  تواصل عبر WhatsApp
                 </Button>
               )}
             </div>

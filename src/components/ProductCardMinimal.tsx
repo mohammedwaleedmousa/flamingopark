@@ -12,9 +12,9 @@ interface ProductCardMinimalProps {
 }
 
 const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => {
-  const { addToCart, country } = useStore();
+  const { addToCart } = useStore();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const currency = country === "SA" ? "ر.س" : "ر.ي";
+  const currency = "ر.ي";
   const isLiked = isFavorite(product.id);
 
   const handleAddToCart = (e: React.MouseEvent) => {

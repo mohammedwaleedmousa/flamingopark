@@ -5,10 +5,10 @@ import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 
 const CartDrawer = () => {
-  const { cart, isCartOpen, closeCart, removeFromCart, updateQuantity, getCartTotal, clearCart, country } = useStore();
+  const { cart, isCartOpen, closeCart, removeFromCart, updateQuantity, getCartTotal, clearCart } = useStore();
   const navigate = useNavigate();
   const total = getCartTotal();
-  const currency = country === 'SA' ? 'ر.س' : 'ر.ي';
+  const currency = 'ر.ي';
 
   const handleCheckout = () => {
     closeCart();

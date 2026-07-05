@@ -129,9 +129,9 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
 
   const currencies: { key: typeof mode; label: string; flag: string }[] = [
-    { key: "SAR",       label: "ريال سعودي",              flag: "🇸🇦" },
-    { key: "YER_SOUTH", label: "ريال يمني — محافظات جنوبية", flag: "🇾🇪" },
-    { key: "YER_NORTH", label: "ريال يمني — محافظات شمالية", flag: "🇾🇪" },
+    { key: "SAR", label: "ريال", flag: "¤" },
+    { key: "YER_SOUTH", label: "ريال", flag: "¤" },
+    { key: "YER_NORTH", label: "ريال", flag: "¤" },
   ];
 
   useEffect(() => {

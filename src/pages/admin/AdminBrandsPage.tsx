@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -28,6 +27,7 @@ interface Brand {
 }
 
 const AdminBrandsPage = () => {
+  const SINGLE_COUNTRY = 'GLOBAL';
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingBrand, setEditingBrand] = useState<Brand | null>(null);
@@ -35,7 +35,7 @@ const AdminBrandsPage = () => {
   const [formData, setFormData] = useState({
     name: '',
     logo_url: '',
-    countries: ['SA', 'YE'] as string[],
+    countries: [SINGLE_COUNTRY] as string[],
     is_active: true,
     sort_order: 0,
   });
@@ -153,7 +153,7 @@ const AdminBrandsPage = () => {
     setFormData({
       name: '',
       logo_url: '',
-      countries: ['SA', 'YE'],
+      countries: [SINGLE_COUNTRY],
       is_active: true,
       sort_order: 0,
     });
@@ -166,7 +166,7 @@ const AdminBrandsPage = () => {
     setFormData({
       name: brand.name,
       logo_url: brand.logo_url || '',
-      countries: brand.countries || ['SA', 'YE'],
+      countries: brand.countries || [SINGLE_COUNTRY],
       is_active: brand.is_active ?? true,
       sort_order: brand.sort_order ?? 0,
     });
@@ -179,17 +179,6 @@ const AdminBrandsPage = () => {
       ...formData,
       id: editingBrand?.id,
     });
-  };
-
-  const handleCountryChange = (country: string, checked: boolean) => {
-    if (checked) {
-      setFormData({ ...formData, countries: [...formData.countries, country] });
-    } else {
-      setFormData({
-        ...formData,
-        countries: formData.countries.filter((c) => c !== country),
-      });
-    }
   };
 
   const filteredBrands = brands?.filter(b => 
@@ -295,8 +284,6 @@ const AdminBrandsPage = () => {
                 </div>
                 <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
                   <span>الترتيب: {brand.sort_order}</span>
-                  <span>•</span>
-                  <span>{brand.countries?.map(c => c === 'SA' ? '🇸🇦' : '🇾🇪').join(' ')}</span>
                 </div>
               </div>
             </div>
@@ -348,7 +335,6 @@ const AdminBrandsPage = () => {
             <tr>
               <th className="text-right p-4 font-heading text-sm">الشعار</th>
               <th className="text-right p-4 font-heading text-sm">الاسم</th>
-              <th className="text-right p-4 font-heading text-sm">الدول</th>
               <th className="text-right p-4 font-heading text-sm">الترتيب</th>
               <th className="text-right p-4 font-heading text-sm">الحالة</th>
               <th className="text-right p-4 font-heading text-sm">إجراءات</th>
@@ -371,13 +357,6 @@ const AdminBrandsPage = () => {
                   )}
                 </td>
                 <td className="p-4 font-heading">{brand.name}</td>
-                <td className="p-4">
-                  <div className="flex gap-1">
-                    {brand.countries?.map(c => (
-                      <span key={c} className="text-lg">{c === 'SA' ? '🇸🇦' : '🇾🇪'}</span>
-                    ))}
-                  </div>
-                </td>
                 <td className="p-4 text-muted-foreground">{brand.sort_order}</td>
                 <td className="p-4">
                   <Switch
@@ -415,7 +394,7 @@ const AdminBrandsPage = () => {
             ))}
             {filteredBrands.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-12 text-center text-muted-foreground">
+                <td colSpan={5} className="p-12 text-center text-muted-foreground">
                   <Tag className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>لا توجد ماركات</p>
                 </td>
@@ -490,27 +469,8 @@ const AdminBrandsPage = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>الدول</Label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 p-3 bg-muted rounded-lg cursor-pointer hover:bg-muted/80 transition-colors">
-                      <Checkbox
-                        checked={formData.countries.includes('SA')}
-                        onCheckedChange={(checked) =>
-                          handleCountryChange('SA', checked as boolean)
-                        }
-                      />
-                      <span>🇸🇦 السعودية</span>
-                    </label>
-                    <label className="flex items-center gap-2 p-3 bg-muted rounded-lg cursor-pointer hover:bg-muted/80 transition-colors">
-                      <Checkbox
-                        checked={formData.countries.includes('YE')}
-                        onCheckedChange={(checked) =>
-                          handleCountryChange('YE', checked as boolean)
-                        }
-                      />
-                      <span>🇾🇪 اليمن</span>
-                    </label>
-                  </div>
+                  <Label>النطاق</Label>
+                  <p className="text-sm text-muted-foreground">هذه الماركة تعمل على المتجر الموحد</p>
                 </div>
 
                 <div className="space-y-2">

@@ -61,7 +61,7 @@ export const NewsletterSubscription = ({
         .insert({
           email: email.toLowerCase(),
           subscribed_at: new Date().toISOString(),
-          country: 'YE', // Default country, can be updated
+          country: 'GLOBAL',
           is_active: true,
         });
 

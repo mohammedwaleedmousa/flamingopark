@@ -40,8 +40,23 @@ interface Kpi {
   customersDelta: number;
 }
 
+type CurrencyMode = "SAR" | "YER_SOUTH" | "YER_NORTH";
+
+const CURRENCY_META: Record<CurrencyMode, { label: string; symbol: string }> = {
+  SAR: { label: "ريال سعودي", symbol: "ر.س" },
+  YER_SOUTH: { label: "ريال يمني (جنوب)", symbol: "ر.ي" },
+  YER_NORTH: { label: "ريال يمني (شمال)", symbol: "ر.ي" },
+};
+
+const modeOf = (row: any): CurrencyMode => {
+  const mode = row?.currency_mode;
+  if (mode === "SAR" || mode === "YER_SOUTH" || mode === "YER_NORTH") return mode;
+  if (row?.country === "SA") return "SAR";
+  return "YER_SOUTH";
+};
+
 const fmt = (n: number) => new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 0 }).format(n);
-const currency = "ر.ي";
+const currency = "متعدد العملات";
 
 const AdminDashboard = () => {
   const [loading, setLoading] = useState(true);
@@ -74,6 +89,18 @@ const AdminDashboard = () => {
   const profit = useProfitSummary();
   const recentQ = useRecentOrders();
   const lowQ = useLowStock();
+
+  const revenueByCurrency = rev.data?.byCurrency || {
+    SAR: { revenue: 0, orders: 0 },
+    YER_SOUTH: { revenue: 0, orders: 0 },
+    YER_NORTH: { revenue: 0, orders: 0 },
+  };
+
+  const profitByCurrency = profit.data?.byCurrency || {
+    SAR: { revenue: 0, totalCost: 0, profit: 0 },
+    YER_SOUTH: { revenue: 0, totalCost: 0, profit: 0 },
+    YER_NORTH: { revenue: 0, totalCost: 0, profit: 0 },
+  };
 
   useEffect(() => {
     // when queries update, map to local state used by template
@@ -251,6 +278,22 @@ const AdminDashboard = () => {
             <div className="h-full w-2/3 rounded-full bg-emerald-500"></div>
           </div>
         </div>
+      </section>
+
+      {/* Multi-currency summary */}
+      <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {(["SAR", "YER_SOUTH", "YER_NORTH"] as CurrencyMode[]).map((mode) => (
+          <div key={mode} className="bg-white border rounded-2xl p-4">
+            <p className="text-xs text-muted-foreground">{CURRENCY_META[mode].label}</p>
+            <p className="text-lg font-semibold mt-1">
+              {fmt(revenueByCurrency[mode].revenue)} {CURRENCY_META[mode].symbol}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">{fmt(revenueByCurrency[mode].orders)} طلب</p>
+            <p className="text-xs text-violet-700 mt-1">
+              صافي الربح: {fmt(profitByCurrency[mode].profit)} {CURRENCY_META[mode].symbol}
+            </p>
+          </div>
+        ))}
       </section>
       {/* Quick Actions */}
       <section className="bg-white rounded-2xl ring-1 ring-black/5 p-5">
@@ -492,7 +535,7 @@ const AdminDashboard = () => {
 
                   {/* amount */}
                   <span className="text-sm font-semibold tabular-nums text-foreground">
-                    {fmt(parseFloat(o.total) || 0)} {currency}
+                    {fmt(parseFloat(o.total) || 0)} {CURRENCY_META[modeOf(o)].symbol}
                   </span>
                 </div>
               </div>

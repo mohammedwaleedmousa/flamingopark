@@ -15,7 +15,7 @@ import {
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import {
-  Plus, Search, Edit, Trash2, Eye, EyeOff, Package, Loader2, X, Globe2, BarChart3,
+  Plus, Search, Edit, Trash2, Eye, EyeOff, Package, Loader2, X, BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AdminPagination } from "@/components/admin/AdminPagination";
@@ -52,7 +52,6 @@ const AdminProductsPage = () => {
 
   const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
   const [stock, setStock] = useState<"all" | "in" | "out">("all");
-  const [country, setCountry] = useState<"all" | "SA" | "YE">("all");
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -60,12 +59,12 @@ const AdminProductsPage = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [search, status, stock, country]);
+  }, [search, status, stock]);
 
   useEffect(() => {
     fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, status, stock, country, page]);
+  }, [search, status, stock, page]);
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -162,11 +161,9 @@ const AdminProductsPage = () => {
     [products, selected]
   );
 
-  const formatPrice = (p: Product) =>
-    `${p.price} ${p.countries?.includes("YE") && !p.countries?.includes("SA") ? "ر.ي" : "ر.س"}`;
+  const formatPrice = (p: Product) => `${p.price} ر.ي`;
 
-  const newProductHref =
-    country === "all" ? "/admin/products/new" : `/admin/products/new?country=${country}`;
+  const newProductHref = "/admin/products/new";
 
   // KPI calculations
   const activeCount = products.filter(p => p.is_active).length;
@@ -235,17 +232,6 @@ const AdminProductsPage = () => {
                 <SelectItem value="out">غير متوفر</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={country} onValueChange={(v) => setCountry(v as typeof country)}>
-              <SelectTrigger className="w-full md:w-36">
-                <Globe2 className="w-3.5 h-3.5 ml-1" />
-                <SelectValue placeholder="البلد" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">كل الدول</SelectItem>
-                <SelectItem value="SA">🇸🇦 السعودية</SelectItem>
-                <SelectItem value="YE">🇾🇪 اليمن</SelectItem>
-              </SelectContent>
-            </Select>
           </div>
         </div>
 
@@ -305,11 +291,7 @@ const AdminProductsPage = () => {
                     {p.discount > 0 && (
                       <span className="text-[10px] bg-destructive/10 text-destructive px-1.5 rounded">-{p.discount}%</span>
                     )}
-                    <div className="flex gap-0.5 ml-auto">
-                      {p.countries?.map((c) => (
-                        <span key={c} className="text-xs">{c === "SA" ? "🇸🇦" : "🇾🇪"}</span>
-                      ))}
-                    </div>
+                    <div className="text-[10px] text-muted-foreground ml-auto">المتجر الموحد</div>
                   </div>
                 </div>
               </div>
@@ -345,7 +327,7 @@ const AdminProductsPage = () => {
                 <th className="text-right p-3 font-heading">التصنيف</th>
                 <th className="text-right p-3 font-heading">السعر</th>
                 <th className="text-right p-3 font-heading">المخزون</th>
-                <th className="text-right p-3 font-heading">البلدان</th>
+                <th className="text-right p-3 font-heading">النطاق</th>
                 <th className="text-right p-3 font-heading">الحالة</th>
                 <th className="text-right p-3 font-heading">الإجراءات</th>
               </tr>
@@ -386,11 +368,7 @@ const AdminProductsPage = () => {
                       </Badge>
                     </td>
                     <td className="p-3">
-                      <div className="flex gap-1">
-                        {p.countries?.map((c) => (
-                          <span key={c} className="text-sm bg-muted px-1.5 py-0.5 rounded">{c === "SA" ? "🇸🇦" : "🇾🇪"}</span>
-                        ))}
-                      </div>
+                      <span className="text-xs text-muted-foreground">المتجر الموحد</span>
                     </td>
                     <td className="p-3">
                       <Badge variant={p.is_active ? "default" : "secondary"} className="text-[10px]">

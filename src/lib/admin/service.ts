@@ -12,6 +12,25 @@ type ChartOfAccountRow = Database["public"]["Tables"]["chart_of_accounts"]["Row"
 type RefundsRow = Database["public"]["Tables"]["refunds"]["Row"];
 type AnalyticsEventRow = Database["public"]["Tables"]["analytics_events"]["Row"];
 
+type CurrencyMode = "SAR" | "YER_SOUTH" | "YER_NORTH";
+
+const currencyModes: CurrencyMode[] = ["SAR", "YER_SOUTH", "YER_NORTH"];
+
+function inferCurrencyModeFromOrder(row: any): CurrencyMode {
+  const mode = row?.currency_mode;
+  if (mode === "SAR" || mode === "YER_SOUTH" || mode === "YER_NORTH") return mode;
+  if (row?.country === "SA") return "SAR";
+  return "YER_SOUTH";
+}
+
+function createCurrencyAccumulator<T>(factory: () => T): Record<CurrencyMode, T> {
+  return {
+    SAR: factory(),
+    YER_SOUTH: factory(),
+    YER_NORTH: factory(),
+  };
+}
+
 export type DateRange = { start: string; end: string };
 
 export type AdminOrderQueryParams = {
@@ -28,7 +47,7 @@ export type AdminProductQueryParams = {
   search?: string;
   status?: "all" | "active" | "inactive";
   stock?: "all" | "in" | "out";
-  country?: "all" | "SA" | "YE";
+  country?: "all" | "GLOBAL";
   page?: number;
   pageSize?: number;
 };
@@ -326,19 +345,27 @@ export async function getCustomerByPhone(phone: string) {
 export async function getRevenueSummary(startDate: string, endDate: string) {
   const { data, error } = await supabase
     .from("orders")
-    .select("total, created_at")
+    .select("total, created_at, country, currency_mode")
     .gte("created_at", startDate)
     .lte("created_at", endDate);
   if (error) throw error;
 
-  const revenue = (data ?? []).reduce((sum, r) => sum + Number(r.total ?? 0), 0);
-  return { revenue };
+  const byCurrency = createCurrencyAccumulator(() => ({ revenue: 0, orders: 0 }));
+  const revenue = (data ?? []).reduce((sum, r) => {
+    const amount = Number(r.total ?? 0);
+    const mode = inferCurrencyModeFromOrder(r);
+    byCurrency[mode].revenue += amount;
+    byCurrency[mode].orders += 1;
+    return sum + amount;
+  }, 0);
+
+  return { revenue, byCurrency };
 }
 
 export async function getOrdersSummary(startDate: string, endDate: string) {
   const { data, error } = await supabase
     .from("orders")
-    .select("id, total, created_at")
+    .select("id, total, created_at, country, currency_mode")
     .gte("created_at", startDate)
     .lte("created_at", endDate);
   if (error) throw error;
@@ -346,7 +373,18 @@ export async function getOrdersSummary(startDate: string, endDate: string) {
   const rows = data ?? [];
   const count = rows.length;
   const avg = count === 0 ? 0 : rows.reduce((s, o) => s + Number(o.total ?? 0), 0) / count;
-  return { count, avg };
+  const byCurrency = createCurrencyAccumulator(() => ({ orders: 0, revenue: 0, avg: 0 }));
+  for (const row of rows) {
+    const mode = inferCurrencyModeFromOrder(row);
+    byCurrency[mode].orders += 1;
+    byCurrency[mode].revenue += Number(row.total ?? 0);
+  }
+  for (const mode of currencyModes) {
+    const item = byCurrency[mode];
+    item.avg = item.orders ? item.revenue / item.orders : 0;
+  }
+
+  return { count, avg, byCurrency };
 }
 
 export async function getCustomersCount(startDate: string, endDate: string) {
@@ -380,7 +418,7 @@ export async function getRevenueTimeseries(startDate: string, endDate: string) {
 export async function getProfitSummary(startDate: string, endDate: string) {
   const { data: orders, error: ordersError } = await supabase
     .from("orders")
-    .select("id, total, items, created_at")
+    .select("id, total, items, created_at, country, currency_mode")
     .gte("created_at", startDate)
     .lte("created_at", endDate);
   if (ordersError) throw ordersError;
@@ -389,9 +427,13 @@ export async function getProfitSummary(startDate: string, endDate: string) {
   let revenue = 0;
   let totalCost = 0;
   const prodIds = new Set<string>();
+  const byCurrency = createCurrencyAccumulator(() => ({ revenue: 0, totalCost: 0, profit: 0 }));
 
   for (const r of rows) {
-    revenue += Number(r.total ?? 0);
+    const amount = Number(r.total ?? 0);
+    revenue += amount;
+    const mode = inferCurrencyModeFromOrder(r);
+    byCurrency[mode].revenue += amount;
     try {
       const items = Array.isArray(r.items) ? r.items : JSON.parse(String(r.items || "[]"));
       for (const it of items) {
@@ -417,23 +459,30 @@ export async function getProfitSummary(startDate: string, endDate: string) {
   for (const r of rows) {
     try {
       const items = Array.isArray(r.items) ? r.items : JSON.parse(String(r.items || "[]"));
+      const mode = inferCurrencyModeFromOrder(r);
       for (const it of items) {
         const qty = Number(it.quantity ?? it.qty ?? 1);
         const pid = it.product_id;
-        totalCost += qty * (productsMap[pid] ?? 0);
+        const itemCost = qty * (productsMap[pid] ?? 0);
+        totalCost += itemCost;
+        byCurrency[mode].totalCost += itemCost;
       }
     } catch (e) {
       // ignore parse errors
     }
   }
 
-  return { revenue, totalCost, profit: revenue - totalCost };
+  for (const mode of currencyModes) {
+    byCurrency[mode].profit = byCurrency[mode].revenue - byCurrency[mode].totalCost;
+  }
+
+  return { revenue, totalCost, profit: revenue - totalCost, byCurrency };
 }
 
 export async function getRecentOrders(startDate: string, endDate: string, limit = 6) {
   const { data, error } = await supabase
     .from("orders")
-    .select("id,order_number,customer_name,total,status,created_at")
+    .select("id,order_number,customer_name,total,status,created_at,country,currency_mode")
     .gte("created_at", startDate)
     .lte("created_at", endDate)
     .order("created_at", { ascending: false })

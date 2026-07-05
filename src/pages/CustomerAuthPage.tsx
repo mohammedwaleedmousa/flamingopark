@@ -22,7 +22,7 @@ const CustomerAuthPage = () => {
   useEffect(() => {
     if (!customer) return;
 
-    const fallbackCountry = customer.country === "SA" || customer.country === "YE" ? customer.country : null;
+    const fallbackCountry = customer.country || "GLOBAL";
 
     if (!country && fallbackCountry) {
       setCountry(fallbackCountry);
@@ -77,9 +77,9 @@ const CustomerAuthPage = () => {
         id: customer.id,
         name: customer.name,
         phone: customer.phone,
-        country: customer.country as "YE" | "SA",
+        country: customer.country as Country,
       });
-      setCountry(customer.country as "YE" | "SA");
+      setCountry(customer.country as Country);
 
       toast({
         title: "مرحباً بك",
@@ -104,48 +104,8 @@ const CustomerAuthPage = () => {
   const handleSkipLogin = async () => {
     setIsDetectingLocation(true);
     
-    // Helper function to try multiple geolocation APIs
     const detectCountryFromIP = async (): Promise<Country> => {
-      // List of APIs to try in order
-      const apis = [
-        {
-          url: 'https://ipwho.is/',
-          getCountry: (data: any) => data.country_code
-        },
-        {
-          url: 'https://ip-api.com/json/?fields=countryCode',
-          getCountry: (data: any) => data.countryCode
-        },
-        {
-          url: 'https://ipapi.co/json/',
-          getCountry: (data: any) => data.country_code
-        }
-      ];
-      
-      for (const api of apis) {
-        try {
-          const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 3000);
-          const response = await fetch(api.url, { 
-            signal: controller.signal
-          });
-          clearTimeout(timeoutId);
-          
-          if (response.ok) {
-            const data = await response.json();
-            const countryCode = api.getCountry(data);
-            console.log(`Country detected from ${api.url}:`, countryCode);
-            
-            if (countryCode === 'SA') return 'SA';
-            if (countryCode === 'YE') return 'YE';
-          }
-        } catch (error) {
-          console.log(`API ${api.url} failed, trying next...`);
-        }
-      }
-      
-      // Default fallback
-      return 'SA';
+      return "GLOBAL";
     };
     
     try {
@@ -161,7 +121,7 @@ const CustomerAuthPage = () => {
       
       toast({
         title: "مرحباً بك",
-        description: `تم تحديد موقعك: ${detectedCountry === 'SA' ? 'السعودية 🇸🇦' : 'اليمن 🇾🇪'}`,
+        description: "تم تحديد موقعك تلقائياً",
       });
       
       navigate("/home");
@@ -172,9 +132,9 @@ const CustomerAuthPage = () => {
         id: "guest",
         name: "ضيف",
         phone: "",
-        country: "SA",
+        country: "GLOBAL",
       });
-      setCountry("SA");
+      setCountry("GLOBAL");
       
       toast({
         title: "مرحباً بك",

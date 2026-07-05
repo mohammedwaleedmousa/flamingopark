@@ -369,7 +369,7 @@ const AdminInvoicesPage = () => {
                             </div>
                           </TableCell>
                           <TableCell className="font-medium text-primary">
-                            {order.total.toFixed(2)} {order.country === 'SA' ? 'ر.س' : 'ر.ي'}
+                            {order.total.toFixed(2)} ر.ي
                           </TableCell>
                           <TableCell className="text-sm">
                             {format(new Date(order.created_at), 'dd MMM yyyy', { locale: ar })}

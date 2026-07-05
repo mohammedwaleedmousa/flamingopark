@@ -39,6 +39,20 @@ interface EventRow {
   metadata: any;
 }
 
+type CurrencyMode = 'SAR' | 'YER_SOUTH' | 'YER_NORTH';
+
+const CURRENCY_LABELS: Record<CurrencyMode, string> = {
+  SAR: 'ريال سعودي',
+  YER_SOUTH: 'ريال يمني (جنوب)',
+  YER_NORTH: 'ريال يمني (شمال)',
+};
+
+const CURRENCY_SYMBOLS: Record<CurrencyMode, string> = {
+  SAR: 'ر.س',
+  YER_SOUTH: 'ر.ي',
+  YER_NORTH: 'ر.ي',
+};
+
 const StatCard = ({ icon: Icon, label, value, hint, accent }: any) => (
   <div className="bg-card border rounded-2xl p-4 md:p-5 relative overflow-hidden">
     <div className={cn('absolute inset-0 bg-gradient-to-br opacity-40', accent)} />
@@ -148,6 +162,29 @@ const AdminAnalyticsPage = () => {
     const conv = visitors ? (purchasers.size / visitors) * 100 : 0;
     const cartConv = addToCart ? (purchases / addToCart) * 100 : 0;
     return { visitors, pageViews, addToCart, beginCheckout, purchases, revenue, conv, cartConv };
+  }, [events]);
+
+  const currencyBreakdown = useMemo(() => {
+    const acc: Record<CurrencyMode, { orders: number; revenue: number }> = {
+      SAR: { orders: 0, revenue: 0 },
+      YER_SOUTH: { orders: 0, revenue: 0 },
+      YER_NORTH: { orders: 0, revenue: 0 },
+    };
+
+    const detectMode = (e: EventRow): CurrencyMode => {
+      const mode = e.metadata?.currency_mode;
+      if (mode === 'SAR' || mode === 'YER_SOUTH' || mode === 'YER_NORTH') return mode;
+      if (e.metadata?.country === 'SA') return 'SAR';
+      return 'YER_SOUTH';
+    };
+
+    for (const e of events) {
+      if (e.event_type !== 'purchase') continue;
+      const mode = detectMode(e);
+      acc[mode].orders += 1;
+      acc[mode].revenue += Number(e.value) || 0;
+    }
+    return acc;
   }, [events]);
 
   // Time series
@@ -315,6 +352,19 @@ const AdminAnalyticsPage = () => {
         <StatCard icon={ShoppingCart} label="طلبات" value={stats.purchases.toLocaleString('en')} accent="from-emerald-500/10 to-emerald-600/5" />
         <StatCard icon={TrendingUp} label="إيرادات" value={stats.revenue.toLocaleString('en', { maximumFractionDigits: 0 })} hint="عملة الموقع" accent="from-primary/10 to-primary/5" />
         <StatCard icon={Percent} label="معدل التحويل" value={`${stats.conv.toFixed(2)}%`} hint={`سلة→شراء ${stats.cartConv.toFixed(1)}%`} accent="from-violet-500/10 to-violet-600/5" />
+      </div>
+
+      {/* Revenue by currency mode */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        {(['SAR', 'YER_SOUTH', 'YER_NORTH'] as CurrencyMode[]).map((mode) => (
+          <div key={mode} className="bg-card border rounded-2xl p-4">
+            <p className="text-xs text-muted-foreground">{CURRENCY_LABELS[mode]}</p>
+            <p className="text-2xl font-heading mt-1">
+              {Math.round(currencyBreakdown[mode].revenue).toLocaleString('en')} {CURRENCY_SYMBOLS[mode]}
+            </p>
+            <p className="text-xs text-muted-foreground mt-1">{currencyBreakdown[mode].orders.toLocaleString('en')} طلب</p>
+          </div>
+        ))}
       </div>
 
       {loading && events.length === 0 ? (

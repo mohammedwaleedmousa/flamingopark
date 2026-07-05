@@ -11,6 +11,7 @@ import AccessoryCard from '@/components/AccessoryCard';
 import FrequentlyBoughtTogether from '@/components/FrequentlyBoughtTogether';
 import ProductDetailSkeleton from '@/components/ProductDetailSkeleton';
 import ProductQA from '@/components/ProductQA';
+import { Button } from '@/components/ui/button';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useStore, Product } from '@/store/useStore';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -91,7 +92,7 @@ const ProductDetailPage = () => {
         category: data.category,
         brand: data.brand,
         inStock: data.in_stock ?? true,
-        countries: (data.countries || ['SA', 'YE']) as ('SA' | 'YE')[],
+        countries: (data.countries || ['GLOBAL']) as Product['countries'],
         isFeatured: data.is_featured,
         isBestSeller: data.is_best_seller,
         hasSizes: (data as any).has_sizes ?? false,
@@ -132,7 +133,7 @@ const ProductDetailPage = () => {
         category: p.category,
         brand: p.brand,
         inStock: p.in_stock ?? true,
-        countries: (p.countries || ['SA', 'YE']) as ('SA' | 'YE')[],
+        countries: (p.countries || ['GLOBAL']) as Product['countries'],
         isFeatured: p.is_featured,
         isBestSeller: p.is_best_seller,
       })) as Product[];
@@ -277,7 +278,7 @@ const ProductDetailPage = () => {
   // Total price including accessories
   const totalPrice = discountedPrice + accessoriesTotal;
 
-  const currency = country === 'SA' ? 'ر.س' : 'ر.ي';
+  const currency = 'ر.ي';
 
   // Effective images: swap gallery when a color variant with images is selected
   const activeColorVariant =

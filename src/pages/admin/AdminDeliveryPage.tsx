@@ -6,13 +6,6 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -34,14 +27,14 @@ interface DeliveryCompany {
 }
 
 const AdminDeliveryPage = () => {
+  const SINGLE_COUNTRY = 'GLOBAL';
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCompany, setEditingCompany] = useState<DeliveryCompany | null>(null);
-  const [filterCountry, setFilterCountry] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [formData, setFormData] = useState({
     name: '',
-    country: 'SA',
+    country: SINGLE_COUNTRY,
     base_fee: 0,
     delivery_days: '',
     is_active: true,
@@ -53,7 +46,6 @@ const AdminDeliveryPage = () => {
       const { data, error } = await supabase
         .from('delivery_companies')
         .select('*')
-        .order('country', { ascending: true })
         .order('name', { ascending: true });
       if (error) throw error;
       return data as DeliveryCompany[];
@@ -67,7 +59,7 @@ const AdminDeliveryPage = () => {
           .from('delivery_companies')
           .update({
             name: data.name,
-            country: data.country,
+            country: SINGLE_COUNTRY,
             base_fee: data.base_fee,
             delivery_days: data.delivery_days || null,
             is_active: data.is_active,
@@ -79,7 +71,7 @@ const AdminDeliveryPage = () => {
           .from('delivery_companies')
           .insert({
             name: data.name,
-            country: data.country,
+            country: SINGLE_COUNTRY,
             base_fee: data.base_fee,
             delivery_days: data.delivery_days || null,
             is_active: data.is_active,
@@ -124,7 +116,7 @@ const AdminDeliveryPage = () => {
   const resetForm = () => {
     setFormData({
       name: '',
-      country: 'SA',
+      country: SINGLE_COUNTRY,
       base_fee: 0,
       delivery_days: '',
       is_active: true,
@@ -154,16 +146,14 @@ const AdminDeliveryPage = () => {
   };
 
   const filteredCompanies = companies?.filter((c) => {
-    const matchesCountry = filterCountry === 'all' || c.country === filterCountry;
     const matchesSearch = c.name.toLowerCase().includes(search.toLowerCase());
-    return matchesCountry && matchesSearch;
+    return matchesSearch;
   }) || [];
 
   const stats = {
     total: companies?.length || 0,
-    sa: companies?.filter(c => c.country === 'SA').length || 0,
-    ye: companies?.filter(c => c.country === 'YE').length || 0,
     active: companies?.filter(c => c.is_active).length || 0,
+    inactive: companies?.filter(c => !c.is_active).length || 0,
   };
 
   if (isLoading) {
@@ -194,25 +184,22 @@ const AdminDeliveryPage = () => {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+      <div className="grid grid-cols-3 gap-3">
         {[
-          { label: 'الكل', value: stats.total, filter: 'all', color: 'from-primary/20 to-primary/10 border-primary/20' },
-          { label: '🇸🇦 السعودية', value: stats.sa, filter: 'SA', color: 'from-green-500/20 to-green-500/10 border-green-500/20' },
-          { label: '🇾🇪 اليمن', value: stats.ye, filter: 'YE', color: 'from-red-500/20 to-red-500/10 border-red-500/20' },
-          { label: 'نشطة', value: stats.active, filter: 'active', color: 'from-blue-500/20 to-blue-500/10 border-blue-500/20' },
+          { label: 'الإجمالي', value: stats.total, color: 'from-primary/20 to-primary/10 border-primary/20' },
+          { label: 'نشطة', value: stats.active, color: 'from-green-500/20 to-green-500/10 border-green-500/20' },
+          { label: 'معطلة', value: stats.inactive, color: 'from-red-500/20 to-red-500/10 border-red-500/20' },
         ].map((stat) => (
-          <button
-            key={stat.filter}
-            onClick={() => setFilterCountry(stat.filter === 'active' ? 'all' : stat.filter)}
+          <div
+            key={stat.label}
             className={cn(
               "p-4 rounded-xl text-center transition-all border bg-gradient-to-br",
               stat.color,
-              filterCountry === stat.filter && 'ring-2 ring-offset-2 ring-primary'
             )}
           >
             <p className="text-2xl font-heading">{stat.value}</p>
             <p className="text-xs text-muted-foreground">{stat.label}</p>
-          </button>
+          </div>
         ))}
       </div>
 
@@ -228,16 +215,6 @@ const AdminDeliveryPage = () => {
             dir="rtl"
           />
         </div>
-        <Select value={filterCountry} onValueChange={setFilterCountry}>
-          <SelectTrigger className="w-full sm:w-40 bg-card">
-            <SelectValue placeholder="فلترة حسب الدولة" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">جميع الدول</SelectItem>
-            <SelectItem value="SA">🇸🇦 السعودية</SelectItem>
-            <SelectItem value="YE">🇾🇪 اليمن</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
       {/* Mobile Cards */}
@@ -257,9 +234,7 @@ const AdminDeliveryPage = () => {
                 </div>
                 <div>
                   <h3 className="font-heading text-foreground">{company.name}</h3>
-                  <p className="text-sm text-muted-foreground">
-                    {company.country === 'SA' ? '🇸🇦 السعودية' : '🇾🇪 اليمن'}
-                  </p>
+                  <p className="text-sm text-muted-foreground">المتجر الموحد</p>
                 </div>
               </div>
               <span className={cn(
@@ -277,7 +252,7 @@ const AdminDeliveryPage = () => {
                 <DollarSign className="w-4 h-4 text-primary" />
                 <div>
                   <p className="text-xs text-muted-foreground">الرسوم</p>
-                  <p className="font-heading text-sm">{company.base_fee} {company.country === 'SA' ? 'ر.س' : 'ر.ي'}</p>
+                  <p className="font-heading text-sm">{company.base_fee} ر.ي</p>
                 </div>
               </div>
               <div className="flex items-center gap-2 p-2 bg-muted/50 rounded-lg">
@@ -336,7 +311,6 @@ const AdminDeliveryPage = () => {
           <thead className="bg-muted/50">
             <tr>
               <th className="text-right p-4 font-heading text-sm">الشركة</th>
-              <th className="text-right p-4 font-heading text-sm">الدولة</th>
               <th className="text-right p-4 font-heading text-sm">رسوم التوصيل</th>
               <th className="text-right p-4 font-heading text-sm">مدة التوصيل</th>
               <th className="text-right p-4 font-heading text-sm">الحالة</th>
@@ -355,13 +329,7 @@ const AdminDeliveryPage = () => {
                   </div>
                 </td>
                 <td className="p-4">
-                  <span className="text-lg">{company.country === 'SA' ? '🇸🇦' : '🇾🇪'}</span>
-                  <span className="text-sm text-muted-foreground mr-2">
-                    {company.country === 'SA' ? 'السعودية' : 'اليمن'}
-                  </span>
-                </td>
-                <td className="p-4">
-                  <span className="font-heading text-primary">{company.base_fee} {company.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
+                  <span className="font-heading text-primary">{company.base_fee} ر.ي</span>
                 </td>
                 <td className="p-4 text-muted-foreground">
                   {company.delivery_days || '-'}
@@ -402,7 +370,7 @@ const AdminDeliveryPage = () => {
             ))}
             {filteredCompanies.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-12 text-center text-muted-foreground">
+                <td colSpan={5} className="p-12 text-center text-muted-foreground">
                   <Truck className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>لا توجد شركات توصيل</p>
                 </td>
@@ -436,31 +404,7 @@ const AdminDeliveryPage = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>الدولة</Label>
-                  <div className="grid grid-cols-2 gap-3">
-                    {[
-                      { value: 'SA', label: '🇸🇦 السعودية' },
-                      { value: 'YE', label: '🇾🇪 اليمن' },
-                    ].map((country) => (
-                      <button
-                        key={country.value}
-                        type="button"
-                        onClick={() => setFormData({ ...formData, country: country.value })}
-                        className={cn(
-                          "p-3 rounded-lg border text-center transition-all",
-                          formData.country === country.value
-                            ? 'bg-primary/10 border-primary text-primary'
-                            : 'bg-muted border-border hover:border-primary/50'
-                        )}
-                      >
-                        {country.label}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <Label>رسوم التوصيل (ر.س)</Label>
+                  <Label>رسوم التوصيل (ر.ي)</Label>
                   <Input
                     type="number"
                     step="0.01"

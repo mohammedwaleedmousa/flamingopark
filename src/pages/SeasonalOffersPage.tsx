@@ -46,7 +46,7 @@ const SeasonalOffersPage = () => {
         category: p.category,
         brand: p.brand,
         inStock: p.in_stock ?? true,
-        countries: (p.countries || ['SA', 'YE']) as ('SA' | 'YE')[],
+        countries: (p.countries || ['GLOBAL']) as Product['countries'],
       })) as Product[];
     },
   });

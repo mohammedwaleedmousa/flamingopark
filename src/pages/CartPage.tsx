@@ -9,10 +9,10 @@ import { Button } from "@/components/ui/button";
 import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
 
 const CartPage = () => {
-  const { cart, updateQuantity, removeFromCart, getCartTotal, country } = useStore();
+  const { cart, updateQuantity, removeFromCart, getCartTotal } = useStore();
   const navigate = useNavigate();
   const { data: content } = useSiteContent("cart_");
-  const currency = country === "SA" ? "ر.س" : "ر.ي";
+  const currency = "ر.ي";
   const total = getCartTotal();
 
   const containerVariants = {

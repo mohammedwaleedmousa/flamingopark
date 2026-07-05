@@ -45,6 +45,7 @@ interface OrderData {
   deliveryCompany: string;
   selectedRegion?: string | null;
   country: string;
+  currencyMode?: "SAR" | "YER_SOUTH" | "YER_NORTH";
   whatsappNumber: string;
   createdAt: string;
 }
@@ -57,7 +58,7 @@ const OrderConfirmationPage = () => {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
   
-  const currency = orderData?.country === 'SA' ? 'ريال' : 'ريال';
+  const currency = 'ريال';
 
   useEffect(() => {
     if (location.state?.orderData) {
@@ -70,6 +71,7 @@ const OrderConfirmationPage = () => {
           order_number: od.orderNumber,
           items_count: od.items?.length ?? 0,
           country: od.country,
+          currency_mode: od.currencyMode || "SAR",
           payment_method: od.paymentMethod,
           coupon_code: od.couponCode ?? null,
         },
@@ -265,7 +267,7 @@ const OrderConfirmationPage = () => {
                   </button>
                 </div>
                 <p className="text-xs text-gray-500">
-                  {new Date(orderData.createdAt).toLocaleDateString('ar-SA', {
+                  {new Date(orderData.createdAt).toLocaleDateString('ar', {
                     year: 'numeric',
                     month: 'long',
                     day: 'numeric',

@@ -37,6 +37,7 @@ const filterTypes = [
 ];
 
 const AdminSectionsPage = () => {
+  const SINGLE_COUNTRY = 'GLOBAL';
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingSection, setEditingSection] = useState<HomepageSection | null>(null);
@@ -45,7 +46,7 @@ const AdminSectionsPage = () => {
     title_ar: '',
     section_type: 'products',
     filter_type: 'featured',
-    countries: ['SA', 'YE'],
+    countries: [SINGLE_COUNTRY],
     is_active: true,
     sort_order: 0,
     max_products: 8,
@@ -170,7 +171,7 @@ const AdminSectionsPage = () => {
       title_ar: '',
       section_type: 'products',
       filter_type: 'featured',
-      countries: ['SA', 'YE'],
+      countries: [SINGLE_COUNTRY],
       is_active: true,
       sort_order: 0,
       max_products: 8,
@@ -188,7 +189,7 @@ const AdminSectionsPage = () => {
       title_ar: section.title_ar,
       section_type: section.section_type,
       filter_type: section.filter_type,
-      countries: section.countries,
+      countries: [SINGLE_COUNTRY],
       is_active: section.is_active,
       sort_order: section.sort_order,
       max_products: section.max_products,
@@ -200,10 +201,11 @@ const AdminSectionsPage = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const submitData = { ...formData, countries: [SINGLE_COUNTRY] as string[] };
     if (editingSection) {
-      updateMutation.mutate({ id: editingSection.id, data: formData });
+      updateMutation.mutate({ id: editingSection.id, data: submitData });
     } else {
-      createMutation.mutate(formData);
+      createMutation.mutate(submitData);
     }
   };
 
@@ -321,37 +323,8 @@ const AdminSectionsPage = () => {
                 </div>
 
                 <div>
-                  <Label>الدول</Label>
-                  <div className="flex gap-4 mt-2">
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.countries.includes('SA')}
-                        onChange={(e) => {
-                          const newCountries = e.target.checked
-                            ? [...formData.countries, 'SA']
-                            : formData.countries.filter((c) => c !== 'SA');
-                          setFormData({ ...formData, countries: newCountries });
-                        }}
-                        className="rounded border-input"
-                      />
-                      السعودية
-                    </label>
-                    <label className="flex items-center gap-2">
-                      <input
-                        type="checkbox"
-                        checked={formData.countries.includes('YE')}
-                        onChange={(e) => {
-                          const newCountries = e.target.checked
-                            ? [...formData.countries, 'YE']
-                            : formData.countries.filter((c) => c !== 'YE');
-                          setFormData({ ...formData, countries: newCountries });
-                        }}
-                        className="rounded border-input"
-                      />
-                      اليمن
-                    </label>
-                  </div>
+                  <Label>النطاق</Label>
+                  <p className="text-sm text-muted-foreground mt-2">القسم يعمل ضمن المتجر الموحد</p>
                 </div>
 
                 <div className="flex gap-2 pt-4">
@@ -379,7 +352,6 @@ const AdminSectionsPage = () => {
                     <TableHead>نوع الفلتر</TableHead>
                     <TableHead>المنتجات المُعينة</TableHead>
                     <TableHead>الحد الأقصى</TableHead>
-                    <TableHead>الدول</TableHead>
                     <TableHead>نشط</TableHead>
                     <TableHead>إجراءات</TableHead>
                   </TableRow>
@@ -407,7 +379,6 @@ const AdminSectionsPage = () => {
                         </span>
                       </TableCell>
                       <TableCell>{section.max_products}</TableCell>
-                      <TableCell>{section.countries?.join(', ')}</TableCell>
                       <TableCell>
                         <Switch
                           checked={section.is_active}

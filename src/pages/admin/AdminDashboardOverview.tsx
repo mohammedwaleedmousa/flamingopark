@@ -32,7 +32,7 @@ function DashboardContent() {
       </div>
 
       <div className="grid grid-cols-3 gap-4 mb-6">
-        <KPI label="Revenue" value={revenue.data ? `SAR ${revenue.data.revenue.toFixed(2)}` : "—"} />
+        <KPI label="Revenue" value={revenue.data ? `${revenue.data.revenue.toFixed(2)} (Multi)` : "—"} />
         <KPI label="Orders (avg)" value={orders.data ? `${orders.data.count} / ${orders.data.avg.toFixed(2)}` : "—"} />
         <KPI label="New Customers" value={customers.data ? customers.data.customers : "—"} />
       </div>

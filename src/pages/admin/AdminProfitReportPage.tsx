@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -39,6 +38,7 @@ interface Order {
   created_at: string;
   discount_amount: number;
   beneficiary_commission: number;
+  currency_mode?: 'SAR' | 'YER_SOUTH' | 'YER_NORTH' | null;
 }
 
 interface Product {
@@ -65,13 +65,27 @@ interface ProfitStats {
 const LOW_MARGIN_THRESHOLD = 20; // 20% profit margin threshold
 
 const AdminProfitReportPage = () => {
+  const SINGLE_COUNTRY = 'GLOBAL';
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedCountry, setSelectedCountry] = useState<'SA' | 'YE'>('SA');
   const [dateFrom, setDateFrom] = useState(() => format(startOfMonth(new Date()), 'yyyy-MM-dd'));
   const [dateTo, setDateTo] = useState(() => format(endOfMonth(new Date()), 'yyyy-MM-dd'));
   const [searchQuery, setSearchQuery] = useState('');
+
+  const modeMeta: Record<'SAR' | 'YER_SOUTH' | 'YER_NORTH', { label: string; symbol: string }> = {
+    SAR: { label: 'ريال سعودي', symbol: 'ر.س' },
+    YER_SOUTH: { label: 'ريال يمني (جنوب)', symbol: 'ر.ي' },
+    YER_NORTH: { label: 'ريال يمني (شمال)', symbol: 'ر.ي' },
+  };
+
+  const modeOf = (order: Order): 'SAR' | 'YER_SOUTH' | 'YER_NORTH' => {
+    if (order.currency_mode === 'SAR' || order.currency_mode === 'YER_SOUTH' || order.currency_mode === 'YER_NORTH') {
+      return order.currency_mode;
+    }
+    if (order.country === 'SA') return 'SAR';
+    return 'YER_SOUTH';
+  };
 
   useEffect(() => {
     fetchData();
@@ -83,7 +97,7 @@ const AdminProfitReportPage = () => {
       const [ordersRes, productsRes] = await Promise.all([
         supabase
           .from('orders')
-          .select('*')
+          .select('*, currency_mode')
           .order('created_at', { ascending: false }),
         supabase
           .from('products')
@@ -122,7 +136,6 @@ const AdminProfitReportPage = () => {
     return products
       .filter(p => {
         if (!p.cost_price || p.cost_price === 0) return false;
-        if (!p.countries?.includes(selectedCountry)) return false;
         const margin = ((p.price - p.cost_price) / p.price) * 100;
         return margin < LOW_MARGIN_THRESHOLD && p.is_active;
       })
@@ -132,7 +145,7 @@ const AdminProfitReportPage = () => {
         profit: p.cost_price ? p.price - p.cost_price : 0,
       }))
       .sort((a, b) => a.margin - b.margin);
-  }, [products, selectedCountry]);
+  }, [products]);
 
   // Create a product cost lookup
   const productCostLookup = useMemo(() => {
@@ -147,7 +160,6 @@ const AdminProfitReportPage = () => {
 
   const filteredOrders = useMemo(() => {
     let filtered = orders.filter(order => 
-      order.country === selectedCountry && 
       order.status !== 'cancelled'
     );
 
@@ -172,7 +184,7 @@ const AdminProfitReportPage = () => {
     }
 
     return filtered;
-  }, [orders, selectedCountry, dateFrom, dateTo, searchQuery]);
+  }, [orders, dateFrom, dateTo, searchQuery]);
 
   // Calculate profit stats
   const stats: ProfitStats = useMemo(() => {
@@ -212,6 +224,32 @@ const AdminProfitReportPage = () => {
     };
   }, [filteredOrders, productCostLookup]);
 
+  const byCurrencyStats = useMemo(() => {
+    const acc = {
+      SAR: { revenue: 0, cost: 0, profit: 0, orders: 0 },
+      YER_SOUTH: { revenue: 0, cost: 0, profit: 0, orders: 0 },
+      YER_NORTH: { revenue: 0, cost: 0, profit: 0, orders: 0 },
+    };
+
+    for (const order of filteredOrders) {
+      const mode = modeOf(order);
+      let orderCost = 0;
+      if (Array.isArray(order.items)) {
+        order.items.forEach((item: OrderItem) => {
+          const costPrice = item.costPrice || productCostLookup[item.id] || item.price * 0.7;
+          orderCost += costPrice * item.quantity;
+        });
+      }
+      const orderProfit = order.total - orderCost - (order.beneficiary_commission || 0);
+      acc[mode].revenue += order.total;
+      acc[mode].cost += orderCost;
+      acc[mode].profit += orderProfit;
+      acc[mode].orders += 1;
+    }
+
+    return acc;
+  }, [filteredOrders, productCostLookup]);
+
   // Monthly profit data for chart
   const monthlyProfitData = useMemo(() => {
     const months: Record<string, { month: string; revenue: number; cost: number; profit: number }> = {};
@@ -229,7 +267,7 @@ const AdminProfitReportPage = () => {
     }
 
     orders
-      .filter(o => o.country === selectedCountry && o.status !== 'cancelled')
+      .filter(o => o.status !== 'cancelled')
       .forEach(order => {
         const key = format(new Date(order.created_at), 'yyyy-MM');
         if (months[key]) {
@@ -248,9 +286,9 @@ const AdminProfitReportPage = () => {
       });
 
     return Object.values(months);
-  }, [orders, selectedCountry, productCostLookup]);
+  }, [orders, productCostLookup]);
 
-  const currency = selectedCountry === 'SA' ? 'ر.س' : 'ر.ي';
+  const currency = 'ر.ي';
 
   const setCurrentMonth = () => {
     setDateFrom(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
@@ -338,18 +376,7 @@ const AdminProfitReportPage = () => {
         </Card>
       )}
 
-      {/* Country Tabs */}
-      <Tabs value={selectedCountry} onValueChange={(v) => setSelectedCountry(v as 'SA' | 'YE')}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="SA" className="gap-2">
-            🇸🇦 السعودية
-          </TabsTrigger>
-          <TabsTrigger value="YE" className="gap-2">
-            🇾🇪 اليمن
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value={selectedCountry} className="space-y-6 mt-6">
+      <div className="space-y-6 mt-6">
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
@@ -404,6 +431,19 @@ const AdminProfitReportPage = () => {
                 </div>
               </CardContent>
             </Card>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {(['SAR', 'YER_SOUTH', 'YER_NORTH'] as const).map((mode) => (
+              <Card key={mode}>
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">{modeMeta[mode].label}</p>
+                  <p className="text-sm mt-1">إيراد: <span className="font-bold">{byCurrencyStats[mode].revenue.toLocaleString()} {modeMeta[mode].symbol}</span></p>
+                  <p className="text-sm">صافي: <span className="font-bold">{byCurrencyStats[mode].profit.toLocaleString()} {modeMeta[mode].symbol}</span></p>
+                  <p className="text-xs text-muted-foreground mt-1">{byCurrencyStats[mode].orders} طلب</p>
+                </CardContent>
+              </Card>
+            ))}
           </div>
 
           {/* Additional Stats */}
@@ -574,13 +614,13 @@ const AdminProfitReportPage = () => {
                             <TableCell className="font-mono text-sm">{order.order_number}</TableCell>
                             <TableCell className="font-medium">{order.customer_name}</TableCell>
                             <TableCell className="text-primary font-bold">
-                              {order.total.toLocaleString()} {currency}
+                              {order.total.toLocaleString()} {modeMeta[modeOf(order)].symbol}
                             </TableCell>
                             <TableCell className="text-red-600">
-                              {orderCost.toLocaleString()} {currency}
+                              {orderCost.toLocaleString()} {modeMeta[modeOf(order)].symbol}
                             </TableCell>
                             <TableCell className={orderProfit >= 0 ? 'text-green-600 font-bold' : 'text-red-600 font-bold'}>
-                              {orderProfit.toLocaleString()} {currency}
+                              {orderProfit.toLocaleString()} {modeMeta[modeOf(order)].symbol}
                             </TableCell>
                             <TableCell>
                               <Badge variant={orderMargin >= 20 ? 'default' : 'destructive'}>
@@ -606,7 +646,7 @@ const AdminProfitReportPage = () => {
               <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    صافي الأرباح - {selectedCountry === 'SA' ? 'السعودية' : 'اليمن'}
+                    صافي الأرباح - المتجر الموحد
                   </p>
                   <p className="text-3xl font-bold text-primary mt-1">
                     {stats.netProfit.toLocaleString()} {currency}
@@ -629,8 +669,7 @@ const AdminProfitReportPage = () => {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+      </div>
     </div>
   );
 };

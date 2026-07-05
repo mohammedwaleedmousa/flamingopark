@@ -323,7 +323,7 @@ const MohammedInvoicesPage = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <Badge className={`${status.color} border text-xs`}>{status.label}</Badge>
-                      <span className="font-bold text-sm">{order.total} {order.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
+                      <span className="font-bold text-sm">{order.total} ر.ي</span>
                     </div>
                   </div>
 
@@ -367,7 +367,7 @@ const MohammedInvoicesPage = () => {
                         )}
                         <div className="flex justify-between font-bold border-t pt-1 mt-1">
                           <span>الإجمالي</span>
-                          <span>{order.total} {order.country === 'SA' ? 'ر.س' : 'ر.ي'}</span>
+                          <span>{order.total} ر.ي</span>
                         </div>
                       </div>
 

@@ -18,7 +18,7 @@ const seedProducts: Product[] = [
     category: 'necklaces',
     brand: 'Flamingo',
     inStock: true,
-    countries: ['YE', 'SA'],
+    countries: ['GLOBAL'],
     isFeatured: true,
     isBestSeller: true,
   },
@@ -37,7 +37,7 @@ const seedProducts: Product[] = [
     category: 'rings',
     brand: 'Flamingo',
     inStock: true,
-    countries: ['YE', 'SA'],
+    countries: ['GLOBAL'],
     isFeatured: true,
   },
   {
@@ -56,7 +56,7 @@ const seedProducts: Product[] = [
     category: 'bracelets',
     brand: 'Luxury gold',
     inStock: true,
-    countries: ['YE', 'SA'],
+    countries: ['GLOBAL'],
     isBestSeller: true,
   },
   {
@@ -73,7 +73,7 @@ const seedProducts: Product[] = [
     category: 'earrings',
     brand: 'Pearl Collection',
     inStock: true,
-    countries: ['SA'],
+    countries: ['GLOBAL'],
     isFeatured: true,
   },
   {
@@ -92,7 +92,7 @@ const seedProducts: Product[] = [
     category: 'sets',
     brand: 'Flamingo',
     inStock: true,
-    countries: ['YE'],
+    countries: ['GLOBAL'],
     isFeatured: true,
     isBestSeller: true,
   },
@@ -110,7 +110,7 @@ const seedProducts: Product[] = [
     category: 'necklaces',
     brand: 'Modern gold',
     inStock: true,
-    countries: ['YE', 'SA'],
+    countries: ['GLOBAL'],
   },
 ];
 
@@ -154,7 +154,7 @@ const generatedProducts: Product[] = Array.from({ length: 500 }, (_, index) => {
     category,
     brand,
     inStock: index % 11 !== 0,
-    countries: (index % 4 === 0 ? ['SA'] : index % 5 === 0 ? ['YE'] : ['YE', 'SA']) as Country[],
+    countries: ['GLOBAL'] as Country[],
     isFeatured: index % 8 === 0,
     isBestSeller: index % 10 === 0,
     variants: [
@@ -223,7 +223,7 @@ export const banners = [
     image: 'https://images.unsplash.com/photo-1515562141207-7a88fb7ce338?w=1920',
     cta: 'Shop Now',
     ctaAr: 'تسوق الآن',
-    countries: ['YE', 'SA'] as Country[],
+    countries: ['GLOBAL'] as Country[],
   },
   {
     id: '2',
@@ -234,7 +234,7 @@ export const banners = [
     image: 'https://images.unsplash.com/photo-1573408301185-9146fe634ad0?w=1920',
     cta: 'Explore',
     ctaAr: 'استكشف',
-    countries: ['YE', 'SA'] as Country[],
+    countries: ['GLOBAL'] as Country[],
   },
 ];
 
@@ -246,7 +246,7 @@ export const reviews = [
     rating: 5,
     message: 'Absolutely stunning jewelry! The quality is exceptional.',
     messageAr: 'مجوهرات رائعة! الجودة استثنائية.',
-    country: 'SA' as Country,
+    country: 'GLOBAL' as Country,
   },
   {
     id: '2',
@@ -255,7 +255,7 @@ export const reviews = [
     rating: 5,
     message: 'Best gold shop experience. Highly recommended!',
     messageAr: 'أفضل تجربة شراء ذهب. أنصح به بشدة!',
-    country: 'YE' as Country,
+    country: 'GLOBAL' as Country,
   },
   {
     id: '3',
@@ -264,19 +264,15 @@ export const reviews = [
     rating: 4,
     message: 'Beautiful designs and excellent customer service.',
     messageAr: 'تصاميم جميلة وخدمة عملاء ممتازة.',
-    country: 'SA' as Country,
+    country: 'GLOBAL' as Country,
   },
 ];
 
 export const deliveryCompanies = {
-  YE: [
-    { id: '1', name: 'Yemen Express', fee: 50, days: '2-3' },
-    { id: '2', name: 'Fast Delivery YE', fee: 75, days: '1-2' },
-  ],
-  SA: [
-    { id: '1', name: 'Aramex', fee: 30, days: '1-2' },
-    { id: '2', name: 'SMSA', fee: 25, days: '2-3' },
-    { id: '3', name: 'DHL Express', fee: 45, days: '1' },
+  GLOBAL: [
+    { id: '1', name: 'Global Express', fee: 30, days: '2-3' },
+    { id: '2', name: 'Fast Delivery', fee: 45, days: '1-2' },
+    { id: '3', name: 'Priority Shipping', fee: 60, days: '1' },
   ],
 };
 

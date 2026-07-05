@@ -59,7 +59,7 @@ interface CODRegion {
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { country, customer, cart, getCartTotal, clearCart } = useStore();
+  const { country, customer, cart, getCartTotal, clearCart, currencyMode } = useStore();
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "bank">("cod");
   const [selectedDelivery, setSelectedDelivery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("");
@@ -95,7 +95,6 @@ const CheckoutPage = () => {
   // Apply coupon - checks both coupons table and offers table
   const applyCoupon = async () => {
     const normalized = couponCode.trim().toUpperCase();
-    const effectiveCountry = country || "SA";
 
     if (!normalized) {
       toast({
@@ -116,8 +115,7 @@ const CheckoutPage = () => {
         
       // Find matching coupon manually (handles trimming issues)
       const matchingCoupon = couponData?.find(c => 
-        c.code?.trim().toUpperCase() === normalized &&
-        (c.countries as string[])?.includes(effectiveCountry)
+        c.code?.trim().toUpperCase() === normalized
       );
 
       if (matchingCoupon) {
@@ -220,17 +218,22 @@ const CheckoutPage = () => {
       if (error) throw error;
       return data as DeliveryCompany[];
     },
-    enabled: !!country,
+    enabled: true,
   });
 
   // Fetch bank accounts
   const { data: bankAccounts = [] } = useQuery({
     queryKey: ["bank-accounts", country],
     queryFn: async () => {
-      const key = country === "SA" ? "bank_accounts_sa" : "bank_accounts_ye";
-      const { data, error } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
+      const { data, error } = await supabase
+        .from("site_settings")
+        .select("key, value")
+        .in("key", ["bank_accounts", "bank_accounts_ye", "bank_accounts_sa"]);
       if (error) throw error;
-      let value = data?.value;
+      const primary = data?.find((row) => row.key === "bank_accounts")?.value;
+      const legacyYe = data?.find((row) => row.key === "bank_accounts_ye")?.value;
+      const legacySa = data?.find((row) => row.key === "bank_accounts_sa")?.value;
+      let value = primary ?? legacyYe ?? legacySa;
       if (typeof value === "string")
         try {
           value = JSON.parse(value);
@@ -245,19 +248,24 @@ const CheckoutPage = () => {
         })) as BankAccount[];
       return [] as BankAccount[];
     },
-    enabled: !!country,
+    enabled: true,
   });
 
   // Fetch WhatsApp number
   const { data: whatsappNumber } = useQuery({
     queryKey: ["whatsapp-number", country],
     queryFn: async () => {
-      const key = country === "SA" ? "whatsapp_sa" : "whatsapp_ye";
-      const { data, error } = await supabase.from("site_settings").select("value").eq("key", key).maybeSingle();
+      const { data, error } = await supabase
+        .from("site_settings")
+        .select("key, value")
+        .in("key", ["whatsapp", "whatsapp_ye", "whatsapp_sa"]);
       if (error) throw error;
-      return (data?.value as string) || (country === "SA" ? "966123456789" : "967123456789");
+      const unified = data?.find((row) => row.key === "whatsapp")?.value;
+      const legacyYe = data?.find((row) => row.key === "whatsapp_ye")?.value;
+      const legacySa = data?.find((row) => row.key === "whatsapp_sa")?.value;
+      return (unified as string) || (legacyYe as string) || (legacySa as string) || "967123456789";
     },
-    enabled: !!country,
+    enabled: true,
   });
 
   // Fetch COD regions
@@ -272,14 +280,48 @@ const CheckoutPage = () => {
       if (error) throw error;
       return data as CODRegion[];
     },
-    enabled: !!country,
+    enabled: true,
   });
 
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
-      const { data, error } = await supabase.from("orders").insert(orderData).select().single();
-      if (error) throw error;
-      return data;
+      const insertOrder = async (payload: Record<string, unknown>) => {
+        const { data, error } = await supabase.from("orders").insert(payload).select().single();
+        if (error) throw error;
+        return data;
+      };
+
+      try {
+        return await insertOrder(orderData as Record<string, unknown>);
+      } catch (error) {
+        const message = String((error as { message?: string })?.message || "");
+        const hasMissingColumnError =
+          /column .* does not exist/i.test(message) ||
+          /Could not find the '.*' column/i.test(message) ||
+          /schema cache/i.test(message);
+
+        if (!hasMissingColumnError) {
+          throw error;
+        }
+
+        const legacyPayload = { ...(orderData as Record<string, unknown>) };
+        const notesValue = String(legacyPayload.customer_notes || "").trim();
+        const cityValue = String(legacyPayload.customer_city || "").trim();
+
+        delete legacyPayload.customer_city;
+        delete legacyPayload.coupon_code;
+        delete legacyPayload.discount_amount;
+        delete legacyPayload.currency_mode;
+
+        legacyPayload.customer_notes = [
+          notesValue || null,
+          cityValue ? `المدينة: ${cityValue}` : null,
+        ]
+          .filter(Boolean)
+          .join(" | ") || null;
+
+        return await insertOrder(legacyPayload);
+      }
     },
   });
 
@@ -360,7 +402,8 @@ const CheckoutPage = () => {
         customer_address: formData.address || "-",
         customer_city: formData.city || "",
         customer_notes: formData.notes || null,
-        country: "YE",
+        country: country || "GLOBAL",
+        currency_mode: currencyMode,
         items: orderItems,
         subtotal,
         delivery_fee: deliveryFee,
@@ -376,12 +419,11 @@ const CheckoutPage = () => {
         orderPayload.customer_id = customer.id;
       }
       
-      const createdOrder = await createOrderMutation.mutateAsync(orderPayload);
+      await createOrderMutation.mutateAsync(orderPayload);
       
       const selectedRegionData = codRegions.find((r) => r.id === selectedRegion);
       
-      // Single-storefront: Yemen WhatsApp
-      const correctWhatsappNumber = "967782676054";
+      const correctWhatsappNumber = whatsappNumber || "967123456789";
       
       const orderData = {
         orderNumber,
@@ -399,7 +441,8 @@ const CheckoutPage = () => {
         paymentMethod,
         deliveryCompany: selectedCompany?.name || "",
         selectedRegion: paymentMethod === "cod" && selectedRegionData ? selectedRegionData.region_name_ar : null,
-        country: "YE",
+        country: country || "GLOBAL",
+        currencyMode,
         whatsappNumber: correctWhatsappNumber,
         createdAt: new Date().toISOString(),
       };

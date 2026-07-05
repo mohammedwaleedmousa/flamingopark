@@ -192,7 +192,7 @@ const OffersPage = () => {
         category: p.category,
         brand: p.brand,
         inStock: p.in_stock ?? true,
-        countries: (p.countries || ["SA", "YE"]) as ("SA" | "YE")[],
+        countries: (p.countries || ["GLOBAL"]) as Product["countries"],
         isFeatured: p.is_featured,
         isBestSeller: p.is_best_seller,
       })) as Product[];

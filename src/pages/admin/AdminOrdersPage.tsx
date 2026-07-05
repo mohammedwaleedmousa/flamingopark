@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import {
   Eye, MessageCircle, Search, ShoppingCart, X, Phone, MapPin, Package,
-  Trash2, Loader2, Globe2, TrendingUp, BarChart3,
+  Trash2, Loader2, TrendingUp, BarChart3,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { AdminPagination } from "@/components/admin/AdminPagination";
@@ -50,7 +50,7 @@ const statusOptions = [
   { value: "cancelled",  label: "ملغي",         color: "bg-red-500/15 text-red-600 border-red-500/30" },
 ];
 
-const currencyOf = (c: string) => (c === "SA" ? "ر.س" : c === "YE" ? "ر.ي" : "");
+const currencyOf = () => "ر.ي";
 
 const AdminOrdersPage = () => {
   const [page, setPage] = useState(1);
@@ -58,7 +58,6 @@ const AdminOrdersPage = () => {
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 350);
   const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [countryFilter, setCountryFilter] = useState<string>("all");
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [confirmDelete, setConfirmDelete] = useState<{ id?: string; bulk?: boolean } | null>(null);
@@ -67,7 +66,7 @@ const AdminOrdersPage = () => {
   const ordersQuery = useAdminOrders({
     search,
     status: statusFilter,
-    country: countryFilter,
+    country: "all",
     page,
     pageSize: PAGE_SIZE,
   });
@@ -125,8 +124,7 @@ const AdminOrdersPage = () => {
     const message = `مرحباً ${order.customer_name}، بخصوص طلبك رقم ${order.order_number}`;
     let toPhone = order.customer_phone.replace(/\D/g, "");
     if (toPhone.startsWith("0")) toPhone = toPhone.substring(1);
-    if (order.country === "YE" && !toPhone.startsWith("967")) toPhone = "967" + toPhone;
-    if (order.country === "SA" && !toPhone.startsWith("966")) toPhone = "966" + toPhone;
+    if (!toPhone.startsWith("967")) toPhone = "967" + toPhone;
     window.open(`https://wa.me/${toPhone}?text=${encodeURIComponent(message)}`, "_blank");
   };
 
@@ -177,14 +175,6 @@ const AdminOrdersPage = () => {
               {statusOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
             </SelectContent>
           </Select>
-          <Select value={countryFilter} onValueChange={setCountryFilter}>
-            <SelectTrigger className="w-full md:w-36"><Globe2 className="w-3.5 h-3.5 ml-1" /><SelectValue placeholder="البلد" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">كل الدول</SelectItem>
-              <SelectItem value="SA">🇸🇦 السعودية</SelectItem>
-              <SelectItem value="YE">🇾🇪 اليمن</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
 
         {selected.size > 0 && (
@@ -227,10 +217,10 @@ const AdminOrdersPage = () => {
                   {getStatusBadge(order.status)}
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
-                  <span className="text-muted-foreground">{order.country === "SA" ? "🇸🇦" : "🇾🇪"} • {order.payment_method === "cod" ? "عند الاستلام" : "بنكي"}</span>
-                  <span className="font-heading text-primary">{parseFloat(String(order.total)).toFixed(0)} {currencyOf(order.country)}</span>
+                  <span className="text-muted-foreground">المتجر الموحد • {order.payment_method === "cod" ? "عند الاستلام" : "بنكي"}</span>
+                  <span className="font-heading text-primary">{parseFloat(String(order.total)).toFixed(0)} {currencyOf()}</span>
                 </div>
-                <p className="text-[10px] text-muted-foreground mt-1">{new Date(order.created_at).toLocaleString("ar-SA")}</p>
+                <p className="text-[10px] text-muted-foreground mt-1">{new Date(order.created_at).toLocaleString("ar")}</p>
               </div>
             </div>
             <div className="flex gap-2 mt-3 pt-3 border-t border-border">
@@ -255,7 +245,6 @@ const AdminOrdersPage = () => {
                 <th className="p-3 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} /></th>
                 <th className="text-right p-3 font-heading">رقم الطلب</th>
                 <th className="text-right p-3 font-heading">العميل</th>
-                <th className="text-right p-3 font-heading">البلد</th>
                 <th className="text-right p-3 font-heading">المجموع</th>
                 <th className="text-right p-3 font-heading">الدفع</th>
                 <th className="text-right p-3 font-heading">الحالة</th>
@@ -265,16 +254,15 @@ const AdminOrdersPage = () => {
             </thead>
             <tbody>
               {isLoading && orders.length === 0 ? (
-                <tr><td colSpan={9} className="p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" /></td></tr>
+                <tr><td colSpan={8} className="p-10 text-center"><Loader2 className="w-6 h-6 animate-spin mx-auto text-muted-foreground" /></td></tr>
               ) : orders.length === 0 ? (
-                <tr><td colSpan={9} className="p-12 text-center text-muted-foreground"><ShoppingCart className="w-10 h-10 mx-auto mb-3 opacity-50" /> لا توجد طلبات</td></tr>
+                <tr><td colSpan={8} className="p-12 text-center text-muted-foreground"><ShoppingCart className="w-10 h-10 mx-auto mb-3 opacity-50" /> لا توجد طلبات</td></tr>
               ) : orders.map(order => (
                 <tr key={order.id} className={cn("border-b border-border hover:bg-muted/30 transition-colors", selected.has(order.id) && "bg-primary/5")}>
                   <td className="p-3"><Checkbox checked={selected.has(order.id)} onCheckedChange={() => toggleSelect(order.id)} /></td>
                   <td className="p-3 font-mono text-xs text-primary">{order.order_number}</td>
                   <td className="p-3"><p className="font-body text-sm">{order.customer_name}</p><p className="text-xs text-muted-foreground" dir="ltr">{order.customer_phone}</p></td>
-                  <td className="p-3 text-lg">{order.country === "SA" ? "🇸🇦" : "🇾🇪"}</td>
-                  <td className="p-3 font-heading text-primary text-sm">{parseFloat(String(order.total)).toFixed(0)} {currencyOf(order.country)}</td>
+                  <td className="p-3 font-heading text-primary text-sm">{parseFloat(String(order.total)).toFixed(0)} {currencyOf()}</td>
                   <td className="p-3 text-xs">{order.payment_method === "cod" ? "عند الاستلام" : "بنكي"}</td>
                   <td className="p-3">
                     <Select value={order.status} onValueChange={(v) => updateStatus(order.id, v)}>
@@ -282,7 +270,7 @@ const AdminOrdersPage = () => {
                       <SelectContent>{statusOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                     </Select>
                   </td>
-                  <td className="p-3 text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString("ar-SA")}</td>
+                  <td className="p-3 text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString("ar")}</td>
                   <td className="p-3">
                     <div className="flex gap-1">
                       <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setSelectedOrder(order)}><Eye className="w-4 h-4" /></Button>
@@ -323,7 +311,7 @@ const AdminOrdersPage = () => {
               </div>
               <div className="grid gap-3">
                 <div className="flex items-center gap-3 p-3 bg-card border border-border rounded-lg">
-                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center"><span>{selectedOrder.country === "SA" ? "🇸🇦" : "🇾🇪"}</span></div>
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center"><span>🏪</span></div>
                   <div><p className="font-heading">{selectedOrder.customer_name}</p><p className="text-xs text-muted-foreground">العميل</p></div>
                 </div>
                 <div className="flex items-center gap-3 p-3 bg-card border border-border rounded-lg">
@@ -346,20 +334,20 @@ const AdminOrdersPage = () => {
                       {(item.image || item.product_image) && <img src={item.image || item.product_image} alt="" className="w-14 h-14 object-cover rounded-lg" />}
                       <div className="flex-1 min-w-0">
                         <p className="font-heading text-sm truncate">{item.name || item.product_name}</p>
-                        <p className="text-xs text-muted-foreground">{item.quantity} × {item.price} {currencyOf(selectedOrder.country)}</p>
+                        <p className="text-xs text-muted-foreground">{item.quantity} × {item.price} {currencyOf()}</p>
                       </div>
-                      <span className="font-heading text-primary text-sm">{(item.quantity * item.price).toFixed(0)} {currencyOf(selectedOrder.country)}</span>
+                      <span className="font-heading text-primary text-sm">{(item.quantity * item.price).toFixed(0)} {currencyOf()}</span>
                     </div>
                   ))}
                 </div>
               </div>
               <div className="border-t border-border pt-4 space-y-2 text-sm">
-                <div className="flex justify-between"><span className="text-muted-foreground">المجموع الفرعي</span><span>{parseFloat(String(selectedOrder.subtotal)).toFixed(0)} {currencyOf(selectedOrder.country)}</span></div>
-                <div className="flex justify-between"><span className="text-muted-foreground">التوصيل</span><span>{parseFloat(String(selectedOrder.delivery_fee)).toFixed(0)} {currencyOf(selectedOrder.country)}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">المجموع الفرعي</span><span>{parseFloat(String(selectedOrder.subtotal)).toFixed(0)} {currencyOf()}</span></div>
+                <div className="flex justify-between"><span className="text-muted-foreground">التوصيل</span><span>{parseFloat(String(selectedOrder.delivery_fee)).toFixed(0)} {currencyOf()}</span></div>
                 {!!selectedOrder.discount_amount && selectedOrder.discount_amount > 0 && (
-                  <div className="flex justify-between text-green-600"><span>الخصم {selectedOrder.coupon_code && <Badge variant="outline" className="mr-1 text-[10px]">{selectedOrder.coupon_code}</Badge>}</span><span>-{parseFloat(String(selectedOrder.discount_amount)).toFixed(0)} {currencyOf(selectedOrder.country)}</span></div>
+                  <div className="flex justify-between text-green-600"><span>الخصم {selectedOrder.coupon_code && <Badge variant="outline" className="mr-1 text-[10px]">{selectedOrder.coupon_code}</Badge>}</span><span>-{parseFloat(String(selectedOrder.discount_amount)).toFixed(0)} {currencyOf()}</span></div>
                 )}
-                <div className="flex justify-between font-heading text-lg pt-3 border-t border-border"><span>الإجمالي</span><span className="text-primary">{parseFloat(String(selectedOrder.total)).toFixed(0)} {currencyOf(selectedOrder.country)}</span></div>
+                <div className="flex justify-between font-heading text-lg pt-3 border-t border-border"><span>الإجمالي</span><span className="text-primary">{parseFloat(String(selectedOrder.total)).toFixed(0)} {currencyOf()}</span></div>
               </div>
             </div>
           </div>

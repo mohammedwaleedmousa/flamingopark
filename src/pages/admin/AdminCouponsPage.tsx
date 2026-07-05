@@ -7,7 +7,6 @@ import { Switch } from '@/components/ui/switch';
 import { Plus, Edit, Trash2, Loader2, Percent, Banknote, Copy, BarChart3 } from 'lucide-react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Checkbox } from '@/components/ui/checkbox';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
 
 interface Coupon {
@@ -26,6 +25,7 @@ interface CouponStats {
 }
 
 const AdminCouponsPage = () => {
+  const SINGLE_COUNTRY = 'GLOBAL';
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [couponStats, setCouponStats] = useState<CouponStats[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -37,7 +37,7 @@ const AdminCouponsPage = () => {
     type: 'percentage' as 'percentage' | 'fixed',
     value: 0,
     is_active: true,
-    countries: ['SA', 'YE'] as string[],
+    countries: [SINGLE_COUNTRY] as string[],
   });
 
   useEffect(() => {
@@ -99,7 +99,7 @@ const AdminCouponsPage = () => {
       type: 'percentage',
       value: 0,
       is_active: true,
-      countries: ['SA', 'YE'],
+      countries: [SINGLE_COUNTRY],
     });
     setEditingCoupon(null);
   };
@@ -112,7 +112,7 @@ const AdminCouponsPage = () => {
         type: coupon.type,
         value: coupon.value,
         is_active: coupon.is_active,
-        countries: coupon.countries || ['SA', 'YE'],
+        countries: coupon.countries || [SINGLE_COUNTRY],
       });
     } else {
       resetForm();
@@ -196,15 +196,6 @@ const AdminCouponsPage = () => {
   const copyCode = (code: string) => {
     navigator.clipboard.writeText(code);
     toast({ title: 'تم', description: 'تم نسخ الكود' });
-  };
-
-  const toggleCountry = (country: string) => {
-    setFormData(prev => ({
-      ...prev,
-      countries: prev.countries.includes(country)
-        ? prev.countries.filter(c => c !== country)
-        : [...prev.countries, country],
-    }));
   };
 
   if (isLoading) {
@@ -302,11 +293,7 @@ const AdminCouponsPage = () => {
             </div>
 
             <div className="flex items-center justify-between">
-              <div className="flex gap-1">
-                {coupon.countries?.map(c => (
-                  <span key={c} className="text-xs">{c === 'SA' ? '🇸🇦' : '🇾🇪'}</span>
-                ))}
-              </div>
+              <div className="text-xs text-muted-foreground">المتجر الموحد</div>
               <div className="flex gap-2">
                 <Button size="icon" variant="ghost" onClick={() => openDialog(coupon)}>
                   <Edit className="w-4 h-4" />
@@ -371,23 +358,8 @@ const AdminCouponsPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm text-muted-foreground mb-2">البلدان</label>
-              <div className="flex gap-4">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={formData.countries.includes('SA')}
-                    onCheckedChange={() => toggleCountry('SA')}
-                  />
-                  <span>🇸🇦 السعودية</span>
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Checkbox
-                    checked={formData.countries.includes('YE')}
-                    onCheckedChange={() => toggleCountry('YE')}
-                  />
-                  <span>🇾🇪 اليمن</span>
-                </label>
-              </div>
+              <label className="block text-sm text-muted-foreground mb-2">النطاق</label>
+              <p className="text-sm text-foreground">الكوبون يعمل على المتجر الموحد</p>
             </div>
 
             <label className="flex items-center gap-2 cursor-pointer">

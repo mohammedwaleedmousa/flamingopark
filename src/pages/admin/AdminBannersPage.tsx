@@ -3,7 +3,6 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Checkbox } from '@/components/ui/checkbox';
 import { Slider } from '@/components/ui/slider';
 import { Plus, Edit, Trash2, Upload, X, Loader2, ZoomIn, Move, ChevronUp, ChevronDown, GripVertical } from 'lucide-react';
 import {
@@ -33,6 +32,7 @@ interface Banner {
 }
 
 const AdminBannersPage = () => {
+  const SINGLE_COUNTRY = 'GLOBAL';
   const [banners, setBanners] = useState<Banner[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -49,7 +49,7 @@ const AdminBannersPage = () => {
     cta_text: '',
     cta_text_ar: '',
     cta_link: '/products',
-    countries: ['SA', 'YE'] as string[],
+    countries: [SINGLE_COUNTRY] as string[],
     is_active: true,
     sort_order: 0,
     image_zoom: 1,
@@ -85,7 +85,7 @@ const AdminBannersPage = () => {
       cta_text: '',
       cta_text_ar: '',
       cta_link: '/products',
-      countries: ['SA', 'YE'],
+      countries: [SINGLE_COUNTRY],
       is_active: true,
       sort_order: banners.length,
       image_zoom: 1,
@@ -107,7 +107,7 @@ const AdminBannersPage = () => {
         cta_text: banner.cta_text || '',
         cta_text_ar: banner.cta_text_ar || '',
         cta_link: banner.cta_link || '/products',
-        countries: banner.countries || ['SA', 'YE'],
+        countries: banner.countries || [SINGLE_COUNTRY],
         is_active: banner.is_active ?? true,
         sort_order: banner.sort_order || 0,
         image_zoom: banner.image_zoom || 1,
@@ -235,15 +235,6 @@ const AdminBannersPage = () => {
     toast({ title: 'تم', description: 'تم تحديث ترتيب البانرات' });
   };
 
-  const toggleCountry = (country: string) => {
-    setFormData(prev => ({
-      ...prev,
-      countries: prev.countries.includes(country)
-        ? prev.countries.filter(c => c !== country)
-        : [...prev.countries, country],
-    }));
-  };
-
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
       <AdminPageHeader
@@ -309,9 +300,7 @@ const AdminBannersPage = () => {
                 <h3 className="font-heading text-foreground mb-1">{banner.title_ar}</h3>
                 <p className="text-sm text-muted-foreground mb-2">{banner.subtitle_ar}</p>
                 <div className="flex gap-1">
-                  {banner.countries?.map(c => (
-                    <span key={c} className="text-xs">{c === 'SA' ? '🇸🇦' : '🇾🇪'}</span>
-                  ))}
+                  <span className="text-xs">المتجر الموحد</span>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -440,7 +429,7 @@ const AdminBannersPage = () => {
                   </div>
                 </div>
               ) : (
-                <label className="block w-full h-40 border-2 border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-gold transition-colors">
+                <label className="w-full h-40 border-2 border-dashed border-border rounded grid place-content-center text-center cursor-pointer hover:border-gold transition-colors">
                   {isUploading ? (
                     <Loader2 className="w-8 h-8 text-gold animate-spin" />
                   ) : (
@@ -475,23 +464,10 @@ const AdminBannersPage = () => {
             </div>
             <div className="flex gap-4">
               <label className="flex items-center gap-2 cursor-pointer">
-                <Checkbox
-                  checked={formData.countries.includes('SA')}
-                  onCheckedChange={() => toggleCountry('SA')}
-                />
-                <span className="text-sm">🇸🇦 السعودية</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Checkbox
-                  checked={formData.countries.includes('YE')}
-                  onCheckedChange={() => toggleCountry('YE')}
-                />
-                <span className="text-sm">🇾🇪 اليمن</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Checkbox
+                <input
+                  type="checkbox"
                   checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: !!checked })}
+                  onChange={(e) => setFormData({ ...formData, is_active: e.target.checked })}
                 />
                 <span className="text-sm">نشط</span>
               </label>

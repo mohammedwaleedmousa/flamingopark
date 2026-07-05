@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Checkbox } from "@/components/ui/checkbox";
 import { Slider } from "@/components/ui/slider";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
@@ -26,6 +25,7 @@ interface Category {
 }
 
 const AdminCategoriesPage = () => {
+  const SINGLE_COUNTRY = "GLOBAL";
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
@@ -37,7 +37,7 @@ const AdminCategoriesPage = () => {
     image_url: "",
     is_active: true,
     sort_order: 0,
-    countries: ["SA", "YE"] as string[],
+    countries: [SINGLE_COUNTRY] as string[],
     image_zoom: 1,
     image_position_x: 50,
     image_position_y: 50,
@@ -155,7 +155,7 @@ const AdminCategoriesPage = () => {
       image_url: "",
       is_active: true,
       sort_order: 0,
-      countries: ["SA", "YE"],
+      countries: [SINGLE_COUNTRY],
       image_zoom: 1,
       image_position_x: 50,
       image_position_y: 50,
@@ -173,21 +173,12 @@ const AdminCategoriesPage = () => {
       image_url: category.image_url || "",
       is_active: category.is_active ?? true,
       sort_order: category.sort_order ?? 0,
-      countries: category.countries || ["SA", "YE"],
+      countries: category.countries || [SINGLE_COUNTRY],
       image_zoom: 1,
       image_position_x: 50,
       image_position_y: 50,
     });
     setIsDialogOpen(true);
-  };
-
-  const toggleCountry = (country: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      countries: prev.countries.includes(country)
-        ? prev.countries.filter((c) => c !== country)
-        : [...prev.countries, country],
-    }));
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -354,7 +345,6 @@ const AdminCategoriesPage = () => {
               <th className="text-right p-4 font-heading text-sm">الصورة</th>
               <th className="text-right p-4 font-heading text-sm">الاسم (عربي)</th>
               <th className="text-right p-4 font-heading text-sm">الاسم (إنجليزي)</th>
-              <th className="text-right p-4 font-heading text-sm">البلدان</th>
               <th className="text-right p-4 font-heading text-sm">الترتيب</th>
               <th className="text-right p-4 font-heading text-sm">الحالة</th>
               <th className="text-right p-4 font-heading text-sm">إجراءات</th>
@@ -378,16 +368,6 @@ const AdminCategoriesPage = () => {
                 </td>
                 <td className="p-4 font-heading">{category.name_ar}</td>
                 <td className="p-4 text-muted-foreground">{category.name}</td>
-                <td className="p-4">
-                  <div className="flex gap-1">
-                    {category.countries?.includes('SA') && (
-                      <span className="px-2 py-0.5 text-xs rounded bg-green-500/15 text-green-600 border border-green-500/30">SA</span>
-                    )}
-                    {category.countries?.includes('YE') && (
-                      <span className="px-2 py-0.5 text-xs rounded bg-blue-500/15 text-blue-600 border border-blue-500/30">YE</span>
-                    )}
-                  </div>
-                </td>
                 <td className="p-4 text-muted-foreground">{category.sort_order}</td>
                 <td className="p-4">
                   <Switch
@@ -418,7 +398,7 @@ const AdminCategoriesPage = () => {
             ))}
             {filteredCategories.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-12 text-center text-muted-foreground">
+                <td colSpan={6} className="p-12 text-center text-muted-foreground">
                   <Grid3X3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
                   <p>لا توجد فئات</p>
                 </td>
@@ -590,27 +570,6 @@ const AdminCategoriesPage = () => {
                         </div>
                       </label>
                     )}
-                  </div>
-                </div>
-
-                {/* Countries Selection */}
-                <div className="space-y-2">
-                  <Label>الدول</Label>
-                  <div className="flex gap-4">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        checked={formData.countries.includes("SA")}
-                        onCheckedChange={() => toggleCountry("SA")}
-                      />
-                      <span className="text-sm">🇸🇦 السعودية</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <Checkbox
-                        checked={formData.countries.includes("YE")}
-                        onCheckedChange={() => toggleCountry("YE")}
-                      />
-                      <span className="text-sm">🇾🇪 اليمن</span>
-                    </label>
                   </div>
                 </div>
 

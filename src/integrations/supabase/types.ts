@@ -819,6 +819,7 @@ export type Database = {
       orders: {
         Row: {
           country: string
+          currency_mode: string | null
           coupon_code: string | null
           created_at: string
           customer_address: string
@@ -841,6 +842,7 @@ export type Database = {
         }
         Insert: {
           country?: string
+          currency_mode?: string | null
           coupon_code?: string | null
           created_at?: string
           customer_address: string
@@ -863,6 +865,7 @@ export type Database = {
         }
         Update: {
           country?: string
+          currency_mode?: string | null
           coupon_code?: string | null
           created_at?: string
           customer_address?: string

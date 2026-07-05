@@ -36,11 +36,11 @@ interface NewInvoiceCreatorProps {
 }
 
 const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps) => {
+  const SINGLE_COUNTRY = 'GLOBAL';
   const [isSaving, setIsSaving] = useState(false);
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
-  const [country, setCountry] = useState('SA');
   const [deliveryFee, setDeliveryFee] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState('cod');
   const [items, setItems] = useState<InvoiceItem[]>([
@@ -51,13 +51,12 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
 
   // Fetch products
   const { data: products = [] } = useQuery({
-    queryKey: ['products-for-invoice', country],
+    queryKey: ['products-for-invoice'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
         .select('id, name_ar, price, images')
         .eq('is_active', true)
-        .contains('countries', [country])
         .order('name_ar');
       if (error) throw error;
       return data as Product[];
@@ -83,7 +82,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
     setSearchQuery('');
   };
 
-  const currency = country === 'SA' ? 'ر.س' : 'ر.ي';
+  const currency = 'ر.ي';
 
   const addItem = () => {
     setItems([...items, { product_name: '', quantity: 1, price: 0 }]);
@@ -114,7 +113,6 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
     setCustomerName('');
     setCustomerPhone('');
     setCustomerAddress('');
-    setCountry('SA');
     setDeliveryFee(0);
     setPaymentMethod('cod');
     setItems([{ product_name: '', quantity: 1, price: 0 }]);
@@ -158,7 +156,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
           customer_name: customerName,
           customer_phone: customerPhone,
           customer_address: customerAddress,
-          country,
+          country: SINGLE_COUNTRY,
           items: orderItems,
           subtotal,
           delivery_fee: deliveryFee,
@@ -230,19 +228,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
                 placeholder="العنوان"
               />
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label className="text-xs">البلد</Label>
-                <Select value={country} onValueChange={setCountry}>
-                  <SelectTrigger className="h-8 text-sm">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="SA">السعودية</SelectItem>
-                    <SelectItem value="YE">اليمن</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+            <div className="grid grid-cols-1 gap-3">
               <div>
                 <Label className="text-xs">طريقة الدفع</Label>
                 <Select value={paymentMethod} onValueChange={setPaymentMethod}>

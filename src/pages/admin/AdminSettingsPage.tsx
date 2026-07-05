@@ -14,8 +14,7 @@ const AdminSettingsPage = () => {
   const [storeInfo, setStoreInfo] = useState({
     name: "Flamingo",
     email: "info@flamingo.com",
-    phone_sa: "",
-    phone_ye: "",
+    phone: "",
   });
 
   const [socialLinks, setSocialLinks] = useState({
@@ -23,15 +22,9 @@ const AdminSettingsPage = () => {
     instagram: "",
   });
 
-  const [whatsapp, setWhatsapp] = useState({
-    sa: "",
-    ye: "",
-  });
+  const [whatsapp, setWhatsapp] = useState("");
 
-  const [bankAccounts, setBankAccounts] = useState({
-    sa: [{ bank: "", account: "", name: "Flamingo" }],
-    ye: [{ bank: "", account: "", name: "Flamingo" }],
-  });
+  const [bankAccounts, setBankAccounts] = useState([{ bank: "", account: "", name: "Flamingo" }]);
 
   const [certPdfUrl, setCertPdfUrl] = useState("");
   const [certImages, setCertImages] = useState<string[]>([]);
@@ -58,23 +51,32 @@ const AdminSettingsPage = () => {
 
           switch (setting.key) {
             case "store_info":
-              if (value && typeof value === "object") setStoreInfo(value as any);
+              if (value && typeof value === "object") {
+                const info = value as Record<string, string>;
+                setStoreInfo({
+                  name: info.name || "Flamingo",
+                  email: info.email || "info@flamingo.com",
+                  phone: info.phone || info.phone_ye || info.phone_sa || "",
+                });
+              }
+              break;
+            case "whatsapp":
+              if (typeof value === "string") setWhatsapp(value);
               break;
             case "whatsapp_sa":
-              setWhatsapp((prev) => ({ ...prev, sa: typeof value === "string" ? value : "" }));
+              if (typeof value === "string" && !whatsapp) setWhatsapp(value);
               break;
             case "whatsapp_ye":
-              setWhatsapp((prev) => ({ ...prev, ye: typeof value === "string" ? value : "" }));
+              if (typeof value === "string") setWhatsapp(value);
+              break;
+            case "bank_accounts":
+              if (Array.isArray(value) && value.length > 0) setBankAccounts(value as any);
               break;
             case "bank_accounts_sa":
-              if (Array.isArray(value) && value.length > 0) {
-                setBankAccounts((prev) => ({ ...prev, sa: value as any }));
-              }
+              if (Array.isArray(value) && value.length > 0 && bankAccounts.length === 0) setBankAccounts(value as any);
               break;
             case "bank_accounts_ye":
-              if (Array.isArray(value) && value.length > 0) {
-                setBankAccounts((prev) => ({ ...prev, ye: value as any }));
-              }
+              if (Array.isArray(value) && value.length > 0) setBankAccounts(value as any);
               break;
             case "certification_pdf_url":
               setCertPdfUrl(typeof value === "string" ? value : "");
@@ -117,10 +119,12 @@ const AdminSettingsPage = () => {
     try {
       await Promise.all([
         updateSetting("store_info", storeInfo),
-        updateSetting("whatsapp_sa", whatsapp.sa),
-        updateSetting("whatsapp_ye", whatsapp.ye),
-        updateSetting("bank_accounts_sa", bankAccounts.sa),
-        updateSetting("bank_accounts_ye", bankAccounts.ye),
+        updateSetting("whatsapp", whatsapp),
+        updateSetting("whatsapp_sa", whatsapp),
+        updateSetting("whatsapp_ye", whatsapp),
+        updateSetting("bank_accounts", bankAccounts),
+        updateSetting("bank_accounts_sa", bankAccounts),
+        updateSetting("bank_accounts_ye", bankAccounts),
         updateSetting("certification_pdf_url", certPdfUrl),
         updateSetting("social_whatsapp", socialLinks.whatsapp),
         updateSetting("social_instagram", socialLinks.instagram),
@@ -230,25 +234,16 @@ const AdminSettingsPage = () => {
     toast({ title: "تم", description: "تم حذف صورة التوثيق" });
   };
 
-  const addBankAccount = (country: "sa" | "ye") => {
-    setBankAccounts((prev) => ({
-      ...prev,
-      [country]: [...prev[country], { bank: "", account: "", name: "Flamingo" }],
-    }));
+  const addBankAccount = () => {
+    setBankAccounts((prev) => [...prev, { bank: "", account: "", name: "Flamingo" }]);
   };
 
-  const updateBankAccount = (country: "sa" | "ye", index: number, field: string, value: string) => {
-    setBankAccounts((prev) => ({
-      ...prev,
-      [country]: prev[country].map((acc, i) => (i === index ? { ...acc, [field]: value } : acc)),
-    }));
+  const updateBankAccount = (index: number, field: string, value: string) => {
+    setBankAccounts((prev) => prev.map((acc, i) => (i === index ? { ...acc, [field]: value } : acc)));
   };
 
-  const removeBankAccount = (country: "sa" | "ye", index: number) => {
-    setBankAccounts((prev) => ({
-      ...prev,
-      [country]: prev[country].filter((_, i) => i !== index),
-    }));
+  const removeBankAccount = (index: number) => {
+    setBankAccounts((prev) => prev.filter((_, i) => i !== index));
   };
 
   if (isLoading) {
@@ -296,26 +291,15 @@ const AdminSettingsPage = () => {
 
       {/* WhatsApp */}
       <div className="bg-card border border-border rounded p-6 space-y-4">
-        <h2 className="font-heading text-lg text-foreground">أرقام واتساب</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <div>
-            <label className="block text-sm text-muted-foreground mb-2">🇸🇦 السعودية</label>
-            <Input
-              value={whatsapp.sa}
-              onChange={(e) => setWhatsapp({ ...whatsapp, sa: e.target.value })}
-              placeholder="+966123456789"
-              dir="ltr"
-            />
-          </div>
-          <div>
-            <label className="block text-sm text-muted-foreground mb-2">🇾🇪 اليمن</label>
-            <Input
-              value={whatsapp.ye}
-              onChange={(e) => setWhatsapp({ ...whatsapp, ye: e.target.value })}
-              placeholder="+967123456789"
-              dir="ltr"
-            />
-          </div>
+        <h2 className="font-heading text-lg text-foreground">رقم واتساب</h2>
+        <div>
+          <label className="block text-sm text-muted-foreground mb-2">رقم واتساب المتجر</label>
+          <Input
+            value={whatsapp}
+            onChange={(e) => setWhatsapp(e.target.value)}
+            placeholder="+967123456789"
+            dir="ltr"
+          />
         </div>
       </div>
 
@@ -344,21 +328,21 @@ const AdminSettingsPage = () => {
         </div>
       </div>
 
-      {/* Bank Accounts SA */}
+      {/* Bank Accounts */}
       <div className="bg-card border border-border rounded p-6 space-y-4">
         <div className="flex items-center justify-between">
-          <h2 className="font-heading text-lg text-foreground">🇸🇦 الحسابات البنكية - السعودية</h2>
-          <Button variant="outline" size="sm" onClick={() => addBankAccount("sa")}>
+          <h2 className="font-heading text-lg text-foreground">الحسابات البنكية</h2>
+          <Button variant="outline" size="sm" onClick={() => addBankAccount()}>
             إضافة حساب
           </Button>
         </div>
-        {bankAccounts.sa.map((acc, index) => (
+        {bankAccounts.map((acc, index) => (
           <div key={index} className="grid grid-cols-3 gap-4 items-end">
             <div>
               <label className="block text-sm text-muted-foreground mb-2">البنك</label>
               <Input
                 value={acc.bank}
-                onChange={(e) => updateBankAccount("sa", index, "bank", e.target.value)}
+                onChange={(e) => updateBankAccount(index, "bank", e.target.value)}
                 placeholder="الراجحي"
               />
             </div>
@@ -366,46 +350,12 @@ const AdminSettingsPage = () => {
               <label className="block text-sm text-muted-foreground mb-2">رقم الحساب</label>
               <Input
                 value={acc.account}
-                onChange={(e) => updateBankAccount("sa", index, "account", e.target.value)}
-                placeholder="SA..."
+                onChange={(e) => updateBankAccount(index, "account", e.target.value)}
+                placeholder="97..."
                 dir="ltr"
               />
             </div>
-            <Button variant="ghost" size="icon" onClick={() => removeBankAccount("sa", index)}>
-              <X className="w-4 h-4" />
-            </Button>
-          </div>
-        ))}
-      </div>
-
-      {/* Bank Accounts YE */}
-      <div className="bg-card border border-border rounded p-6 space-y-4">
-        <div className="flex items-center justify-between">
-          <h2 className="font-heading text-lg text-foreground">🇾🇪 الحسابات البنكية - اليمن</h2>
-          <Button variant="outline" size="sm" onClick={() => addBankAccount("ye")}>
-            إضافة حساب
-          </Button>
-        </div>
-        {bankAccounts.ye.map((acc, index) => (
-          <div key={index} className="grid grid-cols-3 gap-4 items-end">
-            <div>
-              <label className="block text-sm text-muted-foreground mb-2">البنك</label>
-              <Input
-                value={acc.bank}
-                onChange={(e) => updateBankAccount("ye", index, "bank", e.target.value)}
-                placeholder="بنك اليمن"
-              />
-            </div>
-            <div>
-              <label className="block text-sm text-muted-foreground mb-2">رقم الحساب</label>
-              <Input
-                value={acc.account}
-                onChange={(e) => updateBankAccount("ye", index, "account", e.target.value)}
-                placeholder="YE..."
-                dir="ltr"
-              />
-            </div>
-            <Button variant="ghost" size="icon" onClick={() => removeBankAccount("ye", index)}>
+            <Button variant="ghost" size="icon" onClick={() => removeBankAccount(index)}>
               <X className="w-4 h-4" />
             </Button>
           </div>

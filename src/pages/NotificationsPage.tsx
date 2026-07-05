@@ -95,7 +95,7 @@ const NotificationsPage = () => {
     if (minutes < 60) return `منذ ${minutes} دقيقة`;
     if (hours < 24) return `منذ ${hours} ساعة`;
     if (days < 7) return `منذ ${days} يوم`;
-    return date.toLocaleDateString('ar-SA');
+    return date.toLocaleDateString('ar');
   };
 
   const unreadCount = notifications.filter(n => !n.read).length;

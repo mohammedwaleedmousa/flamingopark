@@ -308,7 +308,7 @@ const ReviewsPage = () => {
                         <div>
                           <h4 className="font-heading text-foreground">{review.customer_name}</h4>
                           <p className="text-xs text-muted-foreground">
-                            {new Date(review.created_at).toLocaleDateString('ar-SA', {
+                            {new Date(review.created_at).toLocaleDateString('ar', {
                               year: 'numeric',
                               month: 'long',
                               day: 'numeric'

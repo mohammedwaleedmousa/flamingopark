@@ -28,17 +28,17 @@ interface Review {
 }
 
 const AdminReviewsPage = () => {
+  const SINGLE_COUNTRY = "GLOBAL";
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingReview, setEditingReview] = useState<Review | null>(null);
-  const [filterCountry, setFilterCountry] = useState<string>("all");
   const [filterStatus, setFilterStatus] = useState<string>("pending");
   const [formData, setFormData] = useState({
     customer_name: "",
     message: "",
     message_ar: "",
     rating: 5,
-    country: "SA",
+    country: SINGLE_COUNTRY,
     is_approved: false,
   });
 
@@ -61,7 +61,7 @@ const AdminReviewsPage = () => {
             message: data.message,
             message_ar: data.message_ar || null,
             rating: data.rating,
-            country: data.country,
+            country: SINGLE_COUNTRY,
             is_approved: data.is_approved,
           })
           .eq("id", data.id);
@@ -72,7 +72,7 @@ const AdminReviewsPage = () => {
           message: data.message,
           message_ar: data.message_ar || null,
           rating: data.rating,
-          country: data.country,
+          country: SINGLE_COUNTRY,
           is_approved: data.is_approved,
         });
         if (error) throw error;
@@ -116,7 +116,7 @@ const AdminReviewsPage = () => {
       message: "",
       message_ar: "",
       rating: 5,
-      country: "SA",
+      country: SINGLE_COUNTRY,
       is_approved: false,
     });
     setEditingReview(null);
@@ -145,13 +145,12 @@ const AdminReviewsPage = () => {
   };
 
   const filteredReviews = reviews?.filter((r) => {
-    const countryMatch = filterCountry === "all" || r.country === filterCountry;
     const statusMatch =
       filterStatus === "all" ||
       (filterStatus === "approved" && r.is_approved === true) ||
       (filterStatus === "pending" && (r.is_approved === false || r.is_approved === null));
 
-    return countryMatch && statusMatch;
+    return statusMatch;
   });
 
   const renderStars = (rating: number) => {
@@ -179,16 +178,6 @@ const AdminReviewsPage = () => {
 
       {/* Filters */}
       <div className="flex items-center gap-2 flex-wrap">
-        <Select value={filterCountry} onValueChange={setFilterCountry}>
-            <SelectTrigger className="w-32">
-              <SelectValue placeholder="الدولة" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">جميع الدول</SelectItem>
-              <SelectItem value="SA">السعودية 🇸🇦</SelectItem>
-              <SelectItem value="YE">اليمن 🇾🇪</SelectItem>
-            </SelectContent>
-          </Select>
           <Select value={filterStatus} onValueChange={setFilterStatus}>
             <SelectTrigger className="w-32">
               <SelectValue placeholder="الحالة" />
@@ -258,19 +247,8 @@ const AdminReviewsPage = () => {
                 </div>
 
                 <div>
-                  <Label>الدولة</Label>
-                  <Select
-                    value={formData.country}
-                    onValueChange={(value) => setFormData({ ...formData, country: value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="SA">السعودية 🇸🇦</SelectItem>
-                      <SelectItem value="YE">اليمن 🇾🇪</SelectItem>
-                    </SelectContent>
-                  </Select>
+                  <Label>النطاق</Label>
+                  <p className="text-sm text-muted-foreground mt-2">التقييم سيظهر في المتجر الموحد</p>
                 </div>
 
                 <div className="flex items-center gap-2">
@@ -300,7 +278,6 @@ const AdminReviewsPage = () => {
             <TableHead>العميل</TableHead>
             <TableHead>التقييم</TableHead>
             <TableHead>النجوم</TableHead>
-            <TableHead>الدولة</TableHead>
             <TableHead>التاريخ</TableHead>
             <TableHead>الحالة</TableHead>
             <TableHead>إجراءات</TableHead>
@@ -312,7 +289,6 @@ const AdminReviewsPage = () => {
               <TableCell className="font-medium">{review.customer_name}</TableCell>
               <TableCell className="max-w-xs truncate">{review.message_ar || review.message}</TableCell>
               <TableCell>{renderStars(review.rating)}</TableCell>
-              <TableCell>{review.country === "SA" ? "🇸🇦" : "🇾🇪"}</TableCell>
               <TableCell>{format(new Date(review.created_at), "dd MMM yyyy", { locale: ar })}</TableCell>
               <TableCell>
                 {review.is_approved ? (

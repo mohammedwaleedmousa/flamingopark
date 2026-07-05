@@ -1,7 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -22,6 +21,7 @@ interface Order {
   status: string;
   created_at: string;
   payment_method: string;
+  currency_mode?: string | null;
 }
 
 interface RevenueStats {
@@ -34,7 +34,6 @@ interface RevenueStats {
 const AdminRevenuePage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [selectedCountry, setSelectedCountry] = useState<'SA' | 'YE'>('SA');
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -66,7 +65,7 @@ const AdminRevenuePage = () => {
   };
 
   const filteredOrders = useMemo(() => {
-    let filtered = orders.filter(order => order.country === selectedCountry);
+    let filtered = [...orders];
 
     if (dateFrom) {
       filtered = filtered.filter(order => 
@@ -90,7 +89,7 @@ const AdminRevenuePage = () => {
     }
 
     return filtered;
-  }, [orders, selectedCountry, dateFrom, dateTo, searchQuery]);
+  }, [orders, dateFrom, dateTo, searchQuery]);
 
   const stats: RevenueStats = useMemo(() => {
     const totalRevenue = filteredOrders.reduce((sum, order) => sum + order.total, 0);
@@ -101,7 +100,35 @@ const AdminRevenuePage = () => {
     return { totalRevenue, totalOrders, uniqueCustomers, averageOrderValue };
   }, [filteredOrders]);
 
-  const currency = selectedCountry === 'SA' ? 'ر.س' : 'ر.ي';
+  const modeOf = (order: Order): 'SAR' | 'YER_SOUTH' | 'YER_NORTH' => {
+    if (order.currency_mode === 'SAR' || order.currency_mode === 'YER_SOUTH' || order.currency_mode === 'YER_NORTH') {
+      return order.currency_mode;
+    }
+    if (order.country === 'SA') return 'SAR';
+    return 'YER_SOUTH';
+  };
+
+  const modeMeta: Record<'SAR' | 'YER_SOUTH' | 'YER_NORTH', { label: string; symbol: string }> = {
+    SAR: { label: 'ريال سعودي', symbol: 'ر.س' },
+    YER_SOUTH: { label: 'ريال يمني (جنوب)', symbol: 'ر.ي' },
+    YER_NORTH: { label: 'ريال يمني (شمال)', symbol: 'ر.ي' },
+  };
+
+  const byCurrency = useMemo(() => {
+    const acc = {
+      SAR: { revenue: 0, orders: 0 },
+      YER_SOUTH: { revenue: 0, orders: 0 },
+      YER_NORTH: { revenue: 0, orders: 0 },
+    };
+    for (const order of filteredOrders) {
+      const mode = modeOf(order);
+      acc[mode].revenue += Number(order.total || 0);
+      acc[mode].orders += 1;
+    }
+    return acc;
+  }, [filteredOrders]);
+
+  const currency = 'ر.ي';
 
   const clearFilters = () => {
     setDateFrom('');
@@ -153,18 +180,7 @@ const AdminRevenuePage = () => {
         </Button>
       </div>
 
-      {/* Country Tabs */}
-      <Tabs value={selectedCountry} onValueChange={(v) => setSelectedCountry(v as 'SA' | 'YE')}>
-        <TabsList className="grid w-full max-w-md grid-cols-2">
-          <TabsTrigger value="SA" className="gap-2">
-            🇸🇦 السعودي
-          </TabsTrigger>
-          <TabsTrigger value="YE" className="gap-2">
-            🇾🇪 اليمني
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value={selectedCountry} className="space-y-6 mt-6">
+      <div className="space-y-6 mt-6">
           {/* Stats Cards */}
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {statCards.map((stat, index) => (
@@ -179,6 +195,18 @@ const AdminRevenuePage = () => {
                       <p className="text-lg font-bold">{stat.value}</p>
                     </div>
                   </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {(['SAR', 'YER_SOUTH', 'YER_NORTH'] as const).map((mode) => (
+              <Card key={mode}>
+                <CardContent className="p-4">
+                  <p className="text-xs text-muted-foreground">{modeMeta[mode].label}</p>
+                  <p className="text-xl font-bold mt-1">{byCurrency[mode].revenue.toLocaleString()} {modeMeta[mode].symbol}</p>
+                  <p className="text-xs text-muted-foreground mt-1">{byCurrency[mode].orders} طلب</p>
                 </CardContent>
               </Card>
             ))}
@@ -278,7 +306,7 @@ const AdminRevenuePage = () => {
                             </span>
                           </TableCell>
                           <TableCell className="font-bold text-primary">
-                            {order.total.toLocaleString()} {currency}
+                            {order.total.toLocaleString()} {modeMeta[modeOf(order)].symbol}
                           </TableCell>
                           <TableCell className="text-sm text-muted-foreground">
                             {format(new Date(order.created_at), 'dd MMM yyyy', { locale: ar })}
@@ -298,10 +326,10 @@ const AdminRevenuePage = () => {
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm text-muted-foreground">
-                    إجمالي الإيرادات - {selectedCountry === 'SA' ? 'السعودية' : 'اليمن'}
+                    إجمالي الإيرادات - متعدد العملات
                   </p>
                   <p className="text-3xl font-bold text-primary mt-1">
-                    {stats.totalRevenue.toLocaleString()} {currency}
+                    {stats.totalRevenue.toLocaleString()}
                   </p>
                 </div>
                 <div className="text-left">
@@ -311,8 +339,7 @@ const AdminRevenuePage = () => {
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-      </Tabs>
+      </div>
     </div>
   );
 };

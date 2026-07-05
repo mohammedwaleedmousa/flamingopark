@@ -3,9 +3,9 @@ import { persist } from "zustand/middleware";
 import { track } from "@/lib/analytics";
 import type { CurrencyMode } from "@/lib/currency";
 
-export type Country = "YE" | "SA";
+export type Country = "GLOBAL" | string;
 
-export const detectCountryFromPhone = (_phone?: string): Country => "YE";
+export const detectCountryFromPhone = (_phone?: string): Country => "GLOBAL";
 
 export interface Customer {
   id: string;
@@ -109,7 +109,7 @@ export const useStore = create<StoreState>()(
       customer: null,
       cart: [],
       isCartOpen: false,
-      country: "YE",
+      country: "GLOBAL",
       setCountry: (country) => set({ country }),
 
       currencyMode: "SAR",

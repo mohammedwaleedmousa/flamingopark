@@ -308,7 +308,7 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
                         {review.customer_name}
                       </span>
                       <span className="text-xs text-muted-foreground flex-shrink-0">
-                        {new Date(review.created_at).toLocaleDateString('ar-SA')}
+                        {new Date(review.created_at).toLocaleDateString('ar')}
                       </span>
                     </div>
                     <div className="flex items-center gap-1 mb-2">

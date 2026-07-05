@@ -14,24 +14,34 @@ const SplashScreen = ({ onDone }: { onDone: () => void }) => {
 
   return (
     <div
-      className={`fixed inset-0 z-[100] flex items-center justify-center bg-black transition-opacity duration-500 ${
+      className={`fixed inset-0 z-[100] flex items-center justify-center bg-white transition-opacity duration-500 ${
         leaving ? "opacity-0 pointer-events-none" : "opacity-100"
       }`}
       dir="rtl"
     >
-      <div className="flex flex-col items-center gap-6">
-        <div className="overflow-hidden">
-          <h1
-            className="logo-flamingo text-white text-4xl md:text-6xl tracking-[0.4em] animate-splash-rise"
-            style={{ letterSpacing: "0.45em" }}
-          >
-            FLAMINGO
-          </h1>
-        </div>
-        <div className="h-px w-24 bg-white/30 overflow-hidden">
-          <div className="h-full bg-white animate-splash-line" />
-        </div>
-        <p className="text-white/60 text-[10px] tracking-[0.2em] uppercase">Maison de Luxe</p>
+      <style>{`
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        .flamingo-logo {
+          animation: slideUp 0.8s ease-out;
+          font-weight: 700;
+          letter-spacing: -0.02em;
+        }
+        .park-logo {
+          animation: slideUp 0.8s ease-out 0.2s both;
+          font-weight: 300;
+          letter-spacing: 0.15em;
+        }
+      `}</style>
+      <div className="flex flex-col items-center justify-center gap-2">
+        <h1 className="flamingo-logo text-5xl md:text-7xl font-bold text-black">
+          flamingo
+        </h1>
+        <p className="park-logo text-lg md:text-xl text-gray-600 tracking-wider">
+          park
+        </p>
       </div>
     </div>
   );

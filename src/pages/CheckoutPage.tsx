@@ -57,6 +57,8 @@ interface CODRegion {
   region_name_ar: string;
 }
 
+const CHECKOUT_INFO_STORAGE_KEY = "checkout_saved_info_v1";
+
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { country, customer, cart, getCartTotal, clearCart, currencyMode } = useStore();
@@ -73,9 +75,66 @@ const CheckoutPage = () => {
   const [couponCode, setCouponCode] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [hasSavedInfo, setHasSavedInfo] = useState(false);
 
   const subtotal = getCartTotal();
   const currency = "ر.ي";
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(CHECKOUT_INFO_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<typeof formData>;
+      setHasSavedInfo(true);
+      setFormData((prev) => ({
+        ...prev,
+        name: customer?.id === "guest" ? String(parsed.name || prev.name || "") : prev.name,
+        phone: customer?.id === "guest" ? String(parsed.phone || prev.phone || "") : prev.phone,
+        address: String(parsed.address || prev.address || ""),
+        city: String(parsed.city || prev.city || ""),
+        notes: String(parsed.notes || prev.notes || ""),
+      }));
+    } catch {
+      // Ignore invalid local storage payload.
+    }
+  }, [customer?.id]);
+
+  const saveCustomerInfo = () => {
+    const payload = {
+      name: formData.name.trim(),
+      phone: formData.phone.trim(),
+      address: formData.address.trim(),
+      city: formData.city.trim(),
+      notes: formData.notes.trim(),
+    };
+    localStorage.setItem(CHECKOUT_INFO_STORAGE_KEY, JSON.stringify(payload));
+    setHasSavedInfo(true);
+    toast({ title: "تم الحفظ", description: "تم حفظ بيانات العنوان للاستخدام لاحقًا" });
+  };
+
+  const useSavedCustomerInfo = () => {
+    try {
+      const raw = localStorage.getItem(CHECKOUT_INFO_STORAGE_KEY);
+      if (!raw) return;
+      const parsed = JSON.parse(raw) as Partial<typeof formData>;
+      setFormData((prev) => ({
+        ...prev,
+        name: customer?.id === "guest" ? String(parsed.name || prev.name || "") : prev.name,
+        phone: customer?.id === "guest" ? String(parsed.phone || prev.phone || "") : prev.phone,
+        address: String(parsed.address || ""),
+        city: String(parsed.city || ""),
+        notes: String(parsed.notes || ""),
+      }));
+      toast({ title: "تم", description: "تم تعبئة البيانات المحفوظة" });
+    } catch {
+      toast({ title: "خطأ", description: "تعذر قراءة البيانات المحفوظة", variant: "destructive" });
+    }
+  };
+
+  const startNewAddress = () => {
+    setFormData((prev) => ({ ...prev, address: "", city: "", notes: "" }));
+    toast({ title: "عنوان جديد", description: "يمكنك الآن إدخال عنوان مختلف" });
+  };
 
   // Calculate total cost price (for discount calculations)
   const getCostPriceTotal = () => {
@@ -589,6 +648,20 @@ const CheckoutPage = () => {
                       placeholder="أضف أي ملاحظات خاصة للطلب (مثل وقت التسليم المفضل)"
                       rows={3}
                     />
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <Button type="button" variant="outline" onClick={saveCustomerInfo}>
+                      حفظ المعلومات
+                    </Button>
+                    {hasSavedInfo && (
+                      <Button type="button" variant="outline" onClick={useSavedCustomerInfo}>
+                        استخدام المحفوظ
+                      </Button>
+                    )}
+                    <Button type="button" variant="ghost" onClick={startNewAddress}>
+                      عنوان جديد
+                    </Button>
                   </div>
                 </div>
               </motion.div>

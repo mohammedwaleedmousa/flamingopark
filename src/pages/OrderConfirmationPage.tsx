@@ -8,7 +8,6 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, MessageCircle, Home, Copy, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import flamingoLogo from '@/assets/ermgold-logo-clean.png';
 import { track } from '@/lib/analytics';
 
 interface SelectedAccessory {
@@ -57,6 +56,7 @@ const OrderConfirmationPage = () => {
   const [isConfirming, setIsConfirming] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
+  const flamingoLogo = '/icons/flamingo.jpeg';
   
   const currency = 'ريال';
 
@@ -195,7 +195,7 @@ const OrderConfirmationPage = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-gold mx-auto mb-4" />
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4" />
           <p className="text-muted-foreground">جاري التحميل...</p>
         </div>
       </div>
@@ -247,7 +247,7 @@ const OrderConfirmationPage = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="bg-white border-2 border-gold rounded-lg p-6 md:p-8 mb-6"
+            className="bg-white border border-border rounded-lg p-6 md:p-8 mb-6"
             id="invoice"
           >
             {/* Invoice Header */}
@@ -261,9 +261,9 @@ const OrderConfirmationPage = () => {
                   <span className="font-mono text-sm text-gray-900">{orderData.orderNumber}</span>
                   <button
                     onClick={handleCopyOrderNumber}
-                    className="p-1 hover:bg-amber-50 rounded print:hidden"
+                    className="p-1 hover:bg-primary/10 rounded print:hidden"
                   >
-                    <Copy className="w-4 h-4 text-amber-600" />
+                    <Copy className="w-4 h-4 text-primary" />
                   </button>
                 </div>
                 <p className="text-xs text-gray-500">
@@ -319,7 +319,7 @@ const OrderConfirmationPage = () => {
                           {item.quantity} × {item.price.toFixed(2)} {currency}
                         </p>
                       </div>
-                      <span className="font-heading text-amber-600">
+                      <span className="font-heading text-primary">
                         {(item.price * item.quantity).toFixed(2)} {currency}
                       </span>
                     </div>
@@ -343,7 +343,7 @@ const OrderConfirmationPage = () => {
                               <div className="text-xs">
                                 <span className="text-gray-700">{acc.name_ar}</span>
                                 <span className="text-gray-500 mx-1">×{acc.quantity}</span>
-                                <span className="text-amber-600">+{(acc.price * acc.quantity).toFixed(0)}</span>
+                                <span className="text-primary">+{(acc.price * acc.quantity).toFixed(0)}</span>
                               </div>
                             </div>
                           ))}
@@ -376,7 +376,7 @@ const OrderConfirmationPage = () => {
               <div className="h-px bg-gray-200 my-2" />
               <div className="flex justify-between font-heading text-lg">
                 <span className="text-gray-900">الإجمالي</span>
-                <span className="text-amber-600">{orderData.total.toFixed(2)} {currency}</span>
+                <span className="text-primary">{orderData.total.toFixed(2)} {currency}</span>
               </div>
               <div className="flex justify-between text-sm font-body pt-2">
                 <span className="text-gray-500">طريقة الدفع</span>
@@ -404,7 +404,7 @@ const OrderConfirmationPage = () => {
               <Button
                 onClick={handleConfirmOrder}
                 disabled={isConfirming}
-                className="w-full btn-gold gap-3 text-lg py-6"
+                className="w-full gap-3 text-lg py-6 bg-primary hover:bg-primary/90 text-primary-foreground"
                 size="lg"
               >
                 {isConfirming ? (
@@ -433,7 +433,7 @@ const OrderConfirmationPage = () => {
           >
             <Link 
               to="/home" 
-              className="inline-flex items-center gap-2 text-muted-foreground hover:text-gold transition-colors font-body"
+              className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors font-body"
             >
               <Home className="w-4 h-4" />
               العودة للرئيسية

@@ -66,9 +66,6 @@ const CheckoutPage = () => {
   const [formData, setFormData] = useState({
     name: customer?.name || "",
     phone: customer?.phone || "",
-    address: "",
-    city: "",
-    notes: "",
   });
   const [couponCode, setCouponCode] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
@@ -307,10 +304,6 @@ const CheckoutPage = () => {
     if (isGuest && (!formData.name.trim() || !formData.phone.trim())) {
       return toast({ title: "خطأ", description: "يرجى إدخال الاسم ورقم الهاتف", variant: "destructive" });
     }
-
-    if (!formData.city.trim() || !formData.address.trim()) {
-      return toast({ title: "خطأ", description: "يرجى إدخال المدينة والعنوان", variant: "destructive" });
-    }
     
     if (!selectedDelivery)
       return toast({ title: "خطأ", description: "يرجى اختيار شركة التوصيل", variant: "destructive" });
@@ -357,9 +350,8 @@ const CheckoutPage = () => {
         order_number: orderNumber,
         customer_name: customer?.name || formData.name || "عميل",
         customer_phone: customer?.phone || formData.phone || "",
-        customer_address: formData.address || "-",
-        customer_city: formData.city || "",
-        customer_notes: formData.notes || null,
+        customer_address: "-",
+        customer_notes: null,
         country: "YE",
         items: orderItems,
         subtotal,
@@ -387,9 +379,8 @@ const CheckoutPage = () => {
         orderNumber,
         customerName: customer?.name || formData.name || "عميل",
         customerPhone: customer?.phone || formData.phone || "",
-        customerAddress: formData.address || "-",
-        customerCity: formData.city || "",
-        customerNotes: formData.notes || "",
+        customerAddress: "-",
+        customerNotes: "",
         items: orderItems,
         subtotal,
         deliveryFee,
@@ -405,10 +396,8 @@ const CheckoutPage = () => {
       };
       clearCart();
       navigate("/order-confirmation", { state: { orderData } });
-    } catch (error) {
-      console.error("Order submission error:", error);
-      const errorMessage = error instanceof Error ? error.message : "حدث خطأ أثناء إرسال الطلب";
-      toast({ title: "خطأ", description: errorMessage, variant: "destructive" });
+    } catch {
+      toast({ title: "خطأ", description: "حدث خطأ أثناء إرسال الطلب", variant: "destructive" });
       setIsSubmitting(false);
     }
   };
@@ -446,89 +435,51 @@ const CheckoutPage = () => {
           
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
             <div className="lg:col-span-2 space-y-8">
+              {/* Customer Info */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-card border border-border rounded-lg p-6"
               >
                 <h2 className="font-heading text-xl text-foreground mb-6">معلومات التوصيل</h2>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-body text-muted-foreground mb-2">الاسم الكامل *</label>
-                      {customer?.id === "guest" ? (
-                        <Input
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
-                          dir="rtl"
-                          placeholder="أدخل اسمك الكامل"
-                        />
-                      ) : (
-                        <Input
-                          value={customer?.name || ""}
-                          disabled
-                          className="bg-muted/50 border-border text-foreground"
-                          dir="rtl"
-                        />
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-body text-muted-foreground mb-2">رقم الهاتف *</label>
-                      {customer?.id === "guest" ? (
-                        <Input
-                          value={formData.phone}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
-                          dir="ltr"
-                          placeholder="05xxxxxxxx"
-                        />
-                      ) : (
-                        <Input
-                          value={customer?.phone || ""}
-                          disabled
-                          className="bg-muted/50 border-border text-foreground"
-                          dir="ltr"
-                        />
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Address Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-body text-muted-foreground mb-2">المحافظة/المدينة *</label>
-                      <Input
-                        value={formData.city}
-                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                        className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
-                        dir="rtl"
-                        placeholder="اختر مدينتك"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-body text-muted-foreground mb-2">العنوان بالتفصيل *</label>
-                      <Input
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                        className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
-                        dir="rtl"
-                        placeholder="الحي، الشارع، رقم المبنى..."
-                      />
-                    </div>
-                  </div>
-
-                  {/* Notes */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <label className="block text-sm font-body text-muted-foreground mb-2">ملاحظات إضافية</label>
-                    <textarea
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-                      dir="rtl"
-                      placeholder="أضف أي ملاحظات خاصة للطلب (مثل وقت التسليم المفضل)"
-                      rows={3}
-                    />
+                    <label className="block text-sm font-body text-muted-foreground mb-2">الاسم الكامل *</label>
+                    {customer?.id === "guest" ? (
+                      <Input
+                        value={formData.name}
+                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                        className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
+                        dir="rtl"
+                        placeholder="أدخل اسمك الكامل"
+                      />
+                    ) : (
+                      <Input
+                        value={customer?.name || ""}
+                        disabled
+                        className="bg-muted/50 border-border text-foreground"
+                        dir="rtl"
+                      />
+                    )}
+                  </div>
+                  <div>
+                    <label className="block text-sm font-body text-muted-foreground mb-2">رقم الهاتف *</label>
+                    {customer?.id === "guest" ? (
+                      <Input
+                        value={formData.phone}
+                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                        className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
+                        dir="ltr"
+                        placeholder="05xxxxxxxx"
+                      />
+                    ) : (
+                      <Input
+                        value={customer?.phone || ""}
+                        disabled
+                        className="bg-muted/50 border-border text-foreground"
+                        dir="ltr"
+                      />
+                    )}
                   </div>
                 </div>
               </motion.div>

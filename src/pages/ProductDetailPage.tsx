@@ -10,7 +10,6 @@ import ProductReviews from '@/components/ProductReviews';
 import AccessoryCard from '@/components/AccessoryCard';
 import FrequentlyBoughtTogether from '@/components/FrequentlyBoughtTogether';
 import ProductDetailSkeleton from '@/components/ProductDetailSkeleton';
-import ProductQA from '@/components/ProductQA';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useStore, Product } from '@/store/useStore';
 import { useFavorites } from '@/hooks/useFavorites';
@@ -29,9 +28,9 @@ import {
   Shield,
   RotateCcw,
   Star,
-  ChevronRight,
-  ArrowLeft
+  ChevronRight
 } from 'lucide-react';
+import { Button } from '@/components/ui/button';
 
 const ProductDetailPage = () => {
   const { slug } = useParams();
@@ -43,7 +42,6 @@ const ProductDetailPage = () => {
   const [quantity, setQuantity] = useState(1);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
-  const [selectedColorIdx, setSelectedColorIdx] = useState<number | null>(null);
   const [accessoryQuantities, setAccessoryQuantities] = useState<Record<string, number>>({});
   const [accessoryChoiceMade, setAccessoryChoiceMade] = useState(false);
   const accessoriesSectionRef = useRef<HTMLDivElement>(null);
@@ -98,7 +96,6 @@ const ProductDetailPage = () => {
         sizes: (data as any).sizes || [],
         accessories: accessories as { name: string; name_ar: string; price: number; image_url?: string; description?: string; description_ar?: string }[],
         features: ((data as any).features || []) as { icon: string; title: string; desc: string }[],
-        colorVariants: ((data as any).color_variants || []) as { name: string; hex: string; images: string[] }[],
       };
     },
     enabled: !!slug,
@@ -279,31 +276,6 @@ const ProductDetailPage = () => {
 
   const currency = country === 'SA' ? 'ر.س' : 'ر.ي';
 
-  // Effective images: swap gallery when a color variant with images is selected
-  const activeColorVariant =
-    selectedColorIdx !== null ? product.colorVariants?.[selectedColorIdx] : null;
-  const displayImages =
-    activeColorVariant && activeColorVariant.images.length > 0
-      ? activeColorVariant.images
-      : product.images;
-
-  // Support new `variants` model when available (product.variants: Variant[])
-  const activeVariantModel = selectedColorIdx !== null && (product as any).variants
-    ? (product as any).variants[selectedColorIdx]
-    : undefined;
-
-  const sizesToShow = activeVariantModel?.sizes?.map((s: any) => s.size) || product.sizes || [];
-
-  const getStockForSize = (size?: string) => {
-    if (!size) return undefined;
-    if (activeVariantModel?.sizes) {
-      const s = activeVariantModel.sizes.find((x: any) => x.size === size);
-      return s ? s.stock : undefined;
-    }
-    // fallback to product-level sizes array which may be strings (no stock info)
-    return undefined;
-  };
-
   const updateAccessoryQuantity = (accessoryKey: string, delta: number) => {
     setAccessoryQuantities(prev => {
       const current = prev[accessoryKey] || 0;
@@ -341,21 +313,11 @@ const ProductDetailPage = () => {
       : [];
 
 
-    // Determine active variant id and color (prefer explicit variant model if present)
-    const activeVariant = selectedColorIdx !== null && (product as any).variants
-      ? (product as any).variants[selectedColorIdx]
-      : null;
-
-    const variantId = activeVariant?.id ?? (activeColorVariant ? `${product.id}-color-${selectedColorIdx}` : undefined);
-    const variantColor = activeVariant?.colorName ?? activeColorVariant?.name;
-
     addToCart(
-      product,
-      quantity,
-      selectedSize || undefined,
-      selectedAccs.length > 0 ? selectedAccs : undefined,
-      variantId,
-      variantColor
+      product, 
+      quantity, 
+      selectedSize || undefined, 
+      selectedAccs.length > 0 ? selectedAccs : undefined
     );
     toast({
       title: 'تمت الإضافة بنجاح',
@@ -483,7 +445,7 @@ const ProductDetailPage = () => {
                 </button>
 
                 {/* Image Loading State */}
-                {!imageLoaded && displayImages[selectedImage] && (
+                {!imageLoaded && product.images[selectedImage] && (
                   <div className="absolute inset-0 bg-muted animate-pulse flex items-center justify-center">
                     <Loader2 className="w-8 h-8 animate-spin text-gold/50" />
                   </div>
@@ -502,9 +464,9 @@ const ProductDetailPage = () => {
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
                   >
-                    {displayImages[selectedImage] ? (
+                    {product.images[selectedImage] ? (
                       <img
-                        src={displayImages[selectedImage]}
+                        src={product.images[selectedImage]}
                         alt={product.nameAr}
                         onLoad={() => setImageLoaded(true)}
                         style={{ 
@@ -526,9 +488,9 @@ const ProductDetailPage = () => {
                 </AnimatePresence>
 
                 {/* Image dots indicator */}
-                {displayImages.length > 1 && (
+                {product.images.length > 1 && (
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
-                    {displayImages.map((_, index) => (
+                    {product.images.map((_, index) => (
                       <button
                         key={index}
                         onClick={() => { setSelectedImage(index); setImageLoaded(false); setScale(1); setPosition({ x: 0, y: 0 }); }}
@@ -542,9 +504,9 @@ const ProductDetailPage = () => {
               </div>
 
               {/* Thumbnails */}
-              {displayImages.length > 1 && (
+              {product.images.length > 1 && (
                 <div className="flex gap-3 justify-center">
-                  {displayImages.map((img, index) => (
+                  {product.images.map((img, index) => (
                     <motion.button
                       key={index}
                       onClick={() => {
@@ -615,40 +577,22 @@ const ProductDetailPage = () => {
                 )}
               </div>
 
-              {/* Stock Status (variant + size aware) */}
-              {(() => {
-                const selectedStock = selectedSize ? getStockForSize(selectedSize) : undefined;
-                let status: 'in' | 'low' | 'out' = 'in';
-                if (selectedStock !== undefined) {
-                  if (selectedStock <= 0) status = 'out';
-                  else if (selectedStock <= 5) status = 'low';
-                  else status = 'in';
-                } else {
-                  status = product.inStock ? 'in' : 'out';
-                }
-
-                return (
-                  <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
-                    status === 'in' ? 'bg-emerald-500/10 text-emerald-600' : status === 'low' ? 'bg-yellow-500/10 text-yellow-600' : 'bg-destructive/10 text-destructive'
-                  }`}>
-                    {status === 'in' && (
-                      <>
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <Check className="w-4 h-4" />
-                        <span className="text-sm font-medium">{status === 'in' ? 'متوفر في المخزون' : ''}</span>
-                      </>
-                    )}
-                    {status === 'low' && (
-                      <>
-                        <span className="w-2 h-2 rounded-full bg-yellow-500 animate-pulse" />
-                        <Check className="w-4 h-4" />
-                        <span className="text-sm font-medium">كمية محدودة</span>
-                      </>
-                    )}
-                    {status === 'out' && <span className="text-sm font-medium">غير متوفر حالياً</span>}
-                  </div>
-                );
-              })()}
+              {/* Stock Status */}
+              <div className={`inline-flex items-center gap-2 px-4 py-2 rounded-full ${
+                product.inStock 
+                  ? 'bg-emerald-500/10 text-emerald-600' 
+                  : 'bg-destructive/10 text-destructive'
+              }`}>
+                {product.inStock ? (
+                  <>
+                    <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                    <Check className="w-4 h-4" />
+                    <span className="text-sm font-medium">متوفر في المخزون</span>
+                  </>
+                ) : (
+                  <span className="text-sm font-medium">غير متوفر حالياً</span>
+                )}
+              </div>
 
               {/* 3- Description */}
               <div className="space-y-3">
@@ -658,7 +602,7 @@ const ProductDetailPage = () => {
                 </p>
               </div>
 
-              {/* gold Divider Line */}
+              {/* Gold Divider Line */}
               <div className="h-px bg-gradient-to-r from-border via-gold/50 to-border" />
 
               {/* 4- Accessories - SMALLER WITHOUT EFFECTS */}
@@ -698,76 +642,28 @@ const ProductDetailPage = () => {
               )}
 
               {/* 5- Size Selector */}
-              {/* Color Variants */}
-              {product.colorVariants && product.colorVariants.length > 0 && (
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="font-body text-foreground">اللون:</span>
-                    <span className="text-sm text-muted-foreground">
-                      {selectedColorIdx !== null
-                        ? product.colorVariants[selectedColorIdx].name
-                        : 'اختر لوناً'}
-                    </span>
-                  </div>
-                  <div className="flex flex-wrap gap-3">
-                    {product.colorVariants.map((cv, i) => {
-                      const active = selectedColorIdx === i;
-                      return (
-                        <button
-                          key={i}
-                          type="button"
-                          onClick={() => {
-                            setSelectedColorIdx(active ? null : i);
-                            setSelectedImage(0);
-                            setImageLoaded(false);
-                            setScale(1);
-                            setPosition({ x: 0, y: 0 });
-                          }}
-                          title={cv.name}
-                          className={`relative w-11 h-11 rounded-full border-2 transition-all ${
-                            active ? 'border-primary scale-110 shadow-lg' : 'border-border hover:border-primary/60'
-                          }`}
-                          style={{ backgroundColor: cv.hex }}
-                        >
-                          {active && (
-                            <span className="absolute inset-0 flex items-center justify-center">
-                              <Check className="w-4 h-4 text-white drop-shadow" />
-                            </span>
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {product.hasSizes && sizesToShow && sizesToShow.length > 0 && (
+              {product.hasSizes && product.sizes && product.sizes.length > 0 && (
                 <div className="space-y-3">
                   <span className="font-body text-foreground">الحجم:</span>
                   <div className="flex flex-wrap gap-2">
-                    {sizesToShow.map((size: string) => {
-                      const stock = getStockForSize(size);
-                      const disabled = stock !== undefined ? stock <= 0 : false;
-                      return (
-                        <button
-                          key={size}
-                          onClick={() => !disabled && setSelectedSize(size)}
-                          disabled={disabled}
-                          className={`px-4 py-2 rounded-lg border-2 transition-all font-medium ${
-                            selectedSize === size
-                              ? 'border-gold bg-gold/10 text-gold'
-                              : 'border-border hover:border-gold/50'
-                          } ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
-                        >
-                          {size}
-                        </button>
-                      );
-                    })}
+                    {product.sizes.map((size) => (
+                      <button
+                        key={size}
+                        onClick={() => setSelectedSize(size)}
+                        className={`px-4 py-2 rounded-lg border-2 transition-all font-medium ${
+                          selectedSize === size
+                            ? 'border-gold bg-gold/10 text-gold'
+                            : 'border-border hover:border-gold/50'
+                        }`}
+                      >
+                        {size}
+                      </button>
+                    ))}
                   </div>
                 </div>
               )}
 
-              {/* gold Divider Line */}
+              {/* Gold Divider Line */}
               <div className="h-px bg-gradient-to-r from-border via-gold/50 to-border" />
 
               {/* 6- Total + Quantity Selector */}
@@ -795,37 +691,6 @@ const ProductDetailPage = () => {
                       <Plus className="w-4 h-4" />
                     </button>
                   </div>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="space-y-3 pt-4">
-                <button
-                  onClick={handleAddToCart}
-                  disabled={!product.inStock}
-                  className="btn-unified w-full py-4 font-heading text-lg gap-3 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ShoppingBag className="w-6 h-6" />
-                  إضافة للسلة
-                </button>
-                <div className="flex gap-3">
-                  <button
-                    onClick={() => {
-                      const params = new URLSearchParams();
-                      params.set('id', product.id);
-                      navigate(`/comparison?${params}`);
-                    }}
-                    className="flex-1 btn-unified py-3 gap-2 text-sm"
-                  >
-                    <ArrowLeft className="w-4 h-4" />
-                    مقارنة
-                  </button>
-                  <button
-                    onClick={handleShare}
-                    className="flex-1 px-6 py-3 border-2 border-border rounded-xl hover:border-primary hover:text-primary hover:bg-primary/5 transition-all"
-                  >
-                    <Share2 className="w-5 h-5 mx-auto" />
-                  </button>
                 </div>
               </div>
 
@@ -882,23 +747,6 @@ const ProductDetailPage = () => {
             </motion.section>
           )}
 
-          {/* Q&A Section */}
-          {product && (
-            <section className="mt-20 pt-12 border-t border-border animate-fade-in" dir="rtl">
-              <div className="text-center mb-10">
-                <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-3">
-                  Questions & Answers
-                </p>
-                <h2 className="font-heading text-2xl md:text-3xl text-foreground">
-                  الأسئلة والإجابات
-                </h2>
-              </div>
-              <div className="max-w-4xl mx-auto">
-                <ProductQA productId={product.id} />
-              </div>
-            </section>
-          )}
-
           {/* Recently Viewed */}
           {recentItems.filter((p) => p.id !== product.id).length > 0 && (
             <section className="mt-20 pt-12 border-t border-border animate-fade-in" dir="rtl">
@@ -922,6 +770,31 @@ const ProductDetailPage = () => {
           )}
         </div>
       </main>
+
+      {/* Fixed Action Buttons */}
+      <div className="fixed bottom-0 left-0 right-0 z-40 bg-background border-t border-border/50 p-4 shadow-lg">
+        <div className="container mx-auto max-w-lg">
+          <div className="flex gap-3">
+            <Button
+              onClick={handleAddToCart}
+              disabled={!product.inStock}
+              size="lg"
+              className="flex-1 btn-gold py-6 font-heading text-lg tracking-wider gap-3 rounded-xl disabled:opacity-50"
+            >
+              <ShoppingBag className="w-6 h-6" />
+              إضافة للسلة
+            </Button>
+            <Button
+              onClick={handleShare}
+              variant="outline"
+              size="lg"
+              className="px-6 py-6 border-2 border-border hover:border-gold hover:text-gold hover:bg-gold/5 rounded-xl transition-all"
+            >
+              <Share2 className="w-5 h-5" />
+            </Button>
+          </div>
+        </div>
+      </div>
 
       <Footer />
     </div>

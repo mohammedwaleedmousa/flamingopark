@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { useRef, useState, useEffect, useMemo } from "react";
+import { useRef, useState, useEffect } from "react";
 import { ArrowLeft, Truck, ShieldCheck, Sparkles, RotateCcw } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -51,33 +51,7 @@ const toProduct = (p: DbProduct): Product => ({
   isBestSeller: p.is_best_seller,
 });
 
-type FeaturedCategoryItem = {
-  title: string;
-  subtitle: string;
-  image: string;
-  link: string;
-};
-
-type EditorialItem = {
-  eyebrow: string;
-  title: string;
-  body: string;
-  cta: string;
-  href: string;
-  image: string;
-  reverse: boolean;
-};
-
-const fallbackCategoryImages: Record<string, string> = {
-  women: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=900&q=85",
-  men: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=900&q=85",
-  kids: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=900&q=85",
-  bags: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=900&q=85",
-  shoes: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=900&q=85",
-  beauty: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=900&q=85",
-};
-
-const fallbackFeaturedCategories: FeaturedCategoryItem[] = [
+const featuredCategories = [
   {
     title: "نسائي",
     subtitle: "Women",
@@ -160,7 +134,7 @@ const BrandsStripInline = () => {
 
 // Category horizontal scroll carousel (replaces grid)
 
-const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
+const CategoryCarousel = ({ items }: { items: typeof featuredCategories }) => {
   const [active, setActive] = useState(items[0]);
 
   return (
@@ -292,7 +266,7 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
     </section>
   );
 };
-const fallbackEditorial: EditorialItem[] = [
+const editorial = [
   {
     eyebrow: "Featured Collection",
     title: "أناقة تدوم",
@@ -316,70 +290,6 @@ const fallbackEditorial: EditorialItem[] = [
 ];
 
 const HomePage = () => {
-  const { data: categories = [] } = useQuery({
-    queryKey: ["home-categories"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("slug,name,name_ar,image_url,parent_id,is_active,sort_order")
-        .eq("is_active", true)
-        .is("parent_id", null)
-        .order("sort_order", { ascending: true });
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  const { data: homeContent = {} } = useQuery({
-    queryKey: ["home-content"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("site_content")
-        .select("key, content, content_ar")
-        .like("key", "home_%");
-      if (error) throw error;
-      return (data || []).reduce((acc, row) => {
-        acc[row.key] = row.content_ar || row.content || "";
-        return acc;
-      }, {} as Record<string, string>);
-    },
-  });
-
-  const featuredCategories = useMemo<FeaturedCategoryItem[]>(() => {
-    if (!categories.length) return fallbackFeaturedCategories;
-    return categories.map((c: any) => ({
-      title: c.name_ar || c.name || c.slug,
-      subtitle: c.name || c.name_ar || c.slug,
-      image: c.image_url || fallbackCategoryImages[c.slug] || fallbackFeaturedCategories[0].image,
-      link: `/products?category=${c.slug}`,
-    }));
-  }, [categories]);
-
-  const getHomeContent = (key: string, fallback: string) => homeContent[key] || fallback;
-
-  const editorial = useMemo<EditorialItem[]>(() => {
-    return [
-      {
-        eyebrow: getHomeContent("home_editorial_1_eyebrow", fallbackEditorial[0].eyebrow),
-        title: getHomeContent("home_editorial_1_title", fallbackEditorial[0].title),
-        body: getHomeContent("home_editorial_1_body", fallbackEditorial[0].body),
-        cta: getHomeContent("home_editorial_1_cta", fallbackEditorial[0].cta),
-        href: getHomeContent("home_editorial_1_href", fallbackEditorial[0].href),
-        image: getHomeContent("home_editorial_1_image", fallbackEditorial[0].image),
-        reverse: false,
-      },
-      {
-        eyebrow: getHomeContent("home_editorial_2_eyebrow", fallbackEditorial[1].eyebrow),
-        title: getHomeContent("home_editorial_2_title", fallbackEditorial[1].title),
-        body: getHomeContent("home_editorial_2_body", fallbackEditorial[1].body),
-        cta: getHomeContent("home_editorial_2_cta", fallbackEditorial[1].cta),
-        href: getHomeContent("home_editorial_2_href", fallbackEditorial[1].href),
-        image: getHomeContent("home_editorial_2_image", fallbackEditorial[1].image),
-        reverse: true,
-      },
-    ];
-  }, [homeContent]);
-
   const { data: products = [] } = useQuery({
     queryKey: ["home-products"],
     queryFn: async () => {
@@ -469,7 +379,7 @@ const HomePage = () => {
               <div className="text-center mt-12">
                 <Link
                   to="/products"
-                  className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-pink-500 pb-1 hover:opacity-60 transition text-pink-500"
+                  className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition"
                 >
                   عرض جميع المنتجات <ArrowLeft className="w-3 h-3" />
                 </Link>
@@ -625,7 +535,7 @@ const HomePage = () => {
 
           {/* BACKGROUND IMAGE */}
           <motion.img
-            src={getHomeContent("home_campaign_image", "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1800&q=90")}
+            src="https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1800&q=90"
             alt="Flamingo campaign"
             loading="lazy"
             initial={{ scale: 1.15 }}
@@ -671,7 +581,7 @@ const HomePage = () => {
                   opacity-90
                 "
               >
-                {getHomeContent("home_campaign_eyebrow", "Flamingo · Campaign 2026")}
+                Flamingo · Campaign 2026
               </motion.p>
 
               {/* TITLE */}
@@ -686,7 +596,7 @@ const HomePage = () => {
                   text-white
                 "
               >
-                {getHomeContent("home_campaign_title", "صُممت لتُروى")}
+                صُممت لتُروى
               </motion.h2>
 
               {/* SUB TEXT */}
@@ -701,7 +611,7 @@ const HomePage = () => {
                   max-w-md mx-auto
                 "
               >
-                {getHomeContent("home_campaign_body", "تجربة مختارة بعناية تعكس هوية فلامنجو في الأناقة والبساطة والتميّز")}
+                تجربة مختارة بعناية تعكس هوية فلامنجو في الأناقة والبساطة والتميّز
               </motion.p>
 
               {/* CTA */}
@@ -731,7 +641,7 @@ const HomePage = () => {
                     transition
                   "
                 >
-                  {getHomeContent("home_campaign_cta", "تسوق الآن")}
+                  تسوق الآن
                 </Link>
 
                 <Link

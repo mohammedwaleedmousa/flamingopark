@@ -6,10 +6,8 @@ import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { Product } from "@/store/useStore";
-import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
 
 const NewArrivalsPage = () => {
-  const { data: content } = useSiteContent("new_arrivals_");
   const { data: products = [], isLoading } = useQuery({
     queryKey: ["new-arrivals"],
     queryFn: async () => {
@@ -40,8 +38,8 @@ const NewArrivalsPage = () => {
       <CartDrawer />
       <main className="pt-24 pb-20">
         <section className="container mx-auto px-6 mb-10 text-center">
-          <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-3">{getSiteText(content, "new_arrivals_eyebrow", "Just Arrived")}</p>
-          <h1 className="font-heading text-4xl md:text-6xl">{getSiteText(content, "new_arrivals_title", "وصل حديثاً")}</h1>
+          <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground mb-3">Just Arrived</p>
+          <h1 className="font-heading text-4xl md:text-6xl">وصل حديثاً</h1>
         </section>
         <section className="container mx-auto px-6">
           {isLoading ? (

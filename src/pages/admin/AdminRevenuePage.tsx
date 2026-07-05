@@ -4,10 +4,12 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Loader2, TrendingUp, Users, ShoppingCart, Calendar, DollarSign, Search } from 'lucide-react';
-import { format, subDays } from 'date-fns';
+import { Loader2, TrendingUp, Users, ShoppingCart, DollarSign, Search } from 'lucide-react';
+import { format } from 'date-fns';
 import { ar } from 'date-fns/locale';
 import { toast } from '@/hooks/use-toast';
+import { DateRangePicker, useDateRange } from '@/lib/analytics/dateRange';
+import { getRevenueSummary } from '@/lib/admin/service';
 
 interface Order {
   id: string;
@@ -31,16 +33,35 @@ interface RevenueStats {
   averageOrderValue: number;
 }
 
+type RevenueSummary = {
+  revenue: number;
+  byCurrency: {
+    SAR: { revenue: number; orders: number };
+    YER_SOUTH: { revenue: number; orders: number };
+    YER_NORTH: { revenue: number; orders: number };
+  };
+  byCurrencyNative: {
+    SAR: { revenue: number; orders: number };
+    YER_SOUTH: { revenue: number; orders: number };
+    YER_NORTH: { revenue: number; orders: number };
+  };
+};
+
 const AdminRevenuePage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [dateFrom, setDateFrom] = useState(() => format(subDays(new Date(), 30), 'yyyy-MM-dd'));
-  const [dateTo, setDateTo] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summary, setSummary] = useState<RevenueSummary | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const { range, setRange } = useDateRange();
 
   useEffect(() => {
     fetchOrders();
   }, []);
+
+  useEffect(() => {
+    fetchSummary();
+  }, [range.start, range.end]);
 
   const fetchOrders = async () => {
     setIsLoading(true);
@@ -64,35 +85,56 @@ const AdminRevenuePage = () => {
     }
   };
 
-  const filteredOrders = useMemo(() => {
+  const fetchSummary = async () => {
+    setSummaryLoading(true);
+    try {
+      const revenueData = await getRevenueSummary(range.start, range.end);
+      setSummary(revenueData as RevenueSummary);
+    } catch (error) {
+      console.error('Error fetching revenue summary:', error);
+      toast({
+        title: 'تنبيه',
+        description: 'تعذر تحميل ملخص الإيرادات الموحد، سيتم عرض البيانات المتاحة.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
+  const rangedOrders = useMemo(() => {
     let filtered = orders.filter(order => {
       const status = String(order.status || '').toLowerCase();
       return status !== 'cancelled' && status !== 'canceled';
     });
 
-    if (dateFrom) {
+    if (range.start) {
       filtered = filtered.filter(order => 
-        new Date(order.created_at) >= new Date(dateFrom)
+        new Date(order.created_at) >= new Date(range.start)
       );
     }
 
-    if (dateTo) {
+    if (range.end) {
       filtered = filtered.filter(order => 
-        new Date(order.created_at) <= new Date(dateTo + 'T23:59:59')
+        new Date(order.created_at) <= new Date(range.end + 'T23:59:59')
       );
     }
 
+    return filtered;
+  }, [orders, range.start, range.end]);
+
+  const filteredOrders = useMemo(() => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(order =>
+      return rangedOrders.filter(order =>
         order.customer_name.toLowerCase().includes(query) ||
         order.customer_phone.includes(query) ||
         order.order_number.toLowerCase().includes(query)
       );
     }
 
-    return filtered;
-  }, [orders, dateFrom, dateTo, searchQuery]);
+    return rangedOrders;
+  }, [rangedOrders, searchQuery]);
 
   const modeOf = (order: Order): 'SAR' | 'YER_SOUTH' | 'YER_NORTH' => {
     if (order.currency_mode === 'SAR' || order.currency_mode === 'YER_SOUTH' || order.currency_mode === 'YER_NORTH') {
@@ -115,49 +157,36 @@ const AdminRevenuePage = () => {
     YER_NORTH: { label: 'ريال يمني (شمال)', symbol: 'ر.ي' },
   };
 
-  const byCurrency = useMemo(() => {
-    const acc = {
-      SAR: { revenue: 0, orders: 0 },
-      YER_SOUTH: { revenue: 0, orders: 0 },
-      YER_NORTH: { revenue: 0, orders: 0 },
-    };
-    for (const order of filteredOrders) {
-      const mode = modeOf(order);
-      acc[mode].revenue += toSar(Number(order.total || 0), order);
-      acc[mode].orders += 1;
-    }
-    return acc;
-  }, [filteredOrders]);
+  const byCurrency = summary?.byCurrency || {
+    SAR: { revenue: 0, orders: 0 },
+    YER_SOUTH: { revenue: 0, orders: 0 },
+    YER_NORTH: { revenue: 0, orders: 0 },
+  };
 
-  const byCurrencyNative = useMemo(() => {
-    const acc = {
-      SAR: { revenue: 0, orders: 0 },
-      YER_SOUTH: { revenue: 0, orders: 0 },
-      YER_NORTH: { revenue: 0, orders: 0 },
-    };
-    for (const order of filteredOrders) {
-      const mode = modeOf(order);
-      acc[mode].revenue += Number(order.total || 0);
-      acc[mode].orders += 1;
-    }
-    return acc;
-  }, [filteredOrders]);
+  const byCurrencyNative = summary?.byCurrencyNative || {
+    SAR: { revenue: 0, orders: 0 },
+    YER_SOUTH: { revenue: 0, orders: 0 },
+    YER_NORTH: { revenue: 0, orders: 0 },
+  };
 
   const currency = 'ر.س';
 
   const stats: RevenueStats = useMemo(() => {
-    const totalRevenue = filteredOrders.reduce((sum, order) => sum + toSar(order.total, order), 0);
-    const totalOrders = filteredOrders.length;
-    const uniqueCustomers = new Set(filteredOrders.map(o => o.customer_phone)).size;
+    const totalRevenue = summary?.revenue ?? 0;
+    const totalOrders =
+      byCurrency.SAR.orders + byCurrency.YER_SOUTH.orders + byCurrency.YER_NORTH.orders;
+    const uniqueCustomers = new Set(rangedOrders.map(o => o.customer_phone)).size;
     const averageOrderValue = totalOrders > 0 ? totalRevenue / totalOrders : 0;
 
     return { totalRevenue, totalOrders, uniqueCustomers, averageOrderValue };
-  }, [filteredOrders]);
+  }, [summary, byCurrency, rangedOrders]);
 
   const clearFilters = () => {
-    setDateFrom('');
-    setDateTo('');
     setSearchQuery('');
+    const now = new Date();
+    const end = now.toISOString().slice(0, 10);
+    const start = new Date(now.getTime() - 1000 * 60 * 60 * 24 * 30).toISOString().slice(0, 10);
+    setRange({ start, end });
   };
 
   const statCards = [
@@ -202,7 +231,7 @@ const AdminRevenuePage = () => {
           <h1 className="text-2xl font-heading text-foreground">الإيرادات</h1>
           <p className="text-xs text-muted-foreground mt-1">الفترة الافتراضية: آخر 30 يوم، مع استبعاد الطلبات الملغاة. الإجمالي العام بالريال السعودي، وتفصيل العملات بالقيم الأصلية مع المعادل.</p>
         </div>
-        <Button onClick={fetchOrders} variant="outline" disabled={isLoading}>
+        <Button onClick={() => { fetchOrders(); fetchSummary(); }} variant="outline" disabled={isLoading || summaryLoading}>
           تحديث
         </Button>
       </div>
@@ -256,25 +285,8 @@ const AdminRevenuePage = () => {
                     className="pr-10"
                   />
                 </div>
-                <div className="relative">
-                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                    className="pr-10"
-                    placeholder="من تاريخ"
-                  />
-                </div>
-                <div className="relative">
-                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                    className="pr-10"
-                    placeholder="إلى تاريخ"
-                  />
+                <div className="md:col-span-2 flex items-center">
+                  <DateRangePicker />
                 </div>
                 <Button variant="outline" onClick={clearFilters}>
                   مسح الفلاتر

@@ -16,6 +16,8 @@ import {
 } from '@/components/ui/chart';
 import { BarChart, Bar, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
+import { DateRangePicker, useDateRange } from '@/lib/analytics/dateRange';
+import { getProfitSummary } from '@/lib/admin/service';
 
 interface OrderItem {
   id: string;
@@ -62,6 +64,17 @@ interface ProfitStats {
   totalCommission: number;
 }
 
+type ProfitSummary = {
+  revenue: number;
+  totalCost: number;
+  profit: number;
+  byCurrency: {
+    SAR: { revenue: number; totalCost: number; profit: number };
+    YER_SOUTH: { revenue: number; totalCost: number; profit: number };
+    YER_NORTH: { revenue: number; totalCost: number; profit: number };
+  };
+};
+
 const LOW_MARGIN_THRESHOLD = 20; // 20% profit margin threshold
 
 const isMissingColumnError = (error: unknown) => {
@@ -74,9 +87,10 @@ const AdminProfitReportPage = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [dateFrom, setDateFrom] = useState(() => format(subDays(new Date(), 30), 'yyyy-MM-dd'));
-  const [dateTo, setDateTo] = useState(() => format(new Date(), 'yyyy-MM-dd'));
+  const [summaryLoading, setSummaryLoading] = useState(false);
+  const [summary, setSummary] = useState<ProfitSummary | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const { range, setRange } = useDateRange();
 
   const modeMeta: Record<'SAR' | 'YER_SOUTH' | 'YER_NORTH', { label: string; symbol: string }> = {
     SAR: { label: 'ريال سعودي', symbol: 'ر.س' },
@@ -102,6 +116,10 @@ const AdminProfitReportPage = () => {
   useEffect(() => {
     fetchData();
   }, []);
+
+  useEffect(() => {
+    fetchSummary();
+  }, [range.start, range.end]);
 
   const fetchData = async () => {
     setIsLoading(true);
@@ -164,6 +182,23 @@ const AdminProfitReportPage = () => {
     }
   };
 
+  const fetchSummary = async () => {
+    setSummaryLoading(true);
+    try {
+      const result = await getProfitSummary(range.start, range.end);
+      setSummary(result as ProfitSummary);
+    } catch (error) {
+      console.error('Error fetching profit summary:', error);
+      toast({
+        title: 'تنبيه',
+        description: 'تعذر تحميل ملخص الأرباح الموحد، سيتم عرض البيانات المتاحة.',
+        variant: 'destructive',
+      });
+    } finally {
+      setSummaryLoading(false);
+    }
+  };
+
   // Products with low profit margin
   const lowMarginProducts = useMemo(() => {
     return products
@@ -191,56 +226,48 @@ const AdminProfitReportPage = () => {
     return lookup;
   }, [products]);
 
-  const filteredOrders = useMemo(() => {
+  const rangedOrders = useMemo(() => {
     let filtered = orders.filter(order => 
       order.status !== 'cancelled' && order.status !== 'canceled'
     );
 
-    if (dateFrom) {
+    if (range.start) {
       filtered = filtered.filter(order => 
-        new Date(order.created_at) >= new Date(dateFrom)
+        new Date(order.created_at) >= new Date(range.start)
       );
     }
 
-    if (dateTo) {
+    if (range.end) {
       filtered = filtered.filter(order => 
-        new Date(order.created_at) <= new Date(dateTo + 'T23:59:59')
+        new Date(order.created_at) <= new Date(range.end + 'T23:59:59')
       );
     }
 
+    return filtered;
+  }, [orders, range.start, range.end]);
+
+  const filteredOrders = useMemo(() => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(order =>
+      return rangedOrders.filter(order =>
         order.customer_name.toLowerCase().includes(query) ||
         order.order_number.toLowerCase().includes(query)
       );
     }
 
-    return filtered;
-  }, [orders, dateFrom, dateTo, searchQuery]);
+    return rangedOrders;
+  }, [rangedOrders, searchQuery]);
 
   // Calculate profit stats
   const stats: ProfitStats = useMemo(() => {
-    let totalRevenue = 0;
-    let totalCost = 0;
+    const totalRevenue = summary?.revenue ?? 0;
+    const totalCost = summary?.totalCost ?? 0;
     let totalDiscount = 0;
     let totalCommission = 0;
 
-    filteredOrders.forEach(order => {
-      totalRevenue += toSar(order.total, order);
+    rangedOrders.forEach(order => {
       totalDiscount += toSar(order.discount_amount || 0, order);
       totalCommission += toSar(order.beneficiary_commission || 0, order);
-
-      // Calculate cost from order items
-      if (Array.isArray(order.items)) {
-        order.items.forEach((item: OrderItem) => {
-          // Try to get cost price from the item itself, or from product lookup
-          const itemProductId = (item as any).product_id || item.id;
-          const lookupCost = item.costPrice || productCostLookup[itemProductId];
-          const costPrice = lookupCost ?? toSar(item.price * 0.7, order); // Fallback converts to SAR
-          totalCost += costPrice * item.quantity;
-        });
-      }
     });
 
     const grossProfit = totalRevenue - totalCost;
@@ -253,40 +280,35 @@ const AdminProfitReportPage = () => {
       grossProfit,
       netProfit,
       profitMargin,
-      totalOrders: filteredOrders.length,
+      totalOrders: rangedOrders.length,
       totalDiscount,
       totalCommission,
     };
-  }, [filteredOrders, productCostLookup]);
+  }, [summary, rangedOrders]);
 
   const byCurrencyStats = useMemo(() => {
-    const acc = {
-      SAR: { revenue: 0, cost: 0, profit: 0, orders: 0 },
-      YER_SOUTH: { revenue: 0, cost: 0, profit: 0, orders: 0 },
-      YER_NORTH: { revenue: 0, cost: 0, profit: 0, orders: 0 },
+    const ordersCount = {
+      SAR: 0,
+      YER_SOUTH: 0,
+      YER_NORTH: 0,
     };
-
-    for (const order of filteredOrders) {
+    for (const order of rangedOrders) {
       const mode = modeOf(order);
-      let orderCost = 0;
-      if (Array.isArray(order.items)) {
-        order.items.forEach((item: OrderItem) => {
-          const itemProductId = (item as any).product_id || item.id;
-          const lookupCost = item.costPrice || productCostLookup[itemProductId];
-          const costPrice = lookupCost ?? toSar(item.price * 0.7, order);
-          orderCost += costPrice * item.quantity;
-        });
-      }
-      const orderRevenueSar = toSar(order.total, order);
-      const orderProfit = orderRevenueSar - orderCost - toSar(order.beneficiary_commission || 0, order);
-      acc[mode].revenue += orderRevenueSar;
-      acc[mode].cost += orderCost;
-      acc[mode].profit += orderProfit;
-      acc[mode].orders += 1;
+      ordersCount[mode] += 1;
     }
 
-    return acc;
-  }, [filteredOrders, productCostLookup]);
+    const base = summary?.byCurrency || {
+      SAR: { revenue: 0, totalCost: 0, profit: 0 },
+      YER_SOUTH: { revenue: 0, totalCost: 0, profit: 0 },
+      YER_NORTH: { revenue: 0, totalCost: 0, profit: 0 },
+    };
+
+    return {
+      SAR: { revenue: base.SAR.revenue, cost: base.SAR.totalCost, profit: base.SAR.profit, orders: ordersCount.SAR },
+      YER_SOUTH: { revenue: base.YER_SOUTH.revenue, cost: base.YER_SOUTH.totalCost, profit: base.YER_SOUTH.profit, orders: ordersCount.YER_SOUTH },
+      YER_NORTH: { revenue: base.YER_NORTH.revenue, cost: base.YER_NORTH.totalCost, profit: base.YER_NORTH.profit, orders: ordersCount.YER_NORTH },
+    };
+  }, [summary, rangedOrders]);
 
   const byCurrencyNative = useMemo(() => {
     const acc = {
@@ -295,14 +317,14 @@ const AdminProfitReportPage = () => {
       YER_NORTH: { revenue: 0, orders: 0 },
     };
 
-    for (const order of filteredOrders) {
+    for (const order of rangedOrders) {
       const mode = modeOf(order);
       acc[mode].revenue += Number(order.total || 0);
       acc[mode].orders += 1;
     }
 
     return acc;
-  }, [filteredOrders]);
+  }, [rangedOrders]);
 
   // Monthly profit data for chart
   const monthlyProfitData = useMemo(() => {
@@ -320,8 +342,7 @@ const AdminProfitReportPage = () => {
       };
     }
 
-    orders
-      .filter(o => o.status !== 'cancelled' && o.status !== 'canceled')
+    rangedOrders
       .forEach(order => {
         const key = format(new Date(order.created_at), 'yyyy-MM');
         if (months[key]) {
@@ -342,25 +363,32 @@ const AdminProfitReportPage = () => {
       });
 
     return Object.values(months);
-  }, [orders, productCostLookup]);
+  }, [rangedOrders, productCostLookup]);
 
   const currency = 'ر.س';
 
   const setCurrentMonth = () => {
-    setDateFrom(format(startOfMonth(new Date()), 'yyyy-MM-dd'));
-    setDateTo(format(endOfMonth(new Date()), 'yyyy-MM-dd'));
+    setRange({
+      start: format(startOfMonth(new Date()), 'yyyy-MM-dd'),
+      end: format(endOfMonth(new Date()), 'yyyy-MM-dd'),
+    });
   };
 
   const setLastMonth = () => {
     const lastMonth = subMonths(new Date(), 1);
-    setDateFrom(format(startOfMonth(lastMonth), 'yyyy-MM-dd'));
-    setDateTo(format(endOfMonth(lastMonth), 'yyyy-MM-dd'));
+    setRange({
+      start: format(startOfMonth(lastMonth), 'yyyy-MM-dd'),
+      end: format(endOfMonth(lastMonth), 'yyyy-MM-dd'),
+    });
   };
 
   const clearFilters = () => {
-    setDateFrom('');
-    setDateTo('');
     setSearchQuery('');
+    const now = new Date();
+    setRange({
+      start: format(subDays(now, 30), 'yyyy-MM-dd'),
+      end: format(now, 'yyyy-MM-dd'),
+    });
   };
 
   const COLORS = ['hsl(var(--primary))', 'hsl(var(--muted))', 'hsl(var(--destructive))'];
@@ -391,6 +419,7 @@ const AdminProfitReportPage = () => {
             icon: RefreshCw,
             onClick: fetchData,
             variant: "secondary",
+            loading: isLoading || summaryLoading,
           },
         ]}
       />
@@ -595,23 +624,8 @@ const AdminProfitReportPage = () => {
                     className="pr-10"
                   />
                 </div>
-                <div className="relative">
-                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="date"
-                    value={dateFrom}
-                    onChange={(e) => setDateFrom(e.target.value)}
-                    className="pr-10"
-                  />
-                </div>
-                <div className="relative">
-                  <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input
-                    type="date"
-                    value={dateTo}
-                    onChange={(e) => setDateTo(e.target.value)}
-                    className="pr-10"
-                  />
+                <div className="md:col-span-2 flex items-center">
+                  <DateRangePicker />
                 </div>
                 <div className="flex gap-2">
                   <Button variant="outline" size="sm" onClick={setCurrentMonth}>

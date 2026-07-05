@@ -19,14 +19,13 @@ import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGri
 import * as XLSX from "xlsx";
 import { Wallet, TrendingUp, TrendingDown, BookOpen, Receipt, ArrowUpRight, PiggyBank, DownloadCloud, UploadCloud, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { motion } from "framer-motion";
 import { CURRENCY_RATES } from "@/lib/currency";
 import { toast } from "@/hooks/use-toast";
+import { getProfitSummary, getRevenueSummary } from "@/lib/admin/service";
 
 const currency = "ر.س";
 const fmt = (n: number) => new Intl.NumberFormat("ar-EG", { maximumFractionDigits: 0 }).format(n);
 
-type Range = "7d" | "30d" | "12m";
 type CurrencyMode = "SAR" | "YER_SOUTH" | "YER_NORTH";
 
 type FinanceAlert = {
@@ -89,6 +88,11 @@ const isExpenseType = (type: string) => {
   return ["expense", "out", "cost", "debit", "مصروف", "نفقة", "expense"].includes(t);
 };
 
+const isMissingColumnError = (error: unknown) => {
+  const message = String((error as { message?: string })?.message || "");
+  return /column .* does not exist/i.test(message) || /Could not find the '.*' column/i.test(message);
+};
+
 export default function AdminFinanceDashboard() {
   const { range } = useDateRange();
 
@@ -132,8 +136,8 @@ export default function AdminFinanceDashboard() {
   }, { revenue: 0, expenses: 0, net: 0 });
 
   // compact admin UI state (secondary view using supabase directly for other widgets)
-  const [rangeMode, setRangeMode] = useState<Range>("30d");
   const [loadingOverview, setLoadingOverview] = useState(false);
+  const [hasLoadedOverview, setHasLoadedOverview] = useState(false);
   const [series, setSeries] = useState<any[]>([]);
   const [kpis, setKpis] = useState({ revenue: 0, expenses: 0, profit: 0, refunds: 0 });
   const [revenueByCurrency, setRevenueByCurrency] = useState<Record<CurrencyMode, number>>({
@@ -151,14 +155,14 @@ export default function AdminFinanceDashboard() {
   }, [revenueByCurrency]);
 
   useEffect(() => {
-    loadOverview();
+    loadOverview(false);
 
     const intervalId = window.setInterval(() => {
-      loadOverview();
+      loadOverview(true);
     }, 15000);
 
     const onFocus = () => {
-      loadOverview();
+      loadOverview(true);
     };
 
     window.addEventListener("focus", onFocus);
@@ -167,37 +171,39 @@ export default function AdminFinanceDashboard() {
       window.clearInterval(intervalId);
       window.removeEventListener("focus", onFocus);
     };
-  }, [rangeMode, range.start, range.end]);
+  }, [range.start, range.end, importsInRange]);
 
-  async function loadOverview(){
-    setLoadingOverview(true);
-    setOverviewError(null);
-    const now = new Date();
-
-    // Prefer explicit DateRange from the global picker when provided
-    let startDate: Date;
-    let endDate: Date;
-    if (range && range.start && range.end) {
-      startDate = toDayStart(new Date(range.start));
-      endDate = toDayEnd(new Date(range.end));
-    } else {
-      const days = rangeMode === "7d" ? 7 : rangeMode === "30d" ? 30 : 365;
-      endDate = toDayEnd(new Date(now));
-      startDate = toDayStart(new Date(now));
-      startDate.setDate(now.getDate() - days);
+  async function loadOverview(silent = false){
+    if (!silent) {
+      setLoadingOverview(true);
+      setOverviewError(null);
     }
+    const startDate = toDayStart(new Date(range.start));
+    const endDate = toDayEnd(new Date(range.end));
 
     const daysSpan = Math.max(1, Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1);
-    const monthMode = rangeMode === "12m" || daysSpan > 365;
+    const monthMode = daysSpan >= 120;
 
     try {
+      let revenueSummary: Awaited<ReturnType<typeof getRevenueSummary>> | null = null;
+      let profitSummary: Awaited<ReturnType<typeof getProfitSummary>> | null = null;
+
+      try {
+        [revenueSummary, profitSummary] = await Promise.all([
+          getRevenueSummary(range.start, range.end),
+          getProfitSummary(range.start, range.end),
+        ]);
+      } catch (summaryError) {
+        console.warn("Summary fallback engaged in finance dashboard", summaryError);
+      }
+
       const expensesQueryWithMode = supabase
         .from("expenses")
         .select("amount,expense_date,category_id,currency_mode")
         .gte("expense_date", startDate.toISOString())
         .lte("expense_date", new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString());
 
-      const [ordersRes, expensesRes, refundsRes] = await Promise.all([
+      const [ordersWithModeRes, expensesRes, refundsRes] = await Promise.all([
         supabase
           .from("orders")
           .select("total,created_at,status,currency_mode,country")
@@ -212,7 +218,19 @@ export default function AdminFinanceDashboard() {
           .lte("created_at", new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString()),
       ]);
 
-      if (ordersRes.error) throw ordersRes.error;
+      let ordersData = (ordersWithModeRes.data || []) as any[];
+      if (ordersWithModeRes.error && isMissingColumnError(ordersWithModeRes.error)) {
+        const ordersFallbackRes = await supabase
+          .from("orders")
+          .select("total,created_at,status,country")
+          .gte("created_at", startDate.toISOString())
+          .lte("created_at", new Date(endDate.getTime() + 24 * 60 * 60 * 1000 - 1).toISOString())
+          .neq("status", "cancelled");
+        if (ordersFallbackRes.error) throw ordersFallbackRes.error;
+        ordersData = (ordersFallbackRes.data || []).map((o: any) => ({ ...o, currency_mode: null }));
+      } else if (ordersWithModeRes.error) {
+        throw ordersWithModeRes.error;
+      }
 
       let expensesData = (expensesRes.data || []) as any[];
       if (expensesRes.error && String(expensesRes.error.message || "").toLowerCase().includes("currency_mode")) {
@@ -238,7 +256,7 @@ export default function AdminFinanceDashboard() {
         refundsData = fallbackRefunds.data || [];
       }
 
-      const orders = ((ordersRes.data || []) as any[]).filter((o) => {
+      const orders = (ordersData || []).filter((o) => {
         const status = String(o?.status || "").toLowerCase();
         return status !== "cancelled" && status !== "canceled";
       });
@@ -296,18 +314,28 @@ export default function AdminFinanceDashboard() {
       const importedRevenue = importedEntries.reduce((s, e) => s + (e.amount > 0 ? e.amount : 0), 0);
       const importedExpenses = importedEntries.reduce((s, e) => s + (e.amount < 0 ? Math.abs(e.amount) : 0), 0);
 
-      const groupedRevenue: Record<CurrencyMode, number> = {
-        SAR: 0,
-        YER_SOUTH: 0,
-        YER_NORTH: 0,
-      };
-      orders.forEach((order) => {
-        const mode = resolveOrderMode(order);
-        groupedRevenue[mode] += parseFloat(order.total) || 0;
-      });
+      const groupedRevenue = (revenueSummary
+        ? {
+            SAR: revenueSummary.byCurrencyNative.SAR.revenue,
+            YER_SOUTH: revenueSummary.byCurrencyNative.YER_SOUTH.revenue,
+            YER_NORTH: revenueSummary.byCurrencyNative.YER_NORTH.revenue,
+          }
+        : orders.reduce(
+            (acc, o) => {
+              const mode = resolveOrderMode(o);
+              acc[mode] += parseFloat(o.total) || 0;
+              return acc;
+            },
+            { SAR: 0, YER_SOUTH: 0, YER_NORTH: 0 } as Record<CurrencyMode, number>,
+          )) satisfies Record<CurrencyMode, number>;
 
-      const sumRev = orders.reduce((s, o) => s + toSAR(parseFloat(o.total) || 0, resolveOrderMode(o)), 0) + importedRevenue;
-      const sumExp = expenses.reduce((s, e) => s + toSAR(parseFloat(e.amount) || 0, resolveExpenseMode(e)), 0) + importedExpenses;
+      const sumRev = (revenueSummary
+        ? revenueSummary.revenue
+        : orders.reduce((s, o) => s + toSAR(parseFloat(o.total) || 0, resolveOrderMode(o)), 0)) + importedRevenue;
+
+      const sumExp = (profitSummary
+        ? profitSummary.totalCost
+        : expenses.reduce((s, e) => s + toSAR(parseFloat(e.amount) || 0, resolveExpenseMode(e)), 0)) + importedExpenses;
       const sumRef = refunds.reduce((s, r) => {
         const linked = Array.isArray((r as any).orders) ? (r as any).orders[0] : (r as any).orders;
         const mode = resolveOrderMode({
@@ -320,15 +348,22 @@ export default function AdminFinanceDashboard() {
       setSeries(data);
       setKpis({ revenue: sumRev, expenses: sumExp + sumRef, profit: sumRev - sumExp - sumRef, refunds: sumRef });
       setRevenueByCurrency(groupedRevenue);
+      setHasLoadedOverview(true);
+
+      if (!revenueSummary || !profitSummary) {
+        setOverviewError("تعذر تحميل بعض الملخصات المركزية، وتم احتساب البيانات من المصادر المباشرة.");
+      }
     } catch (error) {
       console.error("Finance overview load failed", error);
       setOverviewError("تعذر تحميل بعض بيانات التحليل المالي. تم عرض البيانات المتاحة.");
-      toast({
-        title: "تنبيه",
-        description: "تعذر تحميل بعض بيانات التحليل المالي، تم إظهار البيانات المتاحة.",
-      });
+      if (!silent) {
+        toast({
+          title: "تنبيه",
+          description: "تعذر تحميل بعض بيانات التحليل المالي، تم إظهار البيانات المتاحة.",
+        });
+      }
     } finally {
-      setLoadingOverview(false);
+      if (!silent) setLoadingOverview(false);
     }
   }
 
@@ -420,12 +455,6 @@ export default function AdminFinanceDashboard() {
     return alerts.slice(0, 4);
   }, [kpis.revenue, kpis.refunds, kpis.profit, margin, series, ledger, totals.net]);
 
-  const options: { value: Range; label: string }[] = [
-    { value: "7d", label: "7 أيام" },
-    { value: "30d", label: "شهر" },
-    { value: "12m", label: "سنة" },
-  ];
-
   function handleFile(ev: React.ChangeEvent<HTMLInputElement>){
     const f = ev.target.files?.[0]; if (!f) return;
     const reader = new FileReader();
@@ -508,17 +537,6 @@ export default function AdminFinanceDashboard() {
           <p className="text-sm text-muted-foreground mt-1">إيرادات، مصروفات، تدفقات نقدية، وأرباح</p>
         </div>
           <div className="flex items-center gap-2">
-          <div className="flex items-center bg-white/70 backdrop-blur border rounded-2xl p-1 shadow-sm w-fit">
-            {options.map((opt) => (
-              <button key={opt.value} onClick={() => setRangeMode(opt.value)} className="relative px-6 py-2 text-xs font-medium rounded-xl transition-colors">
-                {rangeMode === opt.value && (
-                  <motion.div layoutId="active-pill" className="absolute inset-0 bg-gradient-to-r from-pink-500 to-fuchsia-600 rounded-xl" transition={{ type: "spring", stiffness: 500, damping: 35 }} />
-                )}
-                <span className={`relative z-10 transition-colors ${rangeMode === opt.value ? "text-white" : "text-gray-600"}`}>{opt.label}</span>
-              </button>
-            ))}
-          </div>
-
           <div className="flex items-center gap-2">
             <DateRangePicker />
             <input ref={inputRef} type="file" accept=".xlsx,.xls" onChange={handleFile} className="hidden" aria-hidden />
@@ -565,7 +583,7 @@ export default function AdminFinanceDashboard() {
               <div className="relative z-10 p-3 rounded-xl bg-white/70 backdrop-blur border"><k.icon className={cn("w-4.5 h-4.5", k.tone)} /></div>
             </div>
             <p className="text-xs text-muted-foreground mt-3">{k.label}</p>
-            {loadingOverview ? (
+            {!hasLoadedOverview && loadingOverview ? (
               <Skeleton className="h-7 w-28 mt-3" />
             ) : (
               <div className="relative z-10 mt-2">
@@ -582,7 +600,7 @@ export default function AdminFinanceDashboard() {
           <Card key={mode} className="relative p-5 rounded-2xl border-0 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group">
             <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
             <p className="text-xs text-muted-foreground mt-1">{currencyMeta[mode].label}</p>
-            {loadingOverview ? (
+            {!hasLoadedOverview && loadingOverview ? (
               <Skeleton className="h-7 w-28 mt-3" />
             ) : (
               <div className="relative z-10 mt-2">
@@ -596,7 +614,7 @@ export default function AdminFinanceDashboard() {
         <Card className="relative p-5 rounded-2xl border-0 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group">
           <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
           <p className="text-xs text-muted-foreground mt-1">الإجمالي الموحّد (محول إلى ريال سعودي)</p>
-          {loadingOverview ? (
+          {!hasLoadedOverview && loadingOverview ? (
             <Skeleton className="h-7 w-28 mt-3" />
           ) : (
             <div className="relative z-10 mt-2">
@@ -659,9 +677,9 @@ export default function AdminFinanceDashboard() {
             <Button asChild variant="ghost" size="sm"><Link to="/admin/ledger">دفتر اليومية</Link></Button>
           </div>
           <div className="divide-y divide-black/5">
-            {loadingOverview && Array.from({ length: 4 }).map((_, i) => <div key={i} className="p-4"><Skeleton className="h-4 w-2/3" /></div>)}
-            {!loadingOverview && series.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">لا توجد بيانات بعد</p>}
-            {!loadingOverview && series.length > 0 && series.slice(0,8).map((s, idx) => (
+            {!hasLoadedOverview && loadingOverview && Array.from({ length: 4 }).map((_, i) => <div key={i} className="p-4"><Skeleton className="h-4 w-2/3" /></div>)}
+            {hasLoadedOverview && series.length === 0 && <p className="p-8 text-center text-sm text-muted-foreground">لا توجد بيانات بعد</p>}
+            {hasLoadedOverview && series.length > 0 && series.slice(0,8).map((s, idx) => (
               <div key={idx} className="px-5 py-3 flex items-center justify-between hover:bg-black/[0.02]">
                 <div className="min-w-0">
                   <p className="text-sm font-medium truncate">{s.label}</p>

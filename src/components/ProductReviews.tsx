@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { Star, Send, Loader2, User, ImagePlus, X } from 'lucide-react';
+import { Star, Send, Loader2, User, ImagePlus, X, LogIn } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 import { useStore } from '@/store/useStore';
@@ -8,6 +8,8 @@ import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Link } from 'react-router-dom';
+import type { User as SupaUser } from '@supabase/supabase-js';
 
 interface ProductReviewsProps {
   productId: string;
@@ -26,6 +28,8 @@ interface ProductReview {
 const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
   const { customer, country } = useStore();
   const queryClient = useQueryClient();
+  const [authUser, setAuthUser] = useState<SupaUser | null>(null);
+  const [authChecking, setAuthChecking] = useState(true);
   const [rating, setRating] = useState(0);
   const [hoverRating, setHoverRating] = useState(0);
   const [comment, setComment] = useState('');
@@ -34,6 +38,27 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
   const [zoomImg, setZoomImg] = useState<string | null>(null);
 
   const MAX_IMAGES = 5;
+
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        setAuthUser(session?.user ?? null);
+      } finally {
+        setAuthChecking(false);
+      }
+    };
+
+    checkAuth();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setAuthUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const canReview = !!customer || !!authUser;
 
   const handleFiles = async (files: FileList | null) => {
     if (!files || files.length === 0) return;
@@ -78,15 +103,22 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
   // Submit review mutation
   const submitReview = useMutation({
     mutationFn: async () => {
-      if (!customer || !country) throw new Error('يجب تسجيل الدخول أولاً');
+      if (!canReview) throw new Error('يجب تسجيل الدخول أولاً');
       if (rating === 0) throw new Error('يرجى اختيار التقييم');
+
+      const authorName =
+        customer?.name ||
+        authUser?.user_metadata?.full_name ||
+        authUser?.email ||
+        'عميل';
+      const reviewCountry = country || customer?.country || 'GLOBAL';
       
       const { error } = await supabase.from('product_reviews').insert({
         product_id: productId,
-        customer_name: customer.name,
+        customer_name: authorName,
         rating,
         comment: comment.trim() || null,
-        country,
+        country: reviewCountry,
         is_approved: false,
         images,
       } as any);
@@ -181,7 +213,7 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
           </div>
 
           {/* Add Review Form */}
-          {customer ? (
+          {canReview ? (
             <div className="pt-6 border-t border-border/50">
               <h3 className="font-heading text-lg text-foreground mb-4">
                 أضف تقييمك
@@ -263,7 +295,7 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
 
               <Button
                 onClick={() => submitReview.mutate()}
-                disabled={rating === 0 || submitReview.isPending}
+                disabled={rating === 0 || submitReview.isPending || authChecking}
                 className="btn-gold gap-2"
               >
                 {submitReview.isPending ? (
@@ -275,10 +307,12 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
               </Button>
             </div>
           ) : (
-            <div className="pt-6 border-t border-border/50 text-center">
-              <p className="text-muted-foreground text-sm">
-                يجب تسجيل الدخول لإضافة تقييم
-              </p>
+            <div className="pt-6 border-t border-border/50 text-center space-y-2">
+              <p className="text-muted-foreground text-sm">يجب تسجيل الدخول لإضافة تقييم</p>
+              <Link to="/auth" className="inline-flex items-center gap-1 text-sm text-primary hover:underline">
+                <LogIn className="w-4 h-4" />
+                تسجيل الدخول
+              </Link>
             </div>
           )}
         </div>

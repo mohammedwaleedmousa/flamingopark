@@ -261,7 +261,7 @@ const AccountPage = () => {
   const mainItems = [
     { to: "/favorites", icon: Heart, label: "المفضلة", desc: `${favorites.length} منتج`, color: "text-primary" },
     { to: "/cart", icon: ShoppingBag, label: "حقيبتي", desc: "عرض السلة الحالية", color: "text-blue-500" },
-    { to: "/account#orders", icon: Package, label: "طلباتي", desc: "سجل الطلبات والفواتير", color: "text-green-500" },
+    { to: "/my-orders", icon: Package, label: "طلباتي", desc: "سجل الطلبات والفواتير", color: "text-green-500" },
   ];
 
   const resolveInvoiceUrl = (raw: string | null) => {
@@ -276,10 +276,10 @@ const AccountPage = () => {
   const settingsItems = [
     { to: "/account", icon: Settings, label: "الإعدادات", desc: "تحديث بياناتك الشخصية", color: "text-amber-500" },
     {
-      to: latestOrderNumber ? `/order-tracking?order=${encodeURIComponent(latestOrderNumber)}` : "/account#orders",
+      to: "/my-shipments",
       icon: Truck,
       label: "شحناتي",
-      desc: latestOrderNumber ? "تتبع آخر شحنة" : "لا توجد شحنات بعد",
+      desc: latestOrderNumber ? "تتبع الشحنات الحالية" : "عرض سجل الشحنات",
       color: "text-orange-500",
     },
   ];
@@ -327,6 +327,16 @@ const AccountPage = () => {
     delivered: "bg-emerald-100 text-emerald-700",
     cancelled: "bg-red-100 text-red-700",
     canceled: "bg-red-100 text-red-700",
+  };
+  const shippingProgressBarMap: Record<string, string> = {
+    pending: "bg-amber-500",
+    confirmed: "bg-blue-500",
+    processing: "bg-indigo-500",
+    shipped: "bg-sky-500",
+    out_for_delivery: "bg-cyan-500",
+    delivered: "bg-emerald-500",
+    cancelled: "bg-red-500",
+    canceled: "bg-red-500",
   };
   const activeShipments = invoices.filter((inv) => {
     const status = String(inv.status || "").toLowerCase();
@@ -462,6 +472,7 @@ const AccountPage = () => {
                   const status = String(inv.status || "").toLowerCase();
                   const progress = shippingProgressMap[status] ?? 15;
                   const tone = shippingToneMap[status] || "bg-muted text-muted-foreground";
+                  const barTone = shippingProgressBarMap[status] || "bg-primary";
                   return (
                     <div key={`ship-${inv.id}`} className="p-4 flex items-center justify-between gap-3">
                       <div className="flex-1">
@@ -473,7 +484,7 @@ const AccountPage = () => {
                           <span className="text-[11px] text-muted-foreground">{progress}%</span>
                         </div>
                         <div className="mt-2 h-1.5 w-full rounded-full bg-muted overflow-hidden">
-                          <div className="h-full bg-primary transition-all duration-500" style={{ width: `${progress}%` }} />
+                          <div className={`h-full ${barTone} transition-all duration-500`} style={{ width: `${progress}%` }} />
                         </div>
                       </div>
                       <button

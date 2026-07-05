@@ -30,6 +30,8 @@ const ComparisonPage = lazy(() => import("./pages/ComparisonPage"));
 const SeasonalOffersPage = lazy(() => import("./pages/SeasonalOffersPage"));
 const CartPage = lazy(() => import("./pages/CartPage"));
 const AccountPage = lazy(() => import("./pages/AccountPage"));
+const MyOrdersPage = lazy(() => import("./pages/MyOrdersPage"));
+const MyShipmentsPage = lazy(() => import("./pages/MyShipmentsPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const StoreInfoPage = lazy(() => import("./pages/StoreInfoPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
@@ -146,6 +148,8 @@ const App = () => {
             <Route path="/new-arrivals" element={<ProtectedRoute><NewArrivalsPage /></ProtectedRoute>} />
             <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
+            <Route path="/my-orders" element={<ProtectedRoute><MyOrdersPage /></ProtectedRoute>} />
+            <Route path="/my-shipments" element={<ProtectedRoute><MyShipmentsPage /></ProtectedRoute>} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/product/:slug" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
             <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />

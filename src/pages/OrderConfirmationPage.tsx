@@ -8,7 +8,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, MessageCircle, Home, Copy, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import ermgoldLogo from '@/assets/ermgold-logo-new.jpeg';
+import flamingoLogo from '@/assets/ermgold-logo-clean.png';
 import { track } from '@/lib/analytics';
 
 interface SelectedAccessory {
@@ -251,7 +251,7 @@ const OrderConfirmationPage = () => {
             {/* Invoice Header */}
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
               <div>
-                <img src={ermgoldLogo} alt="Flamingo" className="h-16 w-auto object-contain" />
+                <img src={flamingoLogo} alt="Flamingo" className="h-16 w-auto object-contain" />
                 <p className="text-sm text-gray-500 mt-1">فاتورة طلب</p>
               </div>
               <div className="text-left">

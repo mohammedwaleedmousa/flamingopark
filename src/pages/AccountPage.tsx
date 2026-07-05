@@ -323,6 +323,13 @@ const AccountPage = () => {
                     <div>
                       <p className="font-medium text-sm">{inv.order_number}</p>
                       <p className="text-xs text-muted-foreground">{new Date(inv.created_at).toLocaleDateString("ar-EG")}</p>
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/order-tracking?order=${encodeURIComponent(inv.order_number)}`)}
+                        className="mt-2 text-xs px-2.5 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+                      >
+                        تتبع الطلب
+                      </button>
                     </div>
                     <div className="text-left">
                       <p className="text-sm font-semibold">{Number(inv.total).toLocaleString("ar-EG")}</p>
@@ -373,7 +380,7 @@ const AccountPage = () => {
                 {it.label === "الإعدادات" ? (
                   <button
                     onClick={handleSettingsClick}
-                    className="w-full flex items-center gap-4 p-4 md:p-5 border border-border/50 bg-muted/30 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 group rounded-xl text-left"
+                    className="w-full flex items-center gap-4 p-4 md:p-5 border border-border/50 bg-muted/30 hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 group rounded-xl text-right"
                   >
                     <div className={`${it.color} p-2 bg-primary/10 rounded-lg`}>
                       <it.icon className="w-5 h-5" />
@@ -527,7 +534,7 @@ const AccountPage = () => {
                   transition={{ duration: 0.3 }}
                   className="fixed inset-0 z-50 flex items-end md:items-center justify-center p-4"
                 >
-                  <div className="w-full md:w-full md:max-w-lg bg-background border border-border rounded-2xl md:rounded-3xl shadow-2xl">
+                  <div dir="rtl" className="w-full md:w-full md:max-w-lg bg-background border border-border rounded-2xl md:rounded-3xl shadow-2xl text-right">
                     {/* Form Header */}
                     <div className="relative overflow-hidden p-6 md:p-8 border-b border-border/50">
                       <div className="absolute inset-0 bg-gradient-to-br from-primary/10 via-transparent to-primary/5" />

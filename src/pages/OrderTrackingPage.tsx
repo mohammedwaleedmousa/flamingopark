@@ -5,6 +5,7 @@ import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import { Button } from '@/components/ui/button';
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 
 interface TrackingStep {
   title: string;
@@ -17,7 +18,9 @@ interface TrackingStep {
 }
 
 const OrderTrackingPage = () => {
-  const [selectedOrder] = useState('ORD-1735683676054');
+  const [searchParams] = useSearchParams();
+  const orderFromQuery = searchParams.get('order');
+  const [selectedOrder] = useState(orderFromQuery || 'ORD-1735683676054');
 
   const trackingSteps: TrackingStep[] = [
     {

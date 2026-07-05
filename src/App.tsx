@@ -8,8 +8,6 @@ import { useStore } from "@/store/useStore";
 import SplashScreen from "@/components/SplashScreen";
 import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
-import AdminCustomerIntelligence from "./pages/admin/AdminCustomerIntelligence";
-import AdminFinanceDashboard from "./pages/admin/AdminFinanceDashboard";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
@@ -27,9 +25,15 @@ const QRCodePage = lazy(() => import("./pages/QRCodePage"));
 const CategoriesPage = lazy(() => import("./pages/CategoriesPage"));
 const BestSellersPage = lazy(() => import("./pages/BestSellersPage"));
 const NewArrivalsPage = lazy(() => import("./pages/NewArrivalsPage"));
+const SearchPage = lazy(() => import("./pages/SearchPage"));
+const ComparisonPage = lazy(() => import("./pages/ComparisonPage"));
+const SeasonalOffersPage = lazy(() => import("./pages/SeasonalOffersPage"));
 const CartPage = lazy(() => import("./pages/CartPage"));
 const AccountPage = lazy(() => import("./pages/AccountPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
+const StoreInfoPage = lazy(() => import("./pages/StoreInfoPage"));
+const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
+const OrderTrackingPage = lazy(() => import("./pages/OrderTrackingPage"));
 
 // Admin pages
 const AdminLoginPage = lazy(() => import("./pages/admin/AdminLoginPage"));
@@ -60,9 +64,25 @@ const AdminRefundsPage = lazy(() => import("./pages/admin/AdminRefundsPage"));
 const AdminExpensesPage = lazy(() => import("./pages/admin/AdminExpensesPage"));
 const AdminPaymentMethodsPage = lazy(() => import("./pages/admin/AdminPaymentMethodsPage"));
 const AdminInventoryAdjustmentsPage = lazy(() => import("./pages/admin/AdminInventoryAdjustmentsPage"));
+const AdminFinanceDashboard = lazy(() => import("./pages/admin/AdminFinanceDashboard"));
+const AdminCustomerIntelligence = lazy(() => import("./pages/admin/AdminCustomerIntelligence"));
+const AdminAnalyticsDashboard = lazy(() => import("./pages/admin/AdminAnalyticsDashboard"));
+const AdminAnalyticsDashboardV2 = lazy(() => import("./pages/admin/AdminAnalyticsDashboardV2"));
 const MohammedInvoicesPage = lazy(() => import("./pages/MohammedInvoicesPage"));
 
-const queryClient = new QueryClient();
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 5 * 60 * 1000, // 5 minutes - data is fresh for 5 minutes
+      gcTime: 30 * 60 * 1000, // 30 minutes - keep unused data in cache for 30 minutes
+      retry: 2, // retry failed requests 2 times
+      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // exponential backoff
+      refetchOnWindowFocus: false, // don't refetch when user returns to window
+      refetchOnMount: false, // don't refetch when component mounts if data is fresh
+      refetchOnReconnect: true, // refetch when connection is restored
+    },
+  },
+});
 
 const RouteFallback = () => <LoadingScreen />;
 
@@ -119,6 +139,9 @@ const App = () => {
             <Route path="/legacy-auth" element={<CustomerAuthPage />} />
             <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
+            <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
+            <Route path="/comparison" element={<ProtectedRoute><ComparisonPage /></ProtectedRoute>} />
+            <Route path="/seasonal-offers" element={<ProtectedRoute><SeasonalOffersPage /></ProtectedRoute>} />
             <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
             <Route path="/best-sellers" element={<ProtectedRoute><BestSellersPage /></ProtectedRoute>} />
             <Route path="/new-arrivals" element={<ProtectedRoute><NewArrivalsPage /></ProtectedRoute>} />
@@ -133,6 +156,9 @@ const App = () => {
             <Route path="/reviews" element={<ProtectedRoute><ReviewsPage /></ProtectedRoute>} />
             <Route path="/favorites" element={<ProtectedRoute><FavoritesPage /></ProtectedRoute>} />
             <Route path="/qr-code" element={<QRCodePage />} />
+            <Route path="/store-info" element={<ProtectedRoute><StoreInfoPage /></ProtectedRoute>} />
+            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+            <Route path="/order-tracking" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route path="/admin" element={<AdminLayout />}>
@@ -163,8 +189,10 @@ const App = () => {
               <Route path="payment-methods" element={<AdminPaymentMethodsPage />} />
               <Route path="inventory-adjustments" element={<AdminInventoryAdjustmentsPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
-              <Route path="/admin/finance" element={<AdminFinanceDashboard />} />
-              <Route path="/admin/customer-intelligence" element={<AdminCustomerIntelligence/>} />
+              <Route path="finance" element={<AdminFinanceDashboard />} />
+              <Route path="customer-intelligence" element={<AdminCustomerIntelligence/>} />
+              <Route path="analytics-dashboard" element={<AdminAnalyticsDashboard/>} />
+              <Route path="analytics-advanced" element={<AdminAnalyticsDashboardV2/>} />
             </Route>
 
             <Route path="/mohammed" element={<MohammedInvoicesPage />} />

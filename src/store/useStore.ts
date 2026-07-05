@@ -32,6 +32,23 @@ export interface Product {
   countries?: Country[];
   isFeatured?: boolean;
   isBestSeller?: boolean;
+  // Optional modern variant model
+  variants?: Variant[];
+}
+
+export interface VariantSize {
+  size: string;
+  stock: number;
+}
+
+export interface Variant {
+  id: string;
+  colorName: string;
+  colorHex?: string;
+  images: string[];
+  price?: number;
+  discount?: number;
+  sizes?: VariantSize[];
 }
 
 export interface SelectedAccessory {
@@ -47,6 +64,8 @@ export interface CartItem {
   quantity: number;
   selectedSize?: string;
   selectedAccessories?: SelectedAccessory[];
+  variantId?: string;
+  variantColor?: string;
 }
 
 interface StoreState {
@@ -65,11 +84,13 @@ interface StoreState {
     product: Product,
     quantity?: number,
     selectedSize?: string,
-    selectedAccessories?: SelectedAccessory[]
+    selectedAccessories?: SelectedAccessory[],
+    variantId?: string,
+    variantColor?: string
   ) => void;
 
-  removeFromCart: (productId: string) => void;
-  updateQuantity: (productId: string, quantity: number) => void;
+  removeFromCart: (productId: string, variantId?: string) => void;
+  updateQuantity: (productId: string, quantity: number, variantId?: string) => void;
   clearCart: () => void;
 
   toggleCart: () => void;
@@ -96,7 +117,7 @@ export const useStore = create<StoreState>()(
 
       setCustomer: (customer) => set({ customer }),
 
-      addToCart: (product, quantity = 1, selectedSize, selectedAccessories) => {
+      addToCart: (product, quantity = 1, selectedSize, selectedAccessories, variantId, variantColor) => {
         const cart = get().cart;
 
         const accPrice = (selectedAccessories ?? []).reduce(
@@ -104,9 +125,18 @@ export const useStore = create<StoreState>()(
           0
         );
 
-        const unit = product.discount
-          ? product.price * (1 - product.discount / 100)
+        // Determine unit price taking variant override into account
+        const variant = variantId && (product as any).variants
+          ? (product as any).variants.find((v: any) => v.id === variantId)
+          : undefined;
+
+        const unitPriceSource = variant && (variant.price ?? variant.discount !== undefined)
+          ? (variant.price ?? product.price)
           : product.price;
+
+        const unitDiscount = variant && variant.discount !== undefined ? variant.discount : product.discount;
+
+        const unit = unitDiscount ? unitPriceSource * (1 - unitDiscount / 100) : unitPriceSource;
 
         track({
           event_type: "add_to_cart",
@@ -125,7 +155,7 @@ export const useStore = create<StoreState>()(
               .join("|")
           : "";
 
-        const itemKey = `${product.id}-${selectedSize || ""}-${accessoriesKey}`;
+        const itemKey = `${product.id}-${variantId || ""}-${selectedSize || ""}-${accessoriesKey}`;
 
         const existingIndex = cart.findIndex((item) => {
           const existingAccKey = item.selectedAccessories
@@ -136,7 +166,7 @@ export const useStore = create<StoreState>()(
             : "";
 
           return (
-            `${item.product.id}-${item.selectedSize || ""}-${existingAccKey}` === itemKey
+            `${item.product.id}-${item.variantId || ""}-${item.selectedSize || ""}-${existingAccKey}` === itemKey
           );
         });
 
@@ -150,26 +180,29 @@ export const useStore = create<StoreState>()(
           });
         } else {
           set({
-            cart: [...cart, { product, quantity, selectedSize, selectedAccessories }],
+            cart: [...cart, { product, quantity, selectedSize, selectedAccessories, variantId, variantColor }],
           });
         }
       },
 
-      removeFromCart: (productId) => {
+      removeFromCart: (productId, variantId) => {
         set({
-          cart: get().cart.filter((item) => item.product.id !== productId),
+          cart: get().cart.filter((item) => {
+            if (variantId) return !(item.product.id === productId && item.variantId === variantId);
+            return item.product.id !== productId;
+          }),
         });
       },
 
-      updateQuantity: (productId, quantity) => {
+      updateQuantity: (productId, quantity, variantId) => {
         if (quantity <= 0) {
-          get().removeFromCart(productId);
+          get().removeFromCart(productId, variantId);
           return;
         }
 
         set({
           cart: get().cart.map((item) =>
-            item.product.id === productId ? { ...item, quantity } : item
+            item.product.id === productId && (!variantId || item.variantId === variantId) ? { ...item, quantity } : item
           ),
         });
       },
@@ -182,9 +215,15 @@ export const useStore = create<StoreState>()(
 
       getCartTotal: () => {
         return get().cart.reduce((total, item) => {
-          const price = item.product.discount
-            ? item.product.price * (1 - item.product.discount / 100)
-            : item.product.price;
+          // Price may be overridden by variant
+          const variant = item.variantId && (item.product as any).variants
+            ? (item.product as any).variants.find((v: any) => v.id === item.variantId)
+            : undefined;
+
+          const basePrice = variant && variant.price !== undefined ? variant.price : item.product.price;
+          const discount = variant && variant.discount !== undefined ? variant.discount : item.product.discount;
+
+          const price = discount ? basePrice * (1 - discount / 100) : basePrice;
 
           const accessoriesTotal = item.selectedAccessories
             ? item.selectedAccessories.reduce(

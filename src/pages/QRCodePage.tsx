@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Download, Share2, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { toast } from '@/hooks/use-toast';
-import ermgoldLogo from '@/assets/ermgold-logo-new.jpeg';
+import flamingoLogo from '@/assets/ermgold-logo-clean.png';
 
 const QRCodePage = () => {
   const qrRef = useRef<HTMLDivElement>(null);
@@ -27,7 +27,7 @@ const QRCodePage = () => {
       });
       
       const link = document.createElement('a');
-      link.download = 'ermgold-qr-code.png';
+      link.download = 'flamingo-qr-code.png';
       link.href = canvas.toDataURL('image/png');
       link.click();
       
@@ -80,7 +80,7 @@ const QRCodePage = () => {
           >
             <div className="text-center mb-4">
               <img 
-                src={ermgoldLogo} 
+                src={flamingoLogo} 
                 alt="Flamingo" 
                 className="h-12 w-auto mx-auto object-contain"
               />

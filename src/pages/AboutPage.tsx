@@ -9,6 +9,38 @@ import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { useQuery } from '@tanstack/react-query';
 
+// Animated Counter Component
+const AnimatedCounter = ({ end, duration = 2 }: { end: number | string; duration?: number }) => {
+  const [count, setCount] = useState(0);
+  const numEnd = typeof end === 'string' ? parseInt(end) : end;
+
+  useEffect(() => {
+    if (typeof numEnd !== 'number' || numEnd === 0) {
+      setCount(0);
+      return;
+    }
+
+    let startTime: number | null = null;
+    const timer = requestAnimationFrame((time) => {
+      startTime = time;
+      const animate = (currentTime: number) => {
+        if (startTime === null) return;
+        const elapsed = currentTime - startTime;
+        const progress = Math.min(elapsed / (duration * 1000), 1);
+        setCount(Math.floor(progress * numEnd));
+        if (progress < 1) {
+          requestAnimationFrame(animate);
+        }
+      };
+      requestAnimationFrame(animate);
+    });
+
+    return () => cancelAnimationFrame(timer);
+  }, [numEnd, duration]);
+
+  return <>{count}</>;
+};
+
 const AboutPage = () => {
   const [certPdfUrl, setCertPdfUrl] = useState<string | null>(null);
   const [certImages, setCertImages] = useState<string[]>([]);
@@ -223,7 +255,7 @@ const AboutPage = () => {
             />
             <div className="absolute inset-0 bg-gradient-to-b from-black/70 via-black/60 to-black/80" />
             
-            {/* Subtle Gold Shimmer */}
+            {/* Subtle gold Shimmer */}
             <motion.div 
               className="absolute inset-0 bg-gradient-to-r from-transparent via-gold/5 to-transparent"
               animate={{ x: ['-100%', '100%'] }}
@@ -285,11 +317,17 @@ const AboutPage = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ delay: 0.4 + index * 0.1 }}
                   whileHover={{ scale: 1.05, y: -5 }}
-                  className="bg-black/60 border border-gold/30 rounded-xl p-4 hover:border-gold/60 transition-all duration-300"
+                  className="bg-black/60 border border-gold/30 rounded-xl p-4 hover:border-gold/60 transition-all duration-300 group cursor-pointer"
                 >
-                  <stat.icon className="w-5 h-5 text-gold mx-auto mb-2" />
-                  <div className="font-heading text-xl md:text-2xl text-gold">{stat.value}</div>
-                  <div className="text-xs text-white/60 font-body">{stat.label}</div>
+                  <stat.icon className="w-5 h-5 text-gold mx-auto mb-2 group-hover:text-gold/80 transition" />
+                  <div className="font-heading text-xl md:text-2xl text-gold">
+                    {typeof stat.value === 'string' && stat.value.startsWith('+') ? (
+                      <>+<AnimatedCounter end={parseInt(stat.value.slice(1))} /></>
+                    ) : (
+                      stat.value
+                    )}
+                  </div>
+                  <div className="text-xs text-white/60 font-body group-hover:text-white/80 transition">{stat.label}</div>
                 </motion.div>
               ))}
             </motion.div>
@@ -431,17 +469,30 @@ const AboutPage = () => {
                   className="group relative"
                 >
                   <div className={`absolute inset-0 bg-gradient-to-b ${value.color} rounded-2xl transition-opacity group-hover:opacity-100 opacity-50`} />
-                  <div className="relative bg-card border border-border/30 p-8 rounded-2xl text-center transition-all duration-300 group-hover:border-gold/30 group-hover:-translate-y-2">
-                    <div className="w-20 h-20 mx-auto mb-6 flex items-center justify-center bg-gradient-to-br from-gold/20 to-gold/5 rounded-2xl group-hover:scale-110 transition-transform duration-300">
+                  <motion.div 
+                    className="relative bg-card border border-border/30 p-8 rounded-2xl text-center transition-all duration-300 group-hover:border-gold/30 group-hover:-translate-y-2"
+                    whileHover={{ 
+                      boxShadow: "0 20px 40px rgba(214, 158, 46, 0.2)",
+                      y: -8
+                    }}
+                  >
+                    <motion.div 
+                      className="w-20 h-20 mx-auto mb-6 flex items-center justify-center bg-gradient-to-br from-gold/20 to-gold/5 rounded-2xl"
+                      whileHover={{ scale: 1.15, rotate: 5 }}
+                      transition={{ type: "spring", stiffness: 400, damping: 10 }}
+                    >
                       <value.icon className="w-10 h-10 text-gold" />
-                    </div>
-                    <h3 className="font-heading text-xl text-foreground mb-3 group-hover:text-gold transition-colors">
+                    </motion.div>
+                    <motion.h3 
+                      className="font-heading text-xl text-foreground mb-3"
+                      whileHover={{ color: "hsl(var(--gold))" }}
+                    >
                       {value.title}
-                    </h3>
+                    </motion.h3>
                     <p className="font-body text-sm text-muted-foreground leading-relaxed">
                       {value.description}
                     </p>
-                  </div>
+                  </motion.div>
                 </motion.div>
               ))}
             </div>
@@ -481,34 +532,57 @@ const AboutPage = () => {
                 viewport={{ once: true }}
                 className="text-center mb-12"
               >
-                <Button
-                  onClick={() => setShowPdfModal(true)}
-                  size="lg"
-                  className="btn-gold gap-3 px-8 py-6 text-lg rounded-xl"
-                >
-                  <FileText className="w-6 h-6" />
-                  عرض شهادات التوثيق
-                </Button>
+                <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+                  <Button
+                    onClick={() => setShowPdfModal(true)}
+                    size="lg"
+                    className="btn-gold gap-3 px-8 py-6 text-lg rounded-xl shadow-lg hover:shadow-xl transition-shadow"
+                  >
+                    <motion.div
+                      animate={{ rotate: [0, 5, -5, 0] }}
+                      transition={{ duration: 3, repeat: Infinity }}
+                    >
+                      <FileText className="w-6 h-6" />
+                    </motion.div>
+                    عرض شهادات التوثيق
+                  </Button>
+                </motion.div>
               </motion.div>
             )}
 
             {/* Certification Image - Single */}
-            <div className="flex justify-center max-w-md mx-auto">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              whileInView={{ opacity: 1 }}
+              viewport={{ once: true }}
+              className="flex justify-center max-w-md mx-auto"
+            >
               {certImages.length > 0 ? (
                 <motion.div
                   initial={{ opacity: 0, y: 30 }}
                   whileInView={{ opacity: 1, y: 0 }}
                   viewport={{ once: true }}
-                  className="group relative aspect-square w-full rounded-2xl overflow-hidden border-2 border-gold/20 hover:border-gold/50 transition-colors"
+                  whileHover={{ y: -10 }}
+                  className="group relative aspect-square w-full rounded-2xl overflow-hidden border-2 border-gold/20 hover:border-gold/50 transition-all duration-300 shadow-lg hover:shadow-2xl"
                 >
-                  <img
+                  <motion.img
                     src={certImages[0]}
                     alt="شهادة التوثيق"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                    className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-125"
                   />
-                  <div className="absolute inset-0 bg-gradient-to-t from-secondary/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-6">
-                    <span className="text-gold font-heading">شهادة التوثيق</span>
-                  </div>
+                  <motion.div 
+                    className="absolute inset-0 bg-gradient-to-t from-secondary/80 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity flex items-end justify-center pb-6"
+                    initial={{ opacity: 0 }}
+                    whileHover={{ opacity: 1 }}
+                  >
+                    <motion.span 
+                      className="text-gold font-heading text-lg"
+                      animate={{ y: [0, -5, 0] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
+                      شهادة التوثيق
+                    </motion.span>
+                  </motion.div>
                 </motion.div>
               ) : (
                 <motion.div
@@ -518,14 +592,18 @@ const AboutPage = () => {
                   className="aspect-square w-full bg-charcoal rounded-2xl border border-gold/20 flex items-center justify-center"
                 >
                   <div className="text-center">
-                    <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gold/10 flex items-center justify-center">
+                    <motion.div 
+                      className="w-16 h-16 mx-auto mb-4 rounded-full bg-gold/10 flex items-center justify-center"
+                      animate={{ scale: [1, 1.1, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                    >
                       <Award className="w-8 h-8 text-gold/50" />
-                    </div>
+                    </motion.div>
                     <p className="text-sm font-body text-gold-light/50">لم يتم إضافة شهادة توثيق</p>
                   </div>
                 </motion.div>
               )}
-            </div>
+            </motion.div>
           </div>
         </section>
 

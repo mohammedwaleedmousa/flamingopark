@@ -30,6 +30,7 @@ import { useAuthActions } from "@/hooks/useAuthActions";
 import { useCurrency } from "@/lib/currency";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
+import { useCustomerNotifications } from "@/hooks/useCustomerNotifications";
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
@@ -122,6 +123,7 @@ const Navbar = () => {
   const { openCart, getCartCount } = useStore();
   const { favorites } = useFavorites();
   const cartCount = getCartCount();
+  const { unreadCount } = useCustomerNotifications({ enableToasts: true });
   const navigate = useNavigate();
   const { logout } = useAuthActions();
   const { mode, setMode, short, label } = useCurrency();
@@ -206,7 +208,8 @@ const Navbar = () => {
   };
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 bg-white backdrop-blur-xl border-b border-black/5 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.2)]" dir="rtl">      
+    <header className="fixed top-0 inset-x-0 z-50 bg-white/95 backdrop-blur-xl border-b border-black/5 shadow-[0_14px_40px_-22px_rgba(0,0,0,0.28)]" dir="rtl">
+      <div className="h-[2px] w-full bg-gradient-to-r from-transparent via-pink-500 to-transparent" />
       <div className="container mx-auto px-4 md:px-8">
         <div className="relative flex items-center justify-between h-16 md:h-20">
           {/* Right (in RTL): menu + search */}
@@ -249,9 +252,14 @@ const Navbar = () => {
                   </div>
 
                   <nav className="flex-1 overflow-y-auto pb-4 flex flex-col [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
+                    {unreadCount > 0 && (
+                      <div className="mx-3 mb-3 rounded-xl border border-pink-200 bg-pink-50 px-3 py-2 text-xs text-pink-700">
+                        لديك {unreadCount} إشعار جديد
+                      </div>
+                    )}
                     {/* Shopping */}
                     <Section label="التسوق">
-                      <NavItem to="/notifications" icon={Bell} label="الإشعارات" />
+                      <NavItem to="/notifications" icon={Bell} label="الإشعارات" badge={unreadCount || undefined} />
                       <NavItem to="/home" icon={House} label="الرئيسية" />
                       <NavItem to="/categories" icon={SquaresFour} label="جميع الأقسام" />
                       <NavItem to="/products" icon={Package} label="جميع المنتجات" />
@@ -361,13 +369,14 @@ const Navbar = () => {
             to="/home"
             className="
               absolute left-1/2 -translate-x-1/2
-              text-[14px] md:text-xl
-              font-semibold tracking-[0.4em]
+              text-[14px] md:text-[22px]
+              font-semibold tracking-[0.44em]
               uppercase
-              text-black/80
+              text-black
+              drop-shadow-[0_1px_0_rgba(0,0,0,0.04)]
             "
           >
-            <span className="text-pink-500">FLAMINGO</span>
+            <span className="bg-gradient-to-r from-black via-pink-600 to-black bg-clip-text text-transparent">FLAMINGO</span>
           </Link>
 
           {/* Left (RTL): account, wishlist, bag */}
@@ -434,8 +443,7 @@ const Navbar = () => {
         <div className="border-b bg-white/90 backdrop-blur-xl animate-in fade-in duration-200">
           <form onSubmit={submit} className="container mx-auto px-4 py-4">
             <div className="relative">
-
-              <MagnifyingGlass size={22} weight="bold" className="text-black/70 group-hover:text-pink-500 transition" />
+              <MagnifyingGlass size={18} weight="bold" className="absolute right-3 top-1/2 -translate-y-1/2 text-black/60" />
 
               <input
                 autoFocus

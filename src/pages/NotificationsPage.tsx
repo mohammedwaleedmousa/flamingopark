@@ -1,68 +1,19 @@
 import { motion, AnimatePresence } from 'framer-motion';
-import { Bell, Trash2, Check, CheckCircle2, Clock, AlertCircle, Package, Heart, Star } from 'lucide-react';
-import { useState } from 'react';
+import { Bell, Trash2, Check, CheckCircle2, Clock, AlertCircle, Package } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import { Button } from '@/components/ui/button';
-
-interface Notification {
-  id: string;
-  type: 'order' | 'wish' | 'review' | 'system' | 'offer';
-  title: string;
-  message: string;
-  timestamp: Date;
-  read: boolean;
-  actionUrl?: string;
-}
+import { useCustomerNotifications } from '@/hooks/useCustomerNotifications';
 
 const NotificationsPage = () => {
-  const [notifications, setNotifications] = useState<Notification[]>([
-    {
-      id: '1',
-      type: 'order',
-      title: 'تم تأكيد طلبك',
-      message: 'تم تأكيد طلبك #ORD-123456 وسيتم توصيله قريباً',
-      timestamp: new Date(Date.now() - 2 * 60 * 60 * 1000),
-      read: false,
-      actionUrl: '/order-tracking'
-    },
-    {
-      id: '2',
-      type: 'wish',
-      title: 'منتج في قائمة المفضلة متوفر',
-      message: 'المنتج الذي أضفته للمفضلة "خاتم ذهبي" متوفر الآن',
-      timestamp: new Date(Date.now() - 5 * 60 * 60 * 1000),
-      read: false
-    },
-    {
-      id: '3',
-      type: 'offer',
-      title: 'عرض خاص جديد',
-      message: 'استمتع بخصم 30% على جميع المجوهرات الذهبية',
-      timestamp: new Date(Date.now() - 24 * 60 * 60 * 1000),
-      read: true,
-      actionUrl: '/offers'
-    },
-    {
-      id: '4',
-      type: 'system',
-      title: 'ترحيب بك في فلامينجو بارك',
-      message: 'شكراً لك على الانضمام لعائلتنا. استمتع بتجربة تسوق رائعة',
-      timestamp: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000),
-      read: true
-    }
-  ]);
+  const { notifications, unreadCount, isLoading, markAsRead, markAllAsRead, deleteNotification } = useCustomerNotifications();
 
   const getIcon = (type: string) => {
     switch (type) {
       case 'order':
         return Package;
-      case 'wish':
-        return Heart;
-      case 'review':
-        return Star;
-      case 'offer':
+      case 'system':
         return AlertCircle;
       default:
         return Bell;
@@ -73,18 +24,15 @@ const NotificationsPage = () => {
     switch (type) {
       case 'order':
         return 'bg-blue-100 text-blue-600';
-      case 'wish':
-        return 'bg-pink-100 text-pink-600';
-      case 'review':
-        return 'bg-yellow-100 text-yellow-600';
-      case 'offer':
+      case 'system':
         return 'bg-purple-100 text-purple-600';
       default:
         return 'bg-gray-100 text-gray-600';
     }
   };
 
-  const formatTime = (date: Date) => {
+  const formatTime = (value: string) => {
+    const date = new Date(value);
     const now = new Date();
     const diff = now.getTime() - date.getTime();
     const minutes = Math.floor(diff / 60000);
@@ -98,25 +46,7 @@ const NotificationsPage = () => {
     return date.toLocaleDateString('ar');
   };
 
-  const unreadCount = notifications.filter(n => !n.read).length;
-
-  const markAsRead = (id: string) => {
-    setNotifications(notifications.map(n => 
-      n.id === id ? { ...n, read: true } : n
-    ));
-  };
-
-  const deleteNotification = (id: string) => {
-    setNotifications(notifications.filter(n => n.id !== id));
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
-  };
-
-  const sortedNotifications = [...notifications].sort((a, b) => 
-    b.timestamp.getTime() - a.timestamp.getTime()
-  );
+  const sortedNotifications = notifications;
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
@@ -164,7 +94,11 @@ const NotificationsPage = () => {
         </motion.section>
 
         <div className="container mx-auto px-4 py-8">
-          {sortedNotifications.length > 0 ? (
+          {isLoading ? (
+            <div className="max-w-2xl space-y-3">
+              <div className="border rounded-lg p-4 bg-card border-border text-sm text-muted-foreground">جاري تحميل الإشعارات...</div>
+            </div>
+          ) : sortedNotifications.length > 0 ? (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}

@@ -317,6 +317,24 @@ const ProductDetailPage = () => {
   const hasAccessories = !!(product.accessories && product.accessories.length > 0);
 
   const handleAddToCart = () => {
+    if (product.colorVariants && product.colorVariants.length > 0 && selectedColorIdx === null) {
+      toast({
+        title: 'اختيار اللون مطلوب',
+        description: 'يرجى تحديد اللون قبل إضافة المنتج للسلة.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
+    if (product.hasSizes && sizesToShow && sizesToShow.length > 0 && !selectedSize) {
+      toast({
+        title: 'اختيار المقاس مطلوب',
+        description: 'يرجى تحديد المقاس قبل إضافة المنتج للسلة.',
+        variant: 'destructive',
+      });
+      return;
+    }
+
     // If product has accessories and user hasn't decided yet, scroll to accessories first
     if (hasAccessories && !accessoryChoiceMade) {
       accessoriesSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -812,8 +830,24 @@ const ProductDetailPage = () => {
                 <div className="flex gap-3">
                   <button
                     onClick={() => {
+                      const key = 'comparison_product_ids';
+                      let ids: string[] = [];
+                      try {
+                        const raw = localStorage.getItem(key);
+                        if (raw) {
+                          const parsed = JSON.parse(raw);
+                          if (Array.isArray(parsed)) ids = parsed.map(String);
+                        }
+                      } catch {
+                        ids = [];
+                      }
+
+                      const withoutCurrent = ids.filter((id) => id !== product.id);
+                      const nextIds = [...withoutCurrent, product.id].slice(-2);
+                      localStorage.setItem(key, JSON.stringify(nextIds));
+
                       const params = new URLSearchParams();
-                      params.set('id', product.id);
+                      nextIds.forEach((id) => params.append('id', id));
                       navigate(`/comparison?${params}`);
                     }}
                     className="flex-1 btn-unified py-3 gap-2 text-sm"

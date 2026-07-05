@@ -190,15 +190,28 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
       const pdfBlob = pdf.output("blob");
       const fileName = `invoice-${order.order_number}-${Date.now()}.pdf`;
 
-      await supabase.storage.from("invoices").upload(fileName, pdfBlob, {
+      const { error: uploadError } = await supabase.storage.from("invoices").upload(fileName, pdfBlob, {
         contentType: "application/pdf",
         cacheControl: "3600",
       });
 
+      if (uploadError) throw uploadError;
+
+      const { error: linkError } = await supabase
+        .from("orders")
+        .update({ invoice_url: fileName })
+        .eq("id", order.id);
+
+      if (linkError) {
+        console.warn("Failed linking invoice to order:", linkError);
+      }
+
       toast({
         title: "تم",
-        description: "تم حفظ الفاتورة بنجاح",
+        description: "تم حفظ الفاتورة وربطها بالطلب",
       });
+
+      onUpdate();
     } catch (error) {
       console.error("PDF Error:", error);
       toast({

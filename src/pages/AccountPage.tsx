@@ -31,7 +31,7 @@ const AccountPage = () => {
   const [avatar, setAvatar] = useState<File | null>(null);
   const [avatarPreview, setAvatarPreview] = useState<string>("");
   const [notification, setNotification] = useState<{ type: "success" | "error"; message: string } | null>(null);
-  const [invoices, setInvoices] = useState<Array<{ id: string; order_number: string; total: number; status: string; created_at: string }>>([]);
+  const [invoices, setInvoices] = useState<Array<{ id: string; order_number: string; total: number; status: string; created_at: string; invoice_url: string | null }>>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { favorites } = useFavorites();
@@ -68,7 +68,7 @@ const AccountPage = () => {
         const userPhone = String(user?.user_metadata?.phone_number || "").trim();
         let query = supabase
           .from("orders")
-          .select("id, order_number, total, status, created_at")
+          .select("id, order_number, total, status, created_at, invoice_url")
           .order("created_at", { ascending: false })
           .limit(20);
 
@@ -80,7 +80,7 @@ const AccountPage = () => {
 
         const { data, error } = await query;
         if (error) throw error;
-        setInvoices((data || []) as Array<{ id: string; order_number: string; total: number; status: string; created_at: string }>);
+        setInvoices((data || []) as Array<{ id: string; order_number: string; total: number; status: string; created_at: string; invoice_url: string | null }>);
       } catch {
         setInvoices([]);
       } finally {
@@ -162,22 +162,28 @@ const AccountPage = () => {
 
     setFormLoading(true);
     try {
-      const updates: any = {
-        data: {
-          full_name: fullName,
-          phone_number: phoneNumber,
-        }
-      };
+      let avatarUrl = String(user?.user_metadata?.avatar_url || "");
+      if (avatar) {
+        const safeName = avatar.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const path = `${user.id}/${Date.now()}-${safeName}`;
+        const { error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(path, avatar, { upsert: true, cacheControl: "3600" });
 
-      // If avatar was changed and is a data URL, include it in metadata
-      if (avatarPreview && avatarPreview.startsWith('data:')) {
-        updates.data.avatar_url = avatarPreview;
-      } else if (avatarPreview) {
-        updates.data.avatar_url = avatarPreview;
+        if (!uploadError) {
+          const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(path);
+          avatarUrl = publicData.publicUrl;
+        }
+      } else if (avatarPreview && !avatarPreview.startsWith("data:")) {
+        avatarUrl = avatarPreview;
       }
 
       const { error } = await supabase.auth.updateUser({
-        data: updates.data
+        data: {
+          full_name: fullName.trim(),
+          phone_number: phoneNumber.trim(),
+          avatar_url: avatarUrl || null,
+        },
       });
 
       if (error) {
@@ -226,8 +232,17 @@ const AccountPage = () => {
   const mainItems = [
     { to: "/favorites", icon: Heart, label: "المفضلة", desc: `${favorites.length} منتج`, color: "text-primary" },
     { to: "/cart", icon: ShoppingBag, label: "حقيبتي", desc: "عرض السلة الحالية", color: "text-blue-500" },
-    { to: "/products", icon: Package, label: "طلباتي", desc: "سجل المشتريات", color: "text-green-500" },
+    { to: "/account", icon: Package, label: "طلباتي", desc: "سجل الطلبات والفواتير", color: "text-green-500" },
   ];
+
+  const resolveInvoiceUrl = (raw: string | null) => {
+    if (!raw) return null;
+    const value = String(raw).trim();
+    if (!value) return null;
+    if (/^https?:\/\//i.test(value)) return value;
+    const { data } = supabase.storage.from("invoices").getPublicUrl(value);
+    return data.publicUrl;
+  };
 
   const settingsItems = [
     { to: "/account", icon: Settings, label: "الإعدادات", desc: "تحديث بياناتك الشخصية", color: "text-amber-500" },
@@ -329,6 +344,18 @@ const AccountPage = () => {
                         className="mt-2 text-xs px-2.5 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
                       >
                         تتبع الطلب
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const url = resolveInvoiceUrl(inv.invoice_url);
+                          if (!url) return;
+                          window.open(url, "_blank", "noopener,noreferrer");
+                        }}
+                        disabled={!resolveInvoiceUrl(inv.invoice_url)}
+                        className="mt-2 mr-2 text-xs px-2.5 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                      >
+                        عرض الفاتورة
                       </button>
                     </div>
                     <div className="text-left">

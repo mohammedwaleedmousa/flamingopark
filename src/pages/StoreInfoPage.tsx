@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Phone, Mail, MapPin, Clock, Heart, Shield, Truck } from 'lucide-react';
+import { Phone, Mail, MapPin, Clock, Heart, Shield, Truck, MessageCircle } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
@@ -205,12 +205,22 @@ const StoreInfoPage = () => {
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {whatsappNumber && (
-                <Button
-                  onClick={() => handleWhatsApp(whatsappNumber)}
-                  className="btn-gold px-8 py-3 rounded-lg"
-                >
-                  تواصل عبر WhatsApp
-                </Button>
+                <>
+                  <Button
+                    onClick={() => handleWhatsApp(whatsappNumber)}
+                    className="btn-gold px-8 py-3 rounded-lg"
+                  >
+                    تواصل عبر WhatsApp
+                  </Button>
+                  <Button
+                    onClick={() => handleWhatsApp(whatsappNumber)}
+                    variant="outline"
+                    className="px-8 py-3 rounded-lg border-green-500/40 text-green-700 hover:bg-green-50"
+                  >
+                    <MessageCircle className="w-4 h-4 ml-2" />
+                    فتح الواتساب الرسمي
+                  </Button>
+                </>
               )}
             </div>
           </motion.div>

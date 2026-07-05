@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -87,6 +87,25 @@ const ComparisonPage = () => {
   const MAX_COMPARISON_ITEMS = 2;
   const [showLimitWarning, setShowLimitWarning] = useState(productIds.length > MAX_COMPARISON_ITEMS);
 
+  useEffect(() => {
+    if (productIds.length > 0) {
+      localStorage.setItem('comparison_product_ids', JSON.stringify(productIds));
+      return;
+    }
+
+    try {
+      const raw = localStorage.getItem('comparison_product_ids');
+      const saved = raw ? JSON.parse(raw) : [];
+      if (Array.isArray(saved) && saved.length > 0) {
+        const params = new URLSearchParams();
+        saved.slice(0, MAX_COMPARISON_ITEMS).forEach((id: string) => params.append('id', String(id)));
+        setSearchParams(params);
+      }
+    } catch {
+      // Ignore invalid local cache.
+    }
+  }, [MAX_COMPARISON_ITEMS, productIds, setSearchParams]);
+
   // Limit to max 2 items
   const limitedProductIds = productIds.slice(0, MAX_COMPARISON_ITEMS);
 
@@ -122,10 +141,13 @@ const ComparisonPage = () => {
 
   const handleRemoveProduct = (id: string) => {
     const newIds = productIds.filter(pid => pid !== id);
+    localStorage.setItem('comparison_product_ids', JSON.stringify(newIds));
     if (newIds.length === 0) {
       navigate('/comparison');
     } else {
-      setSearchParams({ id: newIds });
+      const params = new URLSearchParams();
+      newIds.forEach((value) => params.append('id', value));
+      setSearchParams(params);
       setShowLimitWarning(newIds.length > MAX_COMPARISON_ITEMS);
     }
   };
@@ -210,7 +232,7 @@ const ComparisonPage = () => {
                     <h3 className="font-heading text-lg mb-2">✨ التوصية الذكية</h3>
                     <div className="mb-4">
                       <h4 className="font-heading text-xl text-primary mb-1">
-                        {recommendedProduct.name_ar}
+                        {recommendedProduct.nameAr}
                       </h4>
                       <div className="flex items-center gap-2 mb-3">
                         <div className="flex-1 bg-muted rounded-full h-2 overflow-hidden">
@@ -287,7 +309,7 @@ const ComparisonPage = () => {
                           {product.images?.[0] && (
                             <img
                               src={product.images[0]}
-                              alt={product.name_ar}
+                              alt={product.nameAr}
                               className="w-full h-full object-cover hover:scale-105 transition"
                             />
                           )}
@@ -300,7 +322,7 @@ const ComparisonPage = () => {
 
                         {/* Product Info */}
                         <div className="px-4 py-2 flex-1 flex flex-col">
-                          <h3 className="font-heading text-lg line-clamp-2 mb-2">{product.name_ar}</h3>
+                          <h3 className="font-heading text-lg line-clamp-2 mb-2">{product.nameAr}</h3>
                           <p className="text-sm text-muted-foreground mb-3">{product.brand}</p>
 
                           {/* Score */}
@@ -317,26 +339,26 @@ const ComparisonPage = () => {
                           )}
 
                           {/* Rating */}
-                          {product.rating && (
+                          {(product as any).rating && (
                             <div className="flex items-center gap-1 mb-3">
                               <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                              <span className="text-sm font-medium">{product.rating.toFixed(1)}/5</span>
+                              <span className="text-sm font-medium">{Number((product as any).rating).toFixed(1)}/5</span>
                             </div>
                           )}
 
                           {/* Price */}
                           <div className="flex items-baseline gap-2 mb-3 mt-auto">
                             <span className="font-heading text-2xl text-primary">{Math.round(product.price)}</span>
-                            {product.original_price && (
+                            {product.originalPrice && (
                               <span className="text-sm line-through text-muted-foreground">
-                                {Math.round(product.original_price)}
+                                {Math.round(product.originalPrice)}
                               </span>
                             )}
                           </div>
 
                           {/* Stock Status */}
                           <div className="mb-4">
-                            {product.in_stock ? (
+                            {product.inStock ? (
                               <span className="text-sm font-medium text-green-600 bg-green-50 px-3 py-1.5 rounded-lg inline-block">
                                 ✓ متوفر
                               </span>
@@ -353,16 +375,16 @@ const ComparisonPage = () => {
                               addToCart({
                                 id: product.id,
                                 name: product.name,
-                                nameAr: product.name_ar,
+                                nameAr: product.nameAr,
                                 slug: product.slug,
                                 price: Number(product.price),
                                 images: product.images || [],
                                 category: product.category,
                                 brand: product.brand,
-                                inStock: product.in_stock ?? true,
+                                inStock: product.inStock ?? true,
                               } as Product, 1);
                             }}
-                            disabled={!product.in_stock}
+                            disabled={!product.inStock}
                             className="btn-unified w-full text-sm py-3 disabled:opacity-50 disabled:cursor-not-allowed gap-2"
                           >
                             <ShoppingCart className="w-4 h-4" />
@@ -392,15 +414,15 @@ const ComparisonPage = () => {
                 {[
                   { key: 'brand', label: 'الماركة' },
                   { key: 'category', label: 'الفئة' },
-                  { key: 'in_stock', label: 'الحالة' },
+                  { key: 'inStock', label: 'الحالة' },
                 ].map(spec => (
                   <motion.div key={spec.key} layout>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-card rounded-lg p-4 md:p-6 border border-border">
                       <div className="font-heading text-foreground text-sm md:col-span-2">{spec.label}</div>
                       {products.map(product => (
                         <div key={product.id} className="text-sm text-foreground bg-muted/30 p-3 rounded">
-                          {spec.key === 'in_stock' ? (
-                            product.in_stock ? (
+                          {spec.key === 'inStock' ? (
+                            product.inStock ? (
                               <span className="flex items-center gap-2 text-green-600 font-medium">
                                 <Check className="w-4 h-4" /> متوفر
                               </span>
@@ -424,7 +446,7 @@ const ComparisonPage = () => {
                     <div className="font-heading text-foreground text-sm md:col-span-2">السعر الأصلي</div>
                     {products.map(product => (
                       <div key={product.id} className="text-sm font-mono text-foreground bg-muted/30 p-3 rounded">
-                        {product.original_price || product.price}
+                        {product.originalPrice || product.price}
                       </div>
                     ))}
                   </div>
@@ -452,10 +474,10 @@ const ComparisonPage = () => {
                     <div className="font-heading text-foreground text-sm md:col-span-2">التقييم</div>
                     {products.map(product => (
                       <div key={product.id} className="text-sm bg-muted/30 p-3 rounded">
-                        {product.rating ? (
+                        {(product as any).rating ? (
                           <div className="flex items-center gap-1">
                             <Star className="w-4 h-4 text-yellow-500 fill-yellow-500" />
-                            <span className="font-medium">{product.rating.toFixed(1)}/5</span>
+                            <span className="font-medium">{Number((product as any).rating).toFixed(1)}/5</span>
                           </div>
                         ) : (
                           <span className="text-muted-foreground">-</span>

@@ -483,7 +483,7 @@ const ProductDetailPage = () => {
               {/* Main Image */}
               <div 
                 ref={imageContainerRef}
-                className="relative h-[85vh] w-full overflow-hidden"
+                className="relative h-[60vh] w-full overflow-hidden"
               >
                 {/* Badges */}
                 <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
@@ -496,12 +496,7 @@ const ProductDetailPage = () => {
                       خصم {product.discount}%
                     </motion.span>
                   )}
-                  {product.isBestSeller && (
-                    <span className="inline-flex items-center gap-1 bg-secondary text-secondary-foreground text-xs font-medium px-3 py-1.5 rounded-full">
-                      <Star className="w-3 h-3 fill-gold text-gold" />
-                      الأكثر مبيعاً
-                    </span>
-                  )}
+                  
                 </div>
 
                 {/* Image Loading State */}

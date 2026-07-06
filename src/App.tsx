@@ -115,11 +115,39 @@ const ScrollToTop = () => {
   return null;
 };
 
+const detectLowBandwidth = () => {
+  if (typeof navigator === "undefined") return false;
+  const connection = (navigator as any).connection;
+  if (!connection) return false;
+
+  const effectiveType = String(connection.effectiveType || "").toLowerCase();
+  const saveData = Boolean(connection.saveData);
+
+  return saveData || effectiveType.includes("2g") || effectiveType === "slow-2g";
+};
+
 const App = () => {
+  const [isLowBandwidth, setIsLowBandwidth] = useState(() => detectLowBandwidth());
   const [showSplash, setShowSplash] = useState(() => {
     if (typeof window === "undefined") return false;
+    if (detectLowBandwidth()) return false;
     return !sessionStorage.getItem("flamingo-splash-seen");
   });
+
+  useEffect(() => {
+    if (typeof navigator === "undefined") return;
+    const connection = (navigator as any).connection;
+    if (!connection || typeof connection.addEventListener !== "function") return;
+
+    const update = () => {
+      const low = detectLowBandwidth();
+      setIsLowBandwidth(low);
+      if (low) setShowSplash(false);
+    };
+
+    connection.addEventListener("change", update);
+    return () => connection.removeEventListener("change", update);
+  }, []);
 
   return (
   <QueryClientProvider client={queryClient}>
@@ -132,7 +160,7 @@ const App = () => {
       <DateRangeProvider>
         <BrowserRouter>
           <ScrollToTop />
-          <AnalyticsTracker />
+          {!isLowBandwidth && <AnalyticsTracker />}
           <Suspense fallback={<RouteFallback />}>
             <Routes>
             <Route path="/" element={<AuthRedirect />} />

@@ -17,6 +17,8 @@ import { useStore, Product } from '@/store/useStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { ArrowRight } from "lucide-react";
+import { useLocation } from "react-router-dom";
 import { 
   ShoppingBag, 
   Share2, 
@@ -37,6 +39,13 @@ import {
 const ProductDetailPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const BACK_ROUTES: Record<string, string> = {
+    products: "/products",
+    categories: "/categories",
+    brands: "/brands",
+  };
+  const from = location.state?.from;
   const { country, addToCart } = useStore();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { items: recentItems, add: addRecent } = useRecentlyViewed();
@@ -433,31 +442,37 @@ const ProductDetailPage = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <Navbar />
       <CartDrawer />
 
-      <main className="pt-20 pb-32">
-        {/* Breadcrumb */}
-        <div className="bg-muted/50 border-b border-border/50">
-          <div className="container mx-auto px-4 py-4">
-            <div className="flex items-center gap-2 text-sm font-body text-muted-foreground">
-              <button onClick={() => navigate('/home')} className="hover:text-gold transition-colors">
-                الرئيسية
-              </button>
-              <ChevronLeft className="w-4 h-4" />
-              <button onClick={() => navigate('/products')} className="hover:text-gold transition-colors">
-                المنتجات
-              </button>
-              <ChevronLeft className="w-4 h-4" />
-              <span className="text-foreground font-medium truncate max-w-[150px] md:max-w-none">
-                {product.nameAr}
-              </span>
-            </div>
-          </div>
-        </div>
+      <main className="pb-24">
+        {/* Floating Header */}
+<div className="absolute top-0 left-0 right-0 z-30 flex items-center justify-between p-5">
 
-        <div className="container mx-auto px-4 py-8 md:py-12">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16">
+  <button
+    onClick={() => navigate(-1)}
+    className="w-11 h-11 rounded-full bg-black/30 backdrop-blur-xl text-white flex items-center justify-center"
+  >
+    <ArrowRight className="w-5 h-5" />
+  </button>
+
+  <button
+  onClick={handleLike}
+  className={`w-11 h-11 rounded-full flex items-center justify-center
+    bg-white shadow-lg border border-gray-100
+    transition-all duration-300
+    ${isLiked ? "scale-110" : "hover:scale-105"}
+  `}
+>
+  <Heart
+    className={`w-5 h-5 ${
+      isLiked ? "text-rose-500 fill-rose-500" : "text-gray-700"
+    }`}
+  />
+</button>
+
+</div>
+        <div className="w-full">
+          <div className="grid grid-cols-1 lg:grid-cols-[55%_45%]">
             {/* Images Section */}
             <motion.div
               initial={{ opacity: 0, x: -30 }}
@@ -468,7 +483,7 @@ const ProductDetailPage = () => {
               {/* Main Image */}
               <div 
                 ref={imageContainerRef}
-                className="relative aspect-square rounded-2xl overflow-hidden bg-gradient-to-br from-muted to-muted/50 border border-border/30"
+                className="relative h-[85vh] w-full overflow-hidden"
               >
                 {/* Badges */}
                 <div className="absolute top-4 right-4 z-10 flex flex-col gap-2">
@@ -488,18 +503,6 @@ const ProductDetailPage = () => {
                     </span>
                   )}
                 </div>
-
-                {/* Like Button */}
-                <button
-                  onClick={handleLike}
-                  className={`absolute top-4 left-4 z-10 p-3 rounded-full transition-all duration-300 ${
-                    isLiked 
-                      ? 'bg-gold text-secondary shadow-lg' 
-                      : 'bg-background/80 text-foreground hover:bg-background'
-                  }`}
-                >
-                  <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-                </button>
 
                 {/* Image Loading State */}
                 {!imageLoaded && displayImages[selectedImage] && (
@@ -525,12 +528,13 @@ const ProductDetailPage = () => {
                       <img
                         src={displayImages[selectedImage]}
                         alt={product.nameAr}
+                        loading="eager"
                         onLoad={() => setImageLoaded(true)}
                         style={{ 
                           transform: `scale(${scale}) translate(${position.x / scale}px, ${position.y / scale}px)`,
                           transformOrigin: 'center center',
                         }}
-                        className={`w-full h-full object-cover transition-opacity duration-200 ${
+                        className={`w-full h-full object-cover transition-all duration-500 ${
                           imageLoaded ? 'opacity-100' : 'opacity-0'
                         }`}
                         draggable={false}
@@ -546,7 +550,7 @@ const ProductDetailPage = () => {
 
                 {/* Image dots indicator */}
                 {displayImages.length > 1 && (
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
+                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-2 px-4 py-2 rounded-full bg-black/20 backdrop-blur-xl">
                     {displayImages.map((_, index) => (
                       <button
                         key={index}

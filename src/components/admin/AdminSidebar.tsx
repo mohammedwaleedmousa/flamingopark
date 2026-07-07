@@ -194,7 +194,7 @@ const AdminSidebar = () => {
       <SidebarFooter className="p-3 border-t border-sidebar-border/60">
         {!collapsed && userEmail && (
           <div className="px-3 py-2 mb-2 rounded-xl bg-primary/5 border border-primary/10">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-black/40 mb-1">حساب الأدمن</p>
+            <p className="text-[10px] uppercase tracking-[0.08em] text-black/40 mb-1">حساب الأدمن</p>
             <p className="text-[12px] font-medium text-black truncate" dir="ltr">{userEmail}</p>
           </div>
         )}

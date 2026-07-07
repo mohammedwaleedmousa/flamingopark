@@ -118,7 +118,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
 
         <div className="flex items-center justify-between">
 
-          <p className="text-[10px] tracking-[0.15em] uppercase text-pink-400">
+          <p className="text-[10px] tracking-[0.08em] uppercase text-pink-400">
             {product.brand}
           </p>
 

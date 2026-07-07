@@ -49,7 +49,7 @@ const BestSellersPage = () => {
       <CartDrawer />
       <main className="pt-24 pb-20">
         <section className="container mx-auto px-6 mb-10 text-center">
-          <p className="text-[10px] tracking-[0.15em] uppercase text-muted-foreground mb-3">{getSiteText(content, "best_sellers_eyebrow", "Most Loved")}</p>
+          <p className="text-[10px] tracking-[0.08em] uppercase text-muted-foreground mb-3">{getSiteText(content, "best_sellers_eyebrow", "Most Loved")}</p>
           <h1 className="font-heading text-4xl md:text-6xl">{getSiteText(content, "best_sellers_title", "الأكثر مبيعاً")}</h1>
         </section>
         <section className="container mx-auto px-6">

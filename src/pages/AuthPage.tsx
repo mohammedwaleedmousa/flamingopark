@@ -100,7 +100,7 @@ const AuthPage = () => {
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black via-black/30 to-transparent" />
         <div className="relative h-full flex flex-col justify-end p-12 text-white">
-          <p className="text-[10px] tracking-[0.15em] uppercase opacity-70 mb-3">Maison Flamingo</p>
+          <p className="text-[10px] tracking-[0.08em] uppercase opacity-70 mb-3">Maison Flamingo</p>
           <h2 className="logo-flamingo text-5xl">FLAMINGO</h2>
           <p className="mt-4 text-sm opacity-80 max-w-sm">انضم إلى عالم من الأناقة الفاخرة والتصاميم الحصرية</p>
         </div>

@@ -32,7 +32,12 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import { useCustomerNotifications } from "@/hooks/useCustomerNotifications";
 import {
-  DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel, DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
 const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -45,7 +50,6 @@ const Section = ({ label, children }: { label: string; children: React.ReactNode
     <div>{children}</div>
   </div>
 );
-
 
 const NavItem = ({
   to,
@@ -77,22 +81,21 @@ const NavItem = ({
         )}
 
         <span
-  className={`
+          className={`
     w-9 h-9 rounded-xl
     flex items-center justify-center
     transition-all duration-300
-    ${isActive
-      ? "bg-pink-50 text-pink-500"
-      : "bg-gray-50 text-black/60 group-hover:bg-pink-50 group-hover:text-pink-600"
+    ${
+      isActive
+        ? "bg-pink-50 text-pink-500"
+        : "bg-gray-50 text-black/60 group-hover:bg-pink-50 group-hover:text-pink-600"
     }
   `}
->
-  <Icon size={18} weight="regular" className="w-[18px] h-[18px]" />
-</span>
-
-        <span className="flex-1 text-[13px] font-medium text-right">
-          {label}
+        >
+          <Icon size={18} weight="regular" className="w-[18px] h-[18px]" />
         </span>
+
+        <span className="flex-1 text-[13px] font-medium text-right">{label}</span>
 
         {badge !== undefined && badge !== 0 && (
           <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-to-br from-pink-400 via-pink-500 to-rose-600 text-white text-[10px] font-bold flex items-center justify-center">
@@ -102,17 +105,13 @@ const NavItem = ({
 
         <CaretLeft
           className={`w-4 h-4 transition-all duration-300 ${
-            isActive
-              ? "text-pink-500"
-              : "text-black/30 group-hover:text-pink-500 group-hover:-translate-x-1"
+            isActive ? "text-pink-500" : "text-black/30 group-hover:text-pink-500 group-hover:-translate-x-1"
           }`}
         />
       </div>
     )}
   </NavLink>
 );
-
-
 
 const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
@@ -198,7 +197,10 @@ const Navbar = () => {
     });
   };
 
-  const goTo = (href: string) => { setMenuOpen(false); navigate(href); };
+  const goTo = (href: string) => {
+    setMenuOpen(false);
+    navigate(href);
+  };
 
   const sideSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,7 +210,10 @@ const Navbar = () => {
   };
 
   return (
-    <header className="fixed top-0 inset-x-0 z-50 bg-white backdrop-blur-xl border-b border-black/5 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.2)]" dir="rtl">
+    <header
+      className="fixed top-0 inset-x-0 z-50 bg-white backdrop-blur-xl border-b border-black/5 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.2)]"
+      dir="rtl"
+    >
       <div className="container mx-auto px-4 md:px-8">
         <div className="relative flex items-center justify-between h-16 md:h-20">
           {/* Right (in RTL): menu + search */}
@@ -224,7 +229,7 @@ const Navbar = () => {
                   "
                   aria-label="القائمة"
                 >
-                  <List size={20} weight="regular" className="text-black/80 group-hover:text-black transition" />               
+                  <List size={20} weight="regular" className="text-black/80 group-hover:text-black transition" />
                 </button>
               </SheetTrigger>
               <SheetContent
@@ -262,7 +267,6 @@ const Navbar = () => {
                       <NavItem to="/home" icon={House} label="الرئيسية" />
                       <NavItem to="/categories" icon={SquaresFour} label="جميع الأقسام" />
                       <NavItem to="/products" icon={Package} label="جميع المنتجات" />
-                      <NavItem to="/comparison" icon={TrendUp} label="مقارنة المنتجات" />
                       <NavItem to="/seasonal-offers" icon={Tag} label="العروض الموسمية" />
                       <NavItem to="/new-arrivals" icon={Package} label="وصل حديثاً" />
                       <NavItem to="/best-sellers" icon={Crown} label="الأكثر مبيعاً" />
@@ -276,14 +280,13 @@ const Navbar = () => {
 
                     <Section label="معلومات">
                       <NavItem to="/store-info" icon={MapPin} label="معلومات المتجر" />
-                    
                     </Section>
                   </nav>
-                <div className="border-t border-border px-6 py-5 bg-white">
-                  {user ? (
-                    <button
-                      onClick={handleLogout}
-                      className="
+                  <div className="border-t border-border px-6 py-5 bg-white">
+                    {user ? (
+                      <button
+                        onClick={handleLogout}
+                        className="
                         w-full flex items-center justify-center gap-2
                         py-3
 
@@ -305,15 +308,15 @@ const Navbar = () => {
 
                         active:scale-[0.98]
                       "
-                    >
-                      <SignOut size={18} weight="bold" />
-                      <span className="relative z-10">تسجيل الخروج</span>
-                      <span className="group absolute bottom-0 left-0 w-0 h-[1px] bg-pink-500 transition-all duration-300 group-hover:w-full" />
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => goTo("/auth")}
-                      className="
+                      >
+                        <SignOut size={18} weight="bold" />
+                        <span className="relative z-10">تسجيل الخروج</span>
+                        <span className="group absolute bottom-0 left-0 w-0 h-[1px] bg-pink-500 transition-all duration-300 group-hover:w-full" />
+                      </button>
+                    ) : (
+                      <button
+                        onClick={() => goTo("/auth")}
+                        className="
                         w-full flex items-center justify-center gap-2
                         py-3
 
@@ -335,16 +338,15 @@ const Navbar = () => {
 
                         active:scale-[0.98]
                       "
-                    >
-                      <SignIn size={18} weight="bold" />
-                      <span className="relative z-10">تسجيل الدخول</span>
-                      <span className="group absolute bottom-0 left-0 w-0 h-[1px] bg-pink-500 transition-all duration-300 group-hover:w-full" />
-                    </button>
-                  )}
-                </div>
+                      >
+                        <SignIn size={18} weight="bold" />
+                        <span className="relative z-10">تسجيل الدخول</span>
+                        <span className="group absolute bottom-0 left-0 w-0 h-[1px] bg-pink-500 transition-all duration-300 group-hover:w-full" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </SheetContent>
-              
             </Sheet>
             <button
               onClick={() => setIsSearchOpen((v) => !v)}
@@ -358,7 +360,11 @@ const Navbar = () => {
               {isSearchOpen ? (
                 <X className="w-5 h-5 text-pink-500 transition" />
               ) : (
-                <MagnifyingGlass size={20} weight="regular" className="text-black/80 group-hover:text-pink-500 transition" />
+                <MagnifyingGlass
+                  size={20}
+                  weight="regular"
+                  className="text-black/80 group-hover:text-pink-500 transition"
+                />
               )}
             </button>
           </div>
@@ -374,7 +380,7 @@ const Navbar = () => {
               text-black/80
             "
           >
-            <span>FLAMINGO</span>
+            <img src="/icons/flamingo.jpeg" alt="Flamingo" className="w-12 h-12" />
           </Link>
 
           {/* Left (RTL): account, wishlist, bag */}
@@ -397,9 +403,14 @@ const Navbar = () => {
                 <DropdownMenuLabel className="text-xs">اختر العملة</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 {currencies.map((c) => (
-                  <DropdownMenuItem key={c.key} onClick={() => setMode(c.key)} className="justify-between gap-20 cursor-pointer">
+                  <DropdownMenuItem
+                    key={c.key}
+                    onClick={() => setMode(c.key)}
+                    className="justify-between gap-20 cursor-pointer"
+                  >
                     <span className="flex items-center gap-2 text-sm">
-                      <span>{c.flag}</span>{c.label}
+                      <span>{c.flag}</span>
+                      {c.label}
                     </span>
                     {mode === c.key && <span className="text-[10px] text-primary">●</span>}
                   </DropdownMenuItem>
@@ -418,7 +429,8 @@ const Navbar = () => {
               <ShoppingCart size={20} weight="fill" className="text-black/80" />
 
               {cartCount > 0 && (
-                <span className="
+                <span
+                  className="
                   absolute -top-1 -left-1
                   min-w-[18px] h-[18px]
                   px-1.5
@@ -427,21 +439,25 @@ const Navbar = () => {
                   text-white text-[10px] font-bold
                   flex items-center justify-center
                   shadow-md
-                ">
+                "
+                >
                   {cartCount}
                 </span>
               )}
             </button>
           </div>
         </div>
-
       </div>
 
       {isSearchOpen && (
         <div className="border-b bg-white/90 backdrop-blur-xl animate-in fade-in duration-200">
           <form onSubmit={submit} className="container mx-auto px-4 py-4">
             <div className="relative">
-              <MagnifyingGlass size={18} weight="bold" className="absolute right-3 top-1/2 -translate-y-1/2 text-black/60" />
+              <MagnifyingGlass
+                size={18}
+                weight="bold"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-black/60"
+              />
 
               <input
                 autoFocus
@@ -460,7 +476,6 @@ const Navbar = () => {
                 "
                 dir="rtl"
               />
-
             </div>
           </form>
         </div>

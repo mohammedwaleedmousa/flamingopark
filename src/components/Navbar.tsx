@@ -262,7 +262,6 @@ const Navbar = () => {
                       <NavItem to="/home" icon={House} label="الرئيسية" />
                       <NavItem to="/categories" icon={SquaresFour} label="جميع الأقسام" />
                       <NavItem to="/products" icon={Package} label="جميع المنتجات" />
-                      <NavItem to="/comparison" icon={TrendUp} label="مقارنة المنتجات" />
                       <NavItem to="/seasonal-offers" icon={Tag} label="العروض الموسمية" />
                       <NavItem to="/new-arrivals" icon={Package} label="وصل حديثاً" />
                       <NavItem to="/best-sellers" icon={Crown} label="الأكثر مبيعاً" />

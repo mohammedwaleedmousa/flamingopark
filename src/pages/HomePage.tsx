@@ -487,7 +487,7 @@ const HomePage = () => {
             key={e.title}
             className="
               bg-background
-              py-16 md:py-28
+              py-1 md:py-28
 
               opacity-0
               translate-y-6

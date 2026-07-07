@@ -295,24 +295,25 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
 const fallbackEditorial: EditorialItem[] = [
   {
     eyebrow: "Featured Collection",
-    title: "أناقة تدوم",
-    body: "اكتشف مجموعة مختارة بعناية من القطع العصرية المصممة لتمنحك إطلالة متجددة تجمع بين الجودة والتفاصيل الراقية.",
-    cta: "اكتشف اختياراتنا المميزة",
+    title: "أناقة تتجاوز الزمن",
+    body: "قطع مختارة بعناية تجمع بين الرقي، الحرفية، والتصميم العصري لتمنحك حضوراً استثنائياً.",
+    cta: "اكتشف المجموعة",
     href: "/products?filter=featured",
-    image: "https://images.unsplash.com/photo-1539109136881-3be0616acf4b?w=1400&q=90",
+    image:
+      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=1800&q=95",
     reverse: false,
   },
 
   {
     eyebrow: "Flamingo Collection",
-    title: "متجر فلامنجو",
-    body: "نقدم مجموعة مختارة من الأزياء والإكسسوارات التي تجمع بين الأناقة العصرية والجودة العالية لتمنحك تجربة تسوق مميزة في كل موسم.",
+    title: "لغة خاصة من الأناقة",
+    body: "تجربة تسوق فاخرة تقدم لك تصاميم مختارة بعناية لعشاق التفاصيل والجمال.",
     cta: "استكشف المتجر",
-    href: "/about",
-    image: "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1400&q=90",
+    href: "/store-info",
+    image:
+      "https://images.unsplash.com/photo-1496217590455-aa63a8350eea?w=1800&q=95",
     reverse: true,
-  }
-
+  },
 ];
 
 const HomePage = () => {
@@ -577,6 +578,7 @@ const HomePage = () => {
 
           </section>
         ))}
+        
         {/* Best Sellers */}
         {bestSellers.length > 0 && (
           <section className="py-20 md:py-28 bg-muted">
@@ -625,7 +627,7 @@ const HomePage = () => {
 
           {/* BACKGROUND IMAGE */}
           <motion.img
-            src={getHomeContent("home_campaign_image", "https://images.unsplash.com/photo-1469334031218-e382a71b716b?w=1800&q=90")}
+            src={getHomeContent("home_campaign_image","https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=1800&q=90")}
             alt="Flamingo campaign"
             loading="lazy"
             initial={{ scale: 1.15 }}

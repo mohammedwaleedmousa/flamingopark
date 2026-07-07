@@ -371,7 +371,7 @@ const CheckoutPage = () => {
 
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
-      const insertOrder = async (payload: Record<string, unknown>) => {
+      const insertOrder = async (payload: any) => {
         const { data, error } = await supabase.from("orders").insert(payload).select().single();
         if (error) throw error;
         return data;

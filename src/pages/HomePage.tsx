@@ -555,7 +555,7 @@ const HomePage = () => {
                       inline-flex items-center gap-3
 
                       text-[11px]
-                      tracking-[0.12em]
+                      tracking-[0.15em]
                       uppercase
 
                       text-pink-500

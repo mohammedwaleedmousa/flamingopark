@@ -374,7 +374,7 @@ const Navbar = () => {
               text-black/80
             "
           >
-            <span>FLAMINGO</span>
+            <img src="/icons/flamingo.jpeg" alt="Flamingo" className="w-12 h-12" />
           </Link>
 
           {/* Left (RTL): account, wishlist, bag */}

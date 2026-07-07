@@ -11,7 +11,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle, X } from "lucide-react";
+import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle, X, User, Home, Package, CheckCircle2, ChevronLeft, ChevronRight, Mail } from "lucide-react";
 import {
   SavedAddress,
   migrateLegacyCheckoutInfo,
@@ -83,6 +83,9 @@ const CheckoutPage = () => {
   const [addressOwnerKey, setAddressOwnerKey] = useState("guest");
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [email, setEmail] = useState("");
+  const [step, setStep] = useState<1 | 2 | 3 | 4 | 5>(1);
+  const [showMobileSummary, setShowMobileSummary] = useState(false);
 
   const subtotal = getCartTotal();
   const currency = "ر.ي";
@@ -497,7 +500,7 @@ const CheckoutPage = () => {
         customer_phone: customerPhone,
         customer_address: formData.address || "-",
         customer_city: formData.city || "",
-        customer_notes: formData.notes || null,
+        customer_notes: [formData.notes, email ? `Email: ${email}` : null].filter(Boolean).join(" | ") || null,
         country: country === "GLOBAL" ? "YE" : country || "YE",
         currency_mode: currencyMode,
         items: orderItems,
@@ -576,29 +579,89 @@ const CheckoutPage = () => {
     <div className="min-h-screen bg-background">
       <Navbar />
       <CartDrawer />
-      <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4">
+      <main className="pt-24 pb-32">
+        <div className="container mx-auto px-4 max-w-6xl">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="font-heading text-3xl md:text-4xl text-foreground mb-8 text-center"
+            className="font-heading text-2xl md:text-4xl text-foreground mb-6 text-center"
           >
-            إتمام <span className="text-gold">الطلب</span>
+            إتمام <span className="text-primary">الطلب</span>
           </motion.h1>
-          
+
+          {/* Stepper */}
+          {(() => {
+            const steps = [
+              { n: 1, label: "المعلومات", icon: User },
+              { n: 2, label: "العنوان", icon: Home },
+              { n: 3, label: "الشحن", icon: Truck },
+              { n: 4, label: "الدفع", icon: CreditCard },
+              { n: 5, label: "المراجعة", icon: CheckCircle2 },
+            ] as const;
+            return (
+              <div className="mb-8">
+                <div className="flex items-center justify-between overflow-x-auto no-scrollbar">
+                  {steps.map((s, i) => {
+                    const active = step === s.n;
+                    const done = step > s.n;
+                    const Icon = s.icon;
+                    return (
+                      <div key={s.n} className="flex items-center flex-1 min-w-fit">
+                        <button
+                          type="button"
+                          onClick={() => step > s.n && setStep(s.n as 1|2|3|4|5)}
+                          className={`flex flex-col items-center gap-1 flex-shrink-0 ${step > s.n ? "cursor-pointer" : "cursor-default"}`}
+                        >
+                          <div className={`w-10 h-10 rounded-full flex items-center justify-center border-2 transition-all ${
+                            active ? "bg-primary text-primary-foreground border-primary scale-110 shadow-md" :
+                            done ? "bg-primary/90 text-primary-foreground border-primary" :
+                            "bg-background text-muted-foreground border-border"
+                          }`}>
+                            {done ? <CheckCircle2 className="w-5 h-5" /> : <Icon className="w-4 h-4" />}
+                          </div>
+                          <span className={`text-[11px] md:text-xs font-medium ${active ? "text-primary" : done ? "text-foreground" : "text-muted-foreground"}`}>
+                            {s.label}
+                          </span>
+                        </button>
+                        {i < steps.length - 1 && (
+                          <div className={`h-0.5 flex-1 mx-1 md:mx-2 mb-5 ${step > s.n ? "bg-primary" : "bg-border"}`} />
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            );
+          })()}
+
+          {/* Mobile summary toggle */}
+          <button
+            type="button"
+            onClick={() => setShowMobileSummary(v => !v)}
+            className="lg:hidden w-full mb-4 flex items-center justify-between p-3 bg-card border border-border rounded-lg"
+          >
+            <span className="text-sm font-medium">ملخص الطلب ({cart.length} منتج)</span>
+            <span className="font-heading text-primary">{total.toFixed(0)} {currency}</span>
+          </button>
+
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
+            <div className="lg:col-span-2 space-y-6">
+              {/* Step 1: Contact info */}
+              {step === 1 && (
               <motion.div
+                key="step1"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 className="bg-card border border-border rounded-lg p-6"
               >
-                <h2 className="font-heading text-xl text-foreground mb-6">معلومات التوصيل</h2>
+                <h2 className="font-heading text-xl text-foreground mb-6 flex items-center gap-2">
+                  <User className="w-5 h-5 text-primary" />
+                  معلومات الاتصال
+                </h2>
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-body text-muted-foreground mb-2">الاسم الكامل *</label>
-                      {isGuestLike ? (
                         <Input
                           value={formData.name}
                           onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -606,18 +669,9 @@ const CheckoutPage = () => {
                           dir="rtl"
                           placeholder="أدخل اسمك الكامل"
                         />
-                      ) : (
-                        <Input
-                          value={customer?.name || ""}
-                          disabled
-                          className="bg-muted/50 border-border text-foreground"
-                          dir="rtl"
-                        />
-                      )}
                     </div>
                     <div>
                       <label className="block text-sm font-body text-muted-foreground mb-2">رقم الهاتف *</label>
-                      {isGuestLike ? (
                         <Input
                           value={formData.phone}
                           onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -625,18 +679,39 @@ const CheckoutPage = () => {
                           dir="ltr"
                           placeholder="05xxxxxxxx"
                         />
-                      ) : (
-                        <Input
-                          value={customer?.phone || ""}
-                          disabled
-                          className="bg-muted/50 border-border text-foreground"
-                          dir="ltr"
-                        />
-                      )}
                     </div>
                   </div>
+                  <div>
+                    <label className="block text-sm font-body text-muted-foreground mb-2 flex items-center gap-1">
+                      <Mail className="w-4 h-4" />
+                      البريد الإلكتروني (اختياري)
+                    </label>
+                    <Input
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="bg-background border-border text-foreground"
+                      dir="ltr"
+                      placeholder="you@example.com"
+                      type="email"
+                    />
+                  </div>
+                </div>
+              </motion.div>
+              )}
 
-                  {/* Address Fields */}
+              {/* Step 2: Address */}
+              {step === 2 && (
+              <motion.div
+                key="step2"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-card border border-border rounded-lg p-6"
+              >
+                <h2 className="font-heading text-xl text-foreground mb-6 flex items-center gap-2">
+                  <Home className="w-5 h-5 text-primary" />
+                  عنوان الشحن
+                </h2>
+                <div className="space-y-4">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-body text-muted-foreground mb-2">المحافظة/المدينة *</label>
@@ -659,8 +734,6 @@ const CheckoutPage = () => {
                       />
                     </div>
                   </div>
-
-                  {/* Notes */}
                   <div>
                     <label className="block text-sm font-body text-muted-foreground mb-2">ملاحظات إضافية</label>
                     <textarea
@@ -672,7 +745,6 @@ const CheckoutPage = () => {
                       rows={3}
                     />
                   </div>
-
                   {savedAddresses.length > 0 && (
                     <div>
                       <label className="block text-sm font-body text-muted-foreground mb-2">العناوين المحفوظة</label>
@@ -690,7 +762,6 @@ const CheckoutPage = () => {
                       </select>
                     </div>
                   )}
-
                   <div className="flex flex-wrap gap-2">
                     <Button type="button" variant="outline" onClick={saveCustomerInfo}>
                       حفظ المعلومات
@@ -706,16 +777,18 @@ const CheckoutPage = () => {
                   </div>
                 </div>
               </motion.div>
+              )}
 
-              {/* Delivery */}
+              {/* Step 3: Delivery */}
+              {step === 3 && (
               <motion.div
+                key="step3"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
                 className="bg-card border border-border rounded-lg p-6"
               >
                 <h2 className="font-heading text-xl text-foreground mb-6 flex items-center gap-2">
-                  <Truck className="w-5 h-5 text-gold" />
+                  <Truck className="w-5 h-5 text-primary" />
                   شركة التوصيل
                 </h2>
                 {deliveryCompanies.length > 0 ? (
@@ -724,12 +797,15 @@ const CheckoutPage = () => {
                       <button
                         key={company.id}
                         onClick={() => setSelectedDelivery(company.id)}
-                        className={`p-4 border rounded-lg text-right transition-all ${selectedDelivery === company.id ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}
+                        className={`p-4 border-2 rounded-lg text-right transition-all ${selectedDelivery === company.id ? "border-primary bg-primary/5 shadow-sm" : "border-border hover:border-primary/50"}`}
                       >
-                        <h3 className="font-heading text-foreground">{company.name}</h3>
-                        <p className="text-sm text-muted-foreground font-body mt-1">
-                          {company.base_fee} {currency} {company.delivery_days && `• ${company.delivery_days}`}
-                        </p>
+                        <div className="flex items-center justify-between">
+                          <h3 className="font-heading text-foreground">{company.name}</h3>
+                          <span className="text-sm font-bold text-primary">{company.base_fee} {currency}</span>
+                        </div>
+                        {company.delivery_days && (
+                          <p className="text-xs text-muted-foreground font-body mt-1">مدة التوصيل: {company.delivery_days}</p>
+                        )}
                       </button>
                     ))}
                   </div>
@@ -737,22 +813,27 @@ const CheckoutPage = () => {
                   <p className="text-muted-foreground text-center py-4">لا توجد شركات توصيل متاحة</p>
                 )}
               </motion.div>
+              )}
 
-              {/* Payment */}
+              {/* Step 4: Payment */}
+              {step === 4 && (
               <motion.div
+                key="step4"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
                 className="bg-card border border-border rounded-lg p-6"
               >
-                <h2 className="font-heading text-xl text-foreground mb-6">طريقة الدفع</h2>
+                <h2 className="font-heading text-xl text-foreground mb-6 flex items-center gap-2">
+                  <CreditCard className="w-5 h-5 text-primary" />
+                  طريقة الدفع
+                </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("cod")}
-                    className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${paymentMethod === "cod" ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}
+                    className={`p-4 border-2 rounded-lg flex items-center gap-3 transition-all ${paymentMethod === "cod" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
                   >
-                    <Banknote className="w-6 h-6 text-gold" />
+                    <Banknote className="w-6 h-6 text-primary" />
                     <div className="text-right">
                       <h3 className="font-heading text-foreground">الدفع عند الاستلام</h3>
                       <p className="text-xs text-muted-foreground font-body">Cash on Delivery</p>
@@ -761,21 +842,19 @@ const CheckoutPage = () => {
                   <button
                     type="button"
                     onClick={() => setPaymentMethod("bank")}
-                    className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${paymentMethod === "bank" ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}
+                    className={`p-4 border-2 rounded-lg flex items-center gap-3 transition-all ${paymentMethod === "bank" ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"}`}
                   >
-                    <CreditCard className="w-6 h-6 text-gold" />
+                    <CreditCard className="w-6 h-6 text-primary" />
                     <div className="text-right">
                       <h3 className="font-heading text-foreground">تحويل بنكي</h3>
                       <p className="text-xs text-muted-foreground font-body">Bank Transfer</p>
                     </div>
                   </button>
                 </div>
-
-                {/* COD regions */}
                 {paymentMethod === "cod" && (
                   <div className="bg-muted rounded-lg p-4 space-y-3">
                     <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                      <MapPin className="w-4 h-4 text-gold" />
+                      <MapPin className="w-4 h-4 text-primary" />
                       <span>اختر منطقة الاستلام *</span>
                     </div>
                     {codRegions.length > 0 ? (
@@ -785,7 +864,7 @@ const CheckoutPage = () => {
                             key={region.id}
                             type="button"
                             onClick={() => setSelectedRegion(region.id)}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedRegion === region.id ? "bg-gold text-white border-gold" : "bg-background border border-border text-foreground hover:border-gold/50"}`}
+                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedRegion === region.id ? "bg-primary text-primary-foreground border-primary" : "bg-background border border-border text-foreground hover:border-primary/50"}`}
                           >
                             {region.region_name_ar}
                           </button>
@@ -799,8 +878,6 @@ const CheckoutPage = () => {
                     )}
                   </div>
                 )}
-
-                {/* Bank accounts */}
                 {paymentMethod === "bank" && bankAccounts.length > 0 && (
                   <div className="bg-muted rounded-lg p-4 space-y-4">
                     <p className="text-sm text-muted-foreground font-body">يرجى التحويل إلى أحد الحسابات التالية:</p>
@@ -815,7 +892,7 @@ const CheckoutPage = () => {
                         <button
                           type="button"
                           onClick={() => handleCopyAccount(acc.account)}
-                          className="p-2 text-gold hover:bg-gold/10 rounded-md transition-colors"
+                          className="p-2 text-primary hover:bg-primary/10 rounded-md transition-colors"
                         >
                           <Copy className="w-4 h-4" />
                         </button>
@@ -823,38 +900,143 @@ const CheckoutPage = () => {
                     ))}
                   </div>
                 )}
+
+                {/* Coupon inside payment step */}
+                <div className="mt-6 pt-6 border-t border-border">
+                  <h3 className="font-heading text-sm text-foreground mb-3">لديك كود خصم؟</h3>
+                  <div className="flex gap-2">
+                    <Input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="أدخل كود الخصم" />
+                    <Button type="button" onClick={applyCoupon} variant="outline" className="flex-shrink-0">تطبيق</Button>
+                  </div>
+                  {discountAmount > 0 && (
+                    <p className="mt-2 text-green-600 text-sm font-medium">تم تطبيق خصم: {discountAmount.toFixed(2)} {currency}</p>
+                  )}
+                </div>
               </motion.div>
+              )}
+
+              {/* Step 5: Review */}
+              {step === 5 && (
+              <motion.div
+                key="step5"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                className="bg-card border border-border rounded-lg p-6 space-y-5"
+              >
+                <h2 className="font-heading text-xl text-foreground flex items-center gap-2">
+                  <CheckCircle2 className="w-5 h-5 text-primary" />
+                  مراجعة الطلب
+                </h2>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-heading text-foreground">معلومات الاتصال</span>
+                      <button type="button" onClick={() => setStep(1)} className="text-xs text-primary hover:underline">تعديل</button>
+                    </div>
+                    <p className="text-muted-foreground">{formData.name}</p>
+                    <p className="text-muted-foreground" dir="ltr">{formData.phone}</p>
+                    {email && <p className="text-muted-foreground text-xs" dir="ltr">{email}</p>}
+                  </div>
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-heading text-foreground">عنوان الشحن</span>
+                      <button type="button" onClick={() => setStep(2)} className="text-xs text-primary hover:underline">تعديل</button>
+                    </div>
+                    <p className="text-muted-foreground">{formData.city}</p>
+                    <p className="text-muted-foreground">{formData.address}</p>
+                    {formData.notes && <p className="text-xs text-muted-foreground mt-1">ملاحظات: {formData.notes}</p>}
+                  </div>
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-heading text-foreground">شركة التوصيل</span>
+                      <button type="button" onClick={() => setStep(3)} className="text-xs text-primary hover:underline">تعديل</button>
+                    </div>
+                    <p className="text-muted-foreground">{selectedCompany?.name || "-"}</p>
+                    <p className="text-xs text-muted-foreground">رسوم: {deliveryFee} {currency}</p>
+                  </div>
+                  <div className="p-4 bg-muted/50 rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="font-heading text-foreground">طريقة الدفع</span>
+                      <button type="button" onClick={() => setStep(4)} className="text-xs text-primary hover:underline">تعديل</button>
+                    </div>
+                    <p className="text-muted-foreground">{paymentMethod === "cod" ? "الدفع عند الاستلام" : "تحويل بنكي"}</p>
+                    {paymentMethod === "cod" && selectedRegion && (
+                      <p className="text-xs text-muted-foreground">المنطقة: {codRegions.find(r => r.id === selectedRegion)?.region_name_ar}</p>
+                    )}
+                  </div>
+                </div>
+
+                <div className="p-4 bg-primary/5 border border-primary/20 rounded-lg text-sm text-foreground">
+                  <p className="flex items-start gap-2">
+                    <AlertCircle className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    بمتابعة الطلب أنت توافق على شروط المتجر. سيتم إرسال الفاتورة تلقائياً وإتاحتها للأدمن.
+                  </p>
+                </div>
+              </motion.div>
+              )}
+
+              {/* Navigation buttons */}
+              <div className="flex items-center justify-between gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => step > 1 && setStep((step - 1) as 1|2|3|4|5)}
+                  disabled={step === 1}
+                  className="gap-1"
+                >
+                  <ChevronRight className="w-4 h-4" />
+                  السابق
+                </Button>
+                {step < 5 ? (
+                  <Button
+                    type="button"
+                    onClick={() => {
+                      // per-step validation
+                      if (step === 1) {
+                        if (!formData.name.trim() || !formData.phone.trim())
+                          return toast({ title: "خطأ", description: "يرجى إدخال الاسم ورقم الهاتف", variant: "destructive" });
+                      }
+                      if (step === 2) {
+                        if (!formData.city.trim() || !formData.address.trim())
+                          return toast({ title: "خطأ", description: "يرجى إدخال المدينة والعنوان", variant: "destructive" });
+                      }
+                      if (step === 3) {
+                        if (!selectedDelivery)
+                          return toast({ title: "خطأ", description: "يرجى اختيار شركة التوصيل", variant: "destructive" });
+                      }
+                      if (step === 4) {
+                        if (paymentMethod === "cod" && codRegions.length > 0 && !selectedRegion)
+                          return toast({ title: "خطأ", description: "يرجى اختيار منطقة الاستلام", variant: "destructive" });
+                      }
+                      setStep((step + 1) as 1|2|3|4|5);
+                    }}
+                    className="gap-1"
+                  >
+                    التالي
+                    <ChevronLeft className="w-4 h-4" />
+                  </Button>
+                ) : (
+                  <Button
+                    type="button"
+                    onClick={handleSubmit as any}
+                    disabled={isSubmitting}
+                    className="gap-2 bg-primary hover:bg-primary/90 text-primary-foreground"
+                  >
+                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />}
+                    تأكيد الطلب
+                  </Button>
+                )}
+              </div>
             </div>
 
-            {/* Beneficiary + Coupon + Summary */}
+            {/* Summary sidebar */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="space-y-6"
+              className={`space-y-6 ${showMobileSummary ? "" : "hidden lg:block"}`}
             >
-              {/* Coupon */}
-              <div className="bg-card border border-border rounded-lg p-6">
-                <h2 className="font-heading text-lg text-foreground mb-4">كود الخصم</h2>
-                <div className="flex gap-2">
-                  <Input
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                    placeholder="أدخل كود الخصم"
-                  />
-                  <Button onClick={applyCoupon} className="flex-shrink-0">
-                    تطبيق
-                  </Button>
-                </div>
-                {discountAmount > 0 && (
-                  <p className="mt-3 text-green-600 font-medium">
-                    تم تطبيق خصم: {discountAmount.toFixed(2)} {currency}
-                  </p>
-                )}
-              </div>
-
-              {/* Summary */}
-              <div className="bg-card border border-border rounded-lg p-6 space-y-4">
+              <div className="bg-card border border-border rounded-lg p-6 space-y-4 lg:sticky lg:top-24">
                 <h2 className="font-heading text-lg text-foreground mb-4">ملخص الطلب</h2>
                 
                 {/* Cart Items with Images */}
@@ -884,14 +1066,14 @@ const CheckoutPage = () => {
                           {item.selectedAccessories && item.selectedAccessories.length > 0 && (
                             <div className="flex flex-wrap gap-1 mt-1">
                               {item.selectedAccessories.map((acc, i) => (
-                                <span key={i} className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
+                                <span key={i} className="text-[10px] bg-primary/10 text-primary px-1.5 py-0.5 rounded">
                                   {acc.name_ar} +{acc.price * acc.quantity}
                                 </span>
                               ))}
                             </div>
                           )}
                         </div>
-                        <span className="text-sm font-medium text-gold">
+                        <span className="text-sm font-medium text-primary">
                           {((itemPrice + accessoriesTotal) * item.quantity).toFixed(0)} {currency}
                         </span>
                       </div>
@@ -921,13 +1103,10 @@ const CheckoutPage = () => {
                 )}
                 <div className="flex justify-between font-bold text-foreground text-lg pt-2 border-t border-border">
                   <span>الإجمالي</span>
-                  <span>
+                  <span className="text-primary">
                     {total.toFixed(2)} {currency}
                   </span>
                 </div>
-                <Button onClick={handleSubmit} className="w-full mt-4 bg-gold hover:bg-gold/90">
-                  إتمام الطلب
-                </Button>
               </div>
             </motion.div>
           </div>

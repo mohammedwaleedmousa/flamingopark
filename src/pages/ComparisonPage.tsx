@@ -91,7 +91,7 @@ const ComparisonPage = () => {
       .filter(Boolean);
     return Array.from(new Set([...repeated, ...csv]));
   }, [searchParams]);
-  const MAX_COMPARISON_ITEMS = 2;
+  const MAX_COMPARISON_ITEMS = 4;
   const [showLimitWarning, setShowLimitWarning] = useState(productIds.length > MAX_COMPARISON_ITEMS);
 
   useEffect(() => {
@@ -212,7 +212,7 @@ const ComparisonPage = () => {
             <div className="container mx-auto px-4 flex items-center gap-3 text-orange-800">
               <AlertCircle className="w-5 h-5 flex-shrink-0" />
               <span className="text-sm">
-                تم الحد الأقصى: يمكنك مقارنة {MAX_COMPARISON_ITEMS} منتجات فقط. تم عرض أول {MAX_COMPARISON_ITEMS} منتج.
+                يمكنك مقارنة حتى {MAX_COMPARISON_ITEMS} منتجات. تم عرض أول {MAX_COMPARISON_ITEMS}.
               </span>
             </div>
           </motion.div>
@@ -292,7 +292,7 @@ const ComparisonPage = () => {
             <div className="mb-8">
               <motion.div
                 layout
-                className="grid grid-cols-1 md:grid-cols-2 gap-6 auto-rows-max"
+                className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 auto-rows-max"
               >
                 {/* Product Cards */}
                 {products.map((product, idx) => {
@@ -422,6 +422,15 @@ const ComparisonPage = () => {
                     </motion.div>
                   );
                 })}
+                {products.length < MAX_COMPARISON_ITEMS && (
+                  <button
+                    onClick={() => navigate('/products')}
+                    className="min-h-[380px] rounded-xl border-2 border-dashed border-border hover:border-primary hover:bg-primary/5 transition flex flex-col items-center justify-center gap-3 text-muted-foreground hover:text-primary"
+                  >
+                    <div className="w-14 h-14 rounded-full bg-muted flex items-center justify-center text-3xl">+</div>
+                    <span className="text-sm font-heading">إضافة منتج للمقارنة</span>
+                  </button>
+                )}
               </motion.div>
             </div>
 
@@ -444,8 +453,8 @@ const ComparisonPage = () => {
                   { key: 'inStock', label: 'الحالة' },
                 ].map(spec => (
                   <motion.div key={spec.key} layout>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-card rounded-lg p-4 md:p-6 border border-border">
-                      <div className="font-heading text-foreground text-sm md:col-span-2">{spec.label}</div>
+                    <div className={`grid grid-cols-1 gap-4 bg-card rounded-lg p-4 md:p-6 border border-border ${products.length >= 3 ? 'md:grid-cols-4' : 'md:grid-cols-2'}`}>
+                      <div className="font-heading text-foreground text-sm md:col-span-full">{spec.label}</div>
                       {products.map(product => (
                         <div key={product.id} className="text-sm text-foreground bg-muted/30 p-3 rounded">
                           {spec.key === 'inStock' ? (
@@ -469,8 +478,8 @@ const ComparisonPage = () => {
 
                 {/* Price Comparison */}
                 <motion.div layout>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-card rounded-lg p-4 md:p-6 border border-border">
-                    <div className="font-heading text-foreground text-sm md:col-span-2">السعر الأصلي</div>
+                  <div className={`grid grid-cols-1 gap-4 bg-card rounded-lg p-4 md:p-6 border border-border ${products.length >= 3 ? 'md:grid-cols-4' : 'md:grid-cols-2'}`}>
+                    <div className="font-heading text-foreground text-sm md:col-span-full">السعر الأصلي</div>
                     {products.map(product => (
                       <div key={product.id} className="text-sm font-mono text-foreground bg-muted/30 p-3 rounded">
                         {product.originalPrice || product.price}
@@ -481,8 +490,8 @@ const ComparisonPage = () => {
 
                 {/* Discount Comparison */}
                 <motion.div layout>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-card rounded-lg p-4 md:p-6 border border-border">
-                    <div className="font-heading text-foreground text-sm md:col-span-2">الخصم</div>
+                  <div className={`grid grid-cols-1 gap-4 bg-card rounded-lg p-4 md:p-6 border border-border ${products.length >= 3 ? 'md:grid-cols-4' : 'md:grid-cols-2'}`}>
+                    <div className="font-heading text-foreground text-sm md:col-span-full">الخصم</div>
                     {products.map(product => (
                       <div key={product.id} className="text-sm font-semibold bg-muted/30 p-3 rounded">
                         {product.discount ? (
@@ -497,8 +506,8 @@ const ComparisonPage = () => {
 
                 {/* Rating Comparison */}
                 <motion.div layout>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-card rounded-lg p-4 md:p-6 border border-border">
-                    <div className="font-heading text-foreground text-sm md:col-span-2">التقييم</div>
+                  <div className={`grid grid-cols-1 gap-4 bg-card rounded-lg p-4 md:p-6 border border-border ${products.length >= 3 ? 'md:grid-cols-4' : 'md:grid-cols-2'}`}>
+                    <div className="font-heading text-foreground text-sm md:col-span-full">التقييم</div>
                     {products.map(product => (
                       <div key={product.id} className="text-sm bg-muted/30 p-3 rounded">
                         {(product as any).rating ? (

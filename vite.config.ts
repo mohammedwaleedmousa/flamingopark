@@ -11,26 +11,6 @@ export default defineConfig(({ mode }) => ({
   },
   build: {
     target: "es2018",
-    sourcemap: false,
-    cssCodeSplit: true,
-    chunkSizeWarningLimit: 350,
-    rollupOptions: {
-      output: {
-        manualChunks(id) {
-          if (!id.includes("node_modules")) return;
-
-          if (id.includes("recharts")) return "charts";
-          if (id.includes("xlsx")) return "excel";
-          if (id.includes("jspdf") || id.includes("html2canvas")) return "pdf-tools";
-          if (id.includes("@supabase")) return "supabase";
-          if (id.includes("react-router")) return "router";
-          if (id.includes("react") || id.includes("scheduler")) return "react-vendor";
-          if (id.includes("lucide-react") || id.includes("@radix-ui")) return "ui-vendor";
-
-          return "vendor";
-        },
-      },
-    },
   },
   plugins: [react(), mode === "development" && componentTagger()].filter(Boolean),
   resolve: {

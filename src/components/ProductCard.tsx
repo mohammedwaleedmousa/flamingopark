@@ -59,12 +59,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
   const aspectClass = size === 'large' ? 'aspect-[4/5] sm:aspect-[3/4]' : size === 'medium' ? 'aspect-[3/5] sm:aspect-[3/4]' : 'aspect-[4/8] sm:aspect-[3/4]';
 
   return (
-    <Link
-  to={`/product/${product.slug}`}
-  state={{ from: "products" }}
-  className="group block"
-  dir="rtl"
->
+    <Link to={`/product/${product.slug}`} className="group block" dir="rtl">
 
       <div
         onMouseEnter={() => setHovered(true)}

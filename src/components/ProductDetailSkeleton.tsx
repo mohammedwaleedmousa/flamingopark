@@ -6,7 +6,7 @@ const ProductDetailSkeleton = () => (
   <div className="min-h-screen bg-background" dir="rtl">
     <Navbar />
     <main className="pt-24 pb-32">
-      <div className="container mx-auto px-4 -mt-24 relative z-20">
+      <div className="container mx-auto px-4 py-8 md:py-12">
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 animate-fade-in">
           <div className="space-y-4">
             <Skeleton className="aspect-square w-full rounded-2xl" />

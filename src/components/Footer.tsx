@@ -36,15 +36,6 @@ const cols: { title: string; links: { label: string; href: string }[] }[] = [
 const Footer = () => {
   return (
     <footer className="bg-background text-foreground border-t border-border">
-      {/* Newsletter */}
-      <section className="border-b border-border">
-        <NewsletterSubscription 
-          className="bg-background"
-          variant="full"
-          title="انضم/ي إلى عالم فلامنجو"
-          description="احصل/ي على آخر إصداراتنا وقصص الموضة الحصرية مباشرةً في بريدك."
-        />
-      </section>
 
       {/* Link columns */}
       <div className="container mx-auto px-6 py-16">

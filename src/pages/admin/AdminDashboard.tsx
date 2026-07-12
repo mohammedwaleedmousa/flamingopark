@@ -481,18 +481,20 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
-      <header className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+    <div dir="rtl" className="mx-auto max-w-[1600px] space-y-10 px-6 lg:px-10 pb-10 bg-slate-50 min-h-screen">
+      <header className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white/90 backdrop-blur-xl px-10 py-8 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,#ffd6e7_0%,transparent_28%),radial-gradient(circle_at_bottom_left,#d7fff6_0%,transparent_25%),linear-gradient(to_bottom_right,#ffffff,#f8fafc)]" />
+      <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
         <div>
           <p className="text-xs text-muted-foreground uppercase tracking-wider">لوحة التحكم</p>
-          <h1 className="font-heading text-2xl md:text-3xl text-foreground mt-1">نظرة عامة على المتجر</h1>
-          <p className="text-sm text-muted-foreground mt-1">الأداء حسب الفترة المختارة مقارنة بالفترة السابقة لنفس المدة</p>
-          <p className="text-xs text-muted-foreground mt-1">الفترة الحالية: {rangeText}</p>
-          <p className="text-xs text-muted-foreground mt-1">المجاميع العامة موحدة إلى ر.س مع استبعاد الطلبات الملغاة، وبطاقات العملات تعرض القيمة الأصلية مع المعادل بالريال السعودي.</p>
+          <h1 className="font-heading text-4xl font-semibold tracking-tight text-slate-900 mt-2">نظرة عامة على المتجر</h1>
+          <p className="mt-3 max-w-2xl text-[15px] leading-7 text-slate-500">الأداء حسب الفترة المختارة مقارنة بالفترة السابقة لنفس المدة</p>
+          <p className="text-[11px] uppercase tracking-wider font-medium text-slate-500 mt-1">الفترة الحالية: {rangeText}</p>
+          <p className="text-[11px] uppercase tracking-wider font-medium text-slate-500 mt-1">المجاميع العامة موحدة إلى ر.س مع استبعاد الطلبات الملغاة، وبطاقات العملات تعرض القيمة الأصلية مع المعادل بالريال السعودي.</p>
         </div>
         <div className="w-full sm:w-auto">
-          <div className="flex flex-wrap items-center gap-1.5 rounded-2xl border border-pink-200/70 bg-gradient-to-r from-rose-50 via-pink-50 to-white px-2 py-1.5 shadow-sm">
-            <div className="flex items-center gap-1.5 rounded-xl border border-pink-200/80 bg-white/85 px-1.5 py-1 backdrop-blur-sm">
+          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-inner">
+            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
               <CalendarDays className="w-3.5 h-3.5 text-pink-600" />
               <DateRangePicker />
             </div>
@@ -520,6 +522,7 @@ const AdminDashboard = () => {
             </Button>
           </div>
         </div>
+        </div>
       </header>
 
       {partialIssues.length > 0 && (
@@ -530,11 +533,11 @@ const AdminDashboard = () => {
       )}
       {/* Today's Overview */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="relative p-5 rounded-2xl border-0 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group bg-white">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
           <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
           <p className="text-xs text-gray-500">مبيعات اليوم</p>
 
-          <h2 className="text-2xl font-semibold mt-2">
+          <h2 className="mt-3 text-3xl font-bold tracking-tight">
             {fmt(todayStats.revenue)} {currency}
           </h2>
 
@@ -543,11 +546,11 @@ const AdminDashboard = () => {
           </p>
         </div>
 
-        <div className="relative p-5 rounded-2xl border-0 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group bg-white">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
           <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
           <p className="text-xs text-muted-foreground">طلبات اليوم</p>
 
-          <h2 className="text-2xl font-semibold mt-2">{todayStats.orders}</h2>
+          <h2 className="mt-3 text-3xl font-bold tracking-tight">{todayStats.orders}</h2>
 
           <div className="mt-4 h-2 rounded-full bg-gray-100">
             <div className="h-full rounded-full bg-blue-500" style={{ width: `${clampPct(Math.abs(todayStats.ordersDelta))}%` }}></div>
@@ -557,22 +560,22 @@ const AdminDashboard = () => {
           </p>
         </div>
 
-        <div className="relative p-5 rounded-2xl border-0 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group bg-white">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
           <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
           <p className="text-xs text-muted-foreground">الزوار</p>
 
-          <h2 className="text-2xl font-semibold mt-2">{todayStats.visitors}</h2>
+          <h2 className="mt-3 text-3xl font-bold tracking-tight">{todayStats.visitors}</h2>
 
           <p className={cn("text-xs mt-3", todayStats.visitorsDelta >= 0 ? "text-emerald-600" : "text-rose-600")}>
             {todayStats.visitorsDelta >= 0 ? "+" : ""}{todayStats.visitorsDelta.toFixed(1)}% مقارنة بالأمس
           </p>
         </div>
 
-        <div className="relative p-5 rounded-2xl border-0 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group bg-white">
+        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
           <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
           <p className="text-xs text-muted-foreground">معدل التحويل</p>
 
-          <h2 className="text-2xl font-semibold mt-2">{todayStats.conversion}%</h2>
+          <h2 className="mt-3 text-3xl font-bold tracking-tight">{todayStats.conversion}%</h2>
 
           <div className="mt-4 h-2 rounded-full bg-gray-100">
             <div className="h-full rounded-full bg-emerald-500" style={{ width: `${clampPct(todayStats.conversion)}%` }}></div>
@@ -600,7 +603,7 @@ const AdminDashboard = () => {
         ))}
       </section>
       {/* Quick Actions */}
-      <section className="bg-white rounded-2xl border-0 shadow-sm hover:shadow-xl transition-all duration-300 p-5 relative overflow-hidden">
+      <section className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white p-7 shadow-sm transition-all duration-300 hover:shadow-xl">
         <div className="absolute inset-0 opacity-[0.05] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
         <div className="flex items-center justify-between mb-4">
           <div>
@@ -659,7 +662,7 @@ const AdminDashboard = () => {
       {/* KPI grid */}
       <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {kpis.map((k) => (
-          <div key={k.label} className="relative p-5 rounded-2xl border-0 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group bg-white">
+          <div key={k.label} className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
             <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
             <div className="flex items-start justify-between">
               <div className={cn("p-2.5 rounded-xl", k.bg)}>

@@ -323,13 +323,13 @@ const AdminProductsPage = () => {
                 <th className="p-3 w-10">
                   <Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} />
                 </th>
-                <th className="text-right p-3 font-heading">المنتج</th>
-                <th className="text-right p-3 font-heading">التصنيف</th>
-                <th className="text-right p-3 font-heading">السعر</th>
-                <th className="text-right p-3 font-heading">المخزون</th>
-                <th className="text-right p-3 font-heading">النطاق</th>
-                <th className="text-right p-3 font-heading">الحالة</th>
-                <th className="text-right p-3 font-heading">الإجراءات</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">المنتج</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">التصنيف</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">السعر</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">المخزون</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">النطاق</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">الحالة</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">الإجراءات</th>
               </tr>
             </thead>
             <tbody>

@@ -172,13 +172,13 @@ const AdminCustomersPage = () => {
             <thead className="bg-muted/40">
               <tr className="text-xs">
                 <th className="p-3 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} /></th>
-                <th className="text-right p-3 font-heading">الاسم</th>
-                <th className="text-right p-3 font-heading">الهاتف</th>
-                <th className="text-right p-3 font-heading">البلد</th>
-                <th className="text-right p-3 font-heading">إجمالي الإنفاق</th>
-                <th className="text-right p-3 font-heading">الطلبات</th>
-                <th className="text-right p-3 font-heading">التسجيل</th>
-                <th className="text-right p-3 font-heading">الإجراءات</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">الاسم</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">الهاتف</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">البلد</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">إجمالي الإنفاق</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">الطلبات</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">التسجيل</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">الإجراءات</th>
               </tr>
             </thead>
             <tbody>

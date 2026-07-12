@@ -211,14 +211,48 @@ const AdminOrdersPage = () => {
               <div className="flex-1 min-w-0">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
-                    <p className="font-mono text-xs text-primary">{order.order_number}</p>
+                    <td className="p-3">
+                      <div className="flex flex-col gap-1">
+                        <span className="inline-flex w-fit rounded-full bg-gradient-to-r from-pink-50 to-fuchsia-50 border border-pink-200 px-3 py-1 text-[11px] font-semibold text-pink-700 font-mono">
+                          #{order.order_number}
+                        </span>
+
+                        <span className="text-[10px] text-muted-foreground">
+                          {new Date(order.created_at).toLocaleTimeString("ar", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </span>
+                      </div>
+                    </td>
                     <p className="font-heading text-sm truncate">{order.customer_name}</p>
                   </div>
                   {getStatusBadge(order.status)}
                 </div>
                 <div className="flex items-center justify-between text-xs mt-1">
-                  <span className="text-muted-foreground">المتجر الموحد • {order.payment_method === "cod" ? "عند الاستلام" : "بنكي"}</span>
-                  <span className="font-heading text-primary">{parseFloat(String(order.total)).toFixed(0)} {currencyOf()}</span>
+                  <td className="p-3">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full px-3 py-1 text-xs font-medium",
+                        order.payment_method === "cod"
+                          ? "bg-orange-50 text-orange-700 border border-orange-200"
+                          : "bg-sky-50 text-sky-700 border border-sky-200"
+                      )}
+                    >
+                      {order.payment_method === "cod" ? "💵 عند الاستلام" : "🏦 تحويل بنكي"}
+                    </span>
+                  </td>
+                  <td className="p-3">
+                    <div className="inline-flex flex-col rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2">
+                      <span className="text-[10px] uppercase tracking-wide text-emerald-600">
+                        الإجمالي
+                      </span>
+
+                      <span className="font-bold text-emerald-700">
+                        {parseFloat(String(order.total)).toFixed(0)} {currencyOf()}
+                      </span>
+                    </div>
+                  </td>
                 </div>
                 <p className="text-[10px] text-muted-foreground mt-1">{new Date(order.created_at).toLocaleString("ar")}</p>
               </div>
@@ -237,19 +271,19 @@ const AdminOrdersPage = () => {
       </div>
 
       {/* Desktop table */}
-      <div className="hidden md:block bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="hidden md:block rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-muted/40">
-              <tr className="text-xs">
+            <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-50 via-white to-slate-50 border-b border-slate-200 backdrop-blur">
+              <tr className="text-[11px] uppercase tracking-wider text-slate-500">
                 <th className="p-3 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} /></th>
-                <th className="text-right p-3 font-heading">رقم الطلب</th>
-                <th className="text-right p-3 font-heading">العميل</th>
-                <th className="text-right p-3 font-heading">المجموع</th>
-                <th className="text-right p-3 font-heading">الدفع</th>
-                <th className="text-right p-3 font-heading">الحالة</th>
-                <th className="text-right p-3 font-heading">التاريخ</th>
-                <th className="text-right p-3 font-heading">الإجراءات</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">رقم الطلب</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">العميل</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">المجموع</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">الدفع</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">الحالة</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">التاريخ</th>
+                <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">الإجراءات</th>
               </tr>
             </thead>
             <tbody>
@@ -258,10 +292,29 @@ const AdminOrdersPage = () => {
               ) : orders.length === 0 ? (
                 <tr><td colSpan={8} className="p-12 text-center text-muted-foreground"><ShoppingCart className="w-10 h-10 mx-auto mb-3 opacity-50" /> لا توجد طلبات</td></tr>
               ) : orders.map(order => (
-                <tr key={order.id} className={cn("border-b border-border hover:bg-muted/30 transition-colors", selected.has(order.id) && "bg-primary/5")}>
+                <tr key={order.id} className={cn("border-b border-slate-100 hover:bg-gradient-to-r hover:from-pink-50/40 hover:to-fuchsia-50/20 transition-all duration-300", selected.has(order.id) && "bg-primary/5")}>
                   <td className="p-3"><Checkbox checked={selected.has(order.id)} onCheckedChange={() => toggleSelect(order.id)} /></td>
                   <td className="p-3 font-mono text-xs text-primary">{order.order_number}</td>
-                  <td className="p-3"><p className="font-body text-sm">{order.customer_name}</p><p className="text-xs text-muted-foreground" dir="ltr">{order.customer_phone}</p></td>
+                  <td className="p-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 text-white flex items-center justify-center font-semibold shadow-sm">
+                        {(order.customer_name || "?").charAt(0)}
+                      </div>
+
+                      <div className="min-w-0">
+                        <p className="font-semibold text-sm truncate">
+                          {order.customer_name}
+                        </p>
+
+                        <p
+                          className="text-xs text-muted-foreground font-mono"
+                          dir="ltr"
+                        >
+                          {order.customer_phone}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
                   <td className="p-3 font-heading text-primary text-sm">{parseFloat(String(order.total)).toFixed(0)} {currencyOf()}</td>
                   <td className="p-3 text-xs">{order.payment_method === "cod" ? "عند الاستلام" : "بنكي"}</td>
                   <td className="p-3">
@@ -270,12 +323,49 @@ const AdminOrdersPage = () => {
                       <SelectContent>{statusOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}</SelectContent>
                     </Select>
                   </td>
-                  <td className="p-3 text-xs text-muted-foreground">{new Date(order.created_at).toLocaleDateString("ar")}</td>
                   <td className="p-3">
-                    <div className="flex gap-1">
-                      <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => setSelectedOrder(order)}><Eye className="w-4 h-4" /></Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => openWhatsApp(order)}><MessageCircle className="w-4 h-4" /></Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setConfirmDelete({ id: order.id })}><Trash2 className="w-4 h-4" /></Button>
+                    <div className="flex flex-col text-xs">
+                      <span className="font-medium">
+                        {new Date(order.created_at).toLocaleDateString("ar")}
+                      </span>
+
+                      <span className="text-muted-foreground">
+                        {new Date(order.created_at).toLocaleTimeString("ar", {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                  </td>
+                  <td className="p-3">
+                    <div className="flex items-center gap-2 rounded-xl bg-slate-100/70 border border-slate-200 p-1.5 w-fit">
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-9 w-9 rounded-lg bg-white hover:bg-blue-50 hover:text-blue-600 shadow-sm transition-all duration-200 hover:scale-105"
+                        onClick={() => setSelectedOrder(order)}
+                      >
+                        <Eye className="w-4 h-4" />
+                      </Button>
+
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-9 w-9 rounded-lg bg-white text-green-600 hover:bg-green-50 hover:text-green-700 shadow-sm transition-all duration-200 hover:scale-105"
+                        onClick={() => openWhatsApp(order)}
+                      >
+                        <MessageCircle className="w-4 h-4" />
+                      </Button>
+
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        className="h-9 w-9 rounded-lg bg-white text-rose-600 hover:bg-rose-50 hover:text-rose-700 shadow-sm transition-all duration-200 hover:scale-105"
+                        onClick={() => setConfirmDelete({ id: order.id })}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+
                     </div>
                   </td>
                 </tr>

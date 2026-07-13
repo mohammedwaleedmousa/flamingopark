@@ -41,6 +41,6 @@ WHERE key = 'about_hero_title' AND content LIKE '%ERMgold%';
 
 -- Add whatsapp numbers if not already set
 INSERT INTO public.site_settings (key, value) VALUES
-  ('whatsapp_ye', '+967782676054'),
-  ('whatsapp_sa', '+966123456789')
+  ('whatsapp_ye', '"+967782676054"'),
+  ('whatsapp_sa', '"+966123456789"')
 ON CONFLICT (key) DO NOTHING;

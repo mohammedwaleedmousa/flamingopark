@@ -30,3 +30,7 @@ dist-ssr
 .env.production
 .env.development
 .vercel
+
+# Supabase local files
+supabase/.temp/
+.supabase/

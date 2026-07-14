@@ -1,6 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
+import TodayOverview from "@/components/admin/dashboard/TodayOverview";
+import CurrencySummary from "@/components/admin/dashboard/CurrencySummary";
+import QuickActions from "@/components/admin/dashboard/QuickActions";
+import KpiCards from "@/components/admin/dashboard/KpiCards";
+import DashboardHeader from "@/components/admin/dashboard/DashboardHeader";
 import {
   useRevenueSummary,
   useOrdersSummary,
@@ -33,6 +38,9 @@ import { AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianG
 import { Plus, PackagePlus, UserPlus, Receipt } from "lucide-react";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
+import DashboardAlerts from "@/components/admin/dashboard/DashboardAlerts";
+import RevenueChart from "@/components/admin/dashboard/RevenueChart";
+import RecentActivity from "@/components/admin/dashboard/RecentActivity";
 
 interface Kpi {
   revenue: number;
@@ -482,48 +490,9 @@ const AdminDashboard = () => {
 
   return (
     <div dir="rtl" className="mx-auto max-w-[1600px] space-y-10 px-6 lg:px-10 pb-10 bg-slate-50 min-h-screen">
-      <header className="relative overflow-hidden rounded-[24px] border border-slate-200 bg-white/90 backdrop-blur-xl px-10 py-8 shadow-[0_12px_40px_rgba(15,23,42,0.06)]">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,#ffd6e7_0%,transparent_28%),radial-gradient(circle_at_bottom_left,#d7fff6_0%,transparent_25%),linear-gradient(to_bottom_right,#ffffff,#f8fafc)]" />
-      <div className="relative flex flex-col lg:flex-row lg:items-end lg:justify-between gap-6">
-        <div>
-          <p className="text-xs text-muted-foreground uppercase tracking-wider">لوحة التحكم</p>
-          <h1 className="font-heading text-4xl font-semibold tracking-tight text-slate-900 mt-2">نظرة عامة على المتجر</h1>
-          <p className="mt-3 max-w-2xl text-[15px] leading-7 text-slate-500">الأداء حسب الفترة المختارة مقارنة بالفترة السابقة لنفس المدة</p>
-          <p className="text-[11px] uppercase tracking-wider font-medium text-slate-500 mt-1">الفترة الحالية: {rangeText}</p>
-          <p className="text-[11px] uppercase tracking-wider font-medium text-slate-500 mt-1">المجاميع العامة موحدة إلى ر.س مع استبعاد الطلبات الملغاة، وبطاقات العملات تعرض القيمة الأصلية مع المعادل بالريال السعودي.</p>
-        </div>
-        <div className="w-full sm:w-auto">
-          <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-slate-50 p-2 shadow-inner">
-            <div className="flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2">
-              <CalendarDays className="w-3.5 h-3.5 text-pink-600" />
-              <DateRangePicker />
-            </div>
-
-            <Button
-              asChild
-              size="sm"
-              className="h-8 bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white shadow-md transition-all duration-300 hover:scale-[1.03] rounded-xl px-3.5 text-xs"
-            >
-              <Link to="/admin/analytics">
-                <BarChart3 className="w-4 h-4 ml-1" />
-                التحليلات
-              </Link>
-            </Button>
-
-            <Button
-              asChild
-              size="sm"
-              className="h-8 bg-white border border-pink-200 text-pink-700 hover:bg-pink-50 shadow-sm transition-all duration-300 hover:scale-[1.03] rounded-xl px-3.5 text-xs"
-            >
-              <Link to="/admin/finance">
-                <Wallet className="w-4 h-4 ml-1" />
-                المالية
-              </Link>
-            </Button>
-          </div>
-        </div>
-        </div>
-      </header>
+      <DashboardHeader
+        rangeText={rangeText}
+      />
 
       {partialIssues.length > 0 && (
         <section className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">
@@ -531,332 +500,55 @@ const AdminDashboard = () => {
           <p className="text-xs mt-1">{partialIssues.join(" - ")}</p>
         </section>
       )}
+      {/* KPI */}
+      <KpiCards
+        kpis={kpis}
+        loading={loading}
+      />
+
       {/* Today's Overview */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-          <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
-          <p className="text-xs text-gray-500">مبيعات اليوم</p>
-
-          <h2 className="mt-3 text-3xl font-bold tracking-tight">
-            {fmt(todayStats.revenue)} {currency}
-          </h2>
-
-          <p className={cn("text-xs mt-3", todayStats.revenueDelta >= 0 ? "text-emerald-600" : "text-rose-600")}> 
-            {todayStats.revenueDelta >= 0 ? "+" : ""}{todayStats.revenueDelta.toFixed(1)}% مقارنة بالأمس
-          </p>
-        </div>
-
-        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-          <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
-          <p className="text-xs text-muted-foreground">طلبات اليوم</p>
-
-          <h2 className="mt-3 text-3xl font-bold tracking-tight">{todayStats.orders}</h2>
-
-          <div className="mt-4 h-2 rounded-full bg-gray-100">
-            <div className="h-full rounded-full bg-blue-500" style={{ width: `${clampPct(Math.abs(todayStats.ordersDelta))}%` }}></div>
-          </div>
-          <p className={cn("text-xs mt-2", todayStats.ordersDelta >= 0 ? "text-emerald-600" : "text-rose-600")}>
-            {todayStats.ordersDelta >= 0 ? "+" : ""}{todayStats.ordersDelta.toFixed(1)}% مقارنة بالأمس
-          </p>
-        </div>
-
-        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-          <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
-          <p className="text-xs text-muted-foreground">الزوار</p>
-
-          <h2 className="mt-3 text-3xl font-bold tracking-tight">{todayStats.visitors}</h2>
-
-          <p className={cn("text-xs mt-3", todayStats.visitorsDelta >= 0 ? "text-emerald-600" : "text-rose-600")}>
-            {todayStats.visitorsDelta >= 0 ? "+" : ""}{todayStats.visitorsDelta.toFixed(1)}% مقارنة بالأمس
-          </p>
-        </div>
-
-        <div className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-          <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
-          <p className="text-xs text-muted-foreground">معدل التحويل</p>
-
-          <h2 className="mt-3 text-3xl font-bold tracking-tight">{todayStats.conversion}%</h2>
-
-          <div className="mt-4 h-2 rounded-full bg-gray-100">
-            <div className="h-full rounded-full bg-emerald-500" style={{ width: `${clampPct(todayStats.conversion)}%` }}></div>
-          </div>
-          <p className={cn("text-xs mt-2", todayStats.conversionDelta >= 0 ? "text-emerald-600" : "text-rose-600")}>
-            {todayStats.conversionDelta >= 0 ? "+" : ""}{todayStats.conversionDelta.toFixed(1)}% مقارنة بالأمس
-          </p>
-        </div>
-      </section>
+      <TodayOverview
+        todayStats={todayStats}
+        currency={currency}
+        fmt={fmt}
+        clampPct={clampPct}
+      />
 
       {/* Multi-currency summary */}
-      <section className="grid grid-cols-1 md:grid-cols-3 gap-3">
-        {(["SAR", "YER_SOUTH", "YER_NORTH"] as CurrencyMode[]).map((mode) => (
-          <div key={mode} className="relative p-4 rounded-2xl border-0 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden group bg-white">
-            <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
-            <p className="text-xs text-muted-foreground">{CURRENCY_META[mode].label}</p>
-            <p className="text-lg font-semibold mt-1">
-              {fmt(revenueByCurrencyNative[mode].revenue)} {CURRENCY_META[mode].symbol}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">{fmt(revenueByCurrencyNative[mode].orders)} طلب</p>
-            <p className="text-xs text-violet-700 mt-1">
-              ما يعادل: {fmt(revenueByCurrency[mode].revenue)} ر.س
-            </p>
-          </div>
-        ))}
-      </section>
+      <CurrencySummary
+        revenueByCurrencyNative={revenueByCurrencyNative}
+        revenueByCurrency={revenueByCurrency}
+        currencyMeta={CURRENCY_META}
+        fmt={fmt}
+      />
+
       {/* Quick Actions */}
-      <section className="relative overflow-hidden rounded-[28px] border border-slate-200 bg-white p-7 shadow-sm transition-all duration-300 hover:shadow-xl">
-        <div className="absolute inset-0 opacity-[0.05] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="font-heading text-base">الإجراءات السريعة</h2>
-
-            <p className="text-xs text-muted-foreground">أكثر العمليات استخداماً</p>
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-          <Link
-            to="/admin/products/new"
-            className="group rounded-2xl border border-black/5 bg-white/80 backdrop-blur p-5 hover:border-pink-300 hover:bg-pink-50/80 transition"
-          >
-            <PackagePlus className="w-8 h-8 text-pink-500 mb-3 group-hover:scale-110 transition" />
-
-            <h3 className="font-medium">إضافة منتج</h3>
-
-            <p className="text-xs text-muted-foreground mt-1">إنشاء منتج جديد</p>
-          </Link>
-
-          <Link
-            to="/admin/orders"
-            className="group rounded-2xl border border-black/5 bg-white/80 backdrop-blur p-5 hover:border-blue-300 hover:bg-blue-50/80 transition"
-          >
-            <Receipt className="w-8 h-8 text-blue-500 mb-3 group-hover:scale-110 transition" />
-
-            <h3 className="font-medium">الطلبات</h3>
-
-            <p className="text-xs text-muted-foreground mt-1">مراجعة الطلبات</p>
-          </Link>
-
-          <Link
-            to="/admin/customers"
-            className="group rounded-2xl border border-black/5 bg-white/80 backdrop-blur p-5 hover:border-green-300 hover:bg-green-50/80 transition"
-          >
-            <UserPlus className="w-8 h-8 text-green-500 mb-3 group-hover:scale-110 transition" />
-
-            <h3 className="font-medium">العملاء</h3>
-
-            <p className="text-xs text-muted-foreground mt-1">إدارة العملاء</p>
-          </Link>
-
-          <Link
-            to="/admin/categories"
-            className="group rounded-2xl border border-black/5 bg-white/80 backdrop-blur p-5 hover:border-violet-300 hover:bg-violet-50/80 transition"
-          >
-            <Plus className="w-8 h-8 text-violet-500 mb-3 group-hover:scale-110 transition" />
-
-            <h3 className="font-medium">الأقسام</h3>
-
-            <p className="text-xs text-muted-foreground mt-1">إدارة التصنيفات</p>
-          </Link>
-        </div>
-      </section>
-      {/* KPI grid */}
-      <section className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {kpis.map((k) => (
-          <div key={k.label} className="relative overflow-hidden rounded-3xl border border-slate-200 bg-white p-6 shadow-sm transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl">
-            <div className="absolute inset-0 opacity-[0.06] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
-            <div className="flex items-start justify-between">
-              <div className={cn("p-2.5 rounded-xl", k.bg)}>
-                <k.icon className={cn("w-4.5 h-4.5", k.tint)} />
-              </div>
-              <span
-                className={cn(
-                  "text-xs px-2 py-0.5 rounded-full",
-                  k.delta >= 0 ? "text-emerald-600 bg-emerald-50" : "text-rose-600 bg-rose-50",
-                )}
-              >
-                {k.delta >= 0 ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-                {Math.abs(k.delta).toFixed(1)}%
-              </span>
-            </div>
-            <div className="mt-4">
-              <p className="text-xs text-muted-foreground">{k.label}</p>
-              {loading ? (
-                <Skeleton className="h-7 w-28 mt-1.5" />
-              ) : (
-                <p className="text-xl md:text-2xl font-heading text-foreground mt-1.5 tabular-nums">{k.value}</p>
-              )}
-            </div>
-          </div>
-        ))}
-      </section>
-
+      <QuickActions />
+      
       {/* Alerts */}
-      {(pendingCount > 0 || lowStock.length > 0) && (
-        <section className="grid md:grid-cols-2 gap-3">
-          {pendingCount > 0 && (
-            <div className="rounded-2xl bg-amber-50/90 ring-1 ring-amber-200 p-4 flex items-center justify-between shadow-sm">
-              <div className="flex items-center gap-3">
-                <div className="relative">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-pink-500 to-rose-500 flex items-center justify-center shadow-lg">
-                    <AlertTriangle className="w-5 h-5 text-white" />
-                  </div>
-
-                  {/* نقطة تنبيه (pulse) */}
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-500 rounded-full animate-ping" />
-                  <span className="absolute -top-1 -right-1 w-3 h-3 bg-red-600 rounded-full" />
-                </div>
-
-                <div>
-                  <p className="text-sm font-medium text-amber-900">{pendingCount} طلبات بانتظار المراجعة</p>
-                  <p className="text-xs text-amber-700/80">{rangeText}</p>
-                </div>
-              </div>
-              <Button asChild size="sm" variant="outline" className="border-amber-300">
-                <Link to="/admin/orders">
-                  عرض
-                  <ArrowUpRight className="w-3.5 h-3.5 mr-1" />
-                </Link>
-              </Button>
-            </div>
-          )}
-          {lowStock.length > 0 && (
-            <div className="rounded-2xl bg-rose-50/90 ring-1 ring-rose-200 p-4 shadow-sm">
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <Package className="w-4 h-4 text-rose-700" />
-                  <p className="text-sm font-medium text-rose-900">مخزون منخفض</p>
-                </div>
-                <Button asChild size="sm" variant="ghost">
-                  <Link to="/admin/products" className="text-rose-700">
-                    إدارة
-                  </Link>
-                </Button>
-              </div>
-              <ul className="space-y-1">
-                {lowStock.map((p) => (
-                  <li key={p.id} className="flex items-center justify-between text-xs text-rose-900/90">
-                    <span className="truncate">{p.name_ar}</span>
-                    <span className="tabular-nums">{p.stock} قطعة</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </section>
-      )}
+      <DashboardAlerts
+        pendingCount={pendingCount}
+        lowStock={lowStock}
+        rangeText={rangeText}
+      />
 
       {/* Revenue chart */}
-      <section className="bg-white rounded-2xl p-5 border-0 shadow-sm hover:shadow-xl transition-all duration-300 relative overflow-hidden">
-        <div className="absolute inset-0 opacity-[0.05] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
-        <div className="flex items-center justify-between mb-4">
-          <div>
-            <h2 className="font-heading text-base">الإيرادات اليومية</h2>
-            <p className="text-xs text-muted-foreground">آخر {rangeDays} يوم</p>
-          </div>
-          <Activity className="w-4 h-4 text-muted-foreground" />
-        </div>
-        <div className="h-64">
-          <ResponsiveContainer width="100%" height="100%">
-            <AreaChart data={chart} margin={{ top: 10, right: 0, left: 0, bottom: 0 }}>
-              <defs>
-                <linearGradient id="rev" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f1f5f9" vertical={false} />
-              <XAxis dataKey="date" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} width={40} />
-              <YAxis yAxisId="orders" orientation="right" tick={{ fontSize: 11, fill: "#94a3b8" }} tickLine={false} axisLine={false} width={36} />
-              <Tooltip
-                contentStyle={{ borderRadius: 12, border: "1px solid #e2e8f0", direction: "rtl" }}
-                formatter={(v: any, name: any) => {
-                  if (name === "طلبات") return [fmt(Number(v)), "طلبات"];
-                  return [`${fmt(Number(v))} ${currency}`, "إيراد"];
-                }}
-              />
-              <Area type="monotone" dataKey="revenue" name="إيراد" stroke="#8b5cf6" strokeWidth={2.5} fill="url(#rev)" />
-              <Area yAxisId="orders" type="monotone" dataKey="orders" name="طلبات" stroke="#0ea5e9" strokeWidth={2} fill="transparent" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
-      </section>
+      <RevenueChart
+        chart={chart}
+        rangeDays={rangeDays}
+        currency={currency}
+        fmt={fmt}
+      />
 
       {/* Recent activity */}
-      <section className="bg-white rounded-2xl border-0 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden relative">
-        <div className="absolute inset-0 opacity-[0.04] bg-gradient-to-br from-violet-500 via-pink-500 to-orange-400" />
-        <div className="px-5 py-4 border-b border-black/5 flex items-center justify-between">
-          <h2 className="font-heading text-base">آخر النشاطات</h2>
-          <Button asChild variant="ghost" size="sm">
-            <Link to="/admin/orders">عرض الكل</Link>
-          </Button>
-        </div>
-        <div className="divide-y divide-black/5">
-          {loading &&
-            Array.from({ length: 4 }).map((_, i) => (
-              <div key={i} className="px-5 py-3 flex items-center justify-between">
-                <Skeleton className="h-4 w-40" />
-                <Skeleton className="h-4 w-16" />
-              </div>
-            ))}
-          {!loading && recent.length === 0 && (
-            <p className="p-8 text-center text-sm text-muted-foreground">لا يوجد نشاط حديث</p>
-          )}
-          {!loading &&
-            recent.map((o, index) => (
-              <div
-                key={o.id}
-                className="px-5 py-4 flex items-start justify-between hover:bg-black/[0.02] transition-colors relative"
-              >
-                {/* Timeline line */}
-                {index !== recent.length - 1 && <span className="absolute left-6 top-10 w-px h-full bg-gray-100" />}
-
-                {/* Left side */}
-                <div className="flex items-center gap-3 min-w-0">
-                  {/* Avatar / Icon */}
-                  <div className="relative">
-                    <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-pink-100 to-rose-100 grid place-items-center text-sm font-bold text-rose-600 shadow-sm">
-                      {(o.customer_name || "?").charAt(0)}
-                    </div>
-
-                    {/* status dot */}
-                    <span className="absolute -bottom-1 -right-1 w-2 h-2 rounded-full bg-emerald-500 ring-2 ring-white" />
-                  </div>
-
-                  {/* Info */}
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-medium truncate">{o.customer_name || "عميل"}</p>
-
-                      {/* Badge type */}
-                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-gray-100 text-gray-600">طلب</span>
-                    </div>
-
-                    <p className="text-[11px] text-muted-foreground font-mono mt-0.5">#{o.order_number}</p>
-                  </div>
-                </div>
-
-                {/* Right side */}
-                <div className="text-left flex flex-col items-end gap-1">
-                  {/* status */}
-                  <span
-                    className={cn(
-                      "text-[10.5px] px-2 py-0.5 rounded-full ring-1",
-                      statusTone[o.status] || "bg-gray-50 text-gray-600 ring-gray-200",
-                    )}
-                  >
-                    {statusLabel[o.status] || o.status}
-                  </span>
-
-                  {/* amount */}
-                  <span className="text-sm font-semibold tabular-nums text-foreground">
-                    {fmt(toSar(parseFloat(o.total) || 0, o))} ر.س
-                  </span>
-                </div>
-              </div>
-            ))}
-        </div>
-      </section>
+      <RecentActivity
+        recent={recent}
+        loading={loading}
+        fmt={fmt}
+        toSar={toSar}
+        statusTone={statusTone}
+        statusLabel={statusLabel}
+      />
     </div>
   );
 };

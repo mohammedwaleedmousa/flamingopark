@@ -18,47 +18,50 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { useEffect, useState } from 'react';
 
-const groups: { label: string; items: { title: string; url: string; icon: any }[] }[] = [
+const groups: {
+  label: string;
+  items: { title: string; url: string; icon: any }[];
+}[] = [
   {
-    label: 'نظرة عامة',
+    label: 'لوحة التحكم',
     items: [
       { title: 'لوحة التحكم', url: '/admin', icon: LayoutDashboard },
-      { title: 'التحليل المالي', url: '/admin/finance', icon: Wallet },
-      { title: 'تحليل العملاء', url: '/admin/customer-intelligence', icon: Brain },
-      { title: 'التقارير والتحليلات', url: '/admin/analytics', icon: BarChart3 },
-      { title: 'الإيرادات', url: '/admin/revenue', icon: TrendingUp },
-      { title: 'تقرير الأرباح', url: '/admin/profit-report', icon: PieChart },
     ],
   },
+
+  {
+    label: 'الكتالوج',
+    items: [
+      { title: 'المنتجات', url: '/admin/products', icon: Package },
+      { title: 'الفئات', url: '/admin/categories', icon: Grid3X3 },
+      { title: 'الماركات', url: '/admin/brands', icon: Tag },
+      { title: 'الأقسام', url: '/admin/sections', icon: LayoutGrid },
+      { title: 'ربط الماركات بالأقسام', url: '/admin/brand-category-map', icon: Link2 },
+      { title: 'دليل العمل السريع', url: '/admin/catalog-workflow', icon: ListChecks },
+    ],
+  },
+
   {
     label: 'المبيعات',
     items: [
       { title: 'الطلبات', url: '/admin/orders', icon: ShoppingCart },
-      { title: 'الفواتير', url: '/admin/invoices', icon: Receipt },
       { title: 'العملاء', url: '/admin/customers', icon: Users },
+      { title: 'الفواتير', url: '/admin/invoices', icon: Receipt },
+      { title: 'المرتجعات', url: '/admin/refunds', icon: RotateCcw },
     ],
   },
+
   {
-    label: 'المحاسبة المالية',
+    label: 'المالية',
     items: [
+      { title: 'لوحة المالية', url: '/admin/finance', icon: Wallet },
       { title: 'دفتر اليومية', url: '/admin/ledger', icon: BookOpen },
-      { title: 'المرتجعات', url: '/admin/refunds', icon: RotateCcw },
       { title: 'المصروفات', url: '/admin/expenses', icon: Receipt },
       { title: 'طرق الدفع والتسويات', url: '/admin/payment-methods', icon: Wallet },
       { title: 'تسوية المخزون', url: '/admin/inventory-adjustments', icon: Boxes },
     ],
   },
-  {
-    label: 'الكتالوج',
-    items: [
-      { title: 'دليل العمل السريع', url: '/admin/catalog-workflow', icon: ListChecks },
-      { title: 'المنتجات', url: '/admin/products', icon: Package },
-      { title: 'الفئات', url: '/admin/categories', icon: Grid3X3 },
-      { title: 'الماركات', url: '/admin/brands', icon: Tag },
-      { title: 'ربط ماركات-أقسام', url: '/admin/brand-category-map', icon: Link2 },
-      { title: 'الأقسام', url: '/admin/sections', icon: LayoutGrid },
-    ],
-  },
+
   {
     label: 'التسويق',
     items: [
@@ -68,15 +71,32 @@ const groups: { label: string; items: { title: string; url: string; icon: any }[
       { title: 'التقييمات', url: '/admin/reviews', icon: Star },
     ],
   },
+
   {
-    label: 'العمليات',
+    label: 'الشحن',
     items: [
       { title: 'شركات التوصيل', url: '/admin/delivery', icon: Truck },
       { title: 'مناطق الدفع', url: '/admin/cod-regions', icon: MapPin },
+    ],
+  },
+
+  {
+    label: 'التقارير والتحليلات',
+    items: [
+      { title: 'لوحة التقارير', url: '/admin/analytics', icon: BarChart3 },
+      { title: 'تحليل العملاء', url: '/admin/customer-intelligence', icon: Brain },
+      { title: 'الإيرادات', url: '/admin/revenue', icon: TrendingUp },
+      { title: 'تقرير الأرباح', url: '/admin/profit-report', icon: PieChart },
+    ],
+  },
+
+  {
+    label: 'النظام',
+    items: [
       { title: 'المحتوى', url: '/admin/content', icon: FileText },
-      { title: 'سجلّ التدقيق', url: '/admin/audit-log', icon: ShieldAlert },
-      { title: 'الباركود', url: '/qr-code', icon: QrCode },
+      { title: 'سجل التدقيق', url: '/admin/audit-log', icon: ShieldAlert },
       { title: 'الإعدادات', url: '/admin/settings', icon: Settings },
+      { title: 'الباركود', url: '/qr-code', icon: QrCode },
     ],
   },
 ];

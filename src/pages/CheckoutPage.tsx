@@ -13,7 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
   CreditCard, Banknote, Truck, Copy, Check, ChevronLeft, ChevronRight,
-  User, MapPin, ShoppingBag, Loader2, AlertCircle, Ticket,
+  User, MapPin, ShoppingBag, Loader2, AlertCircle, Ticket, X,
 } from "lucide-react";
 import {
   SavedAddress, migrateLegacyCheckoutInfo, upsertSavedAddress,
@@ -69,6 +69,7 @@ const CheckoutPage = () => {
   });
   const [couponCode, setCouponCode] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [addressOwnerKey, setAddressOwnerKey] = useState("guest");
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
@@ -116,15 +117,25 @@ const CheckoutPage = () => {
         let discount = coupon.type === "percentage" ? (costPriceTotal * coupon.value) / 100 : coupon.value;
         discount = Math.min(discount, subtotal);
         setDiscountAmount(discount);
+        setAppliedCoupon(normalized);
         toast({ title: "تم التطبيق", description: `خصم ${discount.toFixed(2)} ${currency}` });
         return;
       }
       setDiscountAmount(0);
+      setAppliedCoupon(null);
       toast({ title: "غير صالح", description: "كود الخصم غير موجود", variant: "destructive" });
     } catch {
       setDiscountAmount(0);
+      setAppliedCoupon(null);
       toast({ title: "خطأ", description: "فشل التحقق", variant: "destructive" });
     }
+  };
+
+  const removeCoupon = () => {
+    setCouponCode("");
+    setDiscountAmount(0);
+    setAppliedCoupon(null);
+    toast({ title: "تمت إزالة الكوبون" });
   };
 
   const { data: deliveryCompanies = [] } = useQuery({
@@ -469,11 +480,21 @@ const CheckoutPage = () => {
 
                       <div>
                         <label className="block text-sm mb-2 flex items-center gap-2"><Ticket className="w-4 h-4" /> كود الخصم (اختياري)</label>
-                        <div className="flex gap-2">
-                          <Input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="أدخل الكود" />
-                          <Button onClick={applyCoupon} variant="outline">تطبيق</Button>
-                        </div>
-                        {discountAmount > 0 && <p className="mt-2 text-sm text-green-600">✓ خصم {discountAmount.toFixed(2)} {currency}</p>}
+                        {appliedCoupon ? (
+                          <div className="flex items-center justify-between gap-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
+                            <div className="flex items-center gap-2">
+                              <Check className="w-4 h-4 text-emerald-700" />
+                              <span className="text-sm font-medium text-emerald-800">{appliedCoupon}</span>
+                              <span className="text-xs text-emerald-700">- {discountAmount.toFixed(2)} {currency}</span>
+                            </div>
+                            <Button size="sm" variant="ghost" onClick={removeCoupon} className="h-8 gap-1 text-destructive"><X className="w-3.5 h-3.5" /> إزالة</Button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <Input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="أدخل الكود" />
+                            <Button onClick={applyCoupon} variant="outline">تطبيق</Button>
+                          </div>
+                        )}
                       </div>
                     </div>
                   )}
@@ -497,6 +518,9 @@ const CheckoutPage = () => {
                       <div className="border border-border rounded-lg p-4 space-y-1">
                         <p className="text-xs text-muted-foreground">الشحن والدفع</p>
                         <p className="text-sm">{selectedCompany?.name} • {paymentMethod === "cod" ? "الدفع عند الاستلام" : "تحويل بنكي"}</p>
+                        {appliedCoupon && (
+                          <p className="text-sm text-emerald-700">كوبون: <strong>{appliedCoupon}</strong> — خصم {discountAmount.toFixed(2)} {currency}</p>
+                        )}
                       </div>
 
                       <div className="border border-border rounded-lg p-4">

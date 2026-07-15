@@ -1,5 +1,4 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
 
 // Routes where the back button should NOT show
 const HIDDEN_ROUTES = ["/", "/home", "/index", "/index.html", "/auth", "/signin", "/signup"];

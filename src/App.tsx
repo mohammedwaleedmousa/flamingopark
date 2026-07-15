@@ -80,6 +80,7 @@ const AdminBrandPageEditor = lazy(() => import("./pages/admin/AdminBrandPageEdit
 const AdminBrandFiltersPage = lazy(() => import("./pages/admin/AdminBrandFiltersPage"));
 const AdminCustomerNotificationsPage = lazy(() => import("./pages/admin/AdminCustomerNotificationsPage"));
 const AdminCustomerDetailPage = lazy(() => import("./pages/admin/AdminCustomerDetailPage"));
+const AdminNotificationDeliveriesPage = lazy(() => import("./pages/admin/AdminNotificationDeliveriesPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -217,6 +218,7 @@ const App = () => {
               <Route path="brand-sections" element={<AdminBrandSectionsPage />} />
               <Route path="brand-filters" element={<AdminBrandFiltersPage />} />
               <Route path="customer-notifications" element={<AdminCustomerNotificationsPage />} />
+              <Route path="notification-deliveries" element={<AdminNotificationDeliveriesPage />} />
               <Route path="customers/:id" element={<AdminCustomerDetailPage />} />
             </Route>
 

@@ -40,16 +40,27 @@ const groups: {
   },
 
   {
-    label: 'الكتالوج',
-    items: [
-      { title: 'المنتجات', url: '/admin/products', icon: Package },
-      { title: 'الفئات', url: '/admin/categories', icon: Grid3X3 },
-      { title: 'الماركات', url: '/admin/brands', icon: Tag },
-      { title: 'الأقسام', url: '/admin/sections', icon: LayoutGrid },
-      { title: 'ربط الماركات بالأقسام', url: '/admin/brand-category-map', icon: Link2 },
-      { title: 'دليل العمل السريع', url: '/admin/catalog-workflow', icon: ListChecks },
-    ],
-  },
+  label: 'الكتالوج',
+  items: [
+    { title: 'المنتجات', url: '/admin/products', icon: Package },
+
+    { title: 'الفئات', url: '/admin/categories', icon: Grid3X3 },
+
+    { title: 'الماركات', url: '/admin/brands', icon: Tag },
+
+    { title: 'صفحات الماركات', url: '/admin/brand-pages', icon: LayoutGrid },
+
+    { title: 'أقسام الماركات', url: '/admin/brand-sections', icon: Boxes },
+
+    { title: 'فلاتر الماركات', url: '/admin/brand-filters', icon: ListChecks },
+
+    { title: 'الأقسام', url: '/admin/sections', icon: LayoutGrid },
+
+    { title: 'ربط الماركات بالأقسام', url: '/admin/brand-category-map', icon: Link2 },
+
+    { title: 'دليل العمل السريع', url: '/admin/catalog-workflow', icon: ListChecks },
+  ],
+},
 
   {
     label: 'المبيعات',

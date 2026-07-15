@@ -16,6 +16,7 @@ const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
 const ProductsPage = lazy(() => import("./pages/ProductsPage"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
+const BrandPage = lazy(() => import("./pages/BrandPage"));
 const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
 const OrderConfirmationPage = lazy(() => import("./pages/OrderConfirmationPage"));
 const AboutPage = lazy(() => import("./pages/AboutPage"));
@@ -73,6 +74,10 @@ const AdminFinanceDashboard = lazy(() => import("./pages/admin/AdminFinanceDashb
 const AdminCustomerIntelligence = lazy(() => import("./pages/admin/AdminCustomerIntelligence"));
 const AdminAnalyticsDashboard = lazy(() => import("./pages/admin/AdminAnalyticsDashboard"));
 const MohammedInvoicesPage = lazy(() => import("./pages/MohammedInvoicesPage"));
+const AdminBrandPagesPage = lazy(() => import("./pages/admin/AdminBrandPagesPage"));
+const AdminBrandSectionsPage = lazy(() => import("./pages/admin/AdminBrandSectionsPage"));
+const AdminBrandPageEditor = lazy(() => import("./pages/admin/AdminBrandPageEditor"));
+const AdminBrandFiltersPage = lazy(() => import("./pages/admin/AdminBrandFiltersPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -156,6 +161,7 @@ const App = () => {
             <Route path="/my-shipments" element={<ProtectedRoute><MyShipmentsPage /></ProtectedRoute>} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/product/:slug" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
+            <Route path="/brand/:slug" element={ <ProtectedRoute><BrandPage /></ProtectedRoute> } />
             <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
             <Route path="/order-confirmation" element={<ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>} />
             <Route path="/about" element={<ProtectedRoute><AboutPage /></ProtectedRoute>} />
@@ -200,6 +206,13 @@ const App = () => {
               <Route path="settings" element={<AdminSettingsPage />} />
               <Route path="finance" element={<AdminFinanceDashboard />} />
               <Route path="customer-intelligence" element={<AdminCustomerIntelligence/>} />
+              <Route path="brand-pages" element={<AdminBrandPagesPage />} />
+              <Route path="brand-pages/new" element={<AdminBrandPageEditor />} />
+              <Route path="brand-pages/:id" element={<AdminBrandPageEditor />} />
+              <Route path="brand-sections/:id" element={<AdminBrandSectionsPage />} />
+              <Route path="brand-filters/:id" element={<AdminBrandFiltersPage />} />
+              <Route path="brand-sections" element={<AdminBrandSectionsPage />} />
+              <Route path="brand-filters" element={<AdminBrandFiltersPage />} />
             </Route>
 
             <Route path="/mohammed" element={<MohammedInvoicesPage />} />

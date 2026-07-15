@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Upload } from "lucide-react";
+import { Loader2, Upload, ArrowRight } from "lucide-react";
 
 const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/[^\w\u0600-\u06FF]+/g, "-").replace(/^-+|-+$/g, "");
@@ -112,7 +112,7 @@ const AdminBrandPageEditor = () => {
       <AdminPageHeader
         category="الماركات"
         title={isNew ? "إضافة صفحة ماركة" : "تعديل صفحة الماركة"}
-        actions={[{ label: "رجوع", onClick: () => navigate("/admin/brand-pages"), variant: "secondary" }]}
+        actions={[{ label: "رجوع", icon: ArrowRight, onClick: () => navigate("/admin/brand-pages"), variant: "secondary" }]}
       />
 
       <div className="bg-card border border-border rounded-xl p-6 space-y-5">

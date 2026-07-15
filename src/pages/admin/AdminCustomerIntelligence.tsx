@@ -976,7 +976,7 @@ interface Row {
                                             </div>
                                             <div className="flex items-center gap-2">
                                                 <div className="text-sm text-muted-foreground">مرجع: {p.reference || p.source_id || '—'}</div>
-                                                <Button size="sm" variant="ghost" onClick={() => navigate(`/admin/ledger?ref=${encodeURIComponent(p.reference || p.source_id || '')}`)}>سجل</Button>
+                                                <Button size="sm" variant="ghost" onClick={() => window.location.assign(`/admin/ledger?ref=${encodeURIComponent(p.reference || p.source_id || '')}`)}>سجل</Button>
                                             </div>
                                         </div>
                                     </div>

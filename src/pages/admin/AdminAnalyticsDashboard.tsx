@@ -87,19 +87,19 @@ const AdminAnalyticsDashboard = () => {
         const region = (order.customer_address || '').split(/[,،]/)[0]?.trim() || 'غير محدد';
 
         if (!dailyMap.has(date)) {
-          dailyMap.set(date, { revenue: 0, orders: 0, customers: new Set() });
+          dailyMap.set(date, { revenue: 0, orders: 0, customers: new Set<string>() });
         }
 
-        const day = dailyMap.get(date)!;
+        const day = dailyMap.get(date)! as { revenue: number; orders: number; customers: Set<string> };
         day.revenue += order.total;
         day.orders += 1;
         day.customers.add(order.id);
 
         // Region analysis
         if (!regionMap.has(region)) {
-          regionMap.set(region, { name: region, revenue: 0, orders: 0, customers: new Set() });
+          regionMap.set(region, { name: region, revenue: 0, orders: 0, customers: new Set<string>() });
         }
-        const reg = regionMap.get(region)!;
+        const reg = regionMap.get(region)! as { name: string; revenue: number; orders: number; customers: Set<string> };
         reg.revenue += order.total;
         reg.orders += 1;
         reg.customers.add(order.id);
@@ -140,7 +140,7 @@ const AdminAnalyticsDashboard = () => {
         .sort((a, b) => a.date.localeCompare(b.date));
 
       const regionList = Array.from(regionMap.values())
-        .map(r => ({
+        .map((r: any) => ({
           ...r,
           customers: r.customers.size,
         }))

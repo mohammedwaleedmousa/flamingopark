@@ -1,4 +1,6 @@
-import { supabase } from "@/integrations/supabase/client";
+import { supabase as supabaseClient } from "@/integrations/supabase/client";
+// Cast to any to bypass strict generated types (currency_mode column not in types yet)
+const supabase = supabaseClient as any;
 import type { Database } from "@/integrations/supabase/types";
 import type { QueryClient } from "@tanstack/react-query";
 

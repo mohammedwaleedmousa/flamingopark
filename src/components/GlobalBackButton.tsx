@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import { ChevronRight } from "lucide-react";
 
 // Routes where the back button should NOT show
 const HIDDEN_ROUTES = ["/", "/home", "/index", "/index.html", "/auth", "/signin", "/signup"];
@@ -17,12 +18,13 @@ const GlobalBackButton = () => {
   };
 
   return (
-    <div dir="rtl" className="w-full bg-background pt-20 pb-2 px-4">
+    <div dir="rtl" className="container mx-auto px-4 pt-20 md:pt-24">
       <button
         onClick={handleBack}
         aria-label="رجوع للخلف"
-        className="text-sm text-foreground underline decoration-foreground underline-offset-4 hover:opacity-70 transition-opacity"
+        className="inline-flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition"
       >
+        <ChevronRight className="w-3 h-3" />
         رجوع للخلف
       </button>
     </div>

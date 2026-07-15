@@ -475,6 +475,62 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_notifications: {
+        Row: {
+          body: string
+          broadcast: boolean
+          country: string | null
+          created_at: string
+          customer_id: string | null
+          customer_phone: string | null
+          id: string
+          is_read: boolean
+          link: string | null
+          title: string
+          type: string
+          updated_at: string
+          user_id: string | null
+        }
+        Insert: {
+          body: string
+          broadcast?: boolean
+          country?: string | null
+          created_at?: string
+          customer_id?: string | null
+          customer_phone?: string | null
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          title: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Update: {
+          body?: string
+          broadcast?: boolean
+          country?: string | null
+          created_at?: string
+          customer_id?: string | null
+          customer_phone?: string | null
+          id?: string
+          is_read?: boolean
+          link?: string | null
+          title?: string
+          type?: string
+          updated_at?: string
+          user_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_notifications_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customers: {
         Row: {
           country: string

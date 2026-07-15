@@ -39,7 +39,7 @@ export const NewsletterSubscription = ({
 
     try {
       // Check if email already exists
-      const { data: existing, error: checkError } = await supabase
+      const { data: existing, error: checkError } = await (supabase as any)
         .from('newsletter_subscribers')
         .select('email')
         .eq('email', email.toLowerCase());
@@ -56,7 +56,7 @@ export const NewsletterSubscription = ({
       }
 
       // Insert new subscriber
-      const { error: insertError } = await supabase
+      const { error: insertError } = await (supabase as any)
         .from('newsletter_subscribers')
         .insert({
           email: email.toLowerCase(),

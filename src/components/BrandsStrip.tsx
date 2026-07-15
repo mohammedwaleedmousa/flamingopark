@@ -54,7 +54,9 @@ const BrandsStrip = () => {
       if (!brand.countries || brand.countries.length === 0) {
         return true;
       }
-
+      if (!country || country === "GLOBAL") {
+        return true;
+      }
       return brand.countries.includes(country);
     });
   }, [brands, country]);

@@ -64,7 +64,7 @@ export const ProductQA = ({ productId }: { productId: string }) => {
     queryKey: ['product-questions', productId],
     queryFn: async () => {
       try {
-        const { data, error } = await supabase
+        const { data, error } = await (supabase as any)
           .from('product_questions')
           .select('*')
           .eq('product_id', productId)
@@ -109,7 +109,7 @@ export const ProductQA = ({ productId }: { productId: string }) => {
         return;
       }
 
-      const { error } = await supabase.from('product_questions').insert({
+      const { error } = await (supabase as any).from('product_questions').insert({
         product_id: productId,
         content: newQuestion,
         content_ar: newQuestion,
@@ -144,7 +144,7 @@ export const ProductQA = ({ productId }: { productId: string }) => {
       const current = questions.find(q => q.id === questionId);
       if (!current) return;
 
-      const { error } = await supabase
+      const { error } = await (supabase as any)
         .from('product_questions')
         .update({ helpful_count: (current.helpful_count || 0) + 1 })
         .eq('id', questionId);

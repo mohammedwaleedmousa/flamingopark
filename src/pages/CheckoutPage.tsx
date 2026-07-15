@@ -1,5 +1,5 @@
-import { useState, useEffect } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useMemo } from "react";
+import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { z } from "zod";
@@ -11,15 +11,14 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { CreditCard, Banknote, Truck, Copy, MessageCircle, Loader2, MapPin, AlertCircle, X } from "lucide-react";
 import {
-  SavedAddress,
-  migrateLegacyCheckoutInfo,
-  upsertSavedAddress,
-  getSavedAddresses,
+  CreditCard, Banknote, Truck, Copy, Check, ChevronLeft, ChevronRight,
+  User, MapPin, ShoppingBag, Loader2, AlertCircle, Ticket,
+} from "lucide-react";
+import {
+  SavedAddress, migrateLegacyCheckoutInfo, upsertSavedAddress,
 } from "@/lib/savedAddresses";
 
-// Zod schemas
 const orderAccessorySchema = z.object({
   name: z.string().max(200).optional(),
   name_ar: z.string().max(200).optional(),
@@ -27,7 +26,6 @@ const orderAccessorySchema = z.object({
   quantity: z.number().int().min(1).max(100),
   image_url: z.string().max(2000).optional(),
 });
-
 const orderItemSchema = z.object({
   product_id: z.string().uuid(),
   product_name: z.string().min(1).max(500),
@@ -37,42 +35,34 @@ const orderItemSchema = z.object({
   selected_size: z.string().max(100).nullable(),
   selected_accessories: z.array(orderAccessorySchema).max(50),
 });
-
 const orderItemsSchema = z.array(orderItemSchema).min(1).max(100);
 
-interface Coupon {
-  code: string;
-  type: "percentage" | "fixed";
-  value: number;
-  is_active: boolean;
-}
-interface DeliveryCompany {
-  id: string;
-  name: string;
-  base_fee: number;
-  delivery_days: string | null;
-}
-interface BankAccount {
-  bank: string;
-  account: string;
-  name: string;
-}
-interface CODRegion {
-  id: string;
-  region_name: string;
-  region_name_ar: string;
-}
+interface DeliveryCompany { id: string; name: string; base_fee: number; delivery_days: string | null; }
+interface BankAccount { bank: string; account: string; name: string; }
+interface CODRegion { id: string; region_name: string; region_name_ar: string; }
+
+const STEPS = [
+  { key: "info", label: "المعلومات", icon: User },
+  { key: "address", label: "العنوان", icon: MapPin },
+  { key: "payment", label: "الدفع", icon: CreditCard },
+  { key: "review", label: "المراجعة", icon: Check },
+] as const;
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { country, customer, cart, getCartTotal, clearCart, currencyMode } = useStore();
   const isGuestLike = !customer || customer.id === "guest";
+  const subtotal = getCartTotal();
+  const currency = "ر.ي";
+
+  const [currentStep, setCurrentStep] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "bank">("cod");
   const [selectedDelivery, setSelectedDelivery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState("");
   const [formData, setFormData] = useState({
     name: customer?.name || "",
     phone: customer?.phone || "",
+    email: "",
     address: "",
     city: "",
     notes: "",
@@ -84,19 +74,13 @@ const CheckoutPage = () => {
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [selectedAddressId, setSelectedAddressId] = useState("");
 
-  const subtotal = getCartTotal();
-  const currency = "ر.ي";
-
   useEffect(() => {
     let mounted = true;
     supabase.auth.getUser().then(({ data }) => {
       if (!mounted) return;
-      const owner = data.user?.id || customer?.id || "guest";
-      setAddressOwnerKey(owner);
+      setAddressOwnerKey(data.user?.id || customer?.id || "guest");
     });
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, [customer?.id]);
 
   useEffect(() => {
@@ -109,262 +93,80 @@ const CheckoutPage = () => {
         ...prev,
         name: isGuestLike ? String(def.name || prev.name || "") : prev.name,
         phone: isGuestLike ? String(def.phone || prev.phone || "") : prev.phone,
-        city: def.city,
-        address: def.address,
-        notes: def.notes || "",
+        city: def.city, address: def.address, notes: def.notes || "",
       }));
     }
   }, [addressOwnerKey, isGuestLike]);
 
-  const saveCustomerInfo = () => {
-    const now = Date.now();
-    const currentLabel = selectedAddressId
-      ? getSavedAddresses(addressOwnerKey).find((a) => a.id === selectedAddressId)?.label || `عنوان ${savedAddresses.length + 1}`
-      : `عنوان ${savedAddresses.length + 1}`;
+  const getCostPriceTotal = () => cart.reduce((total, item) => {
+    const costPrice = item.product.costPrice || item.product.price;
+    const accessoriesTotal = item.selectedAccessories?.reduce((sum, acc) => sum + acc.price * acc.quantity, 0) || 0;
+    return total + (costPrice + accessoriesTotal) * item.quantity;
+  }, 0);
 
-    const next = upsertSavedAddress(addressOwnerKey, {
-      id: selectedAddressId || `addr-${now}`,
-      label: currentLabel,
-      name: formData.name.trim(),
-      phone: formData.phone.trim(),
-      city: formData.city.trim(),
-      address: formData.address.trim(),
-      notes: formData.notes.trim(),
-      isDefault: true,
-    });
-    setSavedAddresses(next);
-    const def = next.find((a) => a.isDefault) || next[0];
-    setSelectedAddressId(def?.id || "");
-    toast({ title: "تم الحفظ", description: "تم حفظ العنوان وربطه بحسابك" });
-  };
-
-  const useSavedCustomerInfo = () => {
-    const chosen = savedAddresses.find((a) => a.id === selectedAddressId);
-    if (!chosen) {
-      return toast({ title: "تنبيه", description: "اختر عنوانًا محفوظًا أولاً", variant: "destructive" });
-    }
-    setFormData((prev) => ({
-      ...prev,
-      name: isGuestLike ? String(chosen.name || prev.name || "") : prev.name,
-      phone: isGuestLike ? String(chosen.phone || prev.phone || "") : prev.phone,
-      city: chosen.city,
-      address: chosen.address,
-      notes: chosen.notes || "",
-    }));
-    toast({ title: "تم", description: "تم تعبئة العنوان المحفوظ" });
-  };
-
-  const startNewAddress = () => {
-    setSelectedAddressId("");
-    setFormData((prev) => ({ ...prev, address: "", city: "", notes: "" }));
-    toast({ title: "عنوان جديد", description: "يمكنك الآن إدخال عنوان مختلف" });
-  };
-
-  // Calculate total cost price (for discount calculations)
-  const getCostPriceTotal = () => {
-    return cart.reduce((total, item) => {
-      // Use costPrice if available, otherwise use price
-      const costPrice = item.product.costPrice || item.product.price;
-      // Note: Accessories don't have cost price, so we use their full price
-      const accessoriesTotal = item.selectedAccessories
-        ? item.selectedAccessories.reduce((sum, acc) => sum + acc.price * acc.quantity, 0)
-        : 0;
-      return total + (costPrice + accessoriesTotal) * item.quantity;
-    }, 0);
-  };
-
-  const costPriceTotal = getCostPriceTotal();
-
-  // Apply coupon - checks both coupons table and offers table
   const applyCoupon = async () => {
     const normalized = couponCode.trim().toUpperCase();
-
-    if (!normalized) {
-      toast({
-        title: "خطأ",
-        description: "الرجاء إدخال كود الخصم",
-        variant: "destructive",
-      });
-      return;
-    }
-
+    if (!normalized) { toast({ title: "خطأ", description: "أدخل كود الخصم", variant: "destructive" }); return; }
+    const costPriceTotal = getCostPriceTotal();
     try {
-      // First check coupons table - trim spaces from code for comparison
-      const { data: couponData } = await supabase
-        .from("coupons")
-        .select("code, type, value, countries")
-        .eq("is_active", true)
-        .limit(100);
-        
-      // Find matching coupon manually (handles trimming issues)
-      const matchingCoupon = couponData?.find(c => 
-        c.code?.trim().toUpperCase() === normalized
-      );
-
-      if (matchingCoupon) {
-        const coupon = matchingCoupon as { type: "percentage" | "fixed"; value: number };
-        let discount = 0;
-        if (coupon.type === "percentage") {
-          // Apply percentage discount ONLY on cost price
-          discount = (costPriceTotal * coupon.value) / 100;
-        } else {
-          discount = coupon.value;
-        }
-        // Don't let discount exceed the subtotal
+      const { data: couponData } = await supabase.from("coupons").select("code, type, value").eq("is_active", true).limit(100);
+      const match = couponData?.find((c) => c.code?.trim().toUpperCase() === normalized);
+      if (match) {
+        const coupon = match as { type: "percentage" | "fixed"; value: number };
+        let discount = coupon.type === "percentage" ? (costPriceTotal * coupon.value) / 100 : coupon.value;
         discount = Math.min(discount, subtotal);
         setDiscountAmount(discount);
-        toast({
-          title: "تم التطبيق",
-          description: `تم تطبيق خصم ${discount.toFixed(2)} ${currency}`,
-        });
+        toast({ title: "تم التطبيق", description: `خصم ${discount.toFixed(2)} ${currency}` });
         return;
       }
-
-      // Then check offers table for discount_code
-      const { data: offerData } = await supabase
-        .from("offers")
-        .select("discount_percentage, product_ids")
-        .eq("discount_code", normalized)
-        .eq("is_active", true)
-        .limit(1)
-        .maybeSingle();
-
-      if (offerData && offerData.discount_percentage > 0) {
-        // Check if offer has specific products
-        const offerProductIds = offerData.product_ids as string[] | null;
-        
-        // Calculate applicable cost price total for offer products
-        let applicableCostPriceTotal = costPriceTotal;
-        
-        if (offerProductIds && offerProductIds.length > 0) {
-          // Only apply discount to cost price of products in the offer
-          applicableCostPriceTotal = cart.reduce((sum, item) => {
-            if (offerProductIds.includes(item.product.id)) {
-              // Use costPrice if available, otherwise use price
-              const costPrice = item.product.costPrice || item.product.price;
-              const accessoriesTotal = item.selectedAccessories
-                ? item.selectedAccessories.reduce((accSum, acc) => accSum + acc.price * acc.quantity, 0)
-                : 0;
-              return sum + (costPrice + accessoriesTotal) * item.quantity;
-            }
-            return sum;
-          }, 0);
-          
-          if (applicableCostPriceTotal === 0) {
-            setDiscountAmount(0);
-            toast({
-              title: "غير قابل للتطبيق",
-              description: "هذا الكوبون صالح لمنتجات معينة غير موجودة في سلتك",
-              variant: "destructive",
-            });
-            return;
-          }
-        }
-        
-        // Apply discount on cost price only
-        const discount = Math.min((applicableCostPriceTotal * offerData.discount_percentage) / 100, subtotal);
-        setDiscountAmount(discount);
-        toast({
-          title: "تم التطبيق",
-          description: `تم تطبيق خصم ${discount.toFixed(2)} ${currency}`,
-        });
-        return;
-      }
-
-      // No valid coupon found
       setDiscountAmount(0);
-      toast({
-        title: "غير صالح",
-        description: "كود الخصم غير موجود أو غير صالح",
-        variant: "destructive",
-      });
-    } catch (error) {
-      console.error("Coupon check error:", error);
+      toast({ title: "غير صالح", description: "كود الخصم غير موجود", variant: "destructive" });
+    } catch {
       setDiscountAmount(0);
-      toast({
-        title: "خطأ",
-        description: "حدث خطأ أثناء التحقق من الكوبون",
-        variant: "destructive",
-      });
+      toast({ title: "خطأ", description: "فشل التحقق", variant: "destructive" });
     }
   };
 
-  // Fetch delivery companies
   const { data: deliveryCompanies = [] } = useQuery({
-    queryKey: ["delivery-companies", country],
+    queryKey: ["delivery-companies"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("delivery_companies")
-        .select("*")
-        .eq("is_active", true)
-        .order("name");
+      const { data, error } = await supabase.from("delivery_companies").select("*").eq("is_active", true).order("name");
       if (error) throw error;
       return data as DeliveryCompany[];
     },
-    enabled: true,
   });
 
-  // Fetch bank accounts
   const { data: bankAccounts = [] } = useQuery({
-    queryKey: ["bank-accounts", country],
+    queryKey: ["bank-accounts"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("site_settings")
-        .select("key, value")
-        .in("key", ["bank_accounts", "bank_accounts_ye", "bank_accounts_sa"]);
-      if (error) throw error;
-      const primary = data?.find((row) => row.key === "bank_accounts")?.value;
-      const legacyYe = data?.find((row) => row.key === "bank_accounts_ye")?.value;
-      const legacySa = data?.find((row) => row.key === "bank_accounts_sa")?.value;
-      let value = primary ?? legacyYe ?? legacySa;
-      if (typeof value === "string")
-        try {
-          value = JSON.parse(value);
-        } catch {
-          return [] as BankAccount[];
-        }
-      if (Array.isArray(value))
-        return value.map((v) => ({
-          bank: String((v as any)?.bank || ""),
-          account: String((v as any)?.account || ""),
-          name: String((v as any)?.name || ""),
-        })) as BankAccount[];
+      const { data } = await supabase.from("site_settings").select("key, value").in("key", ["bank_accounts", "bank_accounts_ye", "bank_accounts_sa"]);
+      let value: any = data?.find((r) => r.key === "bank_accounts")?.value ?? data?.find((r) => r.key === "bank_accounts_ye")?.value ?? data?.find((r) => r.key === "bank_accounts_sa")?.value;
+      if (typeof value === "string") try { value = JSON.parse(value); } catch { return [] as BankAccount[]; }
+      if (Array.isArray(value)) return value.map((v: any) => ({ bank: String(v?.bank || ""), account: String(v?.account || ""), name: String(v?.name || "") })) as BankAccount[];
       return [] as BankAccount[];
     },
-    enabled: true,
   });
 
-  // Fetch WhatsApp number
   const { data: whatsappNumber } = useQuery({
-    queryKey: ["whatsapp-number", country],
+    queryKey: ["whatsapp-number"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("site_settings")
-        .select("key, value")
-        .in("key", ["whatsapp", "whatsapp_ye", "whatsapp_sa"]);
-      if (error) throw error;
-      const unified = data?.find((row) => row.key === "whatsapp")?.value;
-      const legacyYe = data?.find((row) => row.key === "whatsapp_ye")?.value;
-      const legacySa = data?.find((row) => row.key === "whatsapp_sa")?.value;
-      return (unified as string) || (legacyYe as string) || (legacySa as string) || "967123456789";
+      const { data } = await supabase.from("site_settings").select("key, value").in("key", ["whatsapp", "whatsapp_ye", "whatsapp_sa"]);
+      return (data?.find((r) => r.key === "whatsapp")?.value as string) || (data?.find((r) => r.key === "whatsapp_ye")?.value as string) || (data?.find((r) => r.key === "whatsapp_sa")?.value as string) || "967123456789";
     },
-    enabled: true,
   });
 
-  // Fetch COD regions
   const { data: codRegions = [] } = useQuery({
-    queryKey: ["cod-regions", country],
+    queryKey: ["cod-regions"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("cod_regions")
-        .select("id, region_name, region_name_ar")
-        .eq("is_active", true)
-        .order("region_name_ar");
+      const { data, error } = await supabase.from("cod_regions").select("id, region_name, region_name_ar").eq("is_active", true).order("region_name_ar");
       if (error) throw error;
       return data as CODRegion[];
     },
-    enabled: true,
   });
+
+  const selectedCompany = deliveryCompanies.find((c) => c.id === selectedDelivery);
+  const deliveryFee = selectedCompany?.base_fee || 0;
+  const total = subtotal + deliveryFee - discountAmount;
 
   const createOrderMutation = useMutation({
     mutationFn: async (orderData: any) => {
@@ -373,561 +175,390 @@ const CheckoutPage = () => {
         if (error) throw error;
         return data;
       };
-
-      const normalizeCountryForLegacy = (payload: Record<string, unknown>) => {
-        if (payload.country === "GLOBAL") {
-          return { ...payload, country: "YE" };
-        }
-        return payload;
-      };
-
+      const normalizeCountry = (payload: Record<string, unknown>) => payload.country === "GLOBAL" ? { ...payload, country: "YE" } : payload;
       try {
-        return await insertOrder(normalizeCountryForLegacy(orderData as Record<string, unknown>));
+        return await insertOrder(normalizeCountry(orderData));
       } catch (error) {
         const message = String((error as { message?: string })?.message || "");
-        const hasMissingColumnError =
-          /column .* does not exist/i.test(message) ||
-          /Could not find the '.*' column/i.test(message) ||
-          /schema cache/i.test(message);
-        const hasCountryConstraintError =
-          /country/i.test(message) && /constraint|check/i.test(message);
-
-        if (hasCountryConstraintError) {
-          const retryPayload = { ...(orderData as Record<string, unknown>), country: "YE" };
-          return await insertOrder(retryPayload);
+        if (/country/i.test(message) && /constraint|check/i.test(message)) {
+          return await insertOrder({ ...orderData, country: "YE" });
         }
-
-        if (!hasMissingColumnError) {
-          throw error;
-        }
-
-        const legacyPayload = { ...(orderData as Record<string, unknown>) };
-        const notesValue = String(legacyPayload.customer_notes || "").trim();
-        const cityValue = String(legacyPayload.customer_city || "").trim();
-
-        delete legacyPayload.customer_city;
-        delete legacyPayload.coupon_code;
-        delete legacyPayload.discount_amount;
-        delete legacyPayload.currency_mode;
-
-        legacyPayload.customer_notes = [
-          notesValue || null,
-          cityValue ? `المدينة: ${cityValue}` : null,
-        ]
-          .filter(Boolean)
-          .join(" | ") || null;
-
-        return await insertOrder(legacyPayload);
+        if (!/column .* does not exist|Could not find the '.*' column|schema cache/i.test(message)) throw error;
+        const legacy = { ...orderData };
+        const notes = String(legacy.customer_notes || "").trim();
+        const city = String(legacy.customer_city || "").trim();
+        delete legacy.customer_city; delete legacy.coupon_code; delete legacy.discount_amount; delete legacy.currency_mode;
+        legacy.customer_notes = [notes || null, city ? `المدينة: ${city}` : null].filter(Boolean).join(" | ") || null;
+        return await insertOrder(legacy);
       }
     },
   });
 
-  const selectedCompany = deliveryCompanies.find((c) => c.id === selectedDelivery);
-  const deliveryFee = selectedCompany?.base_fee || 0;
-  const totalDiscount = discountAmount;
-  const total = subtotal + deliveryFee - totalDiscount;
-
-  const handleCopyAccount = (account: string) => {
-    navigator.clipboard.writeText(account);
-    toast({ title: "تم النسخ", description: "تم نسخ رقم الحساب" });
+  const validateStep = (step: number): boolean => {
+    if (step === 0) {
+      const name = String(customer?.name || formData.name || "").trim();
+      const phone = String(customer?.phone || formData.phone || "").trim();
+      if (isGuestLike && (!name || !phone)) {
+        toast({ title: "الاسم ورقم الهاتف مطلوبان", variant: "destructive" });
+        return false;
+      }
+    }
+    if (step === 1) {
+      if (!formData.city.trim() || !formData.address.trim()) {
+        toast({ title: "المدينة والعنوان مطلوبان", variant: "destructive" });
+        return false;
+      }
+    }
+    if (step === 2) {
+      if (!selectedDelivery) { toast({ title: "اختر شركة التوصيل", variant: "destructive" }); return false; }
+      if (paymentMethod === "cod" && codRegions.length > 0 && !selectedRegion) {
+        toast({ title: "اختر منطقة الاستلام", variant: "destructive" }); return false;
+      }
+    }
+    return true;
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    // Prevent double submission
+  const nextStep = () => { if (validateStep(currentStep)) setCurrentStep((s) => Math.min(s + 1, STEPS.length - 1)); };
+  const prevStep = () => setCurrentStep((s) => Math.max(s - 1, 0));
+
+  const saveAddressToLocal = () => {
+    upsertSavedAddress(addressOwnerKey, {
+      id: selectedAddressId || `addr-${Date.now()}`,
+      label: `عنوان ${savedAddresses.length + 1}`,
+      name: formData.name.trim(), phone: formData.phone.trim(),
+      city: formData.city.trim(), address: formData.address.trim(),
+      notes: formData.notes.trim(), isDefault: true,
+    });
+  };
+
+  const handleSubmit = async () => {
     if (isSubmitting) return;
-    
-    // Treat missing customer profile as guest-like to avoid empty order identity fields.
-    const customerName = String(customer?.name || formData.name || "").trim();
-    const customerPhone = String(customer?.phone || formData.phone || "").trim();
-
-    if (isGuestLike && (!customerName || !customerPhone)) {
-      return toast({ title: "خطأ", description: "يرجى إدخال الاسم ورقم الهاتف", variant: "destructive" });
-    }
-
-    if (!formData.city.trim() || !formData.address.trim()) {
-      return toast({ title: "خطأ", description: "يرجى إدخال المدينة والعنوان", variant: "destructive" });
-    }
-    
-    if (!selectedDelivery)
-      return toast({ title: "خطأ", description: "يرجى اختيار شركة التوصيل", variant: "destructive" });
-    if (paymentMethod === "cod" && codRegions.length > 0 && !selectedRegion)
-      return toast({ title: "خطأ", description: "يرجى اختيار منطقة الاستلام", variant: "destructive" });
-    
+    if (!validateStep(0) || !validateStep(1) || !validateStep(2)) return;
     setIsSubmitting(true);
-
     const orderNumber = `ORD-${Date.now()}`;
     const rawOrderItems = cart.map((item) => {
-      const basePrice = item.product.discount
-        ? item.product.price * (1 - item.product.discount / 100)
-        : item.product.price;
-      const accessoriesTotal = item.selectedAccessories
-        ? item.selectedAccessories.reduce((sum, acc) => sum + acc.price * acc.quantity, 0)
-        : 0;
+      const basePrice = item.product.discount ? item.product.price * (1 - item.product.discount / 100) : item.product.price;
+      const accessoriesTotal = item.selectedAccessories?.reduce((sum, acc) => sum + acc.price * acc.quantity, 0) || 0;
       return {
-        product_id: item.product.id,
-        product_name: item.product.nameAr,
-        product_image: item.product.images?.[0] || "",
-        quantity: item.quantity,
-        price: basePrice + accessoriesTotal,
-        selected_size: item.selectedSize || null,
+        product_id: item.product.id, product_name: item.product.nameAr,
+        product_image: item.product.images?.[0] || "", quantity: item.quantity,
+        price: basePrice + accessoriesTotal, selected_size: item.selectedSize || null,
         selected_accessories: (item.selectedAccessories || []).map((acc) => ({
-          name: String((acc as any).name || ""),
-          name_ar: String((acc as any).name_ar || (acc as any).name || ""),
-          price: Number((acc as any).price) || 0,
-          quantity: Number((acc as any).quantity) || 1,
+          name: String((acc as any).name || ""), name_ar: String((acc as any).name_ar || (acc as any).name || ""),
+          price: Number((acc as any).price) || 0, quantity: Number((acc as any).quantity) || 1,
           image_url: String((acc as any).image_url || ""),
         })),
       };
     });
-    const validationResult = orderItemsSchema.safeParse(rawOrderItems);
-    if (!validationResult.success)
-      return toast({
-        title: "خطأ",
-        description: "حدث خطأ في بيانات الطلب. يرجى المحاولة مرة أخرى.",
-        variant: "destructive",
-      });
-    const orderItems = validationResult.data;
-
+    const validation = orderItemsSchema.safeParse(rawOrderItems);
+    if (!validation.success) {
+      toast({ title: "خطأ", description: "بيانات الطلب غير صحيحة", variant: "destructive" });
+      setIsSubmitting(false); return;
+    }
     try {
+      const customerName = String(customer?.name || formData.name || "").trim();
+      const customerPhone = String(customer?.phone || formData.phone || "").trim();
+      saveAddressToLocal();
+
       const orderPayload: Record<string, unknown> = {
-        order_number: orderNumber,
-        customer_name: customerName || "عميل",
-        customer_phone: customerPhone,
-        customer_address: formData.address || "-",
-        customer_city: formData.city || "",
-        customer_notes: formData.notes || null,
-        country: country === "GLOBAL" ? "YE" : country || "YE",
-        currency_mode: currencyMode,
-        items: orderItems,
-        subtotal,
-        delivery_fee: deliveryFee,
-        total,
-        delivery_company_id: selectedDelivery,
-        payment_method: paymentMethod,
+        order_number: orderNumber, customer_name: customerName || "عميل",
+        customer_phone: customerPhone, customer_address: formData.address || "-",
+        customer_city: formData.city || "", customer_notes: formData.notes || null,
+        country: country === "GLOBAL" ? "YE" : country || "YE", currency_mode: currencyMode,
+        items: validation.data, subtotal, delivery_fee: deliveryFee, total,
+        delivery_company_id: selectedDelivery, payment_method: paymentMethod,
         coupon_code: discountAmount > 0 ? couponCode.trim().toUpperCase() : null,
-        discount_amount: totalDiscount,
+        discount_amount: discountAmount,
       };
-      
-      // Only add customer_id if it's a valid registered customer (not guest)
-      if (customer?.id && customer.id !== "guest") {
-        orderPayload.customer_id = customer.id;
-      }
-      
+      if (customer?.id && customer.id !== "guest") orderPayload.customer_id = customer.id;
+
       await createOrderMutation.mutateAsync(orderPayload);
-      
-      const selectedRegionData = codRegions.find((r) => r.id === selectedRegion);
-      
-      const correctWhatsappNumber = whatsappNumber || "967123456789";
-      
+      const regionData = codRegions.find((r) => r.id === selectedRegion);
       const orderData = {
-        orderNumber,
-        customerName: customer?.name || formData.name || "عميل",
-        customerPhone: customer?.phone || formData.phone || "",
-        customerAddress: formData.address || "-",
-        customerCity: formData.city || "",
-        customerNotes: formData.notes || "",
-        items: orderItems,
-        subtotal,
-        deliveryFee,
-        discountAmount,
-        couponCode: discountAmount > 0 ? couponCode.trim().toUpperCase() : null,
-        total,
-        paymentMethod,
-        deliveryCompany: selectedCompany?.name || "",
-        selectedRegion: paymentMethod === "cod" && selectedRegionData ? selectedRegionData.region_name_ar : null,
-        country: country === "GLOBAL" ? "YE" : country || "YE",
-        currencyMode,
-        whatsappNumber: correctWhatsappNumber,
-        createdAt: new Date().toISOString(),
+        orderNumber, customerName: customerName || "عميل", customerPhone,
+        customerAddress: formData.address || "-", customerCity: formData.city || "",
+        customerNotes: formData.notes || "", items: validation.data, subtotal, deliveryFee,
+        discountAmount, couponCode: discountAmount > 0 ? couponCode.trim().toUpperCase() : null,
+        total, paymentMethod, deliveryCompany: selectedCompany?.name || "",
+        selectedRegion: paymentMethod === "cod" && regionData ? regionData.region_name_ar : null,
+        country: country === "GLOBAL" ? "YE" : country || "YE", currencyMode,
+        whatsappNumber: whatsappNumber || "967123456789", createdAt: new Date().toISOString(),
       };
       clearCart();
       navigate("/order-confirmation", { state: { orderData } });
     } catch (error) {
-      console.error("Order submission error:", error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : String((error as { message?: string; details?: string })?.message || (error as { details?: string })?.details || "حدث خطأ أثناء إرسال الطلب");
-      toast({ title: "خطأ", description: errorMessage, variant: "destructive" });
+      const msg = error instanceof Error ? error.message : "فشل إرسال الطلب";
+      toast({ title: "خطأ", description: msg, variant: "destructive" });
       setIsSubmitting(false);
     }
   };
 
-  if (cart.length === 0)
-    return (
-      <div className="min-h-screen bg-background">
-        <Navbar />
-        <CartDrawer />
-        <main className="pt-32 pb-16">
-          <div className="container mx-auto px-4 text-center">
-            <h1 className="font-heading text-2xl text-foreground mb-4">السلة فارغة</h1>
-            <Button onClick={() => navigate("/products")} className="btn-gold">
-              تسوق الآن
-            </Button>
-          </div>
-        </main>
-        <Footer />
-      </div>
-    );
+  if (cart.length === 0) return (
+    <div className="min-h-screen bg-background"><Navbar /><CartDrawer />
+      <main className="pt-32 pb-16"><div className="container mx-auto px-4 text-center">
+        <ShoppingBag className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
+        <h1 className="font-heading text-2xl text-foreground mb-4">السلة فارغة</h1>
+        <Button onClick={() => navigate("/products")} className="btn-gold">تسوق الآن</Button>
+      </div></main><Footer /></div>
+  );
 
   return (
-    <div className="min-h-screen bg-background">
-      <Navbar />
-      <CartDrawer />
+    <div className="min-h-screen bg-background" dir="rtl">
+      <Navbar /><CartDrawer />
       <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4">
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="font-heading text-3xl md:text-4xl text-foreground mb-8 text-center"
-          >
+        <div className="container mx-auto px-4 max-w-5xl">
+          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
+            className="font-heading text-3xl md:text-4xl text-foreground mb-8 text-center">
             إتمام <span className="text-gold">الطلب</span>
           </motion.h1>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            <div className="lg:col-span-2 space-y-8">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="bg-card border border-border rounded-lg p-6"
-              >
-                <h2 className="font-heading text-xl text-foreground mb-6">معلومات التوصيل</h2>
-                <div className="space-y-4">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-body text-muted-foreground mb-2">الاسم الكامل *</label>
-                      {isGuestLike ? (
-                        <Input
-                          value={formData.name}
-                          onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                          className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
-                          dir="rtl"
-                          placeholder="أدخل اسمك الكامل"
-                        />
-                      ) : (
-                        <Input
-                          value={customer?.name || ""}
-                          disabled
-                          className="bg-muted/50 border-border text-foreground"
-                          dir="rtl"
-                        />
-                      )}
-                    </div>
-                    <div>
-                      <label className="block text-sm font-body text-muted-foreground mb-2">رقم الهاتف *</label>
-                      {isGuestLike ? (
-                        <Input
-                          value={formData.phone}
-                          onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                          className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
-                          dir="ltr"
-                          placeholder="05xxxxxxxx"
-                        />
-                      ) : (
-                        <Input
-                          value={customer?.phone || ""}
-                          disabled
-                          className="bg-muted/50 border-border text-foreground"
-                          dir="ltr"
-                        />
-                      )}
-                    </div>
-                  </div>
 
-                  {/* Address Fields */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <label className="block text-sm font-body text-muted-foreground mb-2">المحافظة/المدينة *</label>
-                      <Input
-                        value={formData.city}
-                        onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                        className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
-                        dir="rtl"
-                        placeholder="اختر مدينتك"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-body text-muted-foreground mb-2">العنوان بالتفصيل *</label>
-                      <Input
-                        value={formData.address}
-                        onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-                        className="bg-background border-border text-foreground placeholder:text-muted-foreground/50"
-                        dir="rtl"
-                        placeholder="الحي، الشارع، رقم المبنى..."
-                      />
-                    </div>
-                  </div>
-
-                  {/* Notes */}
-                  <div>
-                    <label className="block text-sm font-body text-muted-foreground mb-2">ملاحظات إضافية</label>
-                    <textarea
-                      value={formData.notes}
-                      onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                      className="w-full px-4 py-2 bg-background border border-border rounded-lg text-foreground placeholder:text-muted-foreground/50 resize-none focus:outline-none focus:ring-2 focus:ring-primary/50"
-                      dir="rtl"
-                      placeholder="أضف أي ملاحظات خاصة للطلب (مثل وقت التسليم المفضل)"
-                      rows={3}
-                    />
-                  </div>
-
-                  {savedAddresses.length > 0 && (
-                    <div>
-                      <label className="block text-sm font-body text-muted-foreground mb-2">العناوين المحفوظة</label>
-                      <select
-                        value={selectedAddressId}
-                        onChange={(e) => setSelectedAddressId(e.target.value)}
-                        className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm"
+          {/* Stepper */}
+          <div className="mb-10">
+            <div className="flex items-center justify-between max-w-2xl mx-auto">
+              {STEPS.map((step, i) => {
+                const Icon = step.icon;
+                const done = i < currentStep;
+                const active = i === currentStep;
+                return (
+                  <div key={step.key} className="flex items-center flex-1">
+                    <div className="flex flex-col items-center">
+                      <button
+                        onClick={() => { if (i < currentStep) setCurrentStep(i); }}
+                        disabled={i > currentStep}
+                        className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
+                          done ? "bg-gold text-white" : active ? "bg-gold text-white ring-4 ring-gold/20" : "bg-muted text-muted-foreground"
+                        }`}
                       >
-                        <option value="">اختر عنوانًا محفوظًا</option>
-                        {savedAddresses.map((addr) => (
-                          <option key={addr.id} value={addr.id}>
-                            {addr.label} - {addr.city}
-                          </option>
-                        ))}
-                      </select>
+                        {done ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+                      </button>
+                      <span className={`text-xs mt-2 font-medium ${active || done ? "text-foreground" : "text-muted-foreground"}`}>{step.label}</span>
+                    </div>
+                    {i < STEPS.length - 1 && (
+                      <div className={`flex-1 h-0.5 mx-2 -mt-6 transition-colors ${done ? "bg-gold" : "bg-muted"}`} />
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            {/* Step content */}
+            <div className="lg:col-span-2">
+              <AnimatePresence mode="wait">
+                <motion.div key={currentStep} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}
+                  className="bg-card border border-border rounded-2xl p-6">
+
+                  {/* STEP 1: Info */}
+                  {currentStep === 0 && (
+                    <div className="space-y-5">
+                      <h2 className="font-heading text-xl flex items-center gap-2"><User className="w-5 h-5 text-gold" /> معلوماتك الشخصية</h2>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm mb-2">الاسم الكامل *</label>
+                          <Input value={isGuestLike ? formData.name : (customer?.name || "")} onChange={(e) => isGuestLike && setFormData({ ...formData, name: e.target.value })} disabled={!isGuestLike} placeholder="أدخل اسمك" dir="rtl" />
+                        </div>
+                        <div>
+                          <label className="block text-sm mb-2">رقم الهاتف *</label>
+                          <Input value={isGuestLike ? formData.phone : (customer?.phone || "")} onChange={(e) => isGuestLike && setFormData({ ...formData, phone: e.target.value })} disabled={!isGuestLike} placeholder="05xxxxxxxx" dir="ltr" />
+                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-sm mb-2">البريد الإلكتروني (اختياري)</label>
+                        <Input value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="you@example.com" dir="ltr" />
+                      </div>
                     </div>
                   )}
 
-                  <div className="flex flex-wrap gap-2">
-                    <Button type="button" variant="outline" onClick={saveCustomerInfo}>
-                      حفظ المعلومات
-                    </Button>
-                    {savedAddresses.length > 0 && (
-                      <Button type="button" variant="outline" onClick={useSavedCustomerInfo}>
-                        استخدام المحفوظ
-                      </Button>
-                    )}
-                    <Button type="button" variant="ghost" onClick={startNewAddress}>
-                      عنوان جديد
-                    </Button>
-                  </div>
-                </div>
-              </motion.div>
-
-              {/* Delivery */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.1 }}
-                className="bg-card border border-border rounded-lg p-6"
-              >
-                <h2 className="font-heading text-xl text-foreground mb-6 flex items-center gap-2">
-                  <Truck className="w-5 h-5 text-gold" />
-                  شركة التوصيل
-                </h2>
-                {deliveryCompanies.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {deliveryCompanies.map((company) => (
-                      <button
-                        key={company.id}
-                        onClick={() => setSelectedDelivery(company.id)}
-                        className={`p-4 border rounded-lg text-right transition-all ${selectedDelivery === company.id ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}
-                      >
-                        <h3 className="font-heading text-foreground">{company.name}</h3>
-                        <p className="text-sm text-muted-foreground font-body mt-1">
-                          {company.base_fee} {currency} {company.delivery_days && `• ${company.delivery_days}`}
-                        </p>
-                      </button>
-                    ))}
-                  </div>
-                ) : (
-                  <p className="text-muted-foreground text-center py-4">لا توجد شركات توصيل متاحة</p>
-                )}
-              </motion.div>
-
-              {/* Payment */}
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2 }}
-                className="bg-card border border-border rounded-lg p-6"
-              >
-                <h2 className="font-heading text-xl text-foreground mb-6">طريقة الدفع</h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("cod")}
-                    className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${paymentMethod === "cod" ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}
-                  >
-                    <Banknote className="w-6 h-6 text-gold" />
-                    <div className="text-right">
-                      <h3 className="font-heading text-foreground">الدفع عند الاستلام</h3>
-                      <p className="text-xs text-muted-foreground font-body">Cash on Delivery</p>
-                    </div>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setPaymentMethod("bank")}
-                    className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${paymentMethod === "bank" ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}
-                  >
-                    <CreditCard className="w-6 h-6 text-gold" />
-                    <div className="text-right">
-                      <h3 className="font-heading text-foreground">تحويل بنكي</h3>
-                      <p className="text-xs text-muted-foreground font-body">Bank Transfer</p>
-                    </div>
-                  </button>
-                </div>
-
-                {/* COD regions */}
-                {paymentMethod === "cod" && (
-                  <div className="bg-muted rounded-lg p-4 space-y-3">
-                    <div className="flex items-center gap-2 text-sm font-medium text-foreground">
-                      <MapPin className="w-4 h-4 text-gold" />
-                      <span>اختر منطقة الاستلام *</span>
-                    </div>
-                    {codRegions.length > 0 ? (
-                      <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                        {codRegions.map((region) => (
-                          <button
-                            key={region.id}
-                            type="button"
-                            onClick={() => setSelectedRegion(region.id)}
-                            className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedRegion === region.id ? "bg-gold text-white border-gold" : "bg-background border border-border text-foreground hover:border-gold/50"}`}
-                          >
-                            {region.region_name_ar}
-                          </button>
-                        ))}
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2 text-amber-600 bg-amber-50 p-3 rounded-lg">
-                        <AlertCircle className="w-4 h-4" />
-                        <span className="text-sm">لا توجد مناطق محددة حالياً للدفع عند الاستلام</span>
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                {/* Bank accounts */}
-                {paymentMethod === "bank" && bankAccounts.length > 0 && (
-                  <div className="bg-muted rounded-lg p-4 space-y-4">
-                    <p className="text-sm text-muted-foreground font-body">يرجى التحويل إلى أحد الحسابات التالية:</p>
-                    {bankAccounts.map((acc, index) => (
-                      <div key={index} className="flex items-center justify-between p-3 bg-background rounded-md">
+                  {/* STEP 2: Address */}
+                  {currentStep === 1 && (
+                    <div className="space-y-5">
+                      <h2 className="font-heading text-xl flex items-center gap-2"><MapPin className="w-5 h-5 text-gold" /> عنوان التوصيل</h2>
+                      {savedAddresses.length > 0 && (
                         <div>
-                          <p className="font-heading text-sm text-foreground">{acc.bank}</p>
-                          <p className="text-xs text-muted-foreground font-mono" dir="ltr">
-                            {acc.account}
-                          </p>
+                          <label className="block text-sm mb-2">اختر عنواناً محفوظاً</label>
+                          <select value={selectedAddressId} onChange={(e) => {
+                            const id = e.target.value; setSelectedAddressId(id);
+                            const a = savedAddresses.find((x) => x.id === id);
+                            if (a) setFormData((p) => ({ ...p, city: a.city, address: a.address, notes: a.notes || "" }));
+                          }} className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm">
+                            <option value="">— جديد —</option>
+                            {savedAddresses.map((a) => <option key={a.id} value={a.id}>{a.label} - {a.city}</option>)}
+                          </select>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => handleCopyAccount(acc.account)}
-                          className="p-2 text-gold hover:bg-gold/10 rounded-md transition-colors"
-                        >
-                          <Copy className="w-4 h-4" />
-                        </button>
+                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <label className="block text-sm mb-2">المدينة *</label>
+                          <Input value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} placeholder="اختر مدينتك" dir="rtl" />
+                        </div>
+                        <div>
+                          <label className="block text-sm mb-2">العنوان بالتفصيل *</label>
+                          <Input value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="الحي، الشارع، رقم المبنى" dir="rtl" />
+                        </div>
                       </div>
-                    ))}
-                  </div>
-                )}
-              </motion.div>
-            </div>
+                      <div>
+                        <label className="block text-sm mb-2">ملاحظات إضافية</label>
+                        <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={3} dir="rtl"
+                          placeholder="وقت التسليم المفضل، معلم قريب..." className="w-full px-4 py-2 bg-background border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                      </div>
+                    </div>
+                  )}
 
-            {/* Beneficiary + Coupon + Summary */}
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.3 }}
-              className="space-y-6"
-            >
-              {/* Coupon */}
-              <div className="bg-card border border-border rounded-lg p-6">
-                <h2 className="font-heading text-lg text-foreground mb-4">كود الخصم</h2>
-                <div className="flex gap-2">
-                  <Input
-                    value={couponCode}
-                    onChange={(e) => setCouponCode(e.target.value)}
-                    placeholder="أدخل كود الخصم"
-                  />
-                  <Button onClick={applyCoupon} className="flex-shrink-0">
-                    تطبيق
+                  {/* STEP 3: Payment */}
+                  {currentStep === 2 && (
+                    <div className="space-y-6">
+                      <h2 className="font-heading text-xl flex items-center gap-2"><CreditCard className="w-5 h-5 text-gold" /> الشحن والدفع</h2>
+
+                      <div>
+                        <label className="block text-sm mb-3 flex items-center gap-2"><Truck className="w-4 h-4" /> شركة التوصيل *</label>
+                        {deliveryCompanies.length > 0 ? (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                            {deliveryCompanies.map((c) => (
+                              <button key={c.id} onClick={() => setSelectedDelivery(c.id)}
+                                className={`p-4 border rounded-lg text-right transition-all ${selectedDelivery === c.id ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}>
+                                <h3 className="font-heading">{c.name}</h3>
+                                <p className="text-sm text-muted-foreground mt-1">{c.base_fee} {currency} {c.delivery_days && `• ${c.delivery_days}`}</p>
+                              </button>
+                            ))}
+                          </div>
+                        ) : <p className="text-sm text-muted-foreground">لا توجد شركات توصيل</p>}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm mb-3">طريقة الدفع *</label>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                          <button type="button" onClick={() => setPaymentMethod("cod")}
+                            className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${paymentMethod === "cod" ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}>
+                            <Banknote className="w-6 h-6 text-gold" />
+                            <div className="text-right"><h3 className="font-heading">الدفع عند الاستلام</h3><p className="text-xs text-muted-foreground">Cash on Delivery</p></div>
+                          </button>
+                          <button type="button" onClick={() => setPaymentMethod("bank")}
+                            className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${paymentMethod === "bank" ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}>
+                            <CreditCard className="w-6 h-6 text-gold" />
+                            <div className="text-right"><h3 className="font-heading">تحويل بنكي</h3><p className="text-xs text-muted-foreground">Bank Transfer</p></div>
+                          </button>
+                        </div>
+                      </div>
+
+                      {paymentMethod === "cod" && codRegions.length > 0 && (
+                        <div className="bg-muted rounded-lg p-4 space-y-3">
+                          <p className="text-sm font-medium flex items-center gap-2"><MapPin className="w-4 h-4 text-gold" /> منطقة الاستلام *</p>
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            {codRegions.map((r) => (
+                              <button key={r.id} type="button" onClick={() => setSelectedRegion(r.id)}
+                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedRegion === r.id ? "bg-gold text-white" : "bg-background border border-border hover:border-gold/50"}`}>
+                                {r.region_name_ar}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+
+                      {paymentMethod === "bank" && bankAccounts.length > 0 && (
+                        <div className="bg-muted rounded-lg p-4 space-y-3">
+                          <p className="text-sm text-muted-foreground">التحويل إلى:</p>
+                          {bankAccounts.map((a, i) => (
+                            <div key={i} className="flex items-center justify-between p-3 bg-background rounded-md">
+                              <div><p className="font-heading text-sm">{a.bank}</p><p className="text-xs font-mono text-muted-foreground" dir="ltr">{a.account}</p></div>
+                              <button type="button" onClick={() => { navigator.clipboard.writeText(a.account); toast({ title: "تم النسخ" }); }} className="p-2 text-gold hover:bg-gold/10 rounded-md"><Copy className="w-4 h-4" /></button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+
+                      <div>
+                        <label className="block text-sm mb-2 flex items-center gap-2"><Ticket className="w-4 h-4" /> كود الخصم (اختياري)</label>
+                        <div className="flex gap-2">
+                          <Input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="أدخل الكود" />
+                          <Button onClick={applyCoupon} variant="outline">تطبيق</Button>
+                        </div>
+                        {discountAmount > 0 && <p className="mt-2 text-sm text-green-600">✓ خصم {discountAmount.toFixed(2)} {currency}</p>}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* STEP 4: Review */}
+                  {currentStep === 3 && (
+                    <div className="space-y-5">
+                      <h2 className="font-heading text-xl flex items-center gap-2"><Check className="w-5 h-5 text-gold" /> مراجعة الطلب</h2>
+
+                      <div className="border border-border rounded-lg p-4 space-y-2">
+                        <p className="text-xs text-muted-foreground">معلوماتك</p>
+                        <p className="text-sm"><strong>{formData.name || customer?.name}</strong> — <span dir="ltr">{formData.phone || customer?.phone}</span></p>
+                      </div>
+
+                      <div className="border border-border rounded-lg p-4 space-y-1">
+                        <p className="text-xs text-muted-foreground">عنوان التوصيل</p>
+                        <p className="text-sm">{formData.city} — {formData.address}</p>
+                        {formData.notes && <p className="text-xs text-muted-foreground">ملاحظات: {formData.notes}</p>}
+                      </div>
+
+                      <div className="border border-border rounded-lg p-4 space-y-1">
+                        <p className="text-xs text-muted-foreground">الشحن والدفع</p>
+                        <p className="text-sm">{selectedCompany?.name} • {paymentMethod === "cod" ? "الدفع عند الاستلام" : "تحويل بنكي"}</p>
+                      </div>
+
+                      <div className="border border-border rounded-lg p-4">
+                        <p className="text-xs text-muted-foreground mb-3">المنتجات</p>
+                        <div className="space-y-2">
+                          {cart.map((item, i) => {
+                            const price = item.product.discount ? item.product.price * (1 - item.product.discount / 100) : item.product.price;
+                            const accTotal = item.selectedAccessories?.reduce((s, a) => s + a.price * a.quantity, 0) || 0;
+                            return (
+                              <div key={i} className="flex gap-3 items-center">
+                                <img src={item.product.images?.[0] || "/placeholder.svg"} alt="" className="w-12 h-12 object-cover rounded border" />
+                                <div className="flex-1 min-w-0"><p className="text-sm truncate">{item.product.nameAr}</p><p className="text-xs text-muted-foreground">{item.quantity} × {price.toFixed(0)}</p></div>
+                                <span className="text-sm text-gold font-medium">{((price + accTotal) * item.quantity).toFixed(0)}</span>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </motion.div>
+              </AnimatePresence>
+
+              {/* Navigation buttons */}
+              <div className="flex justify-between items-center mt-6 gap-3">
+                <Button variant="outline" onClick={prevStep} disabled={currentStep === 0} className="gap-2">
+                  <ChevronRight className="w-4 h-4" /> السابق
+                </Button>
+                {currentStep < STEPS.length - 1 ? (
+                  <Button onClick={nextStep} className="btn-gold gap-2">
+                    التالي <ChevronLeft className="w-4 h-4" />
                   </Button>
-                </div>
-                {discountAmount > 0 && (
-                  <p className="mt-3 text-green-600 font-medium">
-                    تم تطبيق خصم: {discountAmount.toFixed(2)} {currency}
-                  </p>
+                ) : (
+                  <Button onClick={handleSubmit} disabled={isSubmitting} className="btn-gold gap-2">
+                    {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
+                    تأكيد الطلب النهائي
+                  </Button>
                 )}
               </div>
+            </div>
 
-              {/* Summary */}
-              <div className="bg-card border border-border rounded-lg p-6 space-y-4">
-                <h2 className="font-heading text-lg text-foreground mb-4">ملخص الطلب</h2>
-                
-                {/* Cart Items with Images */}
-                <div className="space-y-3 pb-4 border-b border-border">
-                  {cart.map((item, index) => {
-                    const itemPrice = item.product.discount
-                      ? item.product.price * (1 - item.product.discount / 100)
-                      : item.product.price;
-                    const accessoriesTotal = item.selectedAccessories
-                      ? item.selectedAccessories.reduce((sum, acc) => sum + acc.price * acc.quantity, 0)
-                      : 0;
+            {/* Sidebar summary */}
+            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:sticky lg:top-24 lg:self-start">
+              <div className="bg-card border border-border rounded-2xl p-6 space-y-3">
+                <h2 className="font-heading text-lg">ملخص الطلب</h2>
+                <div className="space-y-2 pb-3 border-b border-border max-h-64 overflow-y-auto">
+                  {cart.map((item, i) => {
+                    const price = item.product.discount ? item.product.price * (1 - item.product.discount / 100) : item.product.price;
+                    const accTotal = item.selectedAccessories?.reduce((s, a) => s + a.price * a.quantity, 0) || 0;
                     return (
-                      <div key={index} className="flex gap-3 items-start">
-                        <img 
-                          src={item.product.images?.[0] || '/placeholder.svg'} 
-                          alt={item.product.nameAr}
-                          className="w-14 h-14 object-cover rounded-lg border border-border flex-shrink-0"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm truncate">{item.product.nameAr}</p>
-                          <p className="text-xs text-muted-foreground">
-                            {item.quantity} × {itemPrice.toFixed(0)} {currency}
-                          </p>
-                          {item.selectedSize && (
-                            <span className="text-xs text-blue-600">الحجم: {item.selectedSize}</span>
-                          )}
-                          {item.selectedAccessories && item.selectedAccessories.length > 0 && (
-                            <div className="flex flex-wrap gap-1 mt-1">
-                              {item.selectedAccessories.map((acc, i) => (
-                                <span key={i} className="text-[10px] bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded">
-                                  {acc.name_ar} +{acc.price * acc.quantity}
-                                </span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        <span className="text-sm font-medium text-gold">
-                          {((itemPrice + accessoriesTotal) * item.quantity).toFixed(0)} {currency}
-                        </span>
+                      <div key={i} className="flex gap-2 items-start text-xs">
+                        <img src={item.product.images?.[0] || "/placeholder.svg"} alt="" className="w-10 h-10 object-cover rounded border" />
+                        <div className="flex-1 min-w-0"><p className="truncate">{item.product.nameAr}</p><p className="text-muted-foreground">{item.quantity}×</p></div>
+                        <span className="text-gold font-medium">{((price + accTotal) * item.quantity).toFixed(0)}</span>
                       </div>
                     );
                   })}
                 </div>
-                
-                <div className="flex justify-between text-sm">
-                  <span>المجموع الفرعي</span>
-                  <span>
-                    {subtotal.toFixed(2)} {currency}
-                  </span>
-                </div>
-                <div className="flex justify-between text-sm">
-                  <span>رسوم التوصيل</span>
-                  <span>
-                    {deliveryFee.toFixed(2)} {currency}
-                  </span>
-                </div>
-                {discountAmount > 0 && (
-                  <div className="flex justify-between text-green-600 font-medium text-sm">
-                    <span>خصم الكوبون</span>
-                    <span>
-                      -{discountAmount.toFixed(2)} {currency}
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between font-bold text-foreground text-lg pt-2 border-t border-border">
-                  <span>الإجمالي</span>
-                  <span>
-                    {total.toFixed(2)} {currency}
-                  </span>
-                </div>
-                <Button onClick={handleSubmit} className="w-full mt-4 bg-gold hover:bg-gold/90">
-                  إتمام الطلب
-                </Button>
+                <div className="flex justify-between text-sm"><span>المجموع الفرعي</span><span>{subtotal.toFixed(2)} {currency}</span></div>
+                <div className="flex justify-between text-sm"><span>رسوم التوصيل</span><span>{deliveryFee.toFixed(2)} {currency}</span></div>
+                {discountAmount > 0 && <div className="flex justify-between text-sm text-green-600"><span>خصم</span><span>-{discountAmount.toFixed(2)}</span></div>}
+                <div className="flex justify-between font-bold text-lg pt-2 border-t border-border"><span>الإجمالي</span><span className="text-gold">{total.toFixed(2)} {currency}</span></div>
               </div>
             </motion.div>
           </div>

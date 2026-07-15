@@ -2,7 +2,8 @@ import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Bell, Send, MessageCircle, Users, Trash2, Loader2 } from "lucide-react";
+import { Bell, Send, MessageCircle, Users, Trash2, Loader2, Activity } from "lucide-react";
+import { Link } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -106,12 +107,52 @@ const AdminCustomerNotificationsPage = () => {
         }];
       }
 
-      const { error } = await (supabase as any).from("customer_notifications").insert(rows);
+      const { data: inserted, error } = await (supabase as any)
+        .from("customer_notifications")
+        .insert(rows)
+        .select("id");
       if (error) throw error;
+      const notifId = inserted?.[0]?.id;
       toast.success("تم إرسال الإشعار");
 
-      if (alsoWhatsapp && selectedCustomer && target === "single") {
-        openWhatsApp(selectedCustomer.phone, `${title.trim()}\n\n${body.trim()}${link ? `\n\n${link}` : ""}`);
+      // Track delivery: in-app row
+      if (notifId) {
+        const deliveryRows: any[] = [];
+        deliveryRows.push({
+          notification_id: notifId,
+          customer_id: target === "single" ? selectedCustomer?.id || null : null,
+          customer_phone: target === "single" ? selectedCustomer?.phone || null : null,
+          channel: "inapp",
+          status: "sent",
+          attempts: 1,
+          delivered_at: new Date().toISOString(),
+          payload: { title: title.trim(), body: body.trim(), broadcast: target === "broadcast" },
+        });
+
+        // WhatsApp delivery row (if applicable)
+        if (alsoWhatsapp && selectedCustomer && target === "single") {
+          let waStatus: "sent" | "failed" = "sent";
+          let waError: string | null = null;
+          try {
+            openWhatsApp(selectedCustomer.phone, `${title.trim()}\n\n${body.trim()}${link ? `\n\n${link}` : ""}`);
+          } catch (e: any) {
+            waStatus = "failed";
+            waError = String(e?.message || e);
+          }
+          deliveryRows.push({
+            notification_id: notifId,
+            customer_id: selectedCustomer.id,
+            customer_phone: selectedCustomer.phone,
+            channel: "whatsapp",
+            status: waStatus,
+            attempts: 1,
+            last_error: waError,
+            delivered_at: waStatus === "sent" ? new Date().toISOString() : null,
+            payload: { title: title.trim(), body: body.trim() },
+          });
+        }
+
+        await (supabase as any).from("notification_deliveries").insert(deliveryRows);
       }
 
       setTitle("");
@@ -141,6 +182,14 @@ const AdminCustomerNotificationsPage = () => {
         title="إشعارات العملاء"
         description="أرسل إشعارات داخل التطبيق مع خيار الإرسال عبر واتساب"
       />
+
+      <div className="flex justify-end">
+        <Link to="/admin/notification-deliveries">
+          <Button variant="outline" className="gap-2">
+            <Activity className="w-4 h-4" /> سجل تسليم الإشعارات
+          </Button>
+        </Link>
+      </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-5 gap-6">
         <div className="lg:col-span-3 space-y-4 bg-card border border-border rounded-2xl p-5">

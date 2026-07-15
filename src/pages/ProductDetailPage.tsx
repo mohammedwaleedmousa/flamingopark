@@ -31,6 +31,7 @@ const ProductDetailPage = () => {
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColorIdx, setSelectedColorIdx] = useState<number | null>(null);
   const [accessoryQuantities, setAccessoryQuantities] = useState<Record<string, number>>({});
+  const [justAdded, setJustAdded] = useState(false);
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', slug],
@@ -108,7 +109,9 @@ const ProductDetailPage = () => {
     const selectedAccs = product.accessories?.map((acc, idx) => ({ acc, qty: accessoryQuantities[`${idx}-${acc.name_ar}`] || 0 }))
       .filter(({ qty }) => qty > 0).map(({ acc, qty }) => ({ name: acc.name, name_ar: acc.name_ar, price: acc.price, quantity: qty, image_url: acc.image_url })) || [];
     addToCart(product, quantity, selectedSize || undefined, selectedAccs.length ? selectedAccs : undefined);
-    toast({ title: 'تمت الإضافة', description: `${product.nameAr} × ${quantity}` });
+    setJustAdded(true);
+    setTimeout(() => setJustAdded(false), 3500);
+    toast({ title: '✓ تمت الإضافة إلى السلة', description: `${product.nameAr} × ${quantity}` });
   };
 
   const handleShare = async () => {
@@ -285,6 +288,17 @@ const ProductDetailPage = () => {
 
               {/* CTA buttons */}
               <div className="space-y-3 pt-4">
+                {justAdded && (
+                  <div className="flex items-center justify-between gap-2 p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 animate-in fade-in slide-in-from-bottom-2">
+                    <div className="flex items-center gap-2 text-emerald-800 text-sm">
+                      <Check className="w-4 h-4" />
+                      <span>تمت الإضافة إلى السلة ({quantity})</span>
+                    </div>
+                    <Button size="sm" onClick={() => navigate('/cart')} className="h-8 bg-emerald-600 hover:bg-emerald-700 text-white">
+                      عرض السلة
+                    </Button>
+                  </div>
+                )}
                 <Button onClick={handleAddToCart} disabled={!product.inStock}
                   className="w-full h-14 rounded-2xl bg-gold hover:bg-gold/90 text-white font-heading text-base gap-3">
                   <ShoppingBag className="w-5 h-5" /> إضافة للسلة

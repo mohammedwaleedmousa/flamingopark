@@ -829,6 +829,62 @@ export type Database = {
           },
         ]
       }
+      notification_deliveries: {
+        Row: {
+          attempts: number
+          channel: string
+          created_at: string
+          customer_id: string | null
+          customer_phone: string | null
+          delivered_at: string | null
+          id: string
+          last_error: string | null
+          notification_id: string
+          payload: Json | null
+          read_at: string | null
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          attempts?: number
+          channel: string
+          created_at?: string
+          customer_id?: string | null
+          customer_phone?: string | null
+          delivered_at?: string | null
+          id?: string
+          last_error?: string | null
+          notification_id: string
+          payload?: Json | null
+          read_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          attempts?: number
+          channel?: string
+          created_at?: string
+          customer_id?: string | null
+          customer_phone?: string | null
+          delivered_at?: string | null
+          id?: string
+          last_error?: string | null
+          notification_id?: string
+          payload?: Json | null
+          read_at?: string | null
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "notification_deliveries_notification_id_fkey"
+            columns: ["notification_id"]
+            isOneToOne: false
+            referencedRelation: "customer_notifications"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       offers: {
         Row: {
           countries: string[] | null

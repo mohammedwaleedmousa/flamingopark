@@ -7,6 +7,7 @@ import { useStore } from "@/store/useStore";
 interface BrandRow {
   id: string;
   name: string;
+  slug: string | null;
   logo_url: string | null;
   countries: string[] | null;
   is_active: boolean | null;
@@ -16,6 +17,8 @@ interface BrandRow {
 interface BrandViewModel {
   id: string;
   name: string;
+  slug: string;
+  logo_url: string | null;
 }
 
 const BrandsStrip = () => {
@@ -31,11 +34,9 @@ const BrandsStrip = () => {
     queryKey: ["home-brands", country],
 
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("brands")
-        .select(
-          "id,name,logo_url,countries,is_active,sort_order"
-        )
+        .select("id,name,logo_url,countries,is_active,sort_order,slug")
         .eq("is_active", true)
         .order("sort_order", {
           ascending: true,
@@ -63,6 +64,8 @@ const BrandsStrip = () => {
     (brand) => ({
       id: brand.id,
       name: brand.name,
+      slug: brand.slug || brand.name.toLowerCase().replace(/\s+/g, "-"),
+      logo_url: brand.logo_url,
     })
   );
 
@@ -93,9 +96,18 @@ const BrandsStrip = () => {
 
   return (
     <section
-      className="py-6 md:py-8 bg-white overflow-hidden"
+      className="py-10 md:py-16 bg-white overflow-hidden"
       dir="rtl"
+      aria-label="أبرز الماركات"
     >
+      <div className="max-w-6xl mx-auto px-4 mb-8 md:mb-10 text-center">
+        <p className="text-[11px] md:text-xs tracking-[0.35em] uppercase text-black/50 mb-2">Maison</p>
+        <h2 className="font-heading text-2xl md:text-3xl tracking-[0.25em] uppercase text-black">
+          أبرز الماركات
+        </h2>
+        <div className="mx-auto mt-4 h-px w-16 bg-gold/60" />
+      </div>
+
       <div className="relative">
 
         <div
@@ -130,8 +142,8 @@ const BrandsStrip = () => {
             brands-strip-track
             flex
             items-center
-            gap-3
-            md:gap-4
+            gap-4
+            md:gap-6
             px-4
             md:px-8
             whitespace-nowrap
@@ -180,43 +192,25 @@ const BrandsStrip = () => {
           {renderBrands.map((brand) => (
             <Link
               key={brand.id}
-              to={`/products?brand=${encodeURIComponent(
-                brand.name
-              )}`}
-
-              className="
-              group
-              inline-flex
-              items-center
-              min-w-fit
-              border
-              border-black/15
-              rounded-none
-              px-4
-              md:px-5
-              py-2
-              text-black/65
-              hover:text-black
-              hover:border-black/30
-              transition-colors
-              duration-300
-              "
-
+              to={`/brands/${brand.slug}`}
+              className="group inline-flex flex-col items-center justify-center min-w-[140px] md:min-w-[180px] h-[110px] md:h-[140px] bg-white border border-black/10 hover:border-gold/70 hover:shadow-[0_10px_30px_-15px_rgba(0,0,0,0.25)] transition-all duration-500 px-5"
               aria-label={`اذهب إلى ماركة ${brand.name}`}
             >
-
-              <span
-                className="
-                font-heading
-                text-sm
-                md:text-base
-                tracking-[0.18em]
-                uppercase
-                "
-              >
+              {brand.logo_url ? (
+                <img
+                  src={brand.logo_url}
+                  alt={brand.name}
+                  loading="lazy"
+                  className="max-h-14 md:max-h-16 max-w-[130px] md:max-w-[150px] object-contain grayscale opacity-80 group-hover:grayscale-0 group-hover:opacity-100 transition duration-500"
+                />
+              ) : (
+                <span className="font-heading text-sm md:text-base tracking-[0.2em] uppercase text-black/70 group-hover:text-black transition-colors">
+                  {brand.name}
+                </span>
+              )}
+              <span className="mt-3 text-[10px] md:text-[11px] tracking-[0.25em] uppercase text-black/45 group-hover:text-gold transition-colors">
                 {brand.name}
               </span>
-
             </Link>
           ))}
 

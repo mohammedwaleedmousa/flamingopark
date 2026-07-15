@@ -205,33 +205,92 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_sections: {
+        Row: {
+          brand_id: string
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          is_active: boolean
+          name: string
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name: string
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          is_active?: boolean
+          name?: string
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_sections_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brands: {
         Row: {
           countries: string[] | null
           created_at: string
+          description: string | null
+          hero_image: string | null
           id: string
           is_active: boolean | null
           logo_url: string | null
           name: string
+          slug: string | null
           sort_order: number | null
+          updated_at: string
         }
         Insert: {
           countries?: string[] | null
           created_at?: string
+          description?: string | null
+          hero_image?: string | null
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
           name: string
+          slug?: string | null
           sort_order?: number | null
+          updated_at?: string
         }
         Update: {
           countries?: string[] | null
           created_at?: string
+          description?: string | null
+          hero_image?: string | null
           id?: string
           is_active?: boolean | null
           logo_url?: string | null
           name?: string
+          slug?: string | null
           sort_order?: number | null
+          updated_at?: string
         }
         Relationships: []
       }

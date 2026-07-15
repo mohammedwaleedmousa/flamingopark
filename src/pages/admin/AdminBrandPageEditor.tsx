@@ -59,14 +59,24 @@ const AdminBrandPageEditor = () => {
   const upload = async (file: File, kind: "logo" | "hero") => {
     setUploading(kind);
     try {
-      const ext = file.name.split(".").pop();
-      const path = `brands/${kind}-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("uploads").upload(path, file);
-      if (error) throw error;
+      const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+      const path = `brands/${kind}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+      const { error } = await supabase.storage
+        .from("uploads")
+        .upload(path, file, { upsert: true, cacheControl: "3600", contentType: file.type || undefined });
+      if (error) {
+        console.error("[brand upload]", error);
+        throw error;
+      }
       const { data } = supabase.storage.from("uploads").getPublicUrl(path);
       setForm((f) => ({ ...f, [kind === "logo" ? "logo_url" : "hero_image"]: data.publicUrl }));
+      toast({ title: "تم رفع الصورة" });
     } catch (e: any) {
-      toast({ title: "فشل رفع الصورة", description: e.message, variant: "destructive" });
+      toast({
+        title: "فشل رفع الصورة",
+        description: e?.message || "تأكد من تسجيل الدخول كأدمن ثم أعد المحاولة",
+        variant: "destructive",
+      });
     } finally {
       setUploading(null);
     }

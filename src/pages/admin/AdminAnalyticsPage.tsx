@@ -317,54 +317,296 @@ const AdminAnalyticsPage = () => {
 
   return (
     <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
-      <AdminPageHeader
-        category="التحليلات"
-        title="التقارير والتحليلات"
-        description="بيانات حقيقية محدّثة لحظياً — زوار، تحويل، إعلانات، أفضل المنتجات"
-        actions={[]}
-      />
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-end lg:justify-between">
 
-      {/* Controls */}
-      <div className="flex items-center gap-2 flex-wrap">
-        <Select value={range} onValueChange={(v) => setRange(v as Range)}>
-            <SelectTrigger className="w-[150px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              {RANGE_OPTIONS.map((o) => (<SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>))}
-            </SelectContent>
-          </Select>
-          <Select value={grain} onValueChange={(v) => setGrain(v as Grain)}>
-            <SelectTrigger className="w-[120px]"><SelectValue /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="hour">بالساعة</SelectItem>
-              <SelectItem value="day">باليوم</SelectItem>
-            </SelectContent>
-          </Select>
-          <Button variant="outline" size="icon" onClick={() => setRefreshKey((k) => k + 1)} aria-label="تحديث">
-            <RefreshCw className={cn('w-4 h-4', loading && 'animate-spin')} />
-          </Button>
+        <div>
+
+          <span className="inline-flex items-center rounded-full bg-primary/10 px-3 py-1 text-xs font-medium text-primary">
+            التحليلات
+          </span>
+
+          <h1 className="mt-4 text-4xl font-bold tracking-tight">
+            التقارير والتحليلات
+          </h1>
+
+          <p className="mt-3 max-w-2xl text-muted-foreground leading-7">
+            راقب المبيعات والإيرادات والزوار ومعدلات التحويل وأداء الحملات الإعلانية من لوحة تحكم موحدة.
+          </p>
+
+          <div className="mt-5 flex items-center gap-2">
+
+            <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
+
+            <span className="text-sm font-medium">
+              البيانات تُحدَّث مباشرة
+            </span>
+
+          </div>
+
         </div>
 
+        <div className="flex flex-wrap items-center gap-3">
+
+          <Select value={range} onValueChange={(v) => setRange(v as Range)}>
+            <SelectTrigger className="w-[170px] rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+
+            <SelectContent>
+              {RANGE_OPTIONS.map((o) => (
+                <SelectItem key={o.value} value={o.value}>
+                  {o.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
+          <Select value={grain} onValueChange={(v) => setGrain(v as Grain)}>
+            <SelectTrigger className="w-[150px] rounded-xl">
+              <SelectValue />
+            </SelectTrigger>
+
+            <SelectContent>
+              <SelectItem value="hour">حسب الساعة</SelectItem>
+              <SelectItem value="day">حسب اليوم</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Button
+            variant="outline"
+            className="rounded-xl"
+            onClick={() => setRefreshKey((k) => k + 1)}
+          >
+            <RefreshCw
+              className={cn(
+                "ml-2 h-4 w-4",
+                loading && "animate-spin"
+              )}
+            />
+            تحديث
+          </Button>
+
+        </div>
+
+      </div>
+
       {/* Stat cards */}
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-        <StatCard icon={Users} label="زوار فريدون" value={stats.visitors.toLocaleString('en')} accent="from-blue-500/10 to-blue-600/5" />
-        <StatCard icon={Eye} label="مشاهدات الصفحات" value={stats.pageViews.toLocaleString('en')} accent="from-cyan-500/10 to-cyan-600/5" />
-        <StatCard icon={MousePointerClick} label="إضافة للسلة" value={stats.addToCart.toLocaleString('en')} accent="from-amber-500/10 to-amber-600/5" />
-        <StatCard icon={ShoppingCart} label="طلبات" value={stats.purchases.toLocaleString('en')} accent="from-emerald-500/10 to-emerald-600/5" />
-        <StatCard icon={TrendingUp} label="إيرادات" value={stats.revenue.toLocaleString('en', { maximumFractionDigits: 0 })} hint="عملة الموقع" accent="from-primary/10 to-primary/5" />
-        <StatCard icon={Percent} label="معدل التحويل" value={`${stats.conv.toFixed(2)}%`} hint={`سلة→شراء ${stats.cartConv.toFixed(1)}%`} accent="from-violet-500/10 to-violet-600/5" />
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-6">
+
+        <StatCard
+          icon={TrendingUp}
+          label="الإيرادات"
+          value={stats.revenue.toLocaleString("en", {
+            maximumFractionDigits: 0,
+          })}
+          hint="إجمالي المبيعات"
+          accent="from-primary/15 to-transparent"
+        />
+
+        <StatCard
+          icon={Users}
+          label="الزوار"
+          value={stats.visitors.toLocaleString("en")}
+          hint="زوار فريدون"
+          accent="from-blue-500/10 to-transparent"
+        />
+
+        <StatCard
+          icon={Eye}
+          label="المشاهدات"
+          value={stats.pageViews.toLocaleString("en")}
+          hint="مشاهدة صفحة"
+          accent="from-cyan-500/10 to-transparent"
+        />
+
+        <StatCard
+          icon={ShoppingCart}
+          label="الطلبات"
+          value={stats.purchases.toLocaleString("en")}
+          hint="طلب مكتمل"
+          accent="from-emerald-500/10 to-transparent"
+        />
+
+        <StatCard
+          icon={MousePointerClick}
+          label="إضافة للسلة"
+          value={stats.addToCart.toLocaleString("en")}
+          hint="تفاعل العملاء"
+          accent="from-amber-500/10 to-transparent"
+        />
+
+        <StatCard
+          icon={Percent}
+          label="التحويل"
+          value={`${stats.conv.toFixed(2)}%`}
+          hint={`شراء ${stats.cartConv.toFixed(1)}%`}
+          accent="from-violet-500/10 to-transparent"
+        />
+
       </div>
 
       {/* Revenue by currency mode */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 gap-5 md:grid-cols-3">
+
         {(['SAR', 'YER_SOUTH', 'YER_NORTH'] as CurrencyMode[]).map((mode) => (
-          <div key={mode} className="bg-card border rounded-2xl p-4">
-            <p className="text-xs text-muted-foreground">{CURRENCY_LABELS[mode]}</p>
-            <p className="text-2xl font-heading mt-1">
-              {Math.round(currencyBreakdown[mode].revenue).toLocaleString('en')} {CURRENCY_SYMBOLS[mode]}
-            </p>
-            <p className="text-xs text-muted-foreground mt-1">{currencyBreakdown[mode].orders.toLocaleString('en')} طلب</p>
+
+          <div
+            key={mode}
+            className="
+              group
+              relative
+              overflow-hidden
+              rounded-3xl
+              border
+              bg-card/80
+              p-6
+              backdrop-blur-xl
+              transition-all
+              duration-300
+              hover:-translate-y-1
+              hover:shadow-2xl
+            "
+          >
+
+            {/* Decorative Gradient */}
+            <div
+              className="
+                absolute
+                -left-12
+                -top-12
+                h-40
+                w-40
+                rounded-full
+                bg-primary/10
+                blur-3xl
+                transition-all
+                duration-500
+                group-hover:bg-primary/20
+              "
+            />
+
+
+            <div className="relative">
+
+              {/* Header */}
+              <div className="flex items-center justify-between">
+
+                <div>
+
+                  <p className="text-sm font-medium text-muted-foreground">
+                    {CURRENCY_LABELS[mode]}
+                  </p>
+
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    أداء المبيعات حسب العملة
+                  </p>
+
+                </div>
+
+
+                <div
+                  className="
+                    flex
+                    h-12
+                    w-12
+                    items-center
+                    justify-center
+                    rounded-2xl
+                    bg-primary/10
+                    text-lg
+                    font-bold
+                    text-primary
+                    shadow-sm
+                  "
+                >
+                  {CURRENCY_SYMBOLS[mode]}
+                </div>
+
+              </div>
+
+
+              {/* Revenue */}
+              <div className="mt-7">
+
+                <div className="flex items-end gap-2">
+
+                  <h3 className="text-3xl font-bold tracking-tight">
+
+                    {Math.round(
+                      currencyBreakdown[mode].revenue
+                    ).toLocaleString('en')}
+
+                  </h3>
+
+                  <span className="mb-1 text-sm font-medium text-muted-foreground">
+                    {CURRENCY_SYMBOLS[mode]}
+                  </span>
+
+                </div>
+
+
+                <p className="mt-2 text-sm text-muted-foreground">
+                  إجمالي الإيرادات
+                </p>
+
+              </div>
+
+
+              {/* Footer */}
+              <div
+                className="
+                  mt-6
+                  flex
+                  items-center
+                  justify-between
+                  rounded-2xl
+                  bg-muted/50
+                  px-4
+                  py-3
+                "
+              >
+
+                <div>
+
+                  <p className="text-xs text-muted-foreground">
+                    الطلبات
+                  </p>
+
+                  <p className="mt-1 font-semibold">
+                    {currencyBreakdown[mode].orders.toLocaleString('en')}
+                  </p>
+
+                </div>
+
+
+                <div
+                  className="
+                    flex
+                    items-center
+                    gap-1
+                    rounded-full
+                    bg-emerald-500/10
+                    px-3
+                    py-1
+                    text-xs
+                    font-medium
+                    text-emerald-600
+                  "
+                >
+                  <TrendingUp className="h-3.5 w-3.5" />
+                  نشط
+                </div>
+
+
+              </div>
+
+
+            </div>
+
           </div>
+
         ))}
+
       </div>
 
       {loading && events.length === 0 ? (
@@ -372,29 +614,184 @@ const AdminAnalyticsPage = () => {
       ) : (
         <>
           {/* Time series */}
-          <div className="bg-card border rounded-2xl p-4 md:p-5">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="font-heading text-lg">حركة الزوار والطلبات</h2>
-              <Button variant="ghost" size="sm" onClick={() => exportCSV(timeSeries, 'timeseries')} className="gap-1">
-                <Download className="w-3.5 h-3.5" /> CSV
-              </Button>
-            </div>
-            <div className="h-72">
-              <ResponsiveContainer>
-                <LineChart data={timeSeries}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
-                  <XAxis dataKey="label" stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                  <YAxis stroke="hsl(var(--muted-foreground))" fontSize={11} />
-                  <Tooltip contentStyle={{ background: 'hsl(var(--card))', border: '1px solid hsl(var(--border))', borderRadius: 12 }} />
-                  <Legend />
-                  <Line type="monotone" dataKey="زوار" stroke="#3b82f6" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="طلبات" stroke="#10b981" strokeWidth={2} dot={false} />
-                  <Line type="monotone" dataKey="إيراد" stroke="#C9A962" strokeWidth={2} dot={false} />
-                </LineChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          <div
+            className="
+              group
+              relative
+              overflow-hidden
+              rounded-3xl
+              border
+              bg-card/80
+              p-5
+              md:p-6
+              shadow-sm
+              backdrop-blur-xl
+              transition-all
+              duration-300
+              hover:shadow-lg
+            "
+          >
 
+            {/* Soft Glow */}
+            <div
+              className="
+                absolute
+                -left-16
+                -top-16
+                h-48
+                w-48
+                rounded-full
+                bg-primary/10
+                blur-3xl
+                transition-all
+                group-hover:bg-primary/20
+              "
+            />
+
+
+            <div className="relative">
+
+              {/* Header */}
+              <div className="mb-6 flex items-center justify-between">
+
+                <div>
+
+                  <h2 className="text-xl font-bold tracking-tight">
+                    حركة الزوار والطلبات
+                  </h2>
+
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    تحليل أداء المتجر ومتابعة نمو المبيعات
+                  </p>
+
+                </div>
+
+
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => exportCSV(timeSeries, "timeseries")}
+                  className="
+                    gap-2
+                    rounded-xl
+                    bg-background
+                    transition-all
+                    hover:bg-muted
+                  "
+                >
+
+                  <Download className="h-4 w-4" />
+
+                  تصدير
+
+                </Button>
+
+              </div>
+
+
+              {/* Chart */}
+              <div className="h-[360px] w-full">
+
+                <ResponsiveContainer width="100%" height="100%">
+
+                  <LineChart
+                    data={timeSeries}
+                    margin={{
+                      top: 10,
+                      right: 10,
+                      left: -10,
+                      bottom: 0,
+                    }}
+                  >
+
+                    <CartesianGrid
+                      strokeDasharray="4 4"
+                      stroke="hsl(var(--border))"
+                      opacity={0.35}
+                    />
+
+
+                    <XAxis
+                      dataKey="label"
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+
+
+                    <YAxis
+                      stroke="hsl(var(--muted-foreground))"
+                      fontSize={12}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+
+
+                    <Tooltip
+                      contentStyle={{
+                        background: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "16px",
+                        padding: "12px",
+                        boxShadow:
+                          "0 15px 40px rgba(0,0,0,0.08)",
+                      }}
+                    />
+
+
+                    <Legend
+                      verticalAlign="top"
+                      height={40}
+                    />
+
+
+                    <Line
+                      type="monotone"
+                      dataKey="زوار"
+                      stroke="#3b82f6"
+                      strokeWidth={3}
+                      dot={false}
+                      activeDot={{
+                        r: 6,
+                      }}
+                    />
+
+
+                    <Line
+                      type="monotone"
+                      dataKey="طلبات"
+                      stroke="#10b981"
+                      strokeWidth={3}
+                      dot={false}
+                      activeDot={{
+                        r: 6,
+                      }}
+                    />
+
+
+                    <Line
+                      type="monotone"
+                      dataKey="إيراد"
+                      stroke="#EC4899"
+                      strokeWidth={3}
+                      dot={false}
+                      activeDot={{
+                        r: 6,
+                      }}
+                    />
+
+
+                  </LineChart>
+
+                </ResponsiveContainer>
+
+              </div>
+
+            </div>
+
+          </div>
+          
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {/* Funnel */}
             <div className="bg-card border rounded-2xl p-4 md:p-5">

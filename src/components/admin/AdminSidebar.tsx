@@ -30,6 +30,16 @@ const groups: {
   },
 
   {
+    label: 'التقارير والتحليلات',
+    items: [
+      { title: 'لوحة التقارير', url: '/admin/analytics', icon: BarChart3 },
+      { title: 'تحليل العملاء', url: '/admin/customer-intelligence', icon: Brain },
+      { title: 'الإيرادات', url: '/admin/revenue', icon: TrendingUp },
+      { title: 'تقرير الأرباح', url: '/admin/profit-report', icon: PieChart },
+    ],
+  },
+
+  {
     label: 'الكتالوج',
     items: [
       { title: 'المنتجات', url: '/admin/products', icon: Package },
@@ -77,16 +87,6 @@ const groups: {
     items: [
       { title: 'شركات التوصيل', url: '/admin/delivery', icon: Truck },
       { title: 'مناطق الدفع', url: '/admin/cod-regions', icon: MapPin },
-    ],
-  },
-
-  {
-    label: 'التقارير والتحليلات',
-    items: [
-      { title: 'لوحة التقارير', url: '/admin/analytics', icon: BarChart3 },
-      { title: 'تحليل العملاء', url: '/admin/customer-intelligence', icon: Brain },
-      { title: 'الإيرادات', url: '/admin/revenue', icon: TrendingUp },
-      { title: 'تقرير الأرباح', url: '/admin/profit-report', icon: PieChart },
     ],
   },
 

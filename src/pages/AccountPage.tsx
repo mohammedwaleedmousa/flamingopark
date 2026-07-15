@@ -194,14 +194,16 @@ const AccountPage = () => {
       let avatarUrl = String(user?.user_metadata?.avatar_url || "");
       if (avatar) {
         const safeName = avatar.name.replace(/[^a-zA-Z0-9._-]/g, "_");
-        const path = `${user.id}/${Date.now()}-${safeName}`;
+        const path = `avatars/${user.id}/${Date.now()}-${safeName}`;
         const { error: uploadError } = await supabase.storage
-          .from("avatars")
+          .from("uploads")
           .upload(path, avatar, { upsert: true, cacheControl: "3600" });
 
         if (!uploadError) {
-          const { data: publicData } = supabase.storage.from("avatars").getPublicUrl(path);
+          const { data: publicData } = supabase.storage.from("uploads").getPublicUrl(path);
           avatarUrl = publicData.publicUrl;
+        } else {
+          setNotification({ type: "error", message: "فشل رفع الصورة: " + uploadError.message });
         }
       } else if (avatarPreview && !avatarPreview.startsWith("data:")) {
         avatarUrl = avatarPreview;

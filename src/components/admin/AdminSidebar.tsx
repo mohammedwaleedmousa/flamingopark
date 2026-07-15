@@ -3,7 +3,7 @@ import {
   Settings, LogOut, Grid3X3, LayoutGrid, FileText, Receipt, MapPin,
   TrendingUp, Percent, Ticket, QrCode, PieChart, BarChart3, ShieldAlert,
   BookOpen, RotateCcw, Wallet, Boxes, LogIn,
-    ChevronDown, Brain, Link2, ListChecks,
+    ChevronDown, Brain, Link2, ListChecks, Bell,
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -69,6 +69,7 @@ const groups: {
       { title: 'العملاء', url: '/admin/customers', icon: Users },
       { title: 'الفواتير', url: '/admin/invoices', icon: Receipt },
       { title: 'المرتجعات', url: '/admin/refunds', icon: RotateCcw },
+      { title: 'إشعارات العملاء', url: '/admin/customer-notifications', icon: Bell },
     ],
   },
 

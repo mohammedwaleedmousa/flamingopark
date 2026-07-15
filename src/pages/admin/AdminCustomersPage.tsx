@@ -8,7 +8,8 @@ import {
   AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent,
   AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
-import { Search, MessageCircle, Trash2, Users, Loader2, X, Wallet, BarChart3, FileText } from "lucide-react";
+import { Search, MessageCircle, Trash2, Users, Loader2, X, Wallet, BarChart3, FileText, Eye, Bell } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { useCurrency } from "@/lib/currency";
 import { cn } from "@/lib/utils";
 import { AdminPagination } from "@/components/admin/AdminPagination";
@@ -26,6 +27,7 @@ interface Customer {
 const PAGE_SIZE = 30;
 
 const AdminCustomersPage = () => {
+  const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [spendMap, setSpendMap] = useState<Record<string, { total: number; count: number }>>({});
   const [total, setTotal] = useState(0);
@@ -199,6 +201,8 @@ const AdminCustomersPage = () => {
                   <td className="p-3 text-xs text-muted-foreground">{new Date(c.created_at).toLocaleDateString("ar")}</td>
                   <td className="p-3">
                     <div className="flex gap-1">
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-primary" onClick={() => navigate(`/admin/customers/${c.id}`)} title="عرض التفاصيل"><Eye className="w-4 h-4" /></Button>
+                      <Button size="icon" variant="ghost" className="h-8 w-8 text-amber-600" onClick={() => navigate(`/admin/customer-notifications?customerId=${c.id}`)} title="إرسال إشعار"><Bell className="w-4 h-4" /></Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-green-600" onClick={() => openWhatsApp(c)}><MessageCircle className="w-4 h-4" /></Button>
                       <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setConfirmDelete({ id: c.id })}><Trash2 className="w-4 h-4" /></Button>
                     </div>

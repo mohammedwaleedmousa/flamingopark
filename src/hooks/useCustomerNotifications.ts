@@ -123,7 +123,7 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
         created_at: string;
       }>;
 
-      const result = rows
+      const orderNotifs = rows
         .map((row) => {
           const status = normalizeStatus(row.status);
           const key = `order-${row.id}-${status}`;
@@ -141,7 +141,36 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
         })
         .filter(Boolean) as CustomerNotification[];
 
-      return result;
+      // Also fetch admin-sent customer notifications (broadcasts + targeted)
+      let dbNotifs: CustomerNotification[] = [];
+      try {
+        const filters: string[] = ["broadcast.eq.true"];
+        if (userId) filters.push(`user_id.eq.${userId}`);
+        if (userPhone) filters.push(`customer_phone.eq.${userPhone}`);
+
+        const { data: notifRows } = await (supabase as any)
+          .from("customer_notifications")
+          .select("id, title, body, type, link, is_read, created_at")
+          .or(filters.join(","))
+          .order("created_at", { ascending: false })
+          .limit(50);
+
+        dbNotifs = (notifRows || [])
+          .filter((r: any) => !deletedIdsRef.current.has(String(r.id)))
+          .map((r: any) => ({
+            id: String(r.id),
+            type: (r.type === "order" ? "order" : "system") as NotificationType,
+            title: String(r.title || ""),
+            message: String(r.body || ""),
+            timestamp: String(r.created_at),
+            read: Boolean(r.is_read) || readIdsRef.current.has(String(r.id)),
+            actionUrl: r.link || undefined,
+          }));
+      } catch {
+        dbNotifs = [];
+      }
+
+      return [...orderNotifs, ...dbNotifs];
     },
   });
 

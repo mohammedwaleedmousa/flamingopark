@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
-import { supabase } from '@/integrations/supabase/client';
+import { supabase as supabaseClient } from '@/integrations/supabase/client';
+const supabase = supabaseClient as any;
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Input } from '@/components/ui/input';
@@ -419,7 +420,6 @@ const AdminProfitReportPage = () => {
             icon: RefreshCw,
             onClick: fetchData,
             variant: "secondary",
-            loading: isLoading || summaryLoading,
           },
         ]}
       />

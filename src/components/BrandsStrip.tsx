@@ -34,11 +34,9 @@ const BrandsStrip = () => {
     queryKey: ["home-brands", country],
 
     queryFn: async () => {
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("brands")
-        .select(
-          "id,name,logo_url,countries,is_active,sort_order,slug" as any
-        )
+        .select("id,name,logo_url,countries,is_active,sort_order,slug")
         .eq("is_active", true)
         .order("sort_order", {
           ascending: true,

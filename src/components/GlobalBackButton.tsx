@@ -17,14 +17,15 @@ const GlobalBackButton = () => {
   };
 
   return (
-    <button
-      onClick={handleBack}
-      aria-label="رجوع للخلف"
-      dir="rtl"
-      className="fixed top-20 right-4 z-40 text-sm text-foreground underline decoration-foreground underline-offset-4 hover:opacity-70 transition-opacity"
-    >
-      رجوع للخلف
-    </button>
+    <div dir="rtl" className="w-full bg-background pt-20 pb-2 px-4">
+      <button
+        onClick={handleBack}
+        aria-label="رجوع للخلف"
+        className="text-sm text-foreground underline decoration-foreground underline-offset-4 hover:opacity-70 transition-opacity"
+      >
+        رجوع للخلف
+      </button>
+    </div>
   );
 };
 

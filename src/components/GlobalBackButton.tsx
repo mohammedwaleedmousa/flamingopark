@@ -20,12 +20,11 @@ const GlobalBackButton = () => {
   return (
     <button
       onClick={handleBack}
-      aria-label="رجوع"
+      aria-label="رجوع للخلف"
       dir="rtl"
-      className="fixed top-20 right-3 z-40 flex items-center gap-1 h-9 px-3 rounded-full bg-background/90 border border-border shadow-sm text-sm text-foreground hover:bg-muted hover:border-gold/50 transition-all backdrop-blur-sm"
+      className="fixed top-20 right-4 z-40 text-sm text-foreground underline decoration-foreground underline-offset-4 hover:opacity-70 transition-opacity"
     >
-      <ChevronRight className="w-4 h-4" />
-      <span className="font-medium">رجوع</span>
+      رجوع للخلف
     </button>
   );
 };

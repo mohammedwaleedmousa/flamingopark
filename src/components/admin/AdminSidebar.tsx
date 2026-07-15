@@ -70,6 +70,7 @@ const groups: {
       { title: 'الفواتير', url: '/admin/invoices', icon: Receipt },
       { title: 'المرتجعات', url: '/admin/refunds', icon: RotateCcw },
       { title: 'إشعارات العملاء', url: '/admin/customer-notifications', icon: Bell },
+      { title: 'سجل تسليم الإشعارات', url: '/admin/notification-deliveries', icon: Bell },
     ],
   },
 

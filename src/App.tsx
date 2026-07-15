@@ -8,7 +8,6 @@ import { useStore } from "@/store/useStore";
 import SplashScreen from "@/components/SplashScreen";
 import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
-import GlobalBackButton from "@/components/GlobalBackButton";
 import { DateRangeProvider } from "@/lib/analytics/dateRange";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
@@ -142,7 +141,6 @@ const App = () => {
         <BrowserRouter>
           <ScrollToTop />
           <AnalyticsTracker />
-          <GlobalBackButton />
           <Suspense fallback={<RouteFallback />}>
             <Routes>
             <Route path="/" element={<AuthRedirect />} />

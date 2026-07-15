@@ -62,15 +62,15 @@ const AdminNotificationDeliveriesPage = () => {
           : Promise.resolve({ data: [] }),
       ]);
 
-      const nMap = new Map((notifs || []).map((n: any) => [n.id, n]));
-      const cMap = new Map((custs || []).map((c: any) => [c.id, c]));
+      const nMap = new Map<string, any>((notifs || []).map((n: any) => [n.id, n]));
+      const cMap = new Map<string, any>((custs || []).map((c: any) => [c.id, c]));
 
       setRows(
         list.map((r) => ({
           ...r,
-          notif_title: nMap.get(r.notification_id)?.title,
-          notif_body: nMap.get(r.notification_id)?.body,
-          customer_name: r.customer_id ? cMap.get(r.customer_id)?.name : "بث عام",
+          notif_title: nMap.get(r.notification_id)?.title as string | undefined,
+          notif_body: nMap.get(r.notification_id)?.body as string | undefined,
+          customer_name: r.customer_id ? (cMap.get(r.customer_id)?.name as string | undefined) : "بث عام",
         }))
       );
     } catch (e: any) {

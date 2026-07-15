@@ -248,30 +248,72 @@ const AdminProductFormPage = () => {
     });
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const files = e.target.files;
-    if (!files) return;
+  const handleImageUpload = async (
+  e: React.ChangeEvent<HTMLInputElement>
+) => {
+  const files = e.target.files;
 
+  if (!files || files.length === 0) return;
+
+  try {
     for (const file of Array.from(files)) {
-      const fileName = `${Date.now()}-${file.name}`;
-      const { error } = await supabase.storage
-        .from('uploads')
-        .upload(`products/${fileName}`, file);
 
-      if (error) {
-        toast({ title: 'خطأ', description: 'فشل في رفع الصورة', variant: 'destructive' });
-      } else {
-        const { data: urlData } = supabase.storage
-          .from('uploads')
-          .getPublicUrl(`products/${fileName}`);
+      const ext = file.name.split(".").pop();
 
-        setFormData(prev => ({
-          ...prev,
-          images: [...prev.images, urlData.publicUrl],
-        }));
+      const fileName = `${Date.now()}.${ext}`;
+
+      const filePath = `products/${fileName}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from("uploads")
+        .upload(filePath, file);
+
+      if (uploadError) {
+        console.error("UPLOAD ERROR:", uploadError);
+
+        toast({
+          title: "خطأ",
+          description: uploadError.message,
+          variant: "destructive",
+        });
+
+        continue;
       }
+
+
+      const { data } = supabase.storage
+        .from("uploads")
+        .getPublicUrl(filePath);
+
+
+      console.log("IMAGE URL:", data.publicUrl);
+
+
+      setFormData((prev) => ({
+        ...prev,
+        images: [
+          ...prev.images,
+          data.publicUrl,
+        ],
+      }));
     }
-  };
+
+    toast({
+      title: "تم",
+      description: "تم رفع الصور بنجاح",
+    });
+
+  } catch (error: any) {
+
+    console.error(error);
+
+    toast({
+      title: "خطأ",
+      description: error.message,
+      variant: "destructive",
+    });
+  }
+};
 
   const removeImage = (index: number) => {
     setFormData(prev => ({

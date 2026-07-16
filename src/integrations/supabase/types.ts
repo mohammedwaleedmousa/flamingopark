@@ -205,6 +205,53 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_filters: {
+        Row: {
+          brand_id: string
+          created_at: string
+          filter_type: string
+          id: string
+          is_active: boolean
+          name: string
+          options: Json
+          slug: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          brand_id: string
+          created_at?: string
+          filter_type?: string
+          id?: string
+          is_active?: boolean
+          name: string
+          options?: Json
+          slug: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          brand_id?: string
+          created_at?: string
+          filter_type?: string
+          id?: string
+          is_active?: boolean
+          name?: string
+          options?: Json
+          slug?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_filters_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_sections: {
         Row: {
           brand_id: string

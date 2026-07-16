@@ -154,7 +154,7 @@ dir="rtl"
 
 className="
 relative
-h-[60svh]
+h-[50svh]
 min-h-[400px]
 overflow-hidden
 "

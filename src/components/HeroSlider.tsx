@@ -304,6 +304,7 @@ right-0
 top-1/2
 -translate-y-1/2
 px-6
+pt-32
 sm:px-10
 md:px-20
 max-w-lg
@@ -314,21 +315,7 @@ text-white
 >
 
 
-<span
 
-className="
-block
-mb-4
-text-[11px]
-tracking-[0.35em]
-text-white/70
-"
-
->
-
-FLAMINGO PARK
-
-</span>
 
 
 

@@ -586,15 +586,16 @@ const AdminProductFormPage = () => {
             </div>
 
             <div>
-              <label className="block text-sm font-body text-muted-foreground mb-2">الماركة *</label>
+              <label className="block text-sm font-body text-muted-foreground mb-2">الماركة (اختياري)</label>
               <Select
-                value={formData.brand}
-                onValueChange={(value) => setFormData({ ...formData, brand: value })}
+                value={formData.brand || "__none__"}
+                onValueChange={(value) => setFormData({ ...formData, brand: value === "__none__" ? "" : value })}
               >
                 <SelectTrigger>
-                  <SelectValue placeholder="اختر الماركة" />
+                  <SelectValue placeholder="بدون ماركة" />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="__none__">بدون ماركة</SelectItem>
                   {filteredBrands.map((brand: any) => (
                     <SelectItem key={brand.id} value={brand.name.trim()}>
                       {brand.name.trim()}

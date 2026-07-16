@@ -102,7 +102,7 @@ const BrandsStrip = () => {
       py-8
       md:py-24
       bg-white
-      overflow-hidden
+      overflow-x-hidden
     "
     dir="rtl"
     aria-label="أبرز الماركات"
@@ -120,14 +120,12 @@ const BrandsStrip = () => {
       "
     >
 
-
       <h2
         className="
           font-heading
           text-3xl
           md:text-5xl
           tracking-[0.02em]
-          uppercase
           text-black
         "
       >
@@ -141,7 +139,7 @@ const BrandsStrip = () => {
           mt-6
           w-20
           h-px
-          bg-black/70
+          bg-pink-500
         "
       />
 
@@ -149,17 +147,17 @@ const BrandsStrip = () => {
 
 
 
-    <div className="relative">
+    <div className="relative w-full">
 
 
-      {/* Soft edges */}
+      {/* Fade edges */}
 
       <div
         className="
           absolute
           inset-y-0
           left-0
-          w-20
+          w-12
           md:w-32
           bg-gradient-to-r
           from-white
@@ -169,12 +167,13 @@ const BrandsStrip = () => {
         "
       />
 
+
       <div
         className="
           absolute
           inset-y-0
           right-0
-          w-20
+          w-12
           md:w-32
           bg-gradient-to-l
           from-white
@@ -198,10 +197,16 @@ const BrandsStrip = () => {
           gap-5
           md:gap-8
 
-          px-5
-          md:px-10
+          px-4
 
           overflow-x-auto
+          overflow-y-hidden
+
+          overscroll-x-contain
+
+          scroll-smooth
+
+          touch-pan-x
 
           whitespace-nowrap
 
@@ -217,8 +222,9 @@ const BrandsStrip = () => {
         `}
 
         style={{
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
+          scrollbarWidth:"none",
+          msOverflowStyle:"none",
+          WebkitOverflowScrolling:"touch",
         }}
 
 
@@ -252,6 +258,7 @@ const BrandsStrip = () => {
       >
 
 
+
         {renderBrands.map((brand)=>(
 
           <Link
@@ -264,18 +271,19 @@ const BrandsStrip = () => {
 
               relative
 
+              shrink-0
+
+              w-[155px]
+              md:w-[210px]
+
+              h-[130px]
+              md:h-[165px]
+
+
               flex
               flex-col
               items-center
               justify-center
-
-
-              min-w-[155px]
-              md:min-w-[210px]
-
-
-              h-[130px]
-              md:h-[165px]
 
 
               rounded-xl
@@ -288,103 +296,91 @@ const BrandsStrip = () => {
               border-black/[0.07]
 
 
-              transition-all
-              duration-500
+              transition-colors
+              duration-300
 
 
-              hover:border-black/20
+              hover:border-pink-300
 
 
-              px-6
+              px-5
             "
           >
 
 
-            {/* Elegant underline */}
+            {/* Logo */}
 
-            <span
+            <div
               className="
-                absolute
-                bottom-4
+                h-16
+                md:h-20
+                w-full
 
-                h-px
-
-                w-0
-
-                bg-black
-
-                transition-all
-                duration-500
-
-                group-hover:w-10
+                flex
+                items-center
+                justify-center
               "
-            />
+            >
+
+              {brand.logo_url ? (
+
+                <img
+                  src={brand.logo_url}
+
+                  alt={brand.name}
+
+                  loading="lazy"
+
+                  className="
+                    max-h-full
+
+                    max-w-[120px]
+                    md:max-w-[160px]
+
+                    object-contain
+
+
+                    opacity-70
+
+                    grayscale
+
+
+                    transition-all
+                    duration-500
+
+
+                    group-hover:opacity-100
+
+                    group-hover:grayscale-0
+
+                    group-hover:scale-[1.03]
+                  "
+                />
+
+              ) : (
+
+                <span
+                  className="
+                    font-heading
+
+                    text-base
+                    md:text-lg
+
+                    tracking-[0.15em]
+
+                    text-black/60
+                  "
+                >
+                  {brand.name}
+                </span>
+
+              )}
+
+            </div>
 
 
 
-            {brand.logo_url ? (
-
-              <img
-                src={brand.logo_url}
-
-                alt={brand.name}
-
-                loading="lazy"
-
-                className="
-                  max-h-14
-                  md:max-h-20
-
-                  max-w-[130px]
-                  md:max-w-[170px]
-
-
-                  object-contain
-
-
-                  opacity-60
-
-
-                  grayscale
-
-
-                  transition-all
-                  duration-500
-
-
-                  group-hover:opacity-100
-
-
-                  group-hover:grayscale-0
-
-
-                  group-hover:scale-[1.03]
-                "
-              />
-
-            ) : (
-
-              <span
-                className="
-                  font-heading
-
-                  text-lg
-
-                  tracking-[0.25em]
-
-                  text-black/60
-
-                  group-hover:text-black
-
-                  transition
-                "
-              >
-                {brand.name}
-              </span>
-
-            )}
-
-
+            {/* Brand Name */}
 
             <span
               className="
@@ -393,19 +389,46 @@ const BrandsStrip = () => {
                 text-[10px]
                 md:text-xs
 
-                tracking-[0.3em]
+                tracking-[0.25em]
 
                 uppercase
 
-                text-black/35
+                text-black/45
 
-                transition
+                transition-colors
 
-                group-hover:text-black/70
+                group-hover:text-black
               "
             >
               {brand.name}
             </span>
+
+
+
+            {/* Flamingo Line */}
+
+            <span
+              className="
+                absolute
+
+                bottom-3
+
+                h-[2px]
+
+                w-8
+
+                rounded-full
+
+                bg-pink-500
+
+
+                transition-all
+                duration-500
+
+
+                group-hover:w-14
+              "
+            />
 
 
           </Link>

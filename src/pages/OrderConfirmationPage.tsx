@@ -44,7 +44,7 @@ interface OrderData {
   deliveryCompany: string;
   selectedRegion?: string | null;
   country: string;
-  currencyMode?: "SAR" | "YER_SOUTH" | "YER_NORTH";
+  currencyMode?: string;
   whatsappNumber: string;
   createdAt: string;
 }
@@ -57,8 +57,17 @@ const OrderConfirmationPage = () => {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
   const flamingoLogo = '/icons/flamingo.jpeg';
-  
-  const currency = 'ريال';
+
+  // Currency snapshot: prices from checkout are in SAR (base). Convert & display in order's currency.
+  const currencyMode = (orderData?.currencyMode as any) || "SAR";
+  const currencySymbol = (require("@/lib/currency").CURRENCY_RATES?.[currencyMode]?.symbol) || 'ر.س';
+  const currency = currencySymbol;
+  const fmt = (amountSAR: number) => {
+    try {
+      const { convertPrice } = require("@/lib/currency");
+      return convertPrice(amountSAR, currencyMode).toLocaleString('en-US');
+    } catch { return amountSAR.toFixed(2); }
+  };
 
   useEffect(() => {
     if (location.state?.orderData) {

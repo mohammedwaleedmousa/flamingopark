@@ -1,330 +1,434 @@
 import { useEffect } from "react";
 import { Link } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
-import { Pagination, Autoplay, EffectFade } from "swiper/modules";
+import { Pagination, Autoplay } from "swiper/modules";
 
 import "swiper/css";
 import "swiper/css/pagination";
-import "swiper/css/effect-fade";
 
 
 const slides = [
   {
     image:
-      "https://images.unsplash.com/photo-1483985988355-763728e1935b",
-    title: "تسوق أحدث صيحات الموضة",
-    desc: "اكتشف مجموعات مختارة من أفضل الماركات العالمية",
+      "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=70",
+
+    title:
+      "تسوق أحدث صيحات الموضة",
+
+    desc:
+      "اكتشف مجموعات مختارة من أفضل الماركات العالمية",
   },
+
+
   {
     image:
-      "https://images.unsplash.com/photo-1445205170230-053b83016050",
-    title: "أناقة تعكس شخصيتك",
-    desc: "منتجات فاخرة بتصميم عصري وجودة عالية",
+      "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1200&q=70",
+
+    title:
+      "أناقة تعكس شخصيتك",
+
+    desc:
+      "منتجات فاخرة بتصميم عصري وجودة عالية",
   },
+
+
   {
     image:
-      "https://images.unsplash.com/photo-1441986300917-64674bd600d8",
-    title: "تجربة تسوق مختلفة",
-    desc: "كل ما تحتاجه في مكان واحد",
+      "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1200&q=70",
+
+    title:
+      "تجربة تسوق مختلفة",
+
+    desc:
+      "كل ما تحتاجه في مكان واحد",
   },
+
 ];
+
 
 
 export default function HeroSlider() {
 
 
-  useEffect(() => {
 
-    const style = document.createElement("style");
+useEffect(()=>{
 
-    style.innerHTML = `
 
-      .hero-slider .swiper-pagination {
+const style=document.createElement("style");
 
-        bottom:22px !important;
 
-        display:flex;
-        justify-content:center;
-        align-items:center;
+style.innerHTML=`
 
-        gap:8px;
+.hero-slider .swiper-pagination{
 
-      }
+bottom:22px !important;
 
+display:flex;
+justify-content:center;
+align-items:center;
 
-      .hero-slider .swiper-pagination-bullet {
+gap:8px;
 
-        width:32px;
-        height:3px;
+}
 
-        border-radius:999px;
 
-        background:white;
+.hero-slider .swiper-pagination-bullet{
 
-        opacity:.45;
+width:32px;
+height:3px;
 
-        margin:0 !important;
+border-radius:20px;
 
-        transition:all .3s ease;
+background:#fff;
 
-      }
+opacity:.45;
 
+margin:0!important;
 
-      .hero-slider .swiper-pagination-bullet-active {
+transition:all .35s ease;
 
-        width:75px;
+}
 
-        opacity:1;
 
-      }
+.hero-slider .swiper-pagination-bullet-active{
 
+width:75px;
 
-      @media(max-width:640px){
+opacity:1;
 
-        .hero-slider .swiper-pagination {
+}
 
-          bottom:18px !important;
 
-        }
 
+@media(max-width:640px){
 
-        .hero-slider .swiper-pagination-bullet {
+.hero-slider .swiper-pagination{
 
-          width:24px;
+bottom:18px!important;
 
-        }
+}
 
 
-        .hero-slider .swiper-pagination-bullet-active {
+.hero-slider .swiper-pagination-bullet{
 
-          width:55px;
+width:25px;
 
-        }
+}
 
-      }
 
-    `;
+.hero-slider .swiper-pagination-bullet-active{
 
+width:55px;
 
-    document.head.appendChild(style);
+}
 
+}
 
-    return () => {
 
-      document.head.removeChild(style);
+`;
 
-    };
 
+document.head.appendChild(style);
 
-  }, []);
 
 
+return()=>{
 
-  return (
+document.head.removeChild(style);
 
-    <section
+}
 
-      dir="rtl"
 
-      className="
-        relative
-        h-[60svh]
-        min-h-[380px]
-        overflow-hidden
-      "
+},[]);
 
-    >
 
 
-      <Swiper
 
-        modules={[
-          Pagination,
-          Autoplay,
-          EffectFade
-        ]}
 
-        effect="fade"
+return (
 
-        speed={900}
 
-        pagination={{
-          clickable:true,
-        }}
+<section
 
-        autoplay={{
-          delay:4500,
-          disableOnInteraction:false,
-        }}
+dir="rtl"
 
-        loop={true}
+className="
+relative
+h-[60svh]
+min-h-[400px]
+overflow-hidden
+"
 
-        grabCursor={true}
 
-        className="hero-slider h-full"
+>
 
 
-      >
 
+<Swiper
 
-        {slides.map((slide,index)=>(
 
+modules={[
+Pagination,
+Autoplay
+]}
 
-          <SwiperSlide key={index}>
 
+pagination={{
 
-            <div
+clickable:true
 
-              className="
-                relative
-                h-full
-                w-full
-                bg-cover
-                bg-center
-              "
+}}
 
-              style={{
 
-                backgroundImage:
-                `url(${slide.image})`
 
-              }}
+autoplay={{
 
-            >
+delay:5000,
 
+disableOnInteraction:false,
 
-              {/* Overlay */}
+pauseOnMouseEnter:true,
 
-              <div
+}}
 
-                className="
-                  absolute
-                  inset-0
-                  bg-gradient-to-l
-                  from-black/75
-                  via-black/35
-                  to-transparent
-                "
 
-              />
 
+speed={800}
 
 
-              {/* Content */}
 
-              <div
+loop={true}
 
-                className="
-                  absolute
-                  inset-0
-                  z-10
-                "
 
-              >
 
+grabCursor={true}
 
-                <div
 
-                  className="
-                    absolute
-                    right-0
-                    top-1/2
-                    -translate-y-1/2
-                    px-6
-                    sm:px-10
-                    md:px-20
-                    pt-32
-                    max-w-md
-                    text-right
-                    text-white
-                  "
 
-                >
+touchRatio={1}
 
 
-                  
 
+resistance={true}
 
 
-                  <h1
 
-                    className="
-                      text-2xl
-                      sm:text-3xl
-                      md:text-5xl
-                      font-semibold
-                      leading-tight
-                    "
+resistanceRatio={0.85}
 
-                  >
 
-                    {slide.title}
 
-                  </h1>
+className="
+hero-slider
+h-full
+"
 
 
 
-                  <p
+>
 
-                    className="
-                      mt-4
-                      text-sm
-                      sm:text-base
-                      text-white/80
-                      leading-7
-                    "
 
-                  >
 
-                    {slide.desc}
+{
 
-                  </p>
+slides.map((slide,index)=>(
 
 
+<SwiperSlide
 
-                  <Link
+key={index}
 
-                    to="/products"
+>
 
-                    className="
-                      inline-flex
-                      mt-7
-                      text-sm
-                      text-white
-                      border-b
-                      border-white
-                      pb-2
-                      hover:opacity-70
-                      transition
-                    "
 
-                  >
+<div
 
-                    اكتشف المجموعة
 
-                  </Link>
+className="
+relative
+h-full
+w-full
+bg-cover
+bg-center
+will-change-transform
+"
 
 
-                </div>
 
+style={{
 
-              </div>
+backgroundImage:
+`url(${slide.image})`
 
+}}
 
-            </div>
 
+>
 
-          </SwiperSlide>
 
+{/* Dark Layer */}
 
-        ))}
+<div
 
+className="
+absolute
+inset-0
+bg-gradient-to-l
+from-black/75
+via-black/40
+to-transparent
+"
 
-      </Swiper>
+/>
 
 
-    </section>
 
-  );
+
+{/* Content */}
+
+
+<div
+
+className="
+absolute
+inset-0
+"
+
+>
+
+
+<div
+
+className="
+absolute
+right-0
+top-1/2
+-translate-y-1/2
+px-6
+sm:px-10
+md:px-20
+max-w-lg
+text-right
+text-white
+"
+
+>
+
+
+<span
+
+className="
+block
+mb-4
+text-[11px]
+tracking-[0.35em]
+text-white/70
+"
+
+>
+
+FLAMINGO PARK
+
+</span>
+
+
+
+
+<h1
+
+className="
+text-3xl
+sm:text-4xl
+md:text-5xl
+font-semibold
+leading-tight
+"
+
+>
+
+{slide.title}
+
+</h1>
+
+
+
+
+
+<p
+
+className="
+mt-5
+text-sm
+sm:text-base
+text-white/80
+leading-7
+max-w-sm
+"
+
+>
+
+{slide.desc}
+
+</p>
+
+
+
+
+
+<Link
+
+
+to="/products"
+
+
+className="
+inline-flex
+mt-8
+text-sm
+border-b
+border-white
+pb-2
+hover:opacity-70
+transition
+"
+
+>
+
+
+اكتشف المجموعة
+
+
+</Link>
+
+
+
+
+</div>
+
+
+</div>
+
+
+
+
+</div>
+
+
+</SwiperSlide>
+
+
+))
+
+
+}
+
+
+
+</Swiper>
+
+
+</section>
+
+
+);
 
 }

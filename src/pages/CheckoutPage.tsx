@@ -275,7 +275,11 @@ const CheckoutPage = () => {
         order_number: orderNumber, customer_name: customerName || "عميل",
         customer_phone: customerPhone, customer_address: formData.address || "-",
         customer_city: formData.city || "", customer_notes: formData.notes || null,
-        country: country === "GLOBAL" ? "YE" : country || "YE", currency_mode: currencyMode,
+        country: country || "GLOBAL",
+        currency_mode: currencyMode,
+        currency_code: currencyMode,
+        exchange_rate_snapshot: (await import("@/lib/currency")).getRateSnapshot(currencyMode),
+        total_base: total,
         items: validation.data, subtotal, delivery_fee: deliveryFee, total,
         delivery_company_id: selectedDelivery, payment_method: paymentMethod,
         coupon_code: discountAmount > 0 ? couponCode.trim().toUpperCase() : null,
@@ -292,7 +296,7 @@ const CheckoutPage = () => {
         discountAmount, couponCode: discountAmount > 0 ? couponCode.trim().toUpperCase() : null,
         total, paymentMethod, deliveryCompany: selectedCompany?.name || "",
         selectedRegion: paymentMethod === "cod" && regionData ? regionData.region_name_ar : null,
-        country: country === "GLOBAL" ? "YE" : country || "YE", currencyMode,
+        country: country || "GLOBAL", currencyMode,
         whatsappNumber: whatsappNumber || "967123456789", createdAt: new Date().toISOString(),
       };
       clearCart();

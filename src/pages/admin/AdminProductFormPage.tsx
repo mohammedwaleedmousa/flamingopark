@@ -763,12 +763,39 @@ const AdminProductFormPage = () => {
         {/* Settings */}
         <div className="bg-card border border-border rounded p-6 space-y-4">
           <h2 className="font-heading text-lg text-foreground">الإعدادات</h2>
-          
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-body text-muted-foreground mb-2">
+                الكمية في المخزون *
+              </label>
+              <Input
+                type="number"
+                min={0}
+                value={formData.stock_quantity}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  const n = Math.max(0, parseInt(v || '0') || 0);
+                  setFormData({
+                    ...formData,
+                    stock_quantity: v,
+                    in_stock: n > 0 ? formData.in_stock : false,
+                  });
+                }}
+                placeholder="0"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                عند وصول الكمية إلى 0 سيصبح المنتج غير متوفر تلقائياً وسيُخصم عند كل طلب.
+              </p>
+            </div>
+          </div>
+
           <div className="flex flex-wrap gap-6">
             <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox
                 checked={formData.in_stock}
                 onCheckedChange={(checked) => setFormData({ ...formData, in_stock: !!checked })}
+                disabled={(parseInt(formData.stock_quantity || '0') || 0) === 0}
               />
               <span className="text-sm">متوفر</span>
             </label>

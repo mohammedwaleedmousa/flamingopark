@@ -390,6 +390,10 @@ const AdminProductFormPage = () => {
       accessories: formData.accessories as unknown as any,
       features: formData.features as unknown as any,
       color_variants: formData.color_variants as unknown as any,
+      return_policy: formData.return_policy || null,
+      specs: formData.specs as unknown as any,
+      has_quality_variants: formData.has_quality_variants,
+      quality_variants: formData.quality_variants as unknown as any,
     };
 
     try {

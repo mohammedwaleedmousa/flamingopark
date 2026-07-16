@@ -1431,6 +1431,7 @@ export type Database = {
           sizes: string[] | null
           slug: string
           sort_order: number | null
+          stock_quantity: number
           updated_at: string
         }
         Insert: {
@@ -1460,6 +1461,7 @@ export type Database = {
           sizes?: string[] | null
           slug: string
           sort_order?: number | null
+          stock_quantity?: number
           updated_at?: string
         }
         Update: {
@@ -1489,6 +1491,7 @@ export type Database = {
           sizes?: string[] | null
           slug?: string
           sort_order?: number | null
+          stock_quantity?: number
           updated_at?: string
         }
         Relationships: []

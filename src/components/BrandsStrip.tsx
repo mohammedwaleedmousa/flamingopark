@@ -126,7 +126,7 @@ const BrandsStrip = () => {
           font-heading
           text-3xl
           md:text-5xl
-          tracking-[0.15em]
+          tracking-[0.10em]
           uppercase
           text-black
         "

@@ -84,11 +84,18 @@ const AdminProductFormPage = () => {
     image_zoom: 1,
     image_position_x: 50,
     image_position_y: 50,
+    return_policy: '',
+    specs: [] as { label: string; value: string }[],
+    has_quality_variants: false,
+    quality_variants: [] as { name: string; price: number; description: string; images: string[]; in_stock: boolean }[],
   });
 
   const [newSize, setNewSize] = useState('');
   const [newAccessory, setNewAccessory] = useState({ name: '', name_ar: '', price: '', image_url: '', description: '', description_ar: '' });
   const [newFeature, setNewFeature] = useState({ icon: 'truck', title: '', desc: '' });
+  const [newSpec, setNewSpec] = useState({ label: '', value: '' });
+  const [newQuality, setNewQuality] = useState({ name: '', price: '', description: '' });
+  const [uploadingQualityIdx, setUploadingQualityIdx] = useState<number | null>(null);
   const [uploadingAccessoryImage, setUploadingAccessoryImage] = useState(false);
   const [selectedParentSlug, setSelectedParentSlug] = useState('');
 
@@ -233,6 +240,10 @@ const AdminProductFormPage = () => {
         image_zoom: 1,
         image_position_x: 50,
         image_position_y: 50,
+        return_policy: (data as any).return_policy || '',
+        specs: ((data as any).specs || []) as { label: string; value: string }[],
+        has_quality_variants: (data as any).has_quality_variants ?? false,
+        quality_variants: ((data as any).quality_variants || []) as { name: string; price: number; description: string; images: string[]; in_stock: boolean }[],
       });
     }
     setIsLoading(false);
@@ -379,6 +390,10 @@ const AdminProductFormPage = () => {
       accessories: formData.accessories as unknown as any,
       features: formData.features as unknown as any,
       color_variants: formData.color_variants as unknown as any,
+      return_policy: formData.return_policy || null,
+      specs: formData.specs as unknown as any,
+      has_quality_variants: formData.has_quality_variants,
+      quality_variants: formData.quality_variants as unknown as any,
     };
 
     try {
@@ -1186,6 +1201,228 @@ const AdminProductFormPage = () => {
           value={formData.color_variants}
           onChange={(v) => setFormData((prev) => ({ ...prev, color_variants: v }))}
         />
+
+        {/* Specifications */}
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+          <h2 className="text-lg font-heading">المواصفات التفصيلية</h2>
+          <p className="text-xs text-muted-foreground">أضف مواصفات المنتج (مثل: المادة، الوزن، البلد، إلخ). تُعرض كجدول قابل للطي في صفحة المنتج.</p>
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2">
+            <Input placeholder="التسمية (مثل: المادة)" value={newSpec.label} onChange={(e) => setNewSpec({ ...newSpec, label: e.target.value })} />
+            <Input placeholder="القيمة (مثل: جلد طبيعي)" value={newSpec.value} onChange={(e) => setNewSpec({ ...newSpec, value: e.target.value })} />
+            <Button
+              type="button"
+              onClick={() => {
+                if (!newSpec.label.trim() || !newSpec.value.trim()) return;
+                setFormData((p) => ({ ...p, specs: [...p.specs, { label: newSpec.label.trim(), value: newSpec.value.trim() }] }));
+                setNewSpec({ label: '', value: '' });
+              }}
+              className="btn-gold"
+            >
+              إضافة
+            </Button>
+          </div>
+          {formData.specs.length > 0 && (
+            <div className="space-y-2">
+              {formData.specs.map((s, i) => (
+                <div key={i} className="flex items-center gap-3 p-3 bg-muted rounded-lg">
+                  <span className="text-sm font-medium flex-1">{s.label}</span>
+                  <span className="text-sm text-muted-foreground flex-1">{s.value}</span>
+                  <button
+                    type="button"
+                    onClick={() => setFormData((p) => ({ ...p, specs: p.specs.filter((_, idx) => idx !== i) }))}
+                    className="text-destructive hover:text-destructive/80"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+
+        {/* Return Policy */}
+        <div className="bg-card border border-border rounded-xl p-6 space-y-3">
+          <h2 className="text-lg font-heading">سياسة الإرجاع الخاصة بهذا المنتج</h2>
+          <p className="text-xs text-muted-foreground">اتركه فارغاً لاستخدام السياسة الافتراضية للموقع.</p>
+          <Textarea
+            rows={4}
+            value={formData.return_policy}
+            onChange={(e) => setFormData({ ...formData, return_policy: e.target.value })}
+            placeholder="مثال: يمكنك إرجاع هذا المنتج خلال 7 أيام..."
+          />
+        </div>
+
+        {/* Quality Variants */}
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h2 className="text-lg font-heading">جودات / خامات متعددة</h2>
+              <p className="text-xs text-muted-foreground mt-1">فعّل هذا الخيار إذا كان لدى المنتج أكثر من جودة أو خامة بأسعار وصور مختلفة.</p>
+            </div>
+            <label className="inline-flex items-center gap-2">
+              <input
+                type="checkbox"
+                checked={formData.has_quality_variants}
+                onChange={(e) => setFormData({ ...formData, has_quality_variants: e.target.checked })}
+                className="w-4 h-4"
+              />
+              <span className="text-sm">مفعّل</span>
+            </label>
+          </div>
+
+          {formData.has_quality_variants && (
+            <>
+              <div className="grid grid-cols-1 md:grid-cols-[1fr_120px_auto] gap-2">
+                <Input
+                  placeholder="اسم الجودة (مثل: ممتاز / A+)"
+                  value={newQuality.name}
+                  onChange={(e) => setNewQuality({ ...newQuality, name: e.target.value })}
+                />
+                <Input
+                  type="number"
+                  placeholder="السعر"
+                  value={newQuality.price}
+                  onChange={(e) => setNewQuality({ ...newQuality, price: e.target.value })}
+                />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (!newQuality.name.trim() || !newQuality.price) return;
+                    setFormData((p) => ({
+                      ...p,
+                      quality_variants: [...p.quality_variants, {
+                        name: newQuality.name.trim(),
+                        price: parseFloat(newQuality.price),
+                        description: newQuality.description.trim(),
+                        images: [],
+                        in_stock: true,
+                      }],
+                    }));
+                    setNewQuality({ name: '', price: '', description: '' });
+                  }}
+                  className="btn-gold"
+                >
+                  إضافة جودة
+                </Button>
+              </div>
+              <Textarea
+                rows={2}
+                placeholder="وصف الجودة الجديدة (اختياري)"
+                value={newQuality.description}
+                onChange={(e) => setNewQuality({ ...newQuality, description: e.target.value })}
+              />
+
+              {formData.quality_variants.length > 0 && (
+                <div className="space-y-4">
+                  {formData.quality_variants.map((qv, idx) => (
+                    <div key={idx} className="border border-border rounded-lg p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex-1 space-y-2">
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                            <Input
+                              value={qv.name}
+                              onChange={(e) => {
+                                const v = [...formData.quality_variants];
+                                v[idx] = { ...v[idx], name: e.target.value };
+                                setFormData({ ...formData, quality_variants: v });
+                              }}
+                              placeholder="الاسم"
+                            />
+                            <Input
+                              type="number"
+                              value={qv.price}
+                              onChange={(e) => {
+                                const v = [...formData.quality_variants];
+                                v[idx] = { ...v[idx], price: parseFloat(e.target.value) || 0 };
+                                setFormData({ ...formData, quality_variants: v });
+                              }}
+                              placeholder="السعر"
+                            />
+                          </div>
+                          <Textarea
+                            rows={2}
+                            value={qv.description}
+                            onChange={(e) => {
+                              const v = [...formData.quality_variants];
+                              v[idx] = { ...v[idx], description: e.target.value };
+                              setFormData({ ...formData, quality_variants: v });
+                            }}
+                            placeholder="الوصف الخاص بهذه الجودة"
+                          />
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => setFormData((p) => ({
+                            ...p,
+                            quality_variants: p.quality_variants.filter((_, i) => i !== idx),
+                          }))}
+                          className="text-destructive hover:text-destructive/80 shrink-0 mt-1"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+
+                      {/* Images */}
+                      <div className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <span className="text-sm font-medium">صور هذه الجودة</span>
+                          <label className="inline-flex items-center gap-2 text-xs border rounded px-2 py-1 cursor-pointer hover:bg-muted">
+                            {uploadingQualityIdx === idx ? 'جاري الرفع...' : 'رفع صور'}
+                            <input
+                              type="file"
+                              accept="image/*"
+                              multiple
+                              className="hidden"
+                              onChange={async (e) => {
+                                const files = Array.from(e.target.files || []);
+                                if (files.length === 0) return;
+                                setUploadingQualityIdx(idx);
+                                const urls: string[] = [];
+                                for (const f of files) {
+                                  const ext = (f.name.split('.').pop() || 'jpg').toLowerCase();
+                                  const path = `products/quality-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
+                                  const { error } = await supabase.storage.from('uploads').upload(path, f, { upsert: true });
+                                  if (!error) {
+                                    const { data } = supabase.storage.from('uploads').getPublicUrl(path);
+                                    urls.push(data.publicUrl);
+                                  }
+                                }
+                                const v = [...formData.quality_variants];
+                                v[idx] = { ...v[idx], images: [...(v[idx].images || []), ...urls] };
+                                setFormData({ ...formData, quality_variants: v });
+                                setUploadingQualityIdx(null);
+                                e.target.value = '';
+                              }}
+                            />
+                          </label>
+                        </div>
+                        {qv.images && qv.images.length > 0 && (
+                          <div className="flex flex-wrap gap-2">
+                            {qv.images.map((img, i) => (
+                              <div key={i} className="relative w-16 h-16 rounded overflow-hidden border border-border">
+                                <img src={img} alt="" className="w-full h-full object-cover" />
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const v = [...formData.quality_variants];
+                                    v[idx] = { ...v[idx], images: v[idx].images.filter((_, j) => j !== i) };
+                                    setFormData({ ...formData, quality_variants: v });
+                                  }}
+                                  className="absolute -top-1 -right-1 bg-destructive text-white rounded-full w-4 h-4 flex items-center justify-center text-xs"
+                                >×</button>
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </>
+          )}
+        </div>
+
         <div className="flex gap-4">
           <Button type="submit" disabled={isSaving} className="btn-gold">
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? 'تحديث' : 'إضافة'}

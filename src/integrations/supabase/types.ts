@@ -1463,6 +1463,7 @@ export type Database = {
           description_ar: string | null
           discount: number | null
           features: Json | null
+          has_quality_variants: boolean
           has_sizes: boolean | null
           id: string
           images: string[] | null
@@ -1474,10 +1475,13 @@ export type Database = {
           name_ar: string
           original_price: number | null
           price: number
+          quality_variants: Json
+          return_policy: string | null
           section_ids: string[] | null
           sizes: string[] | null
           slug: string
           sort_order: number | null
+          specs: Json
           stock_quantity: number
           updated_at: string
         }
@@ -1493,6 +1497,7 @@ export type Database = {
           description_ar?: string | null
           discount?: number | null
           features?: Json | null
+          has_quality_variants?: boolean
           has_sizes?: boolean | null
           id?: string
           images?: string[] | null
@@ -1504,10 +1509,13 @@ export type Database = {
           name_ar: string
           original_price?: number | null
           price: number
+          quality_variants?: Json
+          return_policy?: string | null
           section_ids?: string[] | null
           sizes?: string[] | null
           slug: string
           sort_order?: number | null
+          specs?: Json
           stock_quantity?: number
           updated_at?: string
         }
@@ -1523,6 +1531,7 @@ export type Database = {
           description_ar?: string | null
           discount?: number | null
           features?: Json | null
+          has_quality_variants?: boolean
           has_sizes?: boolean | null
           id?: string
           images?: string[] | null
@@ -1534,10 +1543,13 @@ export type Database = {
           name_ar?: string
           original_price?: number | null
           price?: number
+          quality_variants?: Json
+          return_policy?: string | null
           section_ids?: string[] | null
           sizes?: string[] | null
           slug?: string
           sort_order?: number | null
+          specs?: Json
           stock_quantity?: number
           updated_at?: string
         }

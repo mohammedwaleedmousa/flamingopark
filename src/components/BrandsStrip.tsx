@@ -208,6 +208,7 @@ const BrandsStrip = () => {
           className="
             !w-[155px]
             md:!w-[210px]
+            pr-5
           "
 
         >
@@ -218,6 +219,7 @@ const BrandsStrip = () => {
             to={`/brands/${brand.slug}`}
 
             className="
+            
               group
 
               relative

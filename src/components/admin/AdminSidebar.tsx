@@ -32,10 +32,9 @@ const groups: {
   {
     label: 'التقارير والتحليلات',
     items: [
-      { title: 'لوحة التقارير', url: '/admin/analytics', icon: BarChart3 },
-      { title: 'تحليل العملاء', url: '/admin/customer-intelligence', icon: Brain },
-      { title: 'الإيرادات', url: '/admin/revenue', icon: TrendingUp },
-      { title: 'تقرير الأرباح', url: '/admin/profit-report', icon: PieChart },
+      { title: 'نظرة عامة والإيرادات', url: '/admin/reports', icon: BarChart3 },
+      { title: 'الأرباح والمالية', url: '/admin/reports/finance', icon: PieChart },
+      { title: 'تحليل العملاء', url: '/admin/reports/customers', icon: Brain },
     ],
   },
 
@@ -77,7 +76,6 @@ const groups: {
   {
     label: 'المالية',
     items: [
-      { title: 'لوحة المالية', url: '/admin/finance', icon: Wallet },
       { title: 'دفتر اليومية', url: '/admin/ledger', icon: BookOpen },
       { title: 'المصروفات', url: '/admin/expenses', icon: Receipt },
       { title: 'طرق الدفع والتسويات', url: '/admin/payment-methods', icon: Wallet },

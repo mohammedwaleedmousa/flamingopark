@@ -3,6 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/store/useStore";
+import { useEffect } from "react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { FreeMode } from "swiper/modules";
+
+import "swiper/css";
 
 interface BrandRow {
   id: string;
@@ -102,13 +107,14 @@ const BrandsStrip = () => {
       py-8
       md:py-24
       bg-white
-      overflow-x-hidden
+      overflow-hidden
     "
     dir="rtl"
     aria-label="أبرز الماركات"
   >
 
     {/* Header */}
+
     <div
       className="
         max-w-6xl
@@ -147,95 +153,67 @@ const BrandsStrip = () => {
 
 
 
-    <div className="relative w-full">
+    {/* Brands Slider */}
 
 
-      {/* Left Fade */}
+    <Swiper
 
-      <div
-        className="
-          absolute
-          inset-y-0
-          left-0
-          w-12
-          md:w-32
-          bg-gradient-to-r
-          from-white
-          to-transparent
-          z-10
-          pointer-events-none
-        "
-      />
+      modules={[FreeMode]}
+
+      slidesPerView="auto"
+
+      spaceBetween={20}
 
 
-      {/* Right Fade */}
-
-      <div
-        className="
-          absolute
-          inset-y-0
-          right-0
-          w-12
-          md:w-32
-          bg-gradient-to-l
-          from-white
-          to-transparent
-          z-10
-          pointer-events-none
-        "
-      />
+      freeMode={{
+        enabled:true,
+        momentum:true,
+        momentumRatio:0.8,
+        momentumVelocityRatio:0.8,
+      }}
 
 
+      grabCursor={true}
 
-      {/* Brands Slider */}
 
-      <div
-        ref={trackRef}
+      resistance={true}
 
-        className="
-          brands-strip-track
 
-          flex
-          items-center
+      resistanceRatio={0.85}
 
-          gap-5
-          md:gap-8
 
-          px-4
+      speed={700}
 
-          w-full
 
-          overflow-x-auto
+      touchRatio={1}
 
-          overflow-y-hidden
 
-          scroll-smooth
+      className="
+        brands-slider
+        w-full
+        px-4
+      "
 
-          snap-x
-          snap-mandatory
-
-          touch-pan-x
-
-          whitespace-nowrap
-
-          no-scrollbar
-
-          select-none
-        "
-
-        style={{
-          scrollbarWidth: "none",
-          msOverflowStyle: "none",
-          WebkitOverflowScrolling: "touch",
-        }}
-      >
+    >
 
 
 
-        {renderBrands.map((brand)=>(
+      {renderBrands.map((brand)=>(
+
+
+        <SwiperSlide
+
+          key={brand.id}
+
+          className="
+            !w-[155px]
+            md:!w-[210px]
+          "
+
+        >
+
 
           <Link
-            key={brand.id}
 
             to={`/brands/${brand.slug}`}
 
@@ -244,21 +222,16 @@ const BrandsStrip = () => {
 
               relative
 
-              shrink-0
-
-              snap-center
-
-              w-[155px]
-              md:w-[210px]
-
-              h-[130px]
-              md:h-[165px]
-
-
               flex
               flex-col
               items-center
               justify-center
+
+
+              w-full
+
+              h-[130px]
+              md:h-[165px]
 
 
               rounded-xl
@@ -281,13 +254,15 @@ const BrandsStrip = () => {
 
               px-5
             "
+
           >
 
 
 
-            {/* Logo Box */}
+            {/* Logo Area */}
 
             <div
+
               className="
                 h-16
                 md:h-20
@@ -298,16 +273,21 @@ const BrandsStrip = () => {
                 items-center
                 justify-center
               "
+
             >
+
 
               {brand.logo_url ? (
 
+
                 <img
+
                   src={brand.logo_url}
 
                   alt={brand.name}
 
                   loading="lazy"
+
 
                   className="
                     max-h-full
@@ -315,10 +295,12 @@ const BrandsStrip = () => {
                     max-w-[120px]
                     md:max-w-[160px]
 
+
                     object-contain
 
 
                     opacity-70
+
 
                     grayscale
 
@@ -330,15 +312,21 @@ const BrandsStrip = () => {
 
                     group-hover:opacity-100
 
+
                     group-hover:grayscale-0
+
 
                     group-hover:scale-[1.03]
                   "
+
                 />
+
 
               ) : (
 
+
                 <span
+
                   className="
                     font-heading
 
@@ -349,20 +337,28 @@ const BrandsStrip = () => {
 
                     text-black/60
                   "
+
                 >
+
                   {brand.name}
+
                 </span>
 
+
               )}
+
 
             </div>
 
 
 
 
+
             {/* Brand Name */}
 
+
             <span
+
               className="
                 mt-4
 
@@ -373,24 +369,33 @@ const BrandsStrip = () => {
 
                 uppercase
 
+
                 text-black/45
+
 
                 transition-colors
 
                 duration-300
 
+
                 group-hover:text-black
               "
+
             >
+
               {brand.name}
+
             </span>
+
 
 
 
 
             {/* Flamingo Line */}
 
+
             <span
+
               className="
                 absolute
 
@@ -404,51 +409,30 @@ const BrandsStrip = () => {
 
                 bg-pink-500
 
+
                 transition-all
 
                 duration-500
 
+
                 group-hover:w-14
               "
-            />
 
+            />
 
 
           </Link>
 
-        ))}
+
+        </SwiperSlide>
+
+
+      ))}
 
 
 
+    </Swiper>
 
-        {renderBrands.length === 0 && (
-
-          <p className="text-sm text-black/40">
-            لا توجد ماركات متاحة حالياً
-          </p>
-
-        )}
-
-
-
-      </div>
-
-
-    </div>
-
-
-
-
-    <style>{`
-      .brands-strip-track::-webkit-scrollbar {
-        display:none;
-      }
-
-      .brands-strip-track {
-        scroll-behavior: smooth;
-        -webkit-overflow-scrolling: touch;
-      }
-    `}</style>
 
 
   </section>

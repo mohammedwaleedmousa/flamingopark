@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Save, Printer, X, Pencil, Download } from "lucide-react";
+import { CURRENCY_RATES, convertPrice } from "@/lib/currency";
 // Use public path for static assets that live in /public
 const flamingoLogo = "/icons/flamingo.jpeg";
 
@@ -42,6 +43,7 @@ interface Order {
   created_at: string;
   coupon_code?: string | null;
   discount_amount?: number;
+  currency_code?: string | null;
   delivery_companies?: {
     name: string;
   } | null;
@@ -232,7 +234,9 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
   };
 
   const displayOrder = isEditing ? editedOrder : order;
-  const currency = "ريال";
+  const currencyMode = (displayOrder?.currency_code as string) || "SAR";
+  const currency = CURRENCY_RATES[currencyMode]?.symbol || "ر.س";
+  const fmt = (amountSAR: number) => convertPrice(amountSAR, currencyMode).toLocaleString("en-US");
 
   if (!displayOrder) return null;
 

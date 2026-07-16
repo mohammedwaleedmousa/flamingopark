@@ -357,8 +357,8 @@ const AdminProductFormPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name_ar || !formData.price || !formData.category) {
-      toast({ title: 'خطأ', description: 'يرجى ملء الحقول المطلوبة (الاسم، السعر، الفئة)', variant: 'destructive' });
+    if (!formData.name_ar || !formData.price) {
+      toast({ title: 'خطأ', description: 'يرجى ملء الحقول المطلوبة (الاسم، السعر)', variant: 'destructive' });
       return;
     }
 

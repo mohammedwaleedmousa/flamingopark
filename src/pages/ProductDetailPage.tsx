@@ -15,9 +15,10 @@ import { useStore, Product } from '@/store/useStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import { useCurrency } from '@/lib/currency';
 import {
   ShoppingBag, Share2, ChevronLeft, ChevronRight, Minus, Plus, Check, Heart,
-  Truck, Shield, RotateCcw, Star,
+  Truck, Shield, RotateCcw, Star, Package, ChevronDown,
 } from 'lucide-react';
 
 const ProductDetailPage = () => {
@@ -32,6 +33,9 @@ const ProductDetailPage = () => {
   const [selectedColorIdx, setSelectedColorIdx] = useState<number | null>(null);
   const [accessoryQuantities, setAccessoryQuantities] = useState<Record<string, number>>({});
   const [justAdded, setJustAdded] = useState(false);
+  const [selectedQualityIdx, setSelectedQualityIdx] = useState<number | null>(null);
+  const [openSection, setOpenSection] = useState<'specs' | 'return' | null>(null);
+  const { format: formatCurrency, symbol: currencySymbol } = useCurrency();
 
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', slug],
@@ -53,9 +57,24 @@ const ProductDetailPage = () => {
         accessories: accessories as { name: string; name_ar: string; price: number; image_url?: string; description?: string; description_ar?: string }[],
         features: ((data as any).features || []) as { icon: string; title: string; desc: string }[],
         colorVariants: ((data as any).color_variants || []) as { name: string; hex: string; images: string[] }[],
+        specs: ((data as any).specs || []) as { label: string; value: string }[],
+        returnPolicy: (data as any).return_policy as string | null,
+        hasQualityVariants: (data as any).has_quality_variants ?? false,
+        qualityVariants: ((data as any).quality_variants || []) as { id?: string; name: string; price: number; description?: string; images?: string[]; in_stock?: boolean }[],
       };
     },
     enabled: !!slug,
+  });
+
+  // Default return policy from site settings
+  const { data: defaultReturnPolicy } = useQuery({
+    queryKey: ['default-return-policy'],
+    queryFn: async () => {
+      const { data } = await (supabase as any)
+        .from('site_settings').select('value').eq('key', 'default_return_policy').maybeSingle();
+      const v = data?.value;
+      return (typeof v === 'string' ? v : v ?? null) as string | null;
+    },
   });
 
   const { data: relatedProducts = [] } = useQuery({
@@ -91,12 +110,21 @@ const ProductDetailPage = () => {
   );
 
   const accessoriesTotal = product.accessories?.reduce((sum, acc, idx) => sum + acc.price * (accessoryQuantities[`${idx}-${acc.name_ar}`] || 0), 0) || 0;
-  const discountedPrice = product.discount ? product.price * (1 - product.discount / 100) : product.price;
+  // Quality variant swap: overrides price/description/images when selected
+  const activeQuality = product.hasQualityVariants && selectedQualityIdx !== null
+    ? product.qualityVariants?.[selectedQualityIdx] : null;
+  const effectivePrice = activeQuality ? Number(activeQuality.price) : product.price;
+  const effectiveDescription = activeQuality?.description || product.descriptionAr;
+  const discountedPrice = product.discount ? effectivePrice * (1 - product.discount / 100) : effectivePrice;
   const totalPrice = discountedPrice + accessoriesTotal;
-  const currency = 'ر.ي';
+  const currency = currencySymbol;
   const activeColorVariant = selectedColorIdx !== null ? product.colorVariants?.[selectedColorIdx] : null;
-  const displayImages = activeColorVariant && activeColorVariant.images.length > 0 ? activeColorVariant.images : product.images;
+  const qualityImages = activeQuality?.images && activeQuality.images.length > 0 ? activeQuality.images : null;
+  const displayImages = qualityImages
+    ? qualityImages
+    : (activeColorVariant && activeColorVariant.images.length > 0 ? activeColorVariant.images : product.images);
   const sizesToShow = product.sizes || [];
+  const effectiveReturnPolicy = product.returnPolicy || defaultReturnPolicy;
 
   const updateAccessoryQuantity = (key: string, delta: number) => {
     setAccessoryQuantities((prev) => ({ ...prev, [key]: Math.max(0, (prev[key] || 0) + delta) }));
@@ -213,10 +241,9 @@ const ProductDetailPage = () => {
 
               {/* Price */}
               <div className="flex items-baseline gap-3">
-                <span className="text-3xl md:text-4xl font-heading text-foreground">{(totalPrice * quantity).toFixed(0)}</span>
-                <span className="text-lg text-muted-foreground">{currency}</span>
-                {product.originalPrice && (
-                  <span className="text-base text-muted-foreground line-through">{product.originalPrice.toFixed(0)}</span>
+                <span className="text-3xl md:text-4xl font-heading text-foreground">{formatCurrency(totalPrice * quantity)}</span>
+                {product.originalPrice && !activeQuality && (
+                  <span className="text-base text-muted-foreground line-through">{formatCurrency(product.originalPrice)}</span>
                 )}
               </div>
 
@@ -225,6 +252,48 @@ const ProductDetailPage = () => {
                 <span className={`w-2 h-2 rounded-full ${product.inStock ? 'bg-emerald-500' : 'bg-destructive'}`} />
                 {product.inStock ? 'متوفر الآن' : 'غير متوفر'}
               </div>
+
+              {/* Quality / Material variants — swaps images, description, price */}
+              {product.hasQualityVariants && product.qualityVariants && product.qualityVariants.length > 0 && (
+                <div className="space-y-3 pt-2 border-t border-border">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">اختر الجودة / الخامة</span>
+                    <span className="text-xs text-muted-foreground">
+                      {activeQuality ? activeQuality.name : 'اختر'}
+                    </span>
+                  </div>
+                  <div className="grid grid-cols-1 gap-2">
+                    {product.qualityVariants.map((qv, i) => {
+                      const isActive = selectedQualityIdx === i;
+                      return (
+                        <button
+                          key={i}
+                          onClick={() => { setSelectedQualityIdx(isActive ? null : i); setSelectedImage(0); }}
+                          className={`flex items-center gap-3 p-3 rounded-xl border-2 text-right transition-all ${isActive ? 'border-gold bg-gold/5' : 'border-border hover:border-muted-foreground'}`}
+                        >
+                          {qv.images && qv.images[0] ? (
+                            <img src={qv.images[0]} alt={qv.name} className="w-14 h-14 rounded-lg object-cover shrink-0" />
+                          ) : (
+                            <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
+                              <Package className="w-5 h-5 text-muted-foreground" />
+                            </div>
+                          )}
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center justify-between gap-2">
+                              <span className="font-medium text-sm truncate">{qv.name}</span>
+                              <span className="text-sm font-heading text-gold whitespace-nowrap">{formatCurrency(Number(qv.price))}</span>
+                            </div>
+                            {qv.description && (
+                              <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{qv.description}</p>
+                            )}
+                          </div>
+                          {isActive && <Check className="w-5 h-5 text-gold shrink-0" />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Color */}
               {product.colorVariants && product.colorVariants.length > 0 && (
@@ -325,11 +394,56 @@ const ProductDetailPage = () => {
           </div>
 
           {/* Long description — dedicated section, Apple-clean */}
-          {product.descriptionAr && product.descriptionAr.length > 100 && (
+          {effectiveDescription && effectiveDescription.length > 100 && (
             <section className="mt-24 max-w-3xl mx-auto text-center space-y-6">
               <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground">التفاصيل</p>
               <h2 className="font-heading text-3xl md:text-4xl">قصة هذا المنتج</h2>
-              <p className="text-base text-muted-foreground leading-loose">{product.descriptionAr}</p>
+              <p className="text-base text-muted-foreground leading-loose whitespace-pre-wrap">{effectiveDescription}</p>
+            </section>
+          )}
+
+          {/* Specifications + Return Policy — collapsible */}
+          {((product.specs && product.specs.length > 0) || effectiveReturnPolicy) && (
+            <section className="mt-16 max-w-3xl mx-auto space-y-3">
+              {product.specs && product.specs.length > 0 && (
+                <div className="border border-border rounded-2xl overflow-hidden">
+                  <button
+                    onClick={() => setOpenSection(openSection === 'specs' ? null : 'specs')}
+                    className="w-full flex items-center justify-between px-6 py-4 text-right hover:bg-muted/40 transition"
+                  >
+                    <span className="font-heading text-lg">المواصفات</span>
+                    <ChevronDown className={`w-5 h-5 transition-transform ${openSection === 'specs' ? 'rotate-180' : ''}`} />
+                  </button>
+                  {openSection === 'specs' && (
+                    <div className="px-6 pb-5 border-t border-border">
+                      <dl className="divide-y divide-border">
+                        {product.specs.map((s, i) => (
+                          <div key={i} className="flex items-start justify-between py-3 gap-4">
+                            <dt className="text-sm text-muted-foreground">{s.label}</dt>
+                            <dd className="text-sm font-medium text-right">{s.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </div>
+                  )}
+                </div>
+              )}
+              {effectiveReturnPolicy && (
+                <div className="border border-border rounded-2xl overflow-hidden">
+                  <button
+                    onClick={() => setOpenSection(openSection === 'return' ? null : 'return')}
+                    className="w-full flex items-center justify-between px-6 py-4 text-right hover:bg-muted/40 transition"
+                  >
+                    <span className="font-heading text-lg">سياسة الإرجاع والاستبدال</span>
+                    <ChevronDown className={`w-5 h-5 transition-transform ${openSection === 'return' ? 'rotate-180' : ''}`} />
+                  </button>
+                  {openSection === 'return' && (
+                    <div className="px-6 pb-5 border-t border-border pt-4">
+                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{effectiveReturnPolicy}</p>
+                    </div>
+                  )}
+                </div>
+              )}
             </section>
           )}
 

@@ -99,7 +99,7 @@ const BrandsStrip = () => {
   return (
   <section
     className="
-      py-14
+      py-8
       md:py-24
       bg-white
       overflow-hidden

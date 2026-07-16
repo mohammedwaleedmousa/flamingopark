@@ -1,146 +1,330 @@
-import { useRef } from "react";
-import { motion, useScroll, useTransform, useSpring } from "framer-motion";
+import { useEffect } from "react";
+import { Link } from "react-router-dom";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { Pagination, Autoplay, EffectFade } from "swiper/modules";
+
+import "swiper/css";
+import "swiper/css/pagination";
+import "swiper/css/effect-fade";
+
 
 const slides = [
   {
     image:
-      "https://lh3.googleusercontent.com/aida-public/AB6AXuB17rZoAKdh6xzkPmcre-fyzoQaMvSwYza3RP0tdzew44HqFSkCZDUqdeB_BMukNUwD-6FDPKvjJG8VC9-BseJEoTtweNq3rTLsLk9UBm68oOzy1VLXIZu5t_td3LYj135_2-1A-LRM355Qa2IQ8QC1AoxbVYDuL-UhFcGF5q_CnIPl7Cu5o4sEiHbZPQ7q4eZODOroykjUqtZBOj_yfpLUuoxQXtbi0E1VuYZLbHG2IcKE4uHRKfXyY11eauDju1rlDfCrpdEoUQ",
-    tag: "فلامنجو بارك - عدن",
-    title: "إرث يُعاد صياغته\nبلغة الفخامة المعاصرة",
-    desc: "رحلة بصرية تنسج بين الأصالة والحداثة، بتجربة سينمائية على مستوى Apple Keynote.",
+      "https://images.unsplash.com/photo-1483985988355-763728e1935b",
+    title: "تسوق أحدث صيحات الموضة",
+    desc: "اكتشف مجموعات مختارة من أفضل الماركات العالمية",
+  },
+  {
+    image:
+      "https://images.unsplash.com/photo-1445205170230-053b83016050",
+    title: "أناقة تعكس شخصيتك",
+    desc: "منتجات فاخرة بتصميم عصري وجودة عالية",
+  },
+  {
+    image:
+      "https://images.unsplash.com/photo-1441986300917-64674bd600d8",
+    title: "تجربة تسوق مختلفة",
+    desc: "كل ما تحتاجه في مكان واحد",
   },
 ];
 
-export default function VisionProHero() {
-  const ref = useRef<HTMLDivElement>(null);
 
-  const { scrollYProgress } = useScroll({
-    target: ref,
-    offset: ["start start", "end start"],
-  });
+export default function HeroSlider() {
 
-  // smooth cinematic spring (important for Apple feel)
-  const s = useSpring(scrollYProgress, {
-    stiffness: 120,
-    damping: 30,
-    mass: 0.8,
-  });
 
-  /* ---------------- LAYERS ---------------- */
+  useEffect(() => {
 
-  // Background cinematic drift
-  const bgScale = useTransform(s, [0, 1], [1.12, 1.02]);
-  const bgY = useTransform(s, [0, 1], ["0%", "18%"]);
+    const style = document.createElement("style");
 
-  // Glow field (depth light)
-  const glowY = useTransform(s, [0, 1], ["0%", "35%"]);
-  const glowOpacity = useTransform(s, [0, 0.6, 1], [0.6, 0.8, 0]);
+    style.innerHTML = `
 
-  // Content float (Apple keynote motion)
-  const contentY = useTransform(s, [0, 1], ["0%", "-25%"]);
-  const contentScale = useTransform(s, [0, 1], [1, 0.94]);
-  const contentOpacity = useTransform(s, [0, 0.85, 1], [1, 1, 0]);
+      .hero-slider .swiper-pagination {
 
-  // Vignette depth
-  const vignetteOpacity = useTransform(s, [0, 1], [0.15, 0.85]);
+        bottom:22px !important;
+
+        display:flex;
+        justify-content:center;
+        align-items:center;
+
+        gap:8px;
+
+      }
+
+
+      .hero-slider .swiper-pagination-bullet {
+
+        width:32px;
+        height:3px;
+
+        border-radius:999px;
+
+        background:white;
+
+        opacity:.45;
+
+        margin:0 !important;
+
+        transition:all .3s ease;
+
+      }
+
+
+      .hero-slider .swiper-pagination-bullet-active {
+
+        width:75px;
+
+        opacity:1;
+
+      }
+
+
+      @media(max-width:640px){
+
+        .hero-slider .swiper-pagination {
+
+          bottom:18px !important;
+
+        }
+
+
+        .hero-slider .swiper-pagination-bullet {
+
+          width:24px;
+
+        }
+
+
+        .hero-slider .swiper-pagination-bullet-active {
+
+          width:55px;
+
+        }
+
+      }
+
+    `;
+
+
+    document.head.appendChild(style);
+
+
+    return () => {
+
+      document.head.removeChild(style);
+
+    };
+
+
+  }, []);
+
+
 
   return (
-    <div ref={ref} className="relative bg-black">
 
-      {/* STICKY SCENE */}
-      <div className="sticky top-0 h-screen overflow-hidden">
+    <section
 
-        {/* ================= BACKGROUND (FIXED iOS SAFE) ================= */}
-        <motion.div
-          style={{
-            scale: bgScale,
-            y: bgY,
-          }}
-          className="absolute inset-0 will-change-transform transform-gpu"
-        >
-          {/* iOS SAFE WRAPPER (prevents black edge bug) */}
-          <div className="absolute -inset-10">
+      dir="rtl"
+
+      className="
+        relative
+        h-[60svh]
+        min-h-[380px]
+        overflow-hidden
+      "
+
+    >
+
+
+      <Swiper
+
+        modules={[
+          Pagination,
+          Autoplay,
+          EffectFade
+        ]}
+
+        effect="fade"
+
+        speed={900}
+
+        pagination={{
+          clickable:true,
+        }}
+
+        autoplay={{
+          delay:4500,
+          disableOnInteraction:false,
+        }}
+
+        loop={true}
+
+        grabCursor={true}
+
+        className="hero-slider h-full"
+
+
+      >
+
+
+        {slides.map((slide,index)=>(
+
+
+          <SwiperSlide key={index}>
+
+
             <div
-              className="w-full h-full bg-cover bg-center scale-110"
+
+              className="
+                relative
+                h-full
+                w-full
+                bg-cover
+                bg-center
+              "
+
               style={{
-                backgroundImage: `url(${slides[0].image})`,
+
+                backgroundImage:
+                `url(${slide.image})`
+
               }}
-            />
-          </div>
-        </motion.div>
 
-        {/* ================= LIGHT FIELD (Apple Glow Depth) ================= */}
-        <motion.div
-          style={{ y: glowY, opacity: glowOpacity }}
-          className="absolute inset-0"
-        >
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_60%_40%,rgba(236,72,153,0.18),transparent_55%)]" />
-          <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_80%,rgba(255,255,255,0.05),transparent_60%)]" />
-        </motion.div>
+            >
 
-        {/* ================= VIGNETTE (cinematic framing) ================= */}
-        <motion.div
-          style={{ opacity: vignetteOpacity }}
-          className="absolute inset-0 bg-gradient-to-b from-black/20 via-black/60 to-black"
-        />
 
-        {/* ================= CONTENT (Apple keynote float UI) ================= */}
-        <motion.div
-          style={{
-            y: contentY,
-            scale: contentScale,
-            opacity: contentOpacity,
-          }}
-          className="relative h-full flex items-center justify-end px-6 md:px-24 text-right"
-        >
-          <div className="max-w-xl text-white">
+              {/* Overlay */}
 
-            <p className="text-[10px] tracking-[0.6em] text-pink-300/70 mb-4 uppercase">
-              {slides[0].tag}
-            </p>
+              <div
 
-            <h1 className="text-5xl md:text-7xl font-light leading-tight whitespace-pre-line">
-              {slides[0].title}
-            </h1>
+                className="
+                  absolute
+                  inset-0
+                  bg-gradient-to-l
+                  from-black/75
+                  via-black/35
+                  to-transparent
+                "
 
-            <p className="mt-6 text-white/70 text-sm max-w-md leading-relaxed">
-              {slides[0].desc}
-            </p>
+              />
 
-            {/* Apple-style CTA */}
-            <div className="mt-10 flex justify-end">
-              <button className="group relative px-8 py-3 rounded-full border border-white/15 bg-white/5 backdrop-blur-md overflow-hidden transition-all duration-500 hover:border-pink-300/40">
 
-                <span className="relative z-10 text-sm tracking-[0.35em] text-white/80 group-hover:text-white">
-                  اكتشف المجموعة
-                </span>
 
-                {/* subtle Apple glow */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition duration-500 bg-[radial-gradient(circle_at_center,rgba(236,72,153,0.25),transparent_70%)]" />
-              </button>
+              {/* Content */}
+
+              <div
+
+                className="
+                  absolute
+                  inset-0
+                  z-10
+                "
+
+              >
+
+
+                <div
+
+                  className="
+                    absolute
+                    right-0
+                    top-1/2
+                    -translate-y-1/2
+                    px-6
+                    sm:px-10
+                    md:px-20
+                    pt-32
+                    max-w-md
+                    text-right
+                    text-white
+                  "
+
+                >
+
+
+                  
+
+
+
+                  <h1
+
+                    className="
+                      text-2xl
+                      sm:text-3xl
+                      md:text-5xl
+                      font-semibold
+                      leading-tight
+                    "
+
+                  >
+
+                    {slide.title}
+
+                  </h1>
+
+
+
+                  <p
+
+                    className="
+                      mt-4
+                      text-sm
+                      sm:text-base
+                      text-white/80
+                      leading-7
+                    "
+
+                  >
+
+                    {slide.desc}
+
+                  </p>
+
+
+
+                  <Link
+
+                    to="/products"
+
+                    className="
+                      inline-flex
+                      mt-7
+                      text-sm
+                      text-white
+                      border-b
+                      border-white
+                      pb-2
+                      hover:opacity-70
+                      transition
+                    "
+
+                  >
+
+                    اكتشف المجموعة
+
+                  </Link>
+
+
+                </div>
+
+
+              </div>
+
+
             </div>
 
-          </div>
-        </motion.div>
 
-        {/* ================= INDICATOR ================= */}
-        <motion.div
-          style={{ opacity: contentOpacity }}
-          className="absolute bottom-10 right-10 flex flex-col items-end" 
-        >
-          <span className="text-[10px] text-pink-200/60 mb-2">
-            تجربة فلامنجو بارك · عدن
-          </span>
+          </SwiperSlide>
 
-          <div className="w-56 h-[1px] bg-white/10 overflow-hidden">
-            <motion.div
-              className="h-full bg-gradient-to-l from-pink-400 to-white"
-              style={{ scaleX: s, transformOrigin: "right" }}
-            />
-          </div>
-        </motion.div>
 
-      </div>
-    </div>
+        ))}
+
+
+      </Swiper>
+
+
+    </section>
+
   );
+
 }

@@ -276,7 +276,6 @@ const CheckoutPage = () => {
         customer_phone: customerPhone, customer_address: formData.address || "-",
         customer_city: formData.city || "", customer_notes: formData.notes || null,
         country: country || "GLOBAL",
-        currency_mode: currencyMode,
         currency_code: currencyMode,
         exchange_rate_snapshot: (await import("@/lib/currency")).getRateSnapshot(currencyMode),
         total_base: total,

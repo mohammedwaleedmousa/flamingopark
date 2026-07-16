@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Save, Printer, X, Pencil, Download } from "lucide-react";
+import { CURRENCY_RATES, convertPrice } from "@/lib/currency";
 // Use public path for static assets that live in /public
 const flamingoLogo = "/icons/flamingo.jpeg";
 
@@ -42,6 +43,7 @@ interface Order {
   created_at: string;
   coupon_code?: string | null;
   discount_amount?: number;
+  currency_code?: string | null;
   delivery_companies?: {
     name: string;
   } | null;
@@ -232,7 +234,9 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
   };
 
   const displayOrder = isEditing ? editedOrder : order;
-  const currency = "ريال";
+  const currencyMode = (displayOrder?.currency_code as string) || "SAR";
+  const currency = CURRENCY_RATES[currencyMode]?.symbol || "ر.س";
+  const fmt = (amountSAR: number) => convertPrice(amountSAR, currencyMode).toLocaleString("en-US");
 
   if (!displayOrder) return null;
 
@@ -393,14 +397,14 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                               </p>
                             )}
                             <p className="text-sm text-gray-500">
-                              {item.quantity} × {item.price.toFixed(2)} {currency}
+                              {item.quantity} × {fmt(item.price)} {currency}
                             </p>
                           </>
                         )}
                       </div>
                       {!isEditing && (
                         <span className="font-heading text-primary">
-                          {(item.price * item.quantity).toFixed(2)} {currency}
+                          {fmt(item.price * item.quantity)} {currency}
                         </span>
                       )}
                     </div>
@@ -440,7 +444,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <div className="flex justify-between text-sm font-body">
                 <span className="text-gray-500">المجموع الفرعي</span>
-                <span className="text-gray-900">{calculatedTotals.subtotal.toFixed(2)} {currency}</span>
+                <span className="text-gray-900">{fmt(calculatedTotals.subtotal)} {currency}</span>
               </div>
               <div className="flex justify-between text-sm font-body">
                 <span className="text-gray-500">رسوم التوصيل</span>
@@ -456,7 +460,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                     className="w-24 text-sm"
                   />
                 ) : (
-                  <span className="text-gray-900">{calculatedTotals.deliveryFee.toFixed(2)} {currency}</span>
+                  <span className="text-gray-900">{fmt(calculatedTotals.deliveryFee)} {currency}</span>
                 )}
               </div>
               {calculatedTotals.discountAmount > 0 && (
@@ -468,13 +472,13 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                       </span>
                     )}
                   </span>
-                  <span>-{calculatedTotals.discountAmount.toFixed(2)} {currency}</span>
+                  <span>-{fmt(calculatedTotals.discountAmount)} {currency}</span>
                 </div>
               )}
               <div className="h-px bg-gray-200 my-2" />
               <div className="flex justify-between font-heading text-lg">
                 <span className="text-gray-900">الإجمالي</span>
-                <span className="text-primary">{calculatedTotals.total.toFixed(2)} {currency}</span>
+                <span className="text-primary">{fmt(calculatedTotals.total)} {currency}</span>
               </div>
               <div className="flex justify-between text-sm font-body pt-2">
                 <span className="text-gray-500">طريقة الدفع</span>

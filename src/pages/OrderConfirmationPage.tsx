@@ -9,6 +9,7 @@ import { CheckCircle, MessageCircle, Home, Copy, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { track } from '@/lib/analytics';
+import { CURRENCY_RATES, convertPrice } from '@/lib/currency';
 
 interface SelectedAccessory {
   name: string;
@@ -44,7 +45,7 @@ interface OrderData {
   deliveryCompany: string;
   selectedRegion?: string | null;
   country: string;
-  currencyMode?: "SAR" | "YER_SOUTH" | "YER_NORTH";
+  currencyMode?: string;
   whatsappNumber: string;
   createdAt: string;
 }
@@ -57,8 +58,11 @@ const OrderConfirmationPage = () => {
   const [isConfirmed, setIsConfirmed] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
   const flamingoLogo = '/icons/flamingo.jpeg';
-  
-  const currency = 'ريال';
+
+  // Currency snapshot: prices from checkout are in SAR (base). Convert & display in order's currency.
+  const currencyMode = (orderData?.currencyMode as string) || 'SAR';
+  const currency = CURRENCY_RATES[currencyMode]?.symbol || 'ر.س';
+  const fmt = (amountSAR: number) => convertPrice(amountSAR, currencyMode).toLocaleString('en-US');
 
   useEffect(() => {
     if (location.state?.orderData) {
@@ -316,11 +320,11 @@ const OrderConfirmationPage = () => {
                         )}
                         
                         <p className="text-sm text-gray-500">
-                          {item.quantity} × {item.price.toFixed(2)} {currency}
+                          {item.quantity} × {fmt(item.price)} {currency}
                         </p>
                       </div>
                       <span className="font-heading text-primary">
-                        {(item.price * item.quantity).toFixed(2)} {currency}
+                        {fmt(item.price * item.quantity)} {currency}
                       </span>
                     </div>
                     
@@ -359,24 +363,24 @@ const OrderConfirmationPage = () => {
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <div className="flex justify-between text-sm font-body">
                 <span className="text-gray-500">المجموع الفرعي</span>
-                <span className="text-gray-900">{orderData.subtotal.toFixed(2)} {currency}</span>
+                <span className="text-gray-900">{fmt(orderData.subtotal)} {currency}</span>
               </div>
               <div className="flex justify-between text-sm font-body">
                 <span className="text-gray-500">رسوم التوصيل ({orderData.deliveryCompany})</span>
-                <span className="text-gray-900">{orderData.deliveryFee.toFixed(2)} {currency}</span>
+                <span className="text-gray-900">{fmt(orderData.deliveryFee)} {currency}</span>
               </div>
               {orderData.discountAmount && orderData.discountAmount > 0 && (
                 <div className="flex justify-between text-sm font-body text-green-600">
                   <span>
                     الخصم {orderData.couponCode && <span className="font-mono bg-green-100 px-1.5 py-0.5 rounded text-xs mr-1">{orderData.couponCode}</span>}
                   </span>
-                  <span>-{orderData.discountAmount.toFixed(2)} {currency}</span>
+                  <span>-{fmt(orderData.discountAmount)} {currency}</span>
                 </div>
               )}
               <div className="h-px bg-gray-200 my-2" />
               <div className="flex justify-between font-heading text-lg">
                 <span className="text-gray-900">الإجمالي</span>
-                <span className="text-primary">{orderData.total.toFixed(2)} {currency}</span>
+                <span className="text-primary">{fmt(orderData.total)} {currency}</span>
               </div>
               <div className="flex justify-between text-sm font-body pt-2">
                 <span className="text-gray-500">طريقة الدفع</span>

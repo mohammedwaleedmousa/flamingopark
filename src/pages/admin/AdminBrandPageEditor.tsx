@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Loader2, Upload, ArrowRight } from "lucide-react";
 
@@ -15,10 +16,16 @@ const slugify = (s: string) =>
   s.toLowerCase().trim().replace(/[^\w\u0600-\u06FF]+/g, "-").replace(/^-+|-+$/g, "");
 
 const AdminBrandPageEditor = () => {
-  const { id } = useParams<{ id: string }>();
-  const isNew = !id || id === "new";
+  const { id: routeId } = useParams<{ id: string }>();
+  const isNewRoute = !routeId || routeId === "new";
   const navigate = useNavigate();
   const qc = useQueryClient();
+
+  const [selectedBrandId, setSelectedBrandId] = useState<string | null>(
+    isNewRoute ? null : routeId!
+  );
+  const editingId = selectedBrandId || (isNewRoute ? null : routeId!);
+  const isNew = !editingId;
 
   const [form, setForm] = useState({
     name: "",
@@ -31,14 +38,27 @@ const AdminBrandPageEditor = () => {
   });
   const [uploading, setUploading] = useState<"logo" | "hero" | null>(null);
 
+  // كل الماركات ليختار الأدمن منها عند إنشاء صفحة جديدة
+  const { data: allBrands = [] } = useQuery({
+    queryKey: ["all-brands-picker"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("brands")
+        .select("id,name,slug,logo_url,hero_image,description,is_active,sort_order")
+        .order("name", { ascending: true });
+      if (error) throw error;
+      return data || [];
+    },
+  });
+
   const { isLoading } = useQuery({
-    queryKey: ["admin-brand-edit", id],
-    enabled: !isNew,
+    queryKey: ["admin-brand-edit", editingId],
+    enabled: !!editingId,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("brands")
         .select("*")
-        .eq("id", id)
+        .eq("id", editingId)
         .maybeSingle();
       if (error) throw error;
       if (data) {
@@ -55,6 +75,10 @@ const AdminBrandPageEditor = () => {
       return data;
     },
   });
+
+  const pickExistingBrand = (brandId: string) => {
+    setSelectedBrandId(brandId);
+  };
 
   const upload = async (file: File, kind: "logo" | "hero") => {
     setUploading(kind);
@@ -94,21 +118,21 @@ const AdminBrandPageEditor = () => {
         sort_order: Number(form.sort_order) || 0,
       };
       if (!payload.name) throw new Error("اسم الماركة مطلوب");
-      if (isNew) {
+      if (editingId) {
+        const { error } = await (supabase as any).from("brands").update(payload).eq("id", editingId);
+        if (error) throw error;
+        return { id: editingId };
+      } else {
         const { data, error } = await (supabase as any).from("brands").insert(payload).select().single();
         if (error) throw error;
         return data;
-      } else {
-        const { error } = await (supabase as any).from("brands").update(payload).eq("id", id);
-        if (error) throw error;
-        return null;
       }
     },
     onSuccess: (data) => {
       qc.invalidateQueries({ queryKey: ["admin-brand-pages"] });
       qc.invalidateQueries({ queryKey: ["admin-brands"] });
-      toast({ title: isNew ? "تمت الإضافة" : "تم الحفظ" });
-      if (isNew && data?.id) navigate(`/admin/brand-pages/${data.id}`);
+      toast({ title: "تم الحفظ" });
+      if (data?.id && isNewRoute) navigate(`/admin/brand-pages/${data.id}`);
     },
     onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
   });
@@ -121,10 +145,34 @@ const AdminBrandPageEditor = () => {
     <div className="space-y-6 max-w-3xl mx-auto" dir="rtl">
       <AdminPageHeader
         category="الماركات"
-        title={isNew ? "إضافة صفحة ماركة" : "تعديل صفحة الماركة"}
+        title={isNew ? "إضافة صفحة ماركة" : `تعديل صفحة ${form.name || "الماركة"}`}
         actions={[{ label: "رجوع", icon: ArrowRight, onClick: () => navigate("/admin/brand-pages"), variant: "secondary" }]}
       />
 
+      {isNew && (
+        <div className="bg-card border border-border rounded-xl p-6 space-y-4">
+          <div className="space-y-2">
+            <Label>اختر الماركة *</Label>
+            <Select onValueChange={pickExistingBrand}>
+              <SelectTrigger>
+                <SelectValue placeholder="اختر ماركة من القائمة..." />
+              </SelectTrigger>
+              <SelectContent>
+                {allBrands.map((b: any) => (
+                  <SelectItem key={b.id} value={b.id}>
+                    {b.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+            <p className="text-xs text-muted-foreground">
+              اختر ماركة موجودة لإدارة صفحتها (شعار، صورة، وصف، أقسام). لإضافة ماركة جديدة بالكامل، انتقل إلى صفحة الماركات.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {!isNew && (
       <div className="bg-card border border-border rounded-xl p-6 space-y-5">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div className="space-y-2">
@@ -190,6 +238,7 @@ const AdminBrandPageEditor = () => {
           <Button variant="outline" onClick={() => navigate("/admin/brand-pages")}>إلغاء</Button>
         </div>
       </div>
+      )}
     </div>
   );
 };

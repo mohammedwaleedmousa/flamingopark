@@ -9,6 +9,7 @@ import { CheckCircle, MessageCircle, Home, Copy, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { track } from '@/lib/analytics';
+import { CURRENCY_RATES, convertPrice } from '@/lib/currency';
 
 interface SelectedAccessory {
   name: string;
@@ -59,15 +60,9 @@ const OrderConfirmationPage = () => {
   const flamingoLogo = '/icons/flamingo.jpeg';
 
   // Currency snapshot: prices from checkout are in SAR (base). Convert & display in order's currency.
-  const currencyMode = (orderData?.currencyMode as any) || "SAR";
-  const currencySymbol = (require("@/lib/currency").CURRENCY_RATES?.[currencyMode]?.symbol) || 'ر.س';
-  const currency = currencySymbol;
-  const fmt = (amountSAR: number) => {
-    try {
-      const { convertPrice } = require("@/lib/currency");
-      return convertPrice(amountSAR, currencyMode).toLocaleString('en-US');
-    } catch { return amountSAR.toFixed(2); }
-  };
+  const currencyMode = (orderData?.currencyMode as string) || 'SAR';
+  const currency = CURRENCY_RATES[currencyMode]?.symbol || 'ر.س';
+  const fmt = (amountSAR: number) => convertPrice(amountSAR, currencyMode).toLocaleString('en-US');
 
   useEffect(() => {
     if (location.state?.orderData) {

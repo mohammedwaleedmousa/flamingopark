@@ -150,7 +150,7 @@ const BrandsStrip = () => {
     <div className="relative w-full">
 
 
-      {/* Fade edges */}
+      {/* Left Fade */}
 
       <div
         className="
@@ -167,6 +167,8 @@ const BrandsStrip = () => {
         "
       />
 
+
+      {/* Right Fade */}
 
       <div
         className="
@@ -185,10 +187,12 @@ const BrandsStrip = () => {
 
 
 
+      {/* Brands Slider */}
+
       <div
         ref={trackRef}
 
-        className={`
+        className="
           brands-strip-track
 
           flex
@@ -199,12 +203,16 @@ const BrandsStrip = () => {
 
           px-4
 
+          w-full
+
           overflow-x-auto
+
           overflow-y-hidden
 
-          overscroll-x-contain
-
           scroll-smooth
+
+          snap-x
+          snap-mandatory
 
           touch-pan-x
 
@@ -213,48 +221,13 @@ const BrandsStrip = () => {
           no-scrollbar
 
           select-none
-
-          ${
-            isDragging
-              ? "cursor-grabbing"
-              : "cursor-grab"
-          }
-        `}
+        "
 
         style={{
-          scrollbarWidth:"none",
-          msOverflowStyle:"none",
-          WebkitOverflowScrolling:"touch",
+          scrollbarWidth: "none",
+          msOverflowStyle: "none",
+          WebkitOverflowScrolling: "touch",
         }}
-
-
-        onMouseDown={(e)=>
-          handlePointerDown(e.clientX)
-        }
-
-        onMouseMove={(e)=>
-          handlePointerMove(e.clientX)
-        }
-
-        onMouseUp={handlePointerUp}
-
-        onMouseLeave={handlePointerUp}
-
-
-        onTouchStart={(e)=>
-          handlePointerDown(
-            e.touches[0].clientX
-          )
-        }
-
-        onTouchMove={(e)=>
-          handlePointerMove(
-            e.touches[0].clientX
-          )
-        }
-
-        onTouchEnd={handlePointerUp}
-
       >
 
 
@@ -272,6 +245,8 @@ const BrandsStrip = () => {
               relative
 
               shrink-0
+
+              snap-center
 
               w-[155px]
               md:w-[210px]
@@ -297,7 +272,8 @@ const BrandsStrip = () => {
 
 
               transition-colors
-              duration-300
+
+              duration-500
 
 
               hover:border-pink-300
@@ -308,12 +284,14 @@ const BrandsStrip = () => {
           >
 
 
-            {/* Logo */}
+
+            {/* Logo Box */}
 
             <div
               className="
                 h-16
                 md:h-20
+
                 w-full
 
                 flex
@@ -346,6 +324,7 @@ const BrandsStrip = () => {
 
 
                     transition-all
+
                     duration-500
 
 
@@ -380,6 +359,7 @@ const BrandsStrip = () => {
 
 
 
+
             {/* Brand Name */}
 
             <span
@@ -397,11 +377,14 @@ const BrandsStrip = () => {
 
                 transition-colors
 
+                duration-300
+
                 group-hover:text-black
               "
             >
               {brand.name}
             </span>
+
 
 
 
@@ -421,19 +404,20 @@ const BrandsStrip = () => {
 
                 bg-pink-500
 
-
                 transition-all
-                duration-500
 
+                duration-500
 
                 group-hover:w-14
               "
             />
 
 
+
           </Link>
 
         ))}
+
 
 
 
@@ -446,6 +430,7 @@ const BrandsStrip = () => {
         )}
 
 
+
       </div>
 
 
@@ -453,9 +438,15 @@ const BrandsStrip = () => {
 
 
 
+
     <style>{`
       .brands-strip-track::-webkit-scrollbar {
         display:none;
+      }
+
+      .brands-strip-track {
+        scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
       }
     `}</style>
 

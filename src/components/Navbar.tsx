@@ -134,10 +134,16 @@ const Navbar = () => {
     hydrateCurrencies().then(() => setCurrencyList(getActiveCurrencies()));
   }, []);
 
+  // Restore old-style labels for the known 3 currencies; fall back to DB label for any custom currency the admin adds.
+  const staticLabels: Record<string, { label: string; flag: string }> = {
+    SAR: { label: "ريال سعودي (SAR)", flag: "🇸🇦" },
+    YER_SOUTH: { label: "ريال يمني - جنوبي (YER S)", flag: "🇾🇪" },
+    YER_NORTH: { label: "ريال يمني - شمالي (YER N)", flag: "🇾🇪" },
+  };
   const currencies = currencyList.map((c) => ({
     key: c.code as typeof mode,
-    label: `${c.meta.label} (${c.code})`,
-    flag: c.code === "SAR" ? "🇸🇦" : c.code.startsWith("YER") ? "🇾🇪" : "💱",
+    label: staticLabels[c.code]?.label ?? `${c.meta.label} (${c.code})`,
+    flag: staticLabels[c.code]?.flag ?? "💱",
   }));
 
   useEffect(() => {

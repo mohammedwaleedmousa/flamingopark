@@ -80,6 +80,7 @@ const AdminProductFormPage = () => {
     accessories: [] as Accessory[],
     features: [] as ProductFeature[],
     color_variants: [] as ColorVariant[],
+    stock_quantity: '0',
     image_zoom: 1,
     image_position_x: 50,
     image_position_y: 50,
@@ -228,6 +229,7 @@ const AdminProductFormPage = () => {
         accessories: ((data as any).accessories || []) as Accessory[],
         features: ((data as any).features || []) as ProductFeature[],
         color_variants: ((data as any).color_variants || []) as ColorVariant[],
+        stock_quantity: (data as any).stock_quantity?.toString() || '0',
         image_zoom: 1,
         image_position_x: 50,
         image_position_y: 50,
@@ -351,6 +353,7 @@ const AdminProductFormPage = () => {
 
     setIsSaving(true);
 
+    const stockQty = Math.max(0, parseInt(formData.stock_quantity || '0') || 0);
     const productData = {
       name: formData.name,
       name_ar: formData.name_ar,
@@ -363,7 +366,8 @@ const AdminProductFormPage = () => {
       description_ar: formData.description_ar,
       category: formData.category,
       brand: formData.brand,
-      in_stock: formData.in_stock,
+      in_stock: stockQty > 0 ? formData.in_stock : false,
+      stock_quantity: stockQty,
       is_featured: formData.is_featured,
       is_best_seller: formData.is_best_seller,
       is_active: formData.is_active,
@@ -386,15 +390,20 @@ const AdminProductFormPage = () => {
         if (error) throw error;
         toast({ title: 'تم', description: 'تم تحديث المنتج بنجاح' });
       } else {
-        const { error } = await supabase
+        const { data: inserted, error } = await supabase
           .from('products')
-          .insert(productData);
+          .insert(productData)
+          .select()
+          .single();
         if (error) throw error;
+        if (!inserted) throw new Error('لم يتم إنشاء المنتج (استجابة فارغة)');
         toast({ title: 'تم', description: 'تم إضافة المنتج بنجاح' });
       }
       navigate('/admin/products');
     } catch (error: any) {
-      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+      const desc = error?.message || error?.details || error?.hint || 'فشل حفظ المنتج';
+      console.error('[product-save] error:', error);
+      toast({ title: 'خطأ في حفظ المنتج', description: desc, variant: 'destructive' });
     } finally {
       setIsSaving(false);
     }
@@ -754,12 +763,39 @@ const AdminProductFormPage = () => {
         {/* Settings */}
         <div className="bg-card border border-border rounded p-6 space-y-4">
           <h2 className="font-heading text-lg text-foreground">الإعدادات</h2>
-          
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-body text-muted-foreground mb-2">
+                الكمية في المخزون *
+              </label>
+              <Input
+                type="number"
+                min={0}
+                value={formData.stock_quantity}
+                onChange={(e) => {
+                  const v = e.target.value;
+                  const n = Math.max(0, parseInt(v || '0') || 0);
+                  setFormData({
+                    ...formData,
+                    stock_quantity: v,
+                    in_stock: n > 0 ? formData.in_stock : false,
+                  });
+                }}
+                placeholder="0"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                عند وصول الكمية إلى 0 سيصبح المنتج غير متوفر تلقائياً وسيُخصم عند كل طلب.
+              </p>
+            </div>
+          </div>
+
           <div className="flex flex-wrap gap-6">
             <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox
                 checked={formData.in_stock}
                 onCheckedChange={(checked) => setFormData({ ...formData, in_stock: !!checked })}
+                disabled={(parseInt(formData.stock_quantity || '0') || 0) === 0}
               />
               <span className="text-sm">متوفر</span>
             </label>

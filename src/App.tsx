@@ -60,20 +60,17 @@ const AdminSectionsPage = lazy(() => import("./pages/admin/AdminSectionsPage"));
 const AdminContentPage = lazy(() => import("./pages/admin/AdminContentPage"));
 const AdminInvoicesPage = lazy(() => import("./pages/admin/AdminInvoicesPage"));
 const AdminCODRegionsPage = lazy(() => import("./pages/admin/AdminCODRegionsPage"));
-const AdminRevenuePage = lazy(() => import("./pages/admin/AdminRevenuePage"));
-const AdminProfitReportPage = lazy(() => import("./pages/admin/AdminProfitReportPage"));
 const AdminOffersPage = lazy(() => import("./pages/admin/AdminOffersPage"));
 const AdminCouponsPage = lazy(() => import("./pages/admin/AdminCouponsPage"));
-const AdminAnalyticsPage = lazy(() => import("./pages/admin/AdminAnalyticsPage"));
 const AdminAuditLogPage = lazy(() => import("./pages/admin/AdminAuditLogPage"));
 const AdminLedgerPage = lazy(() => import("./pages/admin/AdminLedgerPage"));
 const AdminRefundsPage = lazy(() => import("./pages/admin/AdminRefundsPage"));
 const AdminExpensesPage = lazy(() => import("./pages/admin/AdminExpensesPage"));
 const AdminPaymentMethodsPage = lazy(() => import("./pages/admin/AdminPaymentMethodsPage"));
 const AdminInventoryAdjustmentsPage = lazy(() => import("./pages/admin/AdminInventoryAdjustmentsPage"));
-const AdminFinanceDashboard = lazy(() => import("./pages/admin/AdminFinanceDashboard"));
-const AdminCustomerIntelligence = lazy(() => import("./pages/admin/AdminCustomerIntelligence"));
-const AdminAnalyticsDashboard = lazy(() => import("./pages/admin/AdminAnalyticsDashboard"));
+const ReportsOverviewPage = lazy(() => import("./pages/admin/reports/ReportsOverviewPage"));
+const ReportsFinancePage = lazy(() => import("./pages/admin/reports/ReportsFinancePage"));
+const ReportsCustomersPage = lazy(() => import("./pages/admin/reports/ReportsCustomersPage"));
 const MohammedInvoicesPage = lazy(() => import("./pages/MohammedInvoicesPage"));
 const AdminBrandPagesPage = lazy(() => import("./pages/admin/AdminBrandPagesPage"));
 const AdminBrandSectionsPage = lazy(() => import("./pages/admin/AdminBrandSectionsPage"));
@@ -203,11 +200,17 @@ const App = () => {
               <Route path="sections" element={<AdminSectionsPage />} />
               <Route path="content" element={<AdminContentPage />} />
               <Route path="invoices" element={<AdminInvoicesPage />} />
-              <Route path="revenue" element={<AdminRevenuePage />} />
-              <Route path="profit-report" element={<AdminProfitReportPage />} />
+              <Route path="reports" element={<ReportsOverviewPage />} />
+              <Route path="reports/finance" element={<ReportsFinancePage />} />
+              <Route path="reports/customers" element={<ReportsCustomersPage />} />
+              {/* Legacy aliases */}
+              <Route path="analytics" element={<Navigate to="/admin/reports" replace />} />
+              <Route path="revenue" element={<Navigate to="/admin/reports" replace />} />
+              <Route path="profit-report" element={<Navigate to="/admin/reports/finance" replace />} />
+              <Route path="finance" element={<Navigate to="/admin/reports/finance" replace />} />
+              <Route path="customer-intelligence" element={<Navigate to="/admin/reports/customers" replace />} />
               <Route path="offers" element={<AdminOffersPage />} />
               <Route path="coupons" element={<AdminCouponsPage />} />
-              <Route path="analytics" element={<AdminAnalyticsPage />} />
               <Route path="audit-log" element={<AdminAuditLogPage />} />
               <Route path="ledger" element={<AdminLedgerPage />} />
               <Route path="refunds" element={<AdminRefundsPage />} />
@@ -215,8 +218,6 @@ const App = () => {
               <Route path="payment-methods" element={<AdminPaymentMethodsPage />} />
               <Route path="inventory-adjustments" element={<AdminInventoryAdjustmentsPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
-              <Route path="finance" element={<AdminFinanceDashboard />} />
-              <Route path="customer-intelligence" element={<AdminCustomerIntelligence/>} />
               <Route path="brand-pages" element={<AdminBrandPagesPage />} />
               <Route path="brand-pages/new" element={<AdminBrandPageEditor />} />
               <Route path="brand-pages/:id" element={<AdminBrandPageEditor />} />

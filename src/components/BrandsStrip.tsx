@@ -120,19 +120,6 @@ const BrandsStrip = () => {
       "
     >
 
-      <p
-        className="
-          text-[10px]
-          md:text-xs
-          tracking-[0.55em]
-          uppercase
-          text-black/40
-          mb-4
-        "
-      >
-        FLAMINGO COLLECTION
-      </p>
-
 
       <h2
         className="

@@ -3,7 +3,7 @@ import {
   Settings, LogOut, Grid3X3, LayoutGrid, FileText, Receipt, MapPin,
   TrendingUp, Percent, Ticket, QrCode, PieChart, BarChart3, ShieldAlert,
   BookOpen, RotateCcw, Wallet, Boxes, LogIn,
-    ChevronDown, Brain, Link2, ListChecks, Bell,
+  ChevronDown, Brain, Link2, ListChecks, Bell, Coins, Globe,
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -107,6 +107,8 @@ const groups: {
     label: 'النظام',
     items: [
       { title: 'المحتوى', url: '/admin/content', icon: FileText },
+      { title: 'العملات', url: '/admin/currencies', icon: Coins },
+      { title: 'الدول', url: '/admin/countries', icon: Globe },
       { title: 'سجل التدقيق', url: '/admin/audit-log', icon: ShieldAlert },
       { title: 'الإعدادات', url: '/admin/settings', icon: Settings },
       { title: 'الباركود', url: '/qr-code', icon: QrCode },

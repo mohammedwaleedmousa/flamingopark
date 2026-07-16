@@ -27,7 +27,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import type { User as SupaUser } from "@supabase/supabase-js";
 import { useAuthActions } from "@/hooks/useAuthActions";
-import { useCurrency } from "@/lib/currency";
+import { useCurrency, getActiveCurrencies, hydrateCurrencies } from "@/lib/currency";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import { useCustomerNotifications } from "@/hooks/useCustomerNotifications";
@@ -128,12 +128,17 @@ const Navbar = () => {
   const { mode, setMode, short, label } = useCurrency();
   const location = useLocation();
   const [scrolled, setScrolled] = useState(false);
+  const [currencyList, setCurrencyList] = useState(getActiveCurrencies());
 
-  const currencies: { key: typeof mode; label: string; flag: string }[] = [
-    { key: "SAR", label: "ريال سعودي (SAR)", flag: "🇸🇦" },
-    { key: "YER_SOUTH", label: "ريال يمني - جنوبي (YER S)", flag: "🇾🇪" },
-    { key: "YER_NORTH", label: "ريال يمني - شمالي (YER N)", flag: "🇾🇪" },
-  ];
+  useEffect(() => {
+    hydrateCurrencies().then(() => setCurrencyList(getActiveCurrencies()));
+  }, []);
+
+  const currencies = currencyList.map((c) => ({
+    key: c.code as typeof mode,
+    label: `${c.meta.label} (${c.code})`,
+    flag: c.code === "SAR" ? "🇸🇦" : c.code.startsWith("YER") ? "🇾🇪" : "💱",
+  }));
 
   useEffect(() => {
     // Get initial session and verify it's valid

@@ -442,6 +442,56 @@ export type Database = {
         }
         Relationships: []
       }
+      countries: {
+        Row: {
+          code: string
+          created_at: string
+          default_currency: string | null
+          flag_emoji: string | null
+          is_active: boolean
+          is_featured: boolean
+          name_ar: string
+          name_en: string
+          phone_code: string | null
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          default_currency?: string | null
+          flag_emoji?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          name_ar: string
+          name_en: string
+          phone_code?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          default_currency?: string | null
+          flag_emoji?: string | null
+          is_active?: boolean
+          is_featured?: boolean
+          name_ar?: string
+          name_en?: string
+          phone_code?: string | null
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "countries_default_currency_fkey"
+            columns: ["default_currency"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
+        ]
+      }
       coupons: {
         Row: {
           code: string
@@ -472,6 +522,45 @@ export type Database = {
           type?: string
           updated_at?: string
           value?: number
+        }
+        Relationships: []
+      }
+      currencies: {
+        Row: {
+          code: string
+          created_at: string
+          is_active: boolean
+          is_base: boolean
+          name_ar: string
+          name_en: string
+          rate_to_base: number
+          sort_order: number
+          symbol: string
+          updated_at: string
+        }
+        Insert: {
+          code: string
+          created_at?: string
+          is_active?: boolean
+          is_base?: boolean
+          name_ar: string
+          name_en: string
+          rate_to_base?: number
+          sort_order?: number
+          symbol: string
+          updated_at?: string
+        }
+        Update: {
+          code?: string
+          created_at?: string
+          is_active?: boolean
+          is_base?: boolean
+          name_ar?: string
+          name_en?: string
+          rate_to_base?: number
+          sort_order?: number
+          symbol?: string
+          updated_at?: string
         }
         Relationships: []
       }
@@ -626,9 +715,11 @@ export type Database = {
       expenses: {
         Row: {
           amount: number
+          amount_base: number | null
           category_id: string | null
           created_at: string
           created_by: string | null
+          currency_code: string | null
           description: string
           expense_date: string
           id: string
@@ -640,9 +731,11 @@ export type Database = {
         }
         Insert: {
           amount: number
+          amount_base?: number | null
           category_id?: string | null
           created_at?: string
           created_by?: string | null
+          currency_code?: string | null
           description: string
           expense_date?: string
           id?: string
@@ -654,9 +747,11 @@ export type Database = {
         }
         Update: {
           amount?: number
+          amount_base?: number | null
           category_id?: string | null
           created_at?: string
           created_by?: string | null
+          currency_code?: string | null
           description?: string
           expense_date?: string
           id?: string
@@ -673,6 +768,13 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "expense_categories"
             referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "expenses_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
           },
           {
             foreignKeyName: "expenses_payment_method_fk"
@@ -992,6 +1094,7 @@ export type Database = {
           country: string
           coupon_code: string | null
           created_at: string
+          currency_code: string | null
           customer_address: string
           customer_id: string | null
           customer_name: string
@@ -1000,6 +1103,7 @@ export type Database = {
           delivery_company_id: string | null
           delivery_fee: number
           discount_amount: number | null
+          exchange_rate_snapshot: number | null
           id: string
           invoice_url: string | null
           items: Json
@@ -1008,12 +1112,14 @@ export type Database = {
           status: string
           subtotal: number
           total: number
+          total_base: number | null
           updated_at: string
         }
         Insert: {
           country?: string
           coupon_code?: string | null
           created_at?: string
+          currency_code?: string | null
           customer_address: string
           customer_id?: string | null
           customer_name: string
@@ -1022,6 +1128,7 @@ export type Database = {
           delivery_company_id?: string | null
           delivery_fee?: number
           discount_amount?: number | null
+          exchange_rate_snapshot?: number | null
           id?: string
           invoice_url?: string | null
           items?: Json
@@ -1030,12 +1137,14 @@ export type Database = {
           status?: string
           subtotal: number
           total: number
+          total_base?: number | null
           updated_at?: string
         }
         Update: {
           country?: string
           coupon_code?: string | null
           created_at?: string
+          currency_code?: string | null
           customer_address?: string
           customer_id?: string | null
           customer_name?: string
@@ -1044,6 +1153,7 @@ export type Database = {
           delivery_company_id?: string | null
           delivery_fee?: number
           discount_amount?: number | null
+          exchange_rate_snapshot?: number | null
           id?: string
           invoice_url?: string | null
           items?: Json
@@ -1052,9 +1162,17 @@ export type Database = {
           status?: string
           subtotal?: number
           total?: number
+          total_base?: number | null
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "orders_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
           {
             foreignKeyName: "orders_customer_id_fkey"
             columns: ["customer_id"]
@@ -1077,12 +1195,14 @@ export type Database = {
           country: string
           coupon_code: string | null
           created_at: string
+          currency_code: string | null
           customer_address: string
           customer_name: string
           customer_notes: string | null
           customer_phone: string
           delivery_fee: number
           discount_amount: number | null
+          exchange_rate_snapshot: number | null
           id: string
           invoice_url: string | null
           items: Json
@@ -1092,18 +1212,21 @@ export type Database = {
           status: string
           subtotal: number
           total: number
+          total_base: number | null
         }
         Insert: {
           archived_at?: string
           country: string
           coupon_code?: string | null
           created_at?: string
+          currency_code?: string | null
           customer_address: string
           customer_name: string
           customer_notes?: string | null
           customer_phone: string
           delivery_fee?: number
           discount_amount?: number | null
+          exchange_rate_snapshot?: number | null
           id?: string
           invoice_url?: string | null
           items?: Json
@@ -1113,18 +1236,21 @@ export type Database = {
           status?: string
           subtotal: number
           total: number
+          total_base?: number | null
         }
         Update: {
           archived_at?: string
           country?: string
           coupon_code?: string | null
           created_at?: string
+          currency_code?: string | null
           customer_address?: string
           customer_name?: string
           customer_notes?: string | null
           customer_phone?: string
           delivery_fee?: number
           discount_amount?: number | null
+          exchange_rate_snapshot?: number | null
           id?: string
           invoice_url?: string | null
           items?: Json
@@ -1134,6 +1260,7 @@ export type Database = {
           status?: string
           subtotal?: number
           total?: number
+          total_base?: number | null
         }
         Relationships: []
       }
@@ -1396,8 +1523,10 @@ export type Database = {
       refunds: {
         Row: {
           amount: number
+          amount_base: number | null
           created_at: string
           created_by: string | null
+          currency_code: string | null
           customer_name: string | null
           customer_phone: string | null
           id: string
@@ -1415,8 +1544,10 @@ export type Database = {
         }
         Insert: {
           amount: number
+          amount_base?: number | null
           created_at?: string
           created_by?: string | null
+          currency_code?: string | null
           customer_name?: string | null
           customer_phone?: string | null
           id?: string
@@ -1434,8 +1565,10 @@ export type Database = {
         }
         Update: {
           amount?: number
+          amount_base?: number | null
           created_at?: string
           created_by?: string | null
+          currency_code?: string | null
           customer_name?: string | null
           customer_phone?: string | null
           id?: string
@@ -1452,6 +1585,13 @@ export type Database = {
           updated_at?: string
         }
         Relationships: [
+          {
+            foreignKeyName: "refunds_currency_code_fkey"
+            columns: ["currency_code"]
+            isOneToOne: false
+            referencedRelation: "currencies"
+            referencedColumns: ["code"]
+          },
           {
             foreignKeyName: "refunds_order_id_fkey"
             columns: ["order_id"]

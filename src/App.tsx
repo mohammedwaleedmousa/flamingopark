@@ -227,6 +227,8 @@ const App = () => {
               <Route path="customer-notifications" element={<AdminCustomerNotificationsPage />} />
               <Route path="notification-deliveries" element={<AdminNotificationDeliveriesPage />} />
               <Route path="customers/:id" element={<AdminCustomerDetailPage />} />
+              <Route path="currencies" element={<AdminCurrenciesPage />} />
+              <Route path="countries" element={<AdminCountriesPage />} />
             </Route>
 
             <Route path="/mohammed" element={<MohammedInvoicesPage />} />

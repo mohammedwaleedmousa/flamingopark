@@ -9,6 +9,7 @@ import SplashScreen from "@/components/SplashScreen";
 import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
 import { DateRangeProvider } from "@/lib/analytics/dateRange";
+import { hydrateCurrencies } from "@/lib/currency";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
@@ -81,6 +82,8 @@ const AdminBrandFiltersPage = lazy(() => import("./pages/admin/AdminBrandFilters
 const AdminCustomerNotificationsPage = lazy(() => import("./pages/admin/AdminCustomerNotificationsPage"));
 const AdminCustomerDetailPage = lazy(() => import("./pages/admin/AdminCustomerDetailPage"));
 const AdminNotificationDeliveriesPage = lazy(() => import("./pages/admin/AdminNotificationDeliveriesPage"));
+const AdminCurrenciesPage = lazy(() => import("./pages/admin/AdminCurrenciesPage"));
+const AdminCountriesPage = lazy(() => import("./pages/admin/AdminCountriesPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -128,6 +131,10 @@ const App = () => {
     if (typeof window === "undefined") return false;
     return !sessionStorage.getItem("flamingo-splash-seen");
   });
+
+  useEffect(() => {
+    hydrateCurrencies();
+  }, []);
 
   return (
   <QueryClientProvider client={queryClient}>

@@ -84,11 +84,18 @@ const AdminProductFormPage = () => {
     image_zoom: 1,
     image_position_x: 50,
     image_position_y: 50,
+    return_policy: '',
+    specs: [] as { label: string; value: string }[],
+    has_quality_variants: false,
+    quality_variants: [] as { name: string; price: number; description: string; images: string[]; in_stock: boolean }[],
   });
 
   const [newSize, setNewSize] = useState('');
   const [newAccessory, setNewAccessory] = useState({ name: '', name_ar: '', price: '', image_url: '', description: '', description_ar: '' });
   const [newFeature, setNewFeature] = useState({ icon: 'truck', title: '', desc: '' });
+  const [newSpec, setNewSpec] = useState({ label: '', value: '' });
+  const [newQuality, setNewQuality] = useState({ name: '', price: '', description: '' });
+  const [uploadingQualityIdx, setUploadingQualityIdx] = useState<number | null>(null);
   const [uploadingAccessoryImage, setUploadingAccessoryImage] = useState(false);
   const [selectedParentSlug, setSelectedParentSlug] = useState('');
 

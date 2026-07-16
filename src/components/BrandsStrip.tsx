@@ -208,7 +208,8 @@ const BrandsStrip = () => {
           className="
             !w-[155px]
             md:!w-[210px]
-            pr-5
+            pr-2
+            
           "
 
         >

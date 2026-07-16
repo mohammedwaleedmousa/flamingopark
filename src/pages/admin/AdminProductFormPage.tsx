@@ -240,6 +240,10 @@ const AdminProductFormPage = () => {
         image_zoom: 1,
         image_position_x: 50,
         image_position_y: 50,
+        return_policy: (data as any).return_policy || '',
+        specs: ((data as any).specs || []) as { label: string; value: string }[],
+        has_quality_variants: (data as any).has_quality_variants ?? false,
+        quality_variants: ((data as any).quality_variants || []) as { name: string; price: number; description: string; images: string[]; in_stock: boolean }[],
       });
     }
     setIsLoading(false);

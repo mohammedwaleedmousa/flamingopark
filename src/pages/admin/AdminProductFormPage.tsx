@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { ArrowRight, Loader2, Upload, X, LayoutGrid, Plus, Trash2, Truck, Shield, RotateCcw, GripVertical, ZoomIn, Move } from 'lucide-react';
 import ColorVariantsEditor, { ColorVariant } from '@/components/admin/ColorVariantsEditor';
+import imageCompression from "browser-image-compression";
 
 interface HomepageSection {
   id: string;
@@ -269,63 +270,86 @@ const AdminProductFormPage = () => {
   if (!files || files.length === 0) return;
 
   try {
+
     const uploadPromises = Array.from(files).map(async (file) => {
-      const ext = file.name.split(".").pop();
+
+      // ضغط وتحويل الصورة
+      const compressedFile = await imageCompression(file, {
+        maxSizeMB: 0.15,
+        maxWidthOrHeight: 900,
+        useWebWorker: true,
+        fileType: "image/webp",
+        initialQuality: 0.7,
+      });
+
 
       const fileName = `${Date.now()}-${Math.random()
         .toString(36)
-        .substring(2)}.${ext}`;
+        .substring(2)}.webp`;
+
 
       const filePath = `products/${fileName}`;
 
+
       const { error: uploadError } = await supabase.storage
         .from("uploads")
-        .upload(filePath, file);
+        .upload(
+          filePath,
+          compressedFile,
+          {
+            contentType: "image/webp",
+            upsert: false,
+          }
+        );
+
 
       if (uploadError) {
-        console.error("UPLOAD ERROR:", uploadError);
-
         throw uploadError;
       }
+
 
       const { data } = supabase.storage
         .from("uploads")
         .getPublicUrl(filePath);
 
+
       return data.publicUrl;
+
     });
 
 
     const uploadedUrls = await Promise.all(uploadPromises);
 
 
-    setFormData((prev) => ({
+    setFormData(prev => ({
       ...prev,
       images: [
         ...prev.images,
-        ...uploadedUrls,
+        ...uploadedUrls
       ],
     }));
 
 
     toast({
       title: "تم",
-      description: "تم رفع الصور بنجاح",
+      description: "تم رفع الصور بسرعة",
     });
 
 
-  } catch (error: any) {
+  } catch(error:any){
 
     console.error(error);
 
     toast({
-      title: "خطأ",
-      description: error.message,
-      variant: "destructive",
+      title:"خطأ",
+      description:error.message,
+      variant:"destructive"
     });
 
   } finally {
+
     e.target.value = "";
+
   }
 };
 

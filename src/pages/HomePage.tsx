@@ -584,7 +584,7 @@ const HomePage = () => {
           <section className="py-20 md:py-28 bg-muted">
             <div className="container mx-auto px-6">
               <div className="text-center mb-14">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">الأكثر طلباً</p>
+                <p className="text-[10px] tracking-[0.02em] uppercase text-muted-foreground mb-3">الأكثر طلباً</p>
                 <h2 className="font-heading text-3xl md:text-5xl text-foreground">الأكثر مبيعاً</h2>
               </div>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
@@ -602,12 +602,12 @@ const HomePage = () => {
             <div className="container mx-auto px-6">
               <div className="flex items-end justify-between mb-12">
                 <div>
-                  <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground mb-3">وصل حديثاً</p>
+                  <p className="text-[10px] tracking-[0.02em] uppercase text-muted-foreground mb-3">وصل حديثاً</p>
                   <h2 className="font-heading text-3xl md:text-5xl text-foreground">جديد الموسم</h2>
                 </div>
                 <Link
                   to="/products?filter=featured"
-                  className="text-[11px] tracking-[0.35em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
+                  className="text-[11px] tracking-[0.02em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
                 >
                   عرض الكل <ArrowLeft className="w-3 h-3" />
                 </Link>

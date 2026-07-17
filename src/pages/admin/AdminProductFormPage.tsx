@@ -269,11 +269,12 @@ const AdminProductFormPage = () => {
   if (!files || files.length === 0) return;
 
   try {
-    for (const file of Array.from(files)) {
-
+    const uploadPromises = Array.from(files).map(async (file) => {
       const ext = file.name.split(".").pop();
 
-      const fileName = `${Date.now()}.${ext}`;
+      const fileName = `${Date.now()}-${Math.random()
+        .toString(36)
+        .substring(2)}.${ext}`;
 
       const filePath = `products/${fileName}`;
 
@@ -284,37 +285,34 @@ const AdminProductFormPage = () => {
       if (uploadError) {
         console.error("UPLOAD ERROR:", uploadError);
 
-        toast({
-          title: "خطأ",
-          description: uploadError.message,
-          variant: "destructive",
-        });
-
-        continue;
+        throw uploadError;
       }
-
 
       const { data } = supabase.storage
         .from("uploads")
         .getPublicUrl(filePath);
 
+      return data.publicUrl;
+    });
 
-      console.log("IMAGE URL:", data.publicUrl);
+
+    const uploadedUrls = await Promise.all(uploadPromises);
 
 
-      setFormData((prev) => ({
-        ...prev,
-        images: [
-          ...prev.images,
-          data.publicUrl,
-        ],
-      }));
-    }
+    setFormData((prev) => ({
+      ...prev,
+      images: [
+        ...prev.images,
+        ...uploadedUrls,
+      ],
+    }));
+
 
     toast({
       title: "تم",
       description: "تم رفع الصور بنجاح",
     });
+
 
   } catch (error: any) {
 
@@ -325,6 +323,9 @@ const AdminProductFormPage = () => {
       description: error.message,
       variant: "destructive",
     });
+
+  } finally {
+    e.target.value = "";
   }
 };
 

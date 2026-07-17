@@ -1,5 +1,5 @@
 -- Customer notifications table for admin-to-customer messaging
-CREATE TABLE public.customer_notifications (
+z
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   customer_id uuid REFERENCES public.customers(id) ON DELETE CASCADE,
   user_id uuid REFERENCES auth.users(id) ON DELETE CASCADE,

@@ -205,6 +205,42 @@ export type Database = {
         }
         Relationships: []
       }
+      brand_categories: {
+        Row: {
+          brand_id: string
+          category_id: string
+          created_at: string
+          id: string
+        }
+        Insert: {
+          brand_id: string
+          category_id: string
+          created_at?: string
+          id?: string
+        }
+        Update: {
+          brand_id?: string
+          category_id?: string
+          created_at?: string
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_categories_brand_id_fkey"
+            columns: ["brand_id"]
+            isOneToOne: false
+            referencedRelation: "brands"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_categories_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brand_filters: {
         Row: {
           brand_id: string
@@ -1494,9 +1530,9 @@ export type Database = {
       products: {
         Row: {
           accessories: Json | null
-          brand: string
+          brand: string | null
           brand_id: string | null
-          category: string
+          category: string | null
           category_id: string | null
           color_variants: Json
           cost_price: number | null
@@ -1530,9 +1566,9 @@ export type Database = {
         }
         Insert: {
           accessories?: Json | null
-          brand: string
+          brand?: string | null
           brand_id?: string | null
-          category: string
+          category?: string | null
           category_id?: string | null
           color_variants?: Json
           cost_price?: number | null
@@ -1566,9 +1602,9 @@ export type Database = {
         }
         Update: {
           accessories?: Json | null
-          brand?: string
+          brand?: string | null
           brand_id?: string | null
-          category?: string
+          category?: string | null
           category_id?: string | null
           color_variants?: Json
           cost_price?: number | null

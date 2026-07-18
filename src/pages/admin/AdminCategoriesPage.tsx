@@ -13,6 +13,7 @@ import { Plus, Pencil, Trash2, Upload, Grid3X3, Search, Loader2, X, ZoomIn, Move
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import imageCompression from "browser-image-compression";
 
 interface Category {
   id: string;
@@ -131,26 +132,67 @@ const AdminCategoriesPage = () => {
   });
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
+  const file = e.target.files?.[0];
 
+  if (!file) return;
+
+  try {
     setUploading(true);
-    const fileExt = file.name.split(".").pop();
-    const fileName = `categories/${Date.now()}.${fileExt}`;
 
-    const { error: uploadError } = await supabase.storage.from("uploads").upload(fileName, file);
+    const compressedFile = await imageCompression(file, {
+      maxSizeMB: 0.5,
+      maxWidthOrHeight: 1200,
+      useWebWorker: true,
+      fileType: "image/webp",
+    });
+
+
+    const fileName = `categories/${Date.now()}.webp`;
+
+
+    const { error: uploadError } = await supabase.storage
+      .from("uploads")
+      .upload(fileName, compressedFile, {
+        contentType: "image/webp",
+      });
+
 
     if (uploadError) {
-      toast({ title: "خطأ في رفع الصورة", variant: "destructive" });
-      setUploading(false);
-      return;
+      throw uploadError;
     }
 
-    const { data: urlData } = supabase.storage.from("uploads").getPublicUrl(fileName);
 
-    setFormData({ ...formData, image_url: urlData.publicUrl });
+    const { data } = supabase.storage
+      .from("uploads")
+      .getPublicUrl(fileName);
+
+
+    setFormData((prev) => ({
+      ...prev,
+      image_url: data.publicUrl,
+    }));
+
+
+    toast({
+      title: "تم رفع الصورة بنجاح",
+    });
+
+
+  } catch (error) {
+
+    console.error(error);
+
+    toast({
+      title: "فشل رفع الصورة",
+      variant: "destructive",
+    });
+
+  } finally {
+
     setUploading(false);
-  };
+
+  }
+};
 
   const resetForm = () => {
     setFormData({
@@ -225,12 +267,12 @@ const AdminCategoriesPage = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
+    <div className="min-h-screen max-w-[1500px] mx-auto px-3 md:px-6 py-6 space-y-8" dir="rtl">
       {/* Header */}
       <AdminPageHeader
         category="الكتالوج"
-        title="الفئات"
-        description={`${stats.total} فئة • ${stats.active} نشطة`}
+        title="إدارة الفئات"
+        description={`إجمالي ${stats.total} فئة • ${stats.active} نشطة حالياً`}
         actions={[
           {
             label: "إضافة فئة",
@@ -245,59 +287,80 @@ const AdminCategoriesPage = () => {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         {[
-          { label: "الكل", value: stats.total, color: "from-primary/20 to-primary/10 border-primary/20" },
-          { label: "نشطة", value: stats.active, color: "from-green-500/20 to-green-500/10 border-green-500/20" },
-          { label: "معطلة", value: stats.inactive, color: "from-red-500/20 to-red-500/10 border-red-500/20" },
+          {
+            label: "إجمالي الفئات",
+            value: stats.total,
+            style: "from-pink-500/20 to-pink-500/5",
+          },
+          {
+            label: "الفئات النشطة",
+            value: stats.active,
+            style: "from-green-500/20 to-green-500/5",
+          },
+          {
+            label: "الفئات المعطلة",
+            value: stats.inactive,
+            style: "from-red-500/20 to-red-500/5",
+          },
         ].map((stat) => (
-          <div key={stat.label} className={cn("p-4 rounded-xl text-center border bg-gradient-to-br", stat.color)}>
-            <p className="text-2xl font-heading">{stat.value}</p>
-            <p className="text-xs text-muted-foreground">{stat.label}</p>
+          <div
+            key={stat.label}
+            className={`bg-gradient-to-br ${stat.style} border border-border rounded-2xl p-5 shadow-sm hover:shadow-md transition`}
+          >
+            <p className="text-3xl font-heading">
+              {stat.value}
+            </p>
+
+            <p className="text-sm text-muted-foreground mt-2">
+              {stat.label}
+            </p>
           </div>
         ))}
       </div>
 
       {/* Search */}
-      <div className="relative">
-        <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+      <div className="relative bg-card border border-border rounded-2xl shadow-sm">
+        <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
-          placeholder="بحث عن فئة..."
-          className="pr-10 bg-card"
+          placeholder="ابحث عن فئة..."
+          className="h-14 pr-12 bg-transparent border-0 focus-visible:ring-0 text-base"
           dir="rtl"
         />
       </div>
 
       {/* Mobile Cards */}
-      <div className="md:hidden space-y-3">
+      <div className="md:hidden space-y-4">
         {filteredCategories.map((category, index) => (
           <motion.div
             key={category.id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: index * 0.05 }}
-            className="bg-card border border-border rounded-xl p-4"
+            className="bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all"
           >
-            <div className="flex items-center gap-4">
+            <div className="flex items-start gap-5">
               {category.image_url ? (
                 <img
-                  src={category.image_url}
+                  src={`${category.image_url}?v=${Date.now()}`}
                   alt={category.name_ar}
-                  className="w-16 h-16 object-cover bg-muted rounded-lg"
+                  className="w-20 h-20 object-cover rounded-2xl shadow-sm"
                 />
               ) : (
-                <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center">
+                <div className="w-20 h-20 bg-muted rounded-2xl flex items-center justify-center">
                   <Grid3X3 className="w-6 h-6 text-muted-foreground" />
                 </div>
               )}
               <div className="flex-1 min-w-0">
                 <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-heading text-foreground truncate">{category.name_ar}</h3>
+                  <h3 className="font-heading text-lg text-foreground truncate">{category.name_ar}</h3>
                   <span
                     className={cn(
-                      "px-2 py-1 rounded-full text-xs font-medium shrink-0 border",
+                      "px-3 py-1 rounded-full text-xs font-medium shrink-0 border",
                       category.is_active
                         ? "bg-green-500/15 text-green-600 border-green-500/30"
                         : "bg-red-500/15 text-red-600 border-red-500/30",
@@ -315,16 +378,16 @@ const AdminCategoriesPage = () => {
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
+            <div className="flex items-center gap-3 mt-5 pt-5 border-t border-border">
               <Button
                 size="sm"
                 variant="outline"
-                className="flex-1 gap-2"
+                className="flex-1 h-10 rounded-xl"
                 onClick={() => toggleActiveMutation.mutate({ id: category.id, is_active: !category.is_active })}
               >
                 {category.is_active ? "تعطيل" : "تفعيل"}
               </Button>
-              <Button size="sm" variant="outline" className="flex-1 gap-2" onClick={() => handleEdit(category)}>
+              <Button size="sm" variant="outline" className="flex-1 h-10 rounded-xl gap-2" onClick={() => handleEdit(category)}>
                 <Pencil className="w-4 h-4" />
                 تعديل
               </Button>
@@ -352,41 +415,41 @@ const AdminCategoriesPage = () => {
       </div>
 
       {/* Desktop Table */}
-      <div className="hidden md:block bg-card border border-border rounded-xl overflow-hidden">
+      <div className="hidden md:block bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
         <table className="w-full">
-          <thead className="bg-muted/50">
+          <thead className="bg-muted/30">
             <tr>
-              <th className="text-right p-4 font-heading text-sm">الصورة</th>
-              <th className="text-right p-4 font-heading text-sm">الاسم (عربي)</th>
-              <th className="text-right p-4 font-heading text-sm">الاسم (إنجليزي)</th>
-              <th className="text-right p-4 font-heading text-sm">النوع</th>
-              <th className="text-right p-4 font-heading text-sm">الترتيب</th>
-              <th className="text-right p-4 font-heading text-sm">الحالة</th>
-              <th className="text-right p-4 font-heading text-sm">إجراءات</th>
+              <th className="text-right px-5 py-4 font-heading text-xs text-muted-foreground uppercase">الصورة</th>
+              <th className="text-right px-5 py-4 font-heading text-xs text-muted-foreground uppercase">الاسم (عربي)</th>
+              <th className="text-right px-5 py-4 font-heading text-xs text-muted-foreground uppercase">الاسم (إنجليزي)</th>
+              <th className="text-right px-5 py-4 font-heading text-xs text-muted-foreground uppercase">النوع</th>
+              <th className="text-right px-5 py-4 font-heading text-xs text-muted-foreground uppercase">الترتيب</th>
+              <th className="text-right px-5 py-4 font-heading text-xs text-muted-foreground uppercase">الحالة</th>
+              <th className="text-right px-5 py-4 font-heading text-xs text-muted-foreground uppercase">إجراءات</th>
             </tr>
           </thead>
           <tbody>
             {filteredCategories.map((category) => (
-              <tr key={category.id} className="border-b border-border hover:bg-muted/30 transition-colors">
+              <tr key={category.id} className="border-b border-border hover:bg-muted/40 transition">
                 <td className="p-4">
                   {category.image_url ? (
                     <img
                       src={category.image_url}
                       alt={category.name_ar}
-                      className="h-12 w-12 object-cover bg-muted rounded-lg"
+                      className="h-14 w-14 object-cover rounded-xl shadow-sm"
                     />
                   ) : (
-                    <div className="h-12 w-12 bg-muted rounded-lg flex items-center justify-center">
+                    <div className="h-14 w-14 bg-muted rounded-xl flex items-center justify-center">
                       <Grid3X3 className="w-5 h-5 text-muted-foreground" />
                     </div>
                   )}
                 </td>
-                <td className="p-4 font-heading">{category.name_ar}</td>
-                <td className="p-4 text-muted-foreground">{category.name}</td>
-                <td className="p-4 text-muted-foreground">
+                <td className="px-5 py-4 font-heading text-base">{category.name_ar}</td>
+                <td className="px-5 py-4 text-muted-foreground text-sm">{category.name}</td>
+                <td className="px-5 py-4 text-muted-foreground text-sm">
                   {category.parent_id ? `فرعي (${categoryNameById.get(category.parent_id) || "-"})` : "رئيسي"}
                 </td>
-                <td className="p-4 text-muted-foreground">{category.sort_order}</td>
+                <td className="px-5 py-4 text-muted-foreground text-sm">{category.sort_order}</td>
                 <td className="p-4">
                   <Switch
                     checked={category.is_active ?? true}
@@ -394,14 +457,14 @@ const AdminCategoriesPage = () => {
                   />
                 </td>
                 <td className="p-4">
-                  <div className="flex gap-1">
-                    <Button size="icon" variant="ghost" className="hover:bg-muted" onClick={() => handleEdit(category)}>
+                  <div className="flex gap-2">
+                    <Button size="icon" variant="ghost" className="rounded-xl hover:bg-muted" onClick={() => handleEdit(category)}>
                       <Pencil className="w-4 h-4" />
                     </Button>
                     <Button
                       size="icon"
                       variant="ghost"
-                      className="text-destructive hover:bg-destructive/10"
+                      className="text-destructive rounded-xl hover:bg-destructive/10"
                       onClick={() => {
                         if (confirm("هل أنت متأكد من حذف هذه الفئة؟")) {
                           deleteMutation.mutate(category.id);

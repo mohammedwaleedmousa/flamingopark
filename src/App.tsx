@@ -10,6 +10,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
 import { DateRangeProvider } from "@/lib/analytics/dateRange";
 import { hydrateCurrencies } from "@/lib/currency";
+import AdminBrandSectionProductsPage from "@/pages/admin/AdminBrandSectionProductsPage";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
 const AuthPage = lazy(() => import("./pages/AuthPage"));
@@ -183,6 +184,8 @@ const App = () => {
             <Route path="/store-info" element={<ProtectedRoute><StoreInfoPage /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/order-tracking" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
+            <Route path="/brands/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />
+            <Route path="/brand/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route path="/admin" element={<AdminLayout />}>
@@ -224,7 +227,7 @@ const App = () => {
               <Route path="brand-pages" element={<AdminBrandPagesPage />} />
               <Route path="brand-pages/new" element={<AdminBrandPageEditor />} />
               <Route path="brand-pages/:id" element={<AdminBrandPageEditor />} />
-              <Route path="brand-sections/:id" element={<AdminBrandSectionsPage />} />
+              <Route path="brand-section-products/:id" element={<AdminBrandSectionProductsPage />} />
               <Route path="brand-filters/:id" element={<AdminBrandFiltersPage />} />
               <Route path="brand-sections" element={<AdminBrandSectionsPage />} />
               <Route path="brand-filters" element={<AdminBrandFiltersPage />} />
@@ -233,6 +236,7 @@ const App = () => {
               <Route path="customers/:id" element={<AdminCustomerDetailPage />} />
               <Route path="currencies" element={<AdminCurrenciesPage />} />
               <Route path="countries" element={<AdminCountriesPage />} />
+              <Route path="brand-sections/:id/products" element={<AdminBrandSectionProductsPage />} />
             </Route>
 
             <Route path="/mohammed" element={<MohammedInvoicesPage />} />

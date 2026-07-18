@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Loader2, Upload, ArrowRight } from "lucide-react";
+import { Plus, Pencil, Trash2, Loader2, Upload, ArrowRight, Package } from "lucide-react";
 
 interface Section {
   id: string;
@@ -186,13 +186,43 @@ const AdminBrandSectionsPage = () => {
                 </div>
                 <p className="text-xs text-muted-foreground">/{s.slug} · ترتيب {s.sort_order}</p>
                 <div className="flex gap-2">
-                  <Button size="sm" variant="outline" className="flex-1" onClick={() => openEdit(s)}>
-                    <Pencil className="w-4 h-4 ml-1" /> تعديل
-                  </Button>
-                  <Button size="icon" variant="outline" className="text-destructive" onClick={() => { if (confirm("حذف هذا القسم؟")) del.mutate(s.id); }}>
-                    <Trash2 className="w-4 h-4" />
-                  </Button>
-                </div>
+
+  <Button
+    size="sm"
+    variant="outline"
+    className="flex-1"
+    onClick={() => openEdit(s)}
+  >
+    <Pencil className="w-4 h-4 ml-1" />
+    تعديل
+  </Button>
+
+
+  <Button
+    size="sm"
+    variant="outline"
+    className="flex-1"
+    onClick={() => navigate(`/admin/brand-sections/${s.id}/products`)}
+  >
+    <Package className="w-4 h-4 ml-1" />
+    المنتجات
+  </Button>
+
+
+  <Button
+    size="icon"
+    variant="outline"
+    className="text-destructive"
+    onClick={() => {
+      if (confirm("حذف هذا القسم؟")) {
+        del.mutate(s.id);
+      }
+    }}
+  >
+    <Trash2 className="w-4 h-4" />
+  </Button>
+
+</div>
               </div>
             </div>
           ))}

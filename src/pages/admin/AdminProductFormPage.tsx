@@ -271,22 +271,30 @@ const AdminProductFormPage = () => {
 
   try {
 
-    const uploadPromises = Array.from(files).map(async (file) => {
+    const uploadPromises = Array.from(files).slice(0, 10).map(async (file) => {
 
       // ضغط وتحويل الصورة
       const compressedFile = await imageCompression(file, {
-        maxSizeMB: 0.15,
-        maxWidthOrHeight: 900,
+        maxSizeMB: 0.05,
+        maxWidthOrHeight: 600,
         useWebWorker: true,
-        fileType: "image/webp",
-        initialQuality: 0.7,
+        initialQuality: 0.65,
       });
 
+      console.log(
+        "Original:",
+        (file.size / 1024 / 1024).toFixed(2),
+        "MB"
+      );
 
-      const fileName = `${Date.now()}-${Math.random()
-        .toString(36)
-        .substring(2)}.webp`;
+      console.log(
+        "Compressed:",
+        (compressedFile.size / 1024).toFixed(0),
+        "KB"
+      );
 
+
+      const fileName = `${crypto.randomUUID()}.webp`;
 
       const filePath = `products/${fileName}`;
 
@@ -297,8 +305,8 @@ const AdminProductFormPage = () => {
           filePath,
           compressedFile,
           {
-            contentType: "image/webp",
             upsert: false,
+            cacheControl: "3600",
           }
         );
 
@@ -462,20 +470,32 @@ const AdminProductFormPage = () => {
   }
 
   return (
-    <div className="max-w-4xl space-y-6">
-      <div className="flex items-center gap-4">
-        <Button variant="ghost" onClick={() => navigate('/admin/products')}>
-          <ArrowRight className="w-4 h-4" />
-        </Button>
-        <h1 className="font-heading text-3xl text-foreground">
-          {isEditing ? 'تعديل المنتج' : 'إضافة منتج جديد'}
-        </h1>
+    <div className="max-w-[1400px] mx-auto space-y-8 px-6 pb-10" dir="rtl">
+      <div className="flex items-center justify-between rounded-3xl border border-border/60 bg-background p-6 shadow-sm">
+        <div className="flex items-center gap-4">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => navigate('/admin/products')}
+            className="rounded-2xl h-11 w-11 hover:bg-primary/10"
+          >
+            <ArrowRight className="w-5 h-5" />
+          </Button>
+          <div>
+            <h1 className="font-heading text-3xl font-bold">
+              {isEditing ? 'تعديل المنتج' : 'إضافة منتج جديد'}
+            </h1>
+            <p className="text-sm text-muted-foreground mt-1">
+              إدارة معلومات المنتج، الصور، المخزون والتفاصيل
+            </p>
+          </div>
+        </div>
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-6">
         {/* Basic Info */}
-        <div className="bg-card border border-border rounded p-6 space-y-4">
-          <h2 className="font-heading text-lg text-foreground">المعلومات الأساسية</h2>
+        <div className="bg-background border border-border/60 rounded-3xl p-7 space-y-6 shadow-sm hover:shadow-md transition-all">
+          <h2 className="font-heading text-xl font-bold flex items-center gap-2">المعلومات الأساسية</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
@@ -484,6 +504,7 @@ const AdminProductFormPage = () => {
                 value={formData.name}
                 onChange={(e) => handleNameChange(e.target.value)}
                 placeholder="Product Name"
+                className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
               />
             </div>
             <div>
@@ -493,6 +514,7 @@ const AdminProductFormPage = () => {
                 onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
                 placeholder="اسم المنتج"
                 dir="rtl"
+                className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
               />
             </div>
           </div>
@@ -504,6 +526,7 @@ const AdminProductFormPage = () => {
               onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
               placeholder="product-name"
               dir="ltr"
+              className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
             />
           </div>
 
@@ -515,6 +538,7 @@ const AdminProductFormPage = () => {
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
                 placeholder="0.00"
+                className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
               />
               <p className="text-xs text-muted-foreground mt-1">السعر الذي يظهر للعميل</p>
             </div>
@@ -525,6 +549,7 @@ const AdminProductFormPage = () => {
                 value={formData.cost_price}
                 onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
                 placeholder="0.00"
+                className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
               />
               <p className="text-xs text-muted-foreground mt-1">السعر الأصلي (التكلفة) - الخصومات تُطبق على هذا السعر</p>
             </div>
@@ -538,6 +563,7 @@ const AdminProductFormPage = () => {
                 value={formData.original_price}
                 onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
                 placeholder="0.00"
+                className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
               />
               <p className="text-xs text-muted-foreground mt-1">يظهر مشطوباً بجانب السعر الحالي</p>
             </div>
@@ -548,6 +574,7 @@ const AdminProductFormPage = () => {
                 value={formData.discount}
                 onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
                 placeholder="0"
+                className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
               />
             </div>
           </div>
@@ -667,9 +694,9 @@ const AdminProductFormPage = () => {
         </div>
 
         {/* Images */}
-        <div className="bg-card border border-border rounded p-6 space-y-4">
+        <div className="bg-background border border-border/60 rounded-3xl p-7 space-y-6 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
-            <h2 className="font-heading text-lg text-foreground">الصور</h2>
+            <h2 className="font-heading text-xl font-bold flex items-center gap-2">الصور</h2>
             <span className="text-xs text-muted-foreground">اسحب الصورة لتغيير ترتيبها • الصورة الأولى هي الرئيسية</span>
           </div>
           
@@ -734,7 +761,7 @@ const AdminProductFormPage = () => {
                 accept="image/*"
                 multiple
                 onChange={handleImageUpload}
-                className="hidden"
+                className="hidden h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
               />
             </label>
           </div>
@@ -806,8 +833,8 @@ const AdminProductFormPage = () => {
         </div>
 
         {/* Settings */}
-        <div className="bg-card border border-border rounded p-6 space-y-4">
-          <h2 className="font-heading text-lg text-foreground">الإعدادات</h2>
+        <div className="bg-background border border-border/60 rounded-3xl p-7 space-y-6 shadow-sm hover:shadow-md transition-all">
+          <h2 className="font-heading text-xl font-bold flex items-center gap-2">الإعدادات</h2>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
@@ -815,6 +842,7 @@ const AdminProductFormPage = () => {
                 الكمية في المخزون *
               </label>
               <Input
+                className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
                 type="number"
                 min={0}
                 value={formData.stock_quantity}
@@ -905,9 +933,9 @@ const AdminProductFormPage = () => {
         </div>
 
         {/* Sizes Section */}
-        <div className="bg-card border border-border rounded p-6 space-y-4">
+        <div className="bg-background border border-border/60 rounded-3xl p-7 space-y-6 shadow-sm hover:shadow-md transition-all">
           <div className="flex items-center justify-between">
-            <h2 className="font-heading text-lg text-foreground">الأحجام</h2>
+            <h2 className="font-heading text-xl font-bold flex items-center gap-2">الأحجام</h2>
             <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox
                 checked={formData.has_sizes}
@@ -925,6 +953,7 @@ const AdminProductFormPage = () => {
                   onChange={(e) => setNewSize(e.target.value)}
                   placeholder="أضف حجم (مثال: S, M, L, XL)"
                   dir="rtl"
+                  className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
                 />
                 <Button
                   type="button"
@@ -970,8 +999,8 @@ const AdminProductFormPage = () => {
         </div>
 
         {/* Accessories Section */}
-        <div className="bg-card border border-border rounded p-6 space-y-4">
-          <h2 className="font-heading text-lg text-foreground">الملحقات الإضافية</h2>
+        <div className="bg-background border border-border/60 rounded-3xl p-7 space-y-6 shadow-sm hover:shadow-md transition-all">
+          <h2 className="font-heading text-xl font-bold flex items-center gap-2">الملحقات الإضافية</h2>
           <p className="text-sm text-muted-foreground">
             أضف ملحقات اختيارية للمنتج. عند اختيار أي ملحق سيُضاف سعره للسعر الأساسي.
           </p>
@@ -982,12 +1011,14 @@ const AdminProductFormPage = () => {
                 value={newAccessory.name}
                 onChange={(e) => setNewAccessory(prev => ({ ...prev, name: e.target.value }))}
                 placeholder="الاسم (إنجليزي)"
+                className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
               />
               <Input
                 value={newAccessory.name_ar}
                 onChange={(e) => setNewAccessory(prev => ({ ...prev, name_ar: e.target.value }))}
                 placeholder="الاسم (عربي) *"
                 dir="rtl"
+                className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
               />
             </div>
             
@@ -1004,6 +1035,7 @@ const AdminProductFormPage = () => {
                 value={newAccessory.price}
                 onChange={(e) => setNewAccessory(prev => ({ ...prev, price: e.target.value }))}
                 placeholder="السعر الإضافي *"
+                className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
               />
             </div>
 
@@ -1032,7 +1064,7 @@ const AdminProductFormPage = () => {
                   <input
                     type="file"
                     accept="image/*"
-                    className="hidden"
+                    className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30 hidden"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
@@ -1119,8 +1151,8 @@ const AdminProductFormPage = () => {
         </div>
 
         {/* Product Features Section */}
-        <div className="bg-card border border-border rounded p-6 space-y-4">
-          <h2 className="font-heading text-lg text-foreground">ميزات المنتج</h2>
+        <div className="bg-background border border-border/60 rounded-3xl p-7 space-y-6 shadow-sm hover:shadow-md transition-all">
+          <h2 className="font-heading text-xl font-bold flex items-center gap-2">ميزات المنتج</h2>
           <p className="text-sm text-muted-foreground">أضف ميزات تظهر تحت المنتج (مثل: التوصيل، الضمان، الإرجاع)</p>
           
           <div className="space-y-3">
@@ -1143,6 +1175,7 @@ const AdminProductFormPage = () => {
               <div>
                 <label className="block text-xs text-muted-foreground mb-1">العنوان</label>
                 <Input
+                  className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30" 
                   value={newFeature.title}
                   onChange={(e) => setNewFeature(prev => ({ ...prev, title: e.target.value }))}
                   placeholder="مثال: شحن سريع"
@@ -1157,6 +1190,7 @@ const AdminProductFormPage = () => {
                     onChange={(e) => setNewFeature(prev => ({ ...prev, desc: e.target.value }))}
                     placeholder="مثال: توصيل خلال 2-5 أيام"
                     dir="rtl"
+                    className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
                   />
                   <Button
                     type="button"
@@ -1236,8 +1270,8 @@ const AdminProductFormPage = () => {
           <h2 className="text-lg font-heading">المواصفات التفصيلية</h2>
           <p className="text-xs text-muted-foreground">أضف مواصفات المنتج (مثل: المادة، الوزن، البلد، إلخ). تُعرض كجدول قابل للطي في صفحة المنتج.</p>
           <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-2">
-            <Input placeholder="التسمية (مثل: المادة)" value={newSpec.label} onChange={(e) => setNewSpec({ ...newSpec, label: e.target.value })} />
-            <Input placeholder="القيمة (مثل: جلد طبيعي)" value={newSpec.value} onChange={(e) => setNewSpec({ ...newSpec, value: e.target.value })} />
+            <Input className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30" placeholder="التسمية (مثل: المادة)" value={newSpec.label} onChange={(e) => setNewSpec({ ...newSpec, label: e.target.value })} />
+            <Input className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30" placeholder="القيمة (مثل: جلد طبيعي)" value={newSpec.value} onChange={(e) => setNewSpec({ ...newSpec, value: e.target.value })} />
             <Button
               type="button"
               onClick={() => {
@@ -1293,7 +1327,7 @@ const AdminProductFormPage = () => {
                 type="checkbox"
                 checked={formData.has_quality_variants}
                 onChange={(e) => setFormData({ ...formData, has_quality_variants: e.target.checked })}
-                className="w-4 h-4"
+                className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30 w-4 h-4"
               />
               <span className="text-sm">مفعّل</span>
             </label>
@@ -1306,12 +1340,14 @@ const AdminProductFormPage = () => {
                   placeholder="اسم الجودة (مثل: ممتاز / A+)"
                   value={newQuality.name}
                   onChange={(e) => setNewQuality({ ...newQuality, name: e.target.value })}
+                  className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
                 />
                 <Input
                   type="number"
                   placeholder="السعر"
                   value={newQuality.price}
                   onChange={(e) => setNewQuality({ ...newQuality, price: e.target.value })}
+                  className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
                 />
                 <Button
                   type="button"
@@ -1356,6 +1392,7 @@ const AdminProductFormPage = () => {
                                 setFormData({ ...formData, quality_variants: v });
                               }}
                               placeholder="الاسم"
+                              className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
                             />
                             <Input
                               type="number"
@@ -1366,6 +1403,7 @@ const AdminProductFormPage = () => {
                                 setFormData({ ...formData, quality_variants: v });
                               }}
                               placeholder="السعر"
+                              className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
                             />
                           </div>
                           <Textarea
@@ -1401,7 +1439,7 @@ const AdminProductFormPage = () => {
                               type="file"
                               accept="image/*"
                               multiple
-                              className="hidden"
+                              className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30 hidden"
                               onChange={async (e) => {
                                 const files = Array.from(e.target.files || []);
                                 if (files.length === 0) return;
@@ -1453,10 +1491,25 @@ const AdminProductFormPage = () => {
         </div>
 
         <div className="flex gap-4">
-          <Button type="submit" disabled={isSaving} className="btn-gold">
+          <Button
+            type="submit"
+            disabled={isSaving}
+            className="
+            h-12 px-10 rounded-2xl
+            bg-gradient-to-r from-pink-500 to-rose-500
+            hover:from-pink-600 hover:to-rose-600
+            text-white shadow-lg
+            transition-all hover:scale-[1.02]
+            "
+            >
             {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? 'تحديث' : 'إضافة'}
           </Button>
-          <Button type="button" variant="outline" onClick={() => navigate('/admin/products')}>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-12 px-8 rounded-2xl"
+            onClick={() => navigate('/admin/products')}
+            >
             إلغاء
           </Button>
         </div>

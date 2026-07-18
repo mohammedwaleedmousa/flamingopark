@@ -200,24 +200,30 @@ const AdminProductsPage = () => {
     <div className="max-w-[1600px] mx-auto space-y-8 px-6 py-4" dir="rtl">
       {/* Header */}
       <AdminPageHeader
-        category="الكتالوج"
-        title="المنتجات"
-        description={`إدارة ${total.toLocaleString("ar-EG")} منتج`}
-        actions={[
-          {
-            label: "إضافة منتج",
-            icon: Plus,
-            href: newProductHref,
-            variant: "primary",
-          },
-          {
-            label: "التحليلات",
-            icon: BarChart3,
-            href: "/admin/analytics",
-            variant: "outline",
-          },
-        ]}
-      />
+  category="الكتالوج"
+  title="إدارة المنتجات"
+  description={`تحكم في ${total.toLocaleString("ar-EG")} منتج • إدارة الأسعار والمخزون والحالة`}
+  actions={[
+    {
+      label: "إضافة منتج",
+      icon: Plus,
+      href: newProductHref,
+      variant: "primary",
+    },
+    {
+      label: "إدارة المخزون",
+      icon: Package,
+      href: "/admin/inventory",
+      variant: "outline",
+    },
+    {
+      label: "التقارير",
+      icon: BarChart3,
+      href: "/admin/analytics",
+      variant: "outline",
+    },
+  ]}
+/>
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <div className="rounded-3xl border border-border/60 bg-background p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">

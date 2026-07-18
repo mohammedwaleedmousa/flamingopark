@@ -35,31 +35,72 @@ const AdminPageHeader: React.FC<AdminPageHeaderProps> = ({
       </div>
       
       {actions.length > 0 && (
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap">
           {actions.map((action, idx) => {
+            const Icon = action.icon;
+
             const content = (
               <>
-                <action.icon className="w-4 h-4 ml-1" />
-                {action.label}
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-white/20">
+                  <Icon className="w-4 h-4" />
+                </span>
+
+                <span>{action.label}</span>
               </>
             );
 
             const buttonClass =
-              action.variant === 'primary'
-                ? 'bg-gradient-to-r from-pink-500 to-rose-500 hover:from-pink-600 hover:to-rose-600 text-white shadow-lg transition-all duration-300 hover:scale-[1.03] rounded-xl'
-                : action.variant === 'secondary'
-                ? 'bg-gradient-to-r from-emerald-500 to-green-500 hover:from-emerald-600 hover:to-green-600 text-white shadow-lg transition-all duration-300 hover:scale-[1.03] rounded-xl'
-                : 'bg-white border border-pink-200 text-pink-500 hover:bg-pink-50 shadow-sm transition-all duration-300 hover:scale-[1.03] rounded-xl';
+              action.variant === "primary"
+                ? `
+                  bg-gradient-to-r from-pink-500 via-pink-500 to-rose-500
+                  text-white
+                  shadow-md shadow-pink-500/20
+                  hover:shadow-lg hover:shadow-pink-500/30
+                  hover:-translate-y-0.5
+                  rounded-2xl
+                `
+                : action.variant === "secondary"
+                ? `
+                  bg-gradient-to-r from-emerald-500 to-green-500
+                  text-white
+                  shadow-md shadow-emerald-500/20
+                  hover:-translate-y-0.5
+                  rounded-2xl
+                `
+                : `
+                  bg-background
+                  border border-border
+                  text-foreground
+                  hover:bg-pink-50
+                  hover:border-pink-200
+                  hover:text-pink-600
+                  shadow-sm
+                  hover:-translate-y-0.5
+                  rounded-2xl
+                `;
+
+            const className = `
+              h-11
+              px-5
+              gap-2
+              font-medium
+              transition-all
+              duration-300
+              flex
+              items-center
+              ${buttonClass}
+            `;
 
             if (action.href) {
               return (
                 <Button
                   key={idx}
                   asChild
-                  size="sm"
-                  className={`px-4 ${buttonClass}`}
+                  className={className}
                 >
-                  <Link to={action.href}>{content}</Link>
+                  <Link to={action.href}>
+                    {content}
+                  </Link>
                 </Button>
               );
             }
@@ -68,8 +109,7 @@ const AdminPageHeader: React.FC<AdminPageHeaderProps> = ({
               <Button
                 key={idx}
                 onClick={action.onClick}
-                size="sm"
-                className={`px-4 ${buttonClass}`}
+                className={className}
               >
                 {content}
               </Button>

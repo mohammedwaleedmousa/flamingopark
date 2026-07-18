@@ -33,6 +33,7 @@ interface Product {
   category: string;
   brand: string;
   in_stock: boolean;
+  stock_quantity: number | null;
   is_active: boolean;
   countries: string[];
   images: string[];
@@ -44,6 +45,11 @@ const PAGE_SIZE = 25;
 const AdminProductsPage = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [total, setTotal] = useState(0);
+  const [stats, setStats] = useState({
+    active: 0,
+    inStock: 0,
+    outOfStock: 0,
+  });
   const [page, setPage] = useState(1);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -63,6 +69,7 @@ const AdminProductsPage = () => {
 
   useEffect(() => {
     fetchProducts();
+    fetchProductStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [search, status, stock, page]);
 
@@ -96,6 +103,25 @@ const AdminProductsPage = () => {
       setTotal(count || 0);
     }
     setIsLoading(false);
+  };
+
+  const fetchProductStats = async () => {
+    const { data, error } = await supabase
+      .from("products")
+      .select("is_active,in_stock,stock_quantity");
+
+    if (error) {
+      console.error("Failed to fetch product stats", error);
+      return;
+    }
+
+    console.log("PRODUCT STATS:", data);
+
+    setStats({
+      active: data.filter((p) => p.is_active).length,
+      inStock: data.filter((p) => (p.stock_quantity ?? 0) > 0).length,
+      outOfStock: data.filter((p) => (p.stock_quantity ?? 0) <= 0).length,
+    });
   };
 
   const toggleActive = async (id: string, currentState: boolean) => {
@@ -171,7 +197,7 @@ const AdminProductsPage = () => {
   const outOfStockCount = products.filter(p => !p.in_stock).length;
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
+    <div className="max-w-[1600px] mx-auto space-y-8 px-6 py-4" dir="rtl">
       {/* Header */}
       <AdminPageHeader
         category="الكتالوج"
@@ -193,16 +219,66 @@ const AdminProductsPage = () => {
         ]}
       />
 
+      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="rounded-3xl border border-border/60 bg-background p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-primary/10">
+            <Package className="h-6 w-6 text-primary" />
+          </div>
+
+          <p className="text-sm text-muted-foreground">إجمالي المنتجات</p>
+
+          <h3 className="mt-2 text-3xl font-bold">
+            {total.toLocaleString("ar-EG")}
+          </h3>
+        </div>
+
+        <div className="rounded-3xl border border-border/60 bg-background p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-emerald-500/10">
+            <Eye className="h-6 w-6 text-emerald-600" />
+          </div>
+
+          <p className="text-sm text-muted-foreground">المنتجات النشطة</p>
+
+          <h3 className="mt-2 text-3xl font-bold">
+            {stats.active}
+          </h3>
+        </div>
+
+        <div className="rounded-3xl border border-border/60 bg-background p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-orange-500/10">
+            <Package className="h-6 w-6 text-orange-600" />
+          </div>
+
+          <p className="text-sm text-muted-foreground">متوفر بالمخزون</p>
+
+          <h3 className="mt-2 text-3xl font-bold">
+            {stats.inStock}
+          </h3>
+        </div>
+
+        <div className="rounded-3xl border border-border/60 bg-background p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
+          <div className="mb-4 flex h-12 w-12 items-center justify-center rounded-2xl bg-rose-500/10">
+            <EyeOff className="h-6 w-6 text-rose-600" />
+          </div>
+
+          <p className="text-sm text-muted-foreground">المنتجات المعطلة</p>
+
+          <h3 className="mt-2 text-3xl font-bold">
+            {total - stats.active}
+          </h3>
+        </div>
+      </div>
+
       {/* Filters bar */}
-      <div className="bg-card border border-border rounded-2xl p-3 md:p-4 space-y-3">
+      <div className="sticky top-5 z-20 rounded-3xl border border-border/60 bg-background/80 backdrop-blur-xl shadow-sm p-5 space-y-4">
         <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
             <Input
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               placeholder="ابحث بالاسم العربي/الإنجليزي أو الـ slug..."
-              className="pr-9 bg-background"
+              className="h-12 rounded-2xl border-border/60 bg-muted/30 pr-11 shadow-sm focus-visible:ring-2 focus-visible:ring-primary/20"
               dir="rtl"
             />
             {searchInput && (
@@ -217,7 +293,7 @@ const AdminProductsPage = () => {
           </div>
           <div className="grid grid-cols-3 md:flex gap-2">
             <Select value={status} onValueChange={(v) => setStatus(v as typeof status)}>
-              <SelectTrigger className="w-full md:w-32"><SelectValue placeholder="الحالة" /></SelectTrigger>
+              <SelectTrigger className="h-12 w-full md:w-40 rounded-2xl border-border/60 bg-muted/30 shadow-sm"><SelectValue placeholder="الحالة" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">كل الحالات</SelectItem>
                 <SelectItem value="active">نشط</SelectItem>
@@ -225,7 +301,7 @@ const AdminProductsPage = () => {
               </SelectContent>
             </Select>
             <Select value={stock} onValueChange={(v) => setStock(v as typeof stock)}>
-              <SelectTrigger className="w-full md:w-32"><SelectValue placeholder="المخزون" /></SelectTrigger>
+              <SelectTrigger className="h-12 w-full md:w-40 rounded-2xl border-border/60 bg-muted/30 shadow-sm"><SelectValue placeholder="المخزون" /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">كل المخزون</SelectItem>
                 <SelectItem value="in">متوفر</SelectItem>
@@ -237,7 +313,7 @@ const AdminProductsPage = () => {
 
         {/* Bulk actions bar */}
         {selected.size > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-primary/5 border border-primary/20">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-primary/20 bg-primary/5 px-5 py-3 shadow-md animate-in fade-in slide-in-from-top-2">
             <p className="text-sm">
               تم تحديد <span className="font-bold text-primary">{selected.size}</span> منتج
             </p>
@@ -264,20 +340,20 @@ const AdminProductsPage = () => {
             <Loader2 className="w-6 h-6 animate-spin mx-auto" />
           </div>
         ) : products.length === 0 ? (
-          <div className="text-center py-12 text-muted-foreground bg-card border border-border rounded-xl">
+          <div className="rounded-3xl border border-dashed border-border bg-background py-16 text-center text-muted-foreground">
             <Package className="w-10 h-10 mx-auto mb-3 opacity-50" />
             <p>لا توجد منتجات</p>
           </div>
         ) : (
           products.map((p) => (
-            <div key={p.id} className="bg-card border border-border rounded-xl p-3">
+            <div key={p.id} className="rounded-3xl border border-border/60 bg-background p-4 shadow-sm transition-all hover:shadow-md">
               <div className="flex gap-3">
                 <Checkbox
                   checked={selected.has(p.id)}
                   onCheckedChange={() => toggleSelect(p.id)}
                   className="mt-1"
                 />
-                <img src={p.images?.[0] || "/placeholder.svg"} alt={p.name_ar} className="w-16 h-16 object-cover rounded-lg" />
+                <img src={p.images?.[0] || "/placeholder.svg"} alt={p.name_ar} className="w-20 h-20 rounded-2xl border border-border object-cover shadow-sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-heading text-sm truncate">{p.name_ar}</h3>
@@ -296,11 +372,11 @@ const AdminProductsPage = () => {
                 </div>
               </div>
               <div className="flex gap-2 mt-3 pt-3 border-t border-border">
-                <Button size="sm" variant="outline" className="flex-1 gap-1" onClick={() => toggleActive(p.id, p.is_active)}>
+                <Button size="sm" variant="outline" className="flex-1 gap-2 rounded-xl" onClick={() => toggleActive(p.id, p.is_active)}>
                   {p.is_active ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
                   {p.is_active ? "تعطيل" : "تفعيل"}
                 </Button>
-                <Button asChild size="sm" variant="outline" className="flex-1 gap-1">
+                <Button asChild size="sm" variant="outline" className="flex-1 gap-2 rounded-xl">
                   <Link to={`/admin/products/${p.id}`}>
                     <Edit className="w-3.5 h-3.5" /> تعديل
                   </Link>
@@ -315,10 +391,10 @@ const AdminProductsPage = () => {
       </div>
 
       {/* Desktop table */}
-      <div className="hidden md:block bg-card border border-border rounded-2xl overflow-hidden">
+      <div className="hidden md:block overflow-hidden rounded-3xl border border-border/60 bg-background shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="bg-muted/40">
+            <thead className="bg-muted/60 backdrop-blur supports-[backdrop-filter]:bg-muted/40">
               <tr className="text-xs">
                 <th className="p-3 w-10">
                   <Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} />
@@ -342,16 +418,16 @@ const AdminProductsPage = () => {
               ) : (
                 products.map((p) => (
                   <tr key={p.id} className={cn(
-                    "border-b border-border hover:bg-muted/30 transition-colors",
+                    "border-b border-border/50 transition-all duration-200 hover:bg-primary/[0.03]",
                     selected.has(p.id) && "bg-primary/5"
                   )}>
                     <td className="p-3"><Checkbox checked={selected.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} /></td>
                     <td className="p-3">
                       <div className="flex items-center gap-3">
-                        <img src={p.images?.[0] || "/placeholder.svg"} alt={p.name_ar} className="w-12 h-12 object-cover rounded-lg shrink-0" />
+                        <img src={p.images?.[0] || "/placeholder.svg"} alt={p.name_ar} className="w-16 h-16 rounded-2xl border border-border object-cover shadow-sm shrink-0" />
                         <div className="min-w-0">
-                          <p className="font-heading text-sm truncate max-w-[260px]">{p.name_ar}</p>
-                          <p className="text-xs text-muted-foreground truncate max-w-[260px]">{p.slug}</p>
+                          <p className="font-semibold text-[15px] truncate max-w-[260px]">{p.name_ar}</p>
+                          <p className="mt-1 text-[11px] text-muted-foreground truncate max-w-[260px]">{p.slug}</p>
                         </div>
                       </div>
                     </td>
@@ -363,7 +439,7 @@ const AdminProductsPage = () => {
                       )}
                     </td>
                     <td className="p-3">
-                      <Badge variant={p.in_stock ? "outline" : "secondary"} className="text-[10px]">
+                      <Badge variant={p.in_stock ? "outline" : "secondary"} className="rounded-full px-3 py-1 text-[11px] font-medium">
                         {p.in_stock ? "متوفر" : "نفد"}
                       </Badge>
                     </td>
@@ -371,19 +447,19 @@ const AdminProductsPage = () => {
                       <span className="text-xs text-muted-foreground">المتجر الموحد</span>
                     </td>
                     <td className="p-3">
-                      <Badge variant={p.is_active ? "default" : "secondary"} className="text-[10px]">
+                      <Badge variant={p.is_active ? "default" : "secondary"} className="rounded-full px-3 py-1 text-[11px] font-medium">
                         {p.is_active ? "نشط" : "معطل"}
                       </Badge>
                     </td>
                     <td className="p-3">
                       <div className="flex gap-1">
-                        <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => toggleActive(p.id, p.is_active)}>
+                        <Button size="icon" variant="ghost" className="h-9 w-9 rounded-xl transition-all hover:scale-105 hover:bg-muted" onClick={() => toggleActive(p.id, p.is_active)}>
                           {p.is_active ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                         </Button>
-                        <Button asChild size="icon" variant="ghost" className="h-8 w-8">
+                        <Button asChild size="icon" variant="ghost" className="h-9 w-9 rounded-xl transition-all hover:scale-105 hover:bg-muted">
                           <Link to={`/admin/products/${p.id}`}><Edit className="w-4 h-4" /></Link>
                         </Button>
-                        <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive" onClick={() => setConfirmDelete({ id: p.id })}>
+                        <Button size="icon" variant="ghost" className="h-9 w-9 rounded-xl transition-all hover:scale-105 hover:bg-muted" onClick={() => setConfirmDelete({ id: p.id })}>
                           <Trash2 className="w-4 h-4" />
                         </Button>
                       </div>
@@ -399,7 +475,7 @@ const AdminProductsPage = () => {
           pageSize={PAGE_SIZE}
           total={total}
           onPageChange={setPage}
-          className="px-4 border-t border-border"
+          className="border-t border-border/60 bg-muted/20 px-6 py-3"
         />
       </div>
 

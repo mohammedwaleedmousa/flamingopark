@@ -214,11 +214,11 @@ const AdminSectionsPage = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto p-4 md:p-6" dir="rtl">
+    <div className="min-h-screen max-w-[1500px] mx-auto px-4 md:px-6 py-8 space-y-8" dir="rtl">
       <AdminPageHeader
         category="المحتوى"
         title="أقسام الصفحة الرئيسية"
-        description={`${sections.length} أقسام نشطة`}
+        description={`إدارة ${sections.length} أقسام عرض المنتجات في المتجر`}
         actions={[
           {
             label: "إضافة قسم",
@@ -237,8 +237,8 @@ const AdminSectionsPage = () => {
               <DialogHeader>
                 <DialogTitle>{editingSection ? 'تعديل القسم' : 'إضافة قسم جديد'}</DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
+              <form onSubmit={handleSubmit} className="p-6 space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <Label>العنوان (إنجليزي)</Label>
                     <Input
@@ -254,6 +254,7 @@ const AdminSectionsPage = () => {
                       onChange={(e) => setFormData({ ...formData, title_ar: e.target.value })}
                       required
                       dir="rtl"
+                      className="h-12 rounded-xl"
                     />
                   </div>
                 </div>
@@ -264,7 +265,7 @@ const AdminSectionsPage = () => {
                     value={formData.filter_type}
                     onValueChange={(value) => setFormData({ ...formData, filter_type: value })}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="h-12 rounded-xl">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -277,7 +278,7 @@ const AdminSectionsPage = () => {
                   </Select>
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                   <div>
                     <Label>الترتيب</Label>
                     <Input
@@ -342,72 +343,198 @@ const AdminSectionsPage = () => {
         {isLoading ? (
           <div className="text-center py-8">جاري التحميل...</div>
         ) : (
-          <Card>
-            <CardContent className="p-0">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10"></TableHead>
-                    <TableHead>العنوان</TableHead>
-                    <TableHead>نوع الفلتر</TableHead>
-                    <TableHead>المنتجات المُعينة</TableHead>
-                    <TableHead>الحد الأقصى</TableHead>
-                    <TableHead>نشط</TableHead>
-                    <TableHead>إجراءات</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {sections.map((section) => (
-                    <TableRow key={section.id}>
-                      <TableCell>
-                        <GripVertical className="w-4 h-4 text-muted-foreground" />
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{section.title_ar}</div>
-                          <div className="text-sm text-muted-foreground">{section.title}</div>
-                        </div>
-                      </TableCell>
-                      <TableCell>{getFilterLabel(section.filter_type)}</TableCell>
-                      <TableCell>
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                          (productCounts[section.id] || 0) > 0 
-                            ? 'bg-primary/10 text-primary' 
-                            : 'bg-muted text-muted-foreground'
-                        }`}>
-                          {productCounts[section.id] || 0} منتج
-                        </span>
-                      </TableCell>
-                      <TableCell>{section.max_products}</TableCell>
-                      <TableCell>
-                        <Switch
-                          checked={section.is_active}
-                          onCheckedChange={(checked) =>
-                            toggleActiveMutation.mutate({ id: section.id, is_active: checked })
-                          }
-                        />
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex gap-2">
-                          <Button size="sm" variant="ghost" onClick={() => handleEdit(section)}>
-                            <Pencil className="w-4 h-4" />
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            className="text-destructive"
-                            onClick={() => deleteMutation.mutate(section.id)}
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </Button>
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
+          <Card className="border-border rounded-3xl overflow-hidden shadow-sm">
+  <CardContent className="p-0">
+
+    <div className="overflow-x-auto">
+
+      <Table className="table-fixed" dir="rtl">
+
+        <TableHeader className="bg-muted/40">
+          <TableRow className="hover:bg-transparent">
+
+            <TableHead className="w-[60px] text-center">
+            </TableHead>
+
+
+            <TableHead className="w-[300px] text-right font-heading text-sm text-foreground">
+              القسم
+            </TableHead>
+
+
+            <TableHead className="w-[220px] text-right font-heading text-sm text-foreground">
+              نوع الفلتر
+            </TableHead>
+
+
+            <TableHead className="w-[160px] text-right font-heading text-sm text-foreground">
+              المنتجات
+            </TableHead>
+
+
+            <TableHead className="w-[120px] text-right font-heading text-sm text-foreground">
+              الحد الأقصى
+            </TableHead>
+
+
+            <TableHead className="w-[120px] text-right font-heading text-sm text-foreground">
+              الحالة
+            </TableHead>
+
+
+            <TableHead className="w-[120px] text-right font-heading text-sm text-foreground">
+              الإجراءات
+            </TableHead>
+
+          </TableRow>
+        </TableHeader>
+
+
+        <TableBody>
+
+          {sections.map((section)=>(
+
+            <TableRow
+              key={section.id}
+              className="hover:bg-pink-50/40 transition-colors"
+            >
+
+
+              <TableCell className="text-center">
+                <GripVertical 
+                  className="w-4 h-4 mx-auto text-muted-foreground cursor-grab"
+                />
+              </TableCell>
+
+
+
+              <TableCell dir="rtl">
+
+                <div className="space-y-1">
+
+                  <p className="font-heading font-semibold text-foreground">
+                    {section.title_ar}
+                  </p>
+
+                  <p className="text-xs text-muted-foreground">
+                    {section.title}
+                  </p>
+
+                </div>
+
+              </TableCell>
+
+
+
+              <TableCell dir="rtl">
+
+                <span className="
+                  inline-flex
+                  px-3
+                  py-1
+                  rounded-full
+                  bg-muted
+                  text-xs
+                  font-medium
+                ">
+                  {getFilterLabel(section.filter_type)}
+                </span>
+
+              </TableCell>
+
+
+
+              <TableCell dir="rtl">
+
+                <span
+                  className={`
+                    inline-flex
+                    px-3
+                    py-1
+                    rounded-full
+                    text-xs
+                    font-medium
+                    ${
+                      (productCounts[section.id] || 0) > 0
+                      ? "bg-pink-500/10 text-pink-600"
+                      : "bg-muted text-muted-foreground"
+                    }
+                  `}
+                >
+                  {productCounts[section.id] || 0} منتج
+                </span>
+
+              </TableCell>
+
+
+
+              <TableCell dir="rtl">
+
+                <span className="font-medium">
+                  {section.max_products}
+                </span>
+
+              </TableCell>
+
+
+
+              <TableCell dir="rtl">
+
+                <Switch
+                  checked={section.is_active}
+                  className="data-[state=checked]:bg-pink-500"
+                  onCheckedChange={(checked)=>
+                    toggleActiveMutation.mutate({
+                      id:section.id,
+                      is_active:checked
+                    })
+                  }
+                />
+
+              </TableCell>
+
+
+
+              <TableCell dir="rtl">
+
+                <div className="flex items-center gap-2">
+
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="rounded-xl hover:bg-pink-50 hover:text-pink-600"
+                    onClick={()=>handleEdit(section)}
+                  >
+                    <Pencil className="w-4 h-4"/>
+                  </Button>
+
+
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="rounded-xl text-destructive hover:bg-red-50"
+                    onClick={()=>deleteMutation.mutate(section.id)}
+                  >
+                    <Trash2 className="w-4 h-4"/>
+                  </Button>
+
+                </div>
+
+              </TableCell>
+
+
+            </TableRow>
+
+          ))}
+
+        </TableBody>
+
+      </Table>
+
+    </div>
+
+  </CardContent>
+</Card>
         )}
     </div>
   );

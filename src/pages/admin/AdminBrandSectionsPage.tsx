@@ -146,122 +146,210 @@ const AdminBrandSectionsPage = () => {
   });
 
   return (
-    <div className="space-y-6 max-w-[1200px] mx-auto" dir="rtl">
-      <AdminPageHeader
-        category="الماركات"
-        title="أقسام الماركة"
-        description={`${sections.length} قسم`}
-        actions={[
-          { label: "رجوع", icon: ArrowRight, onClick: () => navigate("/admin/brand-pages"), variant: "secondary" },
-          { label: "إضافة قسم", icon: Plus, onClick: openNew, variant: "primary" },
-        ]}
-      />
+  <div className="min-h-screen max-w-[1500px] mx-auto px-4 md:px-6 py-8 space-y-8" dir="rtl">
+    <AdminPageHeader
+      category="الماركات"
+      title="أقسام الماركة"
+      description={`${sections.length} قسم`}
+      actions={[
+        { label:"رجوع", icon:ArrowRight, onClick:()=>navigate("/admin/brand-pages"), variant:"secondary" },
+        { label:"إضافة قسم", icon:Plus, onClick:openNew, variant:"primary" },
+      ]}
+    />
 
-      <div className="flex items-center gap-3">
-        <Label>الماركة:</Label>
-        <select
-          className="border rounded px-3 py-2 bg-card"
-          value={activeBrandId || ""}
-          onChange={(e) => setSelectedBrandId(e.target.value)}
-        >
-          {brands.map((b) => (<option key={b.id} value={b.id}>{b.name}</option>))}
-        </select>
+    <div className="bg-card border border-border rounded-3xl p-5 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div>
+        <h3 className="font-heading text-lg font-semibold">إدارة أقسام الماركة</h3>
+        <p className="text-sm text-muted-foreground mt-1">اختر الماركة لإدارة أقسامها ومنتجاتها</p>
       </div>
 
-      {isLoading ? (
-        <div className="py-16 flex justify-center"><Loader2 className="w-8 h-8 animate-spin text-primary" /></div>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {sections.map((s) => (
-            <div key={s.id} className="bg-card border border-border rounded-xl overflow-hidden">
-              <div className="aspect-video bg-muted">
-                {s.image_url ? <img src={s.image_url} alt={s.name} className="w-full h-full object-cover" /> : null}
-              </div>
-              <div className="p-4 space-y-3">
-                <div className="flex items-center justify-between">
-                  <h3 className="font-heading">{s.name}</h3>
-                  <span className={`text-xs px-2 py-0.5 rounded ${s.is_active ? "bg-green-500/15 text-green-600" : "bg-red-500/15 text-red-600"}`}>
-                    {s.is_active ? "نشط" : "معطل"}
-                  </span>
-                </div>
-                <p className="text-xs text-muted-foreground">/{s.slug} · ترتيب {s.sort_order}</p>
-                <div className="flex gap-2">
+      <select
+        className="h-12 md:w-72 rounded-xl border border-border bg-background px-4 text-sm outline-none focus:ring-2 focus:ring-primary/30"
+        value={activeBrandId || ""}
+        onChange={(e)=>setSelectedBrandId(e.target.value)}
+      >
+        {brands.map((b)=>(
+          <option key={b.id} value={b.id}>
+            {b.name}
+          </option>
+        ))}
+      </select>
+    </div>
 
-  <Button
-    size="sm"
-    variant="outline"
-    className="flex-1"
-    onClick={() => openEdit(s)}
-  >
-    <Pencil className="w-4 h-4 ml-1" />
-    تعديل
-  </Button>
-
-
-  <Button
-    size="sm"
-    variant="outline"
-    className="flex-1"
-    onClick={() => navigate(`/admin/brand-sections/${s.id}/products`)}
-  >
-    <Package className="w-4 h-4 ml-1" />
-    المنتجات
-  </Button>
-
-
-  <Button
-    size="icon"
-    variant="outline"
-    className="text-destructive"
-    onClick={() => {
-      if (confirm("حذف هذا القسم؟")) {
-        del.mutate(s.id);
-      }
-    }}
-  >
-    <Trash2 className="w-4 h-4" />
-  </Button>
-
-</div>
-              </div>
-            </div>
-          ))}
-          {sections.length === 0 && (
-            <div className="col-span-full text-center py-12 text-muted-foreground">لا توجد أقسام لهذه الماركة</div>
-          )}
-        </div>
-      )}
-
-      <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md" dir="rtl">
-          <DialogHeader><DialogTitle>{editing ? "تعديل قسم" : "قسم جديد"}</DialogTitle></DialogHeader>
-          <div className="space-y-4">
-            <div className="space-y-2"><Label>الاسم *</Label><Input value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></div>
-            <div className="space-y-2"><Label>Slug</Label><Input value={form.slug} placeholder={slugify(form.name)} onChange={(e) => setForm({ ...form, slug: e.target.value })} /></div>
-            <div className="space-y-2"><Label>الوصف</Label><Textarea rows={2} value={form.description} onChange={(e) => setForm({ ...form, description: e.target.value })} /></div>
-            <div className="space-y-2">
-              <Label>الصورة</Label>
-              {form.image_url && <img src={form.image_url} alt="" className="h-24 w-full object-cover rounded" />}
-              <label className="inline-flex items-center gap-2 border rounded px-3 py-2 cursor-pointer hover:bg-muted text-sm">
-                <Upload className="w-4 h-4" /> {uploading ? "جاري الرفع..." : "رفع"}
-                <input type="file" accept="image/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
-              </label>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2"><Label>الترتيب</Label><Input type="number" value={form.sort_order} onChange={(e) => setForm({ ...form, sort_order: Number(e.target.value) })} /></div>
-              <div className="flex items-center gap-2 pt-6"><Switch checked={form.is_active} onCheckedChange={(v) => setForm({ ...form, is_active: v })} /><Label>نشط</Label></div>
-            </div>
-            <div className="flex gap-2">
-              <Button onClick={() => save.mutate()} disabled={save.isPending} className="flex-1">
-                {save.isPending && <Loader2 className="w-4 h-4 animate-spin ml-2" />}حفظ
-              </Button>
-              <Button variant="outline" onClick={() => setDialogOpen(false)}>إلغاء</Button>
+    {isLoading ? (
+      <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+        {[1,2,3].map((i)=>(
+          <div key={i} className="bg-card border border-border rounded-3xl overflow-hidden animate-pulse">
+            <div className="h-56 bg-muted"/>
+            <div className="p-5 space-y-3">
+              <div className="h-5 bg-muted rounded"/>
+              <div className="h-4 bg-muted rounded w-2/3"/>
+              <div className="h-10 bg-muted rounded-xl"/>
             </div>
           </div>
-        </DialogContent>
-      </Dialog>
-    </div>
-  );
+        ))}
+      </div>
+    ) : (
+      <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6">
+        {sections.map((s)=>(
+          <div key={s.id} className="group bg-card border border-border rounded-3xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
+
+            <div className="relative h-56 bg-muted overflow-hidden">
+              {s.image_url ? (
+                <img src={s.image_url} alt={s.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+              ) : (
+                <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                  <Package className="w-12 h-12 opacity-30"/>
+                </div>
+              )}
+
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent"/>
+
+              <span className={`absolute top-4 left-4 text-xs px-3 py-1.5 rounded-full backdrop-blur-md font-medium ${s.is_active ? "bg-green-500/20 text-green-700 border border-green-500/30" : "bg-red-500/20 text-red-700 border border-red-500/30"}`}>
+                {s.is_active ? "نشط" : "معطل"}
+              </span>
+            </div>
+
+            <div className="p-5 space-y-5">
+
+              <div>
+                <h3 className="font-heading text-xl font-semibold">
+                  {s.name}
+                </h3>
+
+                <p className="text-xs text-muted-foreground mt-2">
+                  /{s.slug} • ترتيب {s.sort_order}
+                </p>
+
+                {s.description && (
+                  <p className="text-sm text-muted-foreground mt-3 line-clamp-2">
+                    {s.description}
+                  </p>
+                )}
+              </div>
+
+              <div className="grid grid-cols-3 gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl hover:border-pink-300 hover:text-pink-600"
+                  onClick={()=>openEdit(s)}
+                >
+                  <Pencil className="w-4 h-4 ml-1"/>
+                  تعديل
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  className="rounded-xl hover:border-pink-300 hover:text-pink-600"
+                  onClick={()=>navigate(`/admin/brand-sections/${s.id}/products`)}
+                >
+                  <Package className="w-4 h-4 ml-1"/>
+                  المنتجات
+                </Button>
+
+                <Button
+                  size="icon"
+                  variant="outline"
+                  className="rounded-xl text-destructive hover:bg-destructive/10"
+                  onClick={()=>{
+                    if(confirm("حذف هذا القسم؟")){
+                      del.mutate(s.id);
+                    }
+                  }}
+                >
+                  <Trash2 className="w-4 h-4"/>
+                </Button>
+              </div>
+
+            </div>
+          </div>
+        ))}
+
+        {sections.length===0 && (
+          <div className="col-span-full flex flex-col items-center justify-center py-20 text-muted-foreground">
+            <Package className="w-14 h-14 opacity-40 mb-4"/>
+            <h3 className="text-lg font-semibold text-foreground">
+              لا توجد أقسام
+            </h3>
+            <p className="text-sm mt-2">
+              أضف أول قسم لهذه الماركة للبدء
+            </p>
+          </div>
+        )}
+      </div>
+    )}
+
+    <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+      <DialogContent className="max-w-xl rounded-3xl" dir="rtl">
+        <DialogHeader>
+          <DialogTitle className="font-heading text-xl">
+            {editing ? "تعديل القسم" : "إضافة قسم جديد"}
+          </DialogTitle>
+        </DialogHeader>
+
+        <div className="space-y-5">
+
+          <div className="space-y-2">
+            <Label>اسم القسم *</Label>
+            <Input value={form.name} onChange={(e)=>setForm({...form,name:e.target.value})} className="h-12 rounded-xl"/>
+          </div>
+
+          <div className="space-y-2">
+            <Label>Slug</Label>
+            <Input value={form.slug} placeholder={slugify(form.name)} onChange={(e)=>setForm({...form,slug:e.target.value})} className="h-12 rounded-xl"/>
+          </div>
+
+          <div className="space-y-2">
+            <Label>الوصف</Label>
+            <Textarea rows={4} value={form.description} onChange={(e)=>setForm({...form,description:e.target.value})} className="rounded-xl"/>
+          </div>
+
+          <div className="space-y-3">
+            <Label>الصورة</Label>
+
+            {form.image_url && (
+              <img src={form.image_url} alt="" className="w-full h-48 object-cover rounded-2xl"/>
+            )}
+
+            <label className="h-12 rounded-xl border border-border flex items-center justify-center gap-2 cursor-pointer hover:border-pink-400 transition">
+              {uploading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Upload className="w-5 h-5"/>}
+              {uploading ? "جاري الرفع..." : "رفع صورة"}
+
+              <input type="file" accept="image/*" className="hidden" onChange={(e)=>e.target.files?.[0] && upload(e.target.files[0])}/>
+            </label>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>الترتيب</Label>
+              <Input type="number" value={form.sort_order} onChange={(e)=>setForm({...form,sort_order:Number(e.target.value)})}/>
+            </div>
+
+            <div className="flex items-center gap-3 pt-8">
+              <Switch checked={form.is_active} onCheckedChange={(v)=>setForm({...form,is_active:v})}/>
+              <Label>نشط</Label>
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4 border-t border-border">
+            <Button className="flex-1 h-12 rounded-xl" onClick={()=>save.mutate()} disabled={save.isPending}>
+              {save.isPending && <Loader2 className="w-4 h-4 animate-spin ml-2"/>}
+              حفظ
+            </Button>
+
+            <Button variant="outline" className="h-12 rounded-xl" onClick={()=>setDialogOpen(false)}>
+              إلغاء
+            </Button>
+          </div>
+
+        </div>
+      </DialogContent>
+    </Dialog>
+
+  </div>
+);
 };
 
 export default AdminBrandSectionsPage;

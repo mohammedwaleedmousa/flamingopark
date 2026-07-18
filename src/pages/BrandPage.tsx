@@ -80,26 +80,67 @@ const BrandPage = () => {
   });
 
   const { data: products = [], isLoading: prodLoading } = useQuery({
-    queryKey: ["brand-products", brand?.name],
-    enabled: !!brand?.name,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("is_active", true)
-        .eq("brand", brand!.name)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data || []).map(mapProduct);
-    },
-  });
+  queryKey: ["brand-products", brand?.id],
+  enabled: !!brand?.id,
+  queryFn: async () => {
 
+    const { data: relations, error: relError } = await (supabase as any)
+      .from("brand_section_products")
+      .select(`
+        product_id
+      `);
+
+    if (relError) throw relError;
+
+
+    const productIds = relations?.map(
+      (r: any) => r.product_id
+    ) || [];
+
+
+    if(productIds.length === 0) return [];
+
+
+    const { data, error } = await supabase
+      .from("products")
+      .select("*")
+      .in("id", productIds)
+      .eq("is_active", true)
+      .order("created_at", { ascending:false });
+
+
+    if(error) throw error;
+
+
+    return (data || []).map(mapProduct);
+  },
+});
+const { data: sectionProducts = [] } = useQuery({
+  queryKey: ["brand-section-relations", brand?.id],
+  enabled: !!brand?.id,
+  queryFn: async () => {
+
+    const { data, error } = await (supabase as any)
+      .from("brand_section_products")
+      .select("section_id, product_id");
+
+    if (error) throw error;
+
+    return data || [];
+  },
+});
   const productCount = products.length;
 
   const sectionsWithCount = useMemo(
-    () => sections.map((s) => ({ ...s, count: products.filter((p) => p.category === s.slug).length })),
-    [sections, products]
-  );
+  () =>
+    sections.map((s) => ({
+      ...s,
+      count: sectionProducts.filter(
+        (sp:any) => sp.section_id === s.id
+      ).length,
+    })),
+  [sections, sectionProducts]
+);
 
   if (!slug) return <Navigate to="/home" replace />;
 

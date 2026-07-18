@@ -60,20 +60,32 @@ const BrandSectionPage = () => {
   });
 
   const { data: products = [], isLoading: prodLoading } = useQuery({
-    queryKey: ["brand-section-products", brand?.name, section?.slug],
-    enabled: !!brand?.name && !!section?.slug,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select("*")
-        .eq("is_active", true)
-        .eq("brand", brand!.name)
-        .eq("category", section!.slug)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data || []).map(mapProduct);
-    },
-  });
+  queryKey: ["brand-section-products", section?.id],
+  enabled: !!section?.id,
+  queryFn: async () => {
+
+    const { data, error } = await supabase
+      .from("brand_section_products")
+      .select(`
+        product_id,
+        products (
+          *
+        )
+      `)
+      .eq("section_id", section!.id);
+
+    if (error) throw error;
+
+
+    const products = data
+      ?.map((item: any) => item.products)
+      .filter(Boolean)
+      .filter((p: any) => p.is_active);
+
+
+    return (products || []).map(mapProduct);
+  },
+});
 
   if (!slug || !sectionSlug) return <Navigate to="/home" replace />;
 

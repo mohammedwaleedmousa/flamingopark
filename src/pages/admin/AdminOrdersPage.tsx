@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -20,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useDebounce } from "@/hooks/useDebounce";
+import { TableCell } from "@/components/ui/table";
 
 interface Order {
   id: string;
@@ -129,7 +131,7 @@ const AdminOrdersPage = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
+    <div className="space-y-8 max-w-[1500px] mx-auto px-4 md:px-6 py-8" dir="rtl">
       <AdminPageHeader
         category="إدارة المبيعات"
         title="الطلبات"
@@ -151,50 +153,79 @@ const AdminOrdersPage = () => {
       />
 
       {/* Filters */}
-      <div className="bg-card border border-border rounded-2xl p-3 md:p-4 space-y-3">
-        <div className="flex flex-col md:flex-row gap-3">
-          <div className="relative flex-1">
-            <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-            <Input
-              value={searchInput}
-              onChange={(e) => setSearchInput(e.target.value)}
-              placeholder="ابحث برقم الطلب، اسم العميل، أو رقم الهاتف..."
-              className="pr-9 bg-background"
-              dir="rtl"
-            />
-            {searchInput && (
-              <button onClick={() => setSearchInput("")} className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground">
-                <X className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-40"><SelectValue placeholder="الحالة" /></SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">كل الحالات</SelectItem>
-              {statusOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-            </SelectContent>
-          </Select>
-        </div>
-
-        {selected.size > 0 && (
-          <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 rounded-xl bg-primary/5 border border-primary/20">
-            <p className="text-sm">تم تحديد <span className="font-bold text-primary">{selected.size}</span> طلب</p>
-            <div className="flex gap-2 flex-wrap items-center">
-              <Select value={bulkStatus} onValueChange={(v) => { setBulkStatus(v); bulkUpdateStatus(v); }}>
-                <SelectTrigger className="h-8 w-44"><SelectValue placeholder="تغيير الحالة إلى..." /></SelectTrigger>
-                <SelectContent>
-                  {statusOptions.map(o => <SelectItem key={o.value} value={o.value}>{o.label}</SelectItem>)}
-                </SelectContent>
-              </Select>
-              <Button size="sm" variant="destructive" onClick={() => setConfirmDelete({ bulk: true })}>
-                <Trash2 className="w-4 h-4 ml-1" /> حذف
-              </Button>
-              <Button size="sm" variant="ghost" onClick={() => setSelected(new Set())}>إلغاء</Button>
+      <Card className="rounded-2xl border-border bg-card shadow-sm">
+        <CardContent className="p-5 space-y-5">
+          <div className="flex flex-col lg:flex-row gap-4">
+            <div className="relative flex-1">
+              <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+              <Input
+                value={searchInput}
+                onChange={(e) => setSearchInput(e.target.value)}
+                placeholder="ابحث برقم الطلب، اسم العميل أو رقم الهاتف..."
+                className="h-12 rounded-2xl pr-11 pl-10 bg-background border-border"
+                dir="rtl"
+              />
+              {searchInput && (
+                <Button size="icon" variant="ghost" className="absolute left-2 top-1/2 -translate-y-1/2 h-8 w-8 rounded-xl" onClick={() => setSearchInput("")}>
+                  <X className="w-4 h-4" />
+                </Button>
+              )}
             </div>
+
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-full lg:w-56 h-12 rounded-2xl">
+                <SelectValue placeholder="فلترة حسب الحالة" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">كل الحالات</SelectItem>
+                {statusOptions.map((o) => (
+                  <SelectItem key={o.value} value={o.value}>
+                    {o.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        )}
-      </div>
+
+          {selected.size > 0 && (
+            <div className="flex flex-col lg:flex-row items-start lg:items-center justify-between gap-4 rounded-2xl border border-pink-200 bg-pink-50 px-4 py-3">
+              <div className="flex items-center gap-2">
+                <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-pink-500 text-white font-bold">
+                  {selected.size}
+                </span>
+                <div>
+                  <p className="font-semibold">طلبات محددة</p>
+                  <p className="text-sm text-muted-foreground">يمكنك تنفيذ عمليات جماعية.</p>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Select value={bulkStatus} onValueChange={(v) => { setBulkStatus(v); bulkUpdateStatus(v); }}>
+                  <SelectTrigger className="h-10 w-52 rounded-xl">
+                    <SelectValue placeholder="تغيير الحالة" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {statusOptions.map((o) => (
+                      <SelectItem key={o.value} value={o.value}>
+                        {o.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                <Button variant="destructive" className="rounded-xl" onClick={() => setConfirmDelete({ bulk: true })}>
+                  <Trash2 className="w-4 h-4 ml-2" />
+                  حذف
+                </Button>
+
+                <Button variant="outline" className="rounded-xl" onClick={() => setSelected(new Set())}>
+                  إلغاء التحديد
+                </Button>
+              </div>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Mobile cards */}
       <div className="md:hidden space-y-3">
@@ -213,9 +244,11 @@ const AdminOrdersPage = () => {
                   <div className="min-w-0">
                     <td className="p-3">
                       <div className="flex flex-col gap-1">
-                        <span className="inline-flex w-fit rounded-full bg-gradient-to-r from-pink-50 to-fuchsia-50 border border-pink-200 px-3 py-1 text-[11px] font-semibold text-pink-700 font-mono">
-                          #{order.order_number}
-                        </span>
+                        <TableCell>
+                          <span className="inline-flex px-3 py-1 rounded-full bg-pink-500/10 text-pink-600 text-xs font-semibold font-mono">
+                            #{order.order_number}
+                          </span>
+                        </TableCell>
 
                         <span className="text-[10px] text-muted-foreground">
                           {new Date(order.created_at).toLocaleTimeString("ar", {
@@ -225,7 +258,11 @@ const AdminOrdersPage = () => {
                         </span>
                       </div>
                     </td>
-                    <p className="font-heading text-sm truncate">{order.customer_name}</p>
+                    <div className="space-y-1">
+                      <p className="font-semibold text-sm">
+                        {order.customer_name}
+                      </p>
+                    </div>
                   </div>
                   {getStatusBadge(order.status)}
                 </div>
@@ -244,9 +281,17 @@ const AdminOrdersPage = () => {
                   </td>
                   <td className="p-3">
                     <div className="inline-flex flex-col rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2">
-                      <span className="text-[10px] uppercase tracking-wide text-emerald-600">
-                        الإجمالي
-                      </span>
+                      <TableCell>
+                        <div className="inline-flex flex-col rounded-xl bg-emerald-500/10 px-3 py-2">
+                          <span className="text-[10px] text-emerald-600">
+                            الإجمالي
+                          </span>
+
+                          <span className="font-bold text-emerald-700">
+                            {order.total.toFixed(2)} ر.ي
+                          </span>
+                        </div>
+                      </TableCell>
 
                       <span className="font-bold text-emerald-700">
                         {parseFloat(String(order.total)).toFixed(0)} {currencyOf()}
@@ -271,11 +316,11 @@ const AdminOrdersPage = () => {
       </div>
 
       {/* Desktop table */}
-      <div className="hidden md:block rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden">
+      <div className="hidden md:block rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
         <div className="overflow-x-auto">
           <table className="w-full">
-            <thead className="sticky top-0 z-10 bg-gradient-to-r from-slate-50 via-white to-slate-50 border-b border-slate-200 backdrop-blur">
-              <tr className="text-[11px] uppercase tracking-wider text-slate-500">
+            <thead className="bg-slate-50 border-b border-slate-200">
+              <tr className="h-14 text-xs text-slate-600">
                 <th className="p-3 w-10"><Checkbox checked={allSelected} onCheckedChange={toggleSelectAll} /></th>
                 <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">رقم الطلب</th>
                 <th className="text-right px-5 py-4 font-semibold whitespace-nowrap">العميل</th>

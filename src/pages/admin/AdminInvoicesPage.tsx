@@ -264,11 +264,11 @@ const AdminInvoicesPage = () => {
   };
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
+    <div className="space-y-5 max-w-[1500px] mx-auto px-4 md:px-6 py-6" dir="rtl">
       <AdminPageHeader
         category="المالية"
         title="إدارة الفواتير"
-        description={`${invoices.length} فاتورة`}
+        description={`إدارة ${invoices.length.toLocaleString("ar-EG")} فاتورة محفوظة`}
         actions={[
           {
             label: "فاتورة جديدة",
@@ -276,32 +276,36 @@ const AdminInvoicesPage = () => {
             onClick: () => setShowNewInvoice(true),
             variant: "primary",
           },
-          {
-            label: "تحديث",
-            icon: Search,
-            onClick: () => { 
-              fetchInvoices(); 
-              fetchOrders(); 
-            },
-            variant: "secondary",
-          },
         ]}
       />
 
       {/* Filters */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">البحث والتصفية</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <Card className="rounded-2xl border-border bg-card shadow-sm overflow-hidden">
+        <CardContent className="p-5 space-y-5">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-heading text-base font-semibold">
+                البحث والتصفية
+              </h3>
+
+              <p className="text-xs text-muted-foreground mt-1">
+                البحث عن الفواتير والطلبات
+              </p>
+            </div>
+
+            <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl bg-pink-500/10 text-pink-600 text-sm font-medium">
+              <FileText className="w-4 h-4" />
+              {invoices.length} فاتورة
+            </div>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px_auto] gap-4">
             <div className="relative">
               <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
               <Input
                 placeholder="البحث برقم الطلب أو اسم العميل..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pr-10"
+                className="h-12 rounded-2xl pr-11 bg-background"
               />
             </div>
             <div className="relative">
@@ -310,10 +314,10 @@ const AdminInvoicesPage = () => {
                 type="date"
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="pr-10"
+                className="h-12 rounded-2xl pr-11 bg-background"
               />
             </div>
-            <Button variant="outline" onClick={clearFilters}>
+            <Button variant="outline" className="h-12 rounded-2xl" onClick={clearFilters}>
               مسح الفلاتر
             </Button>
           </div>
@@ -321,13 +325,19 @@ const AdminInvoicesPage = () => {
       </Card>
 
       {/* Tabs for Orders and Uploaded Invoices */}
-      <Tabs defaultValue="orders" className="space-y-4">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="orders" className="gap-2">
+      <Tabs defaultValue="orders" className="space-y-5">
+        <TabsList className="grid w-full grid-cols-2 h-12 rounded-xl bg-muted/50 p-1">
+          <TabsTrigger
+            value="orders"
+            className="rounded-xl gap-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm h-10"
+          >
             <Pencil className="w-4 h-4" />
             إنشاء/تعديل الفواتير ({filteredOrders.length})
           </TabsTrigger>
-          <TabsTrigger value="files" className="gap-2">
+          <TabsTrigger
+            value="files"
+            className="rounded-xl gap-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm"
+          >
             <FileText className="w-4 h-4" />
             الفواتير المحفوظة ({filteredInvoices.length})
           </TabsTrigger>
@@ -335,51 +345,63 @@ const AdminInvoicesPage = () => {
 
         {/* Orders Tab - Create/Edit Invoices */}
         <TabsContent value="orders">
-          <Card>
+          <Card className="rounded-2xl border-border bg-card shadow-sm overflow-hidden">
             <CardContent className="p-0">
               {isLoadingOrders ? (
-                <div className="flex items-center justify-center py-12">
+                <div className="flex flex-col items-center justify-center py-16 gap-3">
                   <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                  <p className="text-sm text-muted-foreground">
+                    جاري تحميل الطلبات...
+                  </p>
                 </div>
               ) : filteredOrders.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">لا توجد طلبات</p>
+                <div className="flex flex-col items-center justify-center py-20 text-center">
+                  <div className="w-20 h-20 rounded-3xl bg-pink-500/10 flex items-center justify-center mb-5">
+                    <FileText className="w-10 h-10 text-pink-500" />
+                  </div>
+
+                  <h3 className="font-heading text-lg font-semibold">
+                    لا توجد طلبات
+                  </h3>
+
+                  <p className="text-sm text-muted-foreground mt-2">
+                    لا يوجد طلبات متاحة لإنشاء فواتير حالياً
+                  </p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead className="text-right">رقم الطلب</TableHead>
-                        <TableHead className="text-right">العميل</TableHead>
-                        <TableHead className="text-right">الإجمالي</TableHead>
-                        <TableHead className="text-right">التاريخ</TableHead>
-                        <TableHead className="text-right">الإجراءات</TableHead>
+                <div className="overflow-x-auto rounded-2xl" dir="rtl">
+                  <Table className="table-fixed text-right">
+                    <TableHeader className="bg-slate-50 border-b">
+                      <TableRow className="h-14 hover:bg-transparent">
+                        <TableHead className="text-right px-5 py-3 text-xs font-semibold text-slate-600 whitespace-nowrap">رقم الطلب</TableHead>
+                        <TableHead className="text-right px-5 py-3 text-xs font-semibold text-slate-600 whitespace-nowrap">العميل</TableHead>
+                        <TableHead className="text-right px-5 py-3 text-xs font-semibold text-slate-600 whitespace-nowrap">الإجمالي</TableHead>
+                        <TableHead className="text-right px-5 py-3 text-xs font-semibold text-slate-600 whitespace-nowrap">التاريخ</TableHead>
+                        <TableHead className="text-right px-5 py-3 text-xs font-semibold text-slate-600 whitespace-nowrap">الإجراءات</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {filteredOrders.map((order) => (
-                        <TableRow key={order.id}>
-                          <TableCell className="font-mono">{order.order_number}</TableCell>
-                          <TableCell>
+                        <TableRow key={order.id} className="h-20 border-b hover:bg-pink-50/40 transition-colors">
+                          <TableCell className="px-5 py-3 align-middle font-mono text-xs text-primary">{order.order_number}</TableCell>
+                          <TableCell className="px-5 py-3 align-middle">
                             <div>
                               <p className="font-medium">{order.customer_name}</p>
                               <p className="text-sm text-muted-foreground" dir="ltr">{order.customer_phone}</p>
                             </div>
                           </TableCell>
-                          <TableCell className="font-medium text-primary">
+                          <TableCell className="px-5 py-3 align-middle font-bold text-primary">
                             {order.total.toFixed(2)} ر.ي
                           </TableCell>
-                          <TableCell className="text-sm">
+                          <TableCell className="px-5 py-3 align-middle text-sm text-muted-foreground">
                             {format(new Date(order.created_at), 'dd MMM yyyy', { locale: ar })}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="px-5 py-3 align-middle">
                             <Button
                               variant="outline"
                               size="sm"
                               onClick={() => handleOpenInvoiceEditor(order)}
-                              className="gap-2"
+                              className="gap-2 h-9 rounded-xl text-xs"
                             >
                               <Eye className="w-4 h-4" />
                               عرض/تعديل الفاتورة
@@ -397,7 +419,7 @@ const AdminInvoicesPage = () => {
 
         {/* Files Tab - Uploaded PDFs */}
         <TabsContent value="files">
-          <Card>
+          <Card className="rounded-2xl border-border shadow-sm overflow-hidden">
             <CardContent className="p-0">
               {isLoading ? (
                 <div className="flex items-center justify-center py-12">
@@ -409,10 +431,10 @@ const AdminInvoicesPage = () => {
                   <p className="text-muted-foreground">لا توجد فواتير محفوظة</p>
                 </div>
               ) : (
-                <div className="overflow-x-auto">
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
+                <div className="overflow-x-auto rounded-2xl">
+                  <Table className="table-fixed">
+                    <TableHeader className="bg-slate-50 border-b">
+                      <TableRow className="h-20 hover:bg-pink-50/40 transition-colors">
                         <TableHead className="text-right">رقم الطلب</TableHead>
                         <TableHead className="text-right">اسم الملف</TableHead>
                         <TableHead className="text-right">تاريخ الإنشاء</TableHead>
@@ -422,18 +444,19 @@ const AdminInvoicesPage = () => {
                     <TableBody>
                       {filteredInvoices.map((invoice) => (
                         <TableRow key={invoice.name}>
-                          <TableCell className="font-mono">{invoice.orderNumber}</TableCell>
+                          <TableCell className="px-5 py-3 align-middle font-mono text-xs text-primary">{invoice.orderNumber}</TableCell>
                           <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
                             {invoice.name}
                           </TableCell>
-                          <TableCell>
+                          <TableCell className="px-5 py-3 align-middle">
                             {format(new Date(invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar })}
                           </TableCell>
-                          <TableCell>
-                            <div className="flex items-center gap-2">
+                          <TableCell className="px-5 py-3 align-middle">
+                            <div className="flex items-center gap-1.5 bg-slate-100 rounded-xl p-1 w-fit">
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
+                                className="h-9 w-9 rounded-lg bg-white shadow-sm"
                                 onClick={() => window.open(invoice.url, '_blank')}
                                 title="فتح"
                               >
@@ -441,7 +464,8 @@ const AdminInvoicesPage = () => {
                               </Button>
                               <Button
                                 variant="ghost"
-                                size="sm"
+                                size="icon"
+                                className="h-9 w-9 rounded-lg bg-white shadow-sm"
                                 onClick={() => handlePrint(invoice.url)}
                                 title="طباعة"
                               >

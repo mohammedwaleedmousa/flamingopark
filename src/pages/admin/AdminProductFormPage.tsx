@@ -390,6 +390,8 @@ const AdminProductFormPage = () => {
     setIsSaving(true);
 
     const stockQty = Math.max(0, parseInt(formData.stock_quantity || '0') || 0);
+    const selectedCat = categories.find((c) => c.slug === formData.category) || null;
+    const selectedBrand = (brands as any[]).find((b: any) => b.name?.trim() === formData.brand?.trim()) || null;
     const productData = {
       name: formData.name,
       name_ar: formData.name_ar,
@@ -400,8 +402,10 @@ const AdminProductFormPage = () => {
       discount: parseInt(formData.discount) || 0,
       description: formData.description,
       description_ar: formData.description_ar,
-      category: formData.category,
-      brand: formData.brand,
+      category: formData.category || null,
+      brand: formData.brand || null,
+      category_id: selectedCat?.id ?? null,
+      brand_id: selectedBrand?.id ?? null,
       in_stock: stockQty > 0 ? formData.in_stock : false,
       stock_quantity: stockQty,
       is_featured: formData.is_featured,

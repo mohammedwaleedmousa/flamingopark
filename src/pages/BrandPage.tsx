@@ -161,7 +161,7 @@ const BrandPage = () => {
                   {sectionsWithCount.map((s) => (
                     <Link
                       key={s.id}
-                      to={`/products?brand=${encodeURIComponent(brand.name)}&category=${encodeURIComponent(s.slug)}`}
+                      to={`/brands/${brand.slug || slug}/sections/${encodeURIComponent(s.slug)}`}
                       className="group relative aspect-[4/5] overflow-hidden bg-neutral-100 border border-black/5 hover:border-gold transition-colors"
                     >
                       {s.image_url && (

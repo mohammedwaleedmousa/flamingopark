@@ -272,7 +272,7 @@ const AdminBrandsPage = () => {
   }
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
+    <div className="min-h-screen max-w-[1600px] mx-auto px-5 md:px-8 py-10 space-y-10" dir="rtl">
       {/* Header */}
       <AdminPageHeader
         category="الكتالوج"
@@ -289,7 +289,7 @@ const AdminBrandsPage = () => {
       />
 
       {/* Stats */}
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
         {[
           { label: 'الكل', value: stats.total, color: 'from-primary/20 to-primary/10 border-primary/20' },
           { label: 'نشطة', value: stats.active, color: 'from-green-500/20 to-green-500/10 border-green-500/20' },
@@ -298,7 +298,7 @@ const AdminBrandsPage = () => {
           <div
             key={stat.label}
             className={cn(
-              "p-4 rounded-xl text-center border bg-gradient-to-br",
+              "relative overflow-hidden p-6 rounded-3xl border bg-gradient-to-br shadow-sm hover:shadow-md transition-all duration-300",
               stat.color
             )}
           >
@@ -309,191 +309,129 @@ const AdminBrandsPage = () => {
       </div>
 
       {/* Search */}
-      <div className="relative">
+      <div className="relative bg-card border border-border rounded-3xl shadow-sm overflow-hidden">
         <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
         <Input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="بحث عن ماركة..."
-          className="pr-10 bg-card"
+          className="h-16 pr-14 bg-transparent border-0 focus-visible:ring-0 text-base"
           dir="rtl"
         />
       </div>
 
       {/* Mobile Cards */}
-      <div className="md:hidden space-y-3">
-        {filteredBrands.map((brand, index) => (
-          <motion.div
-            key={brand.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="bg-card border border-border rounded-xl p-4"
-          >
-            <div className="flex items-center gap-4">
+      <div className="md:hidden grid gap-5">
+        {filteredBrands.map((brand,index)=>(
+          <motion.div key={brand.id} initial={{opacity:0,y:15}} animate={{opacity:1,y:0}} transition={{delay:index*0.05}} className="group relative bg-card border border-border rounded-3xl p-5 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
+            <div className="absolute inset-x-0 top-0 h-1 bg-gradient-to-r from-primary/40 via-primary to-primary/40 opacity-0 group-hover:opacity-100 transition-opacity"/>
+            <div className="flex items-center gap-5">
               {brand.logo_url ? (
-                <img
-                  src={brand.logo_url}
-                  alt={brand.name}
-                  className="w-16 h-16 object-contain bg-muted rounded-lg p-2"
-                />
+                <div className="w-24 h-24 rounded-3xl bg-white border border-border flex items-center justify-center p-4 shadow-sm shrink-0">
+                  <img src={brand.logo_url} alt={brand.name} className="w-full h-full object-contain"/>
+                </div>
               ) : (
-                <div className="w-16 h-16 bg-muted rounded-lg flex items-center justify-center">
-                  <Tag className="w-6 h-6 text-muted-foreground" />
+                <div className="w-24 h-24 rounded-3xl bg-muted flex items-center justify-center shrink-0">
+                  <Tag className="w-8 h-8 text-muted-foreground"/>
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-heading text-foreground truncate">{brand.name}</h3>
-                  <span className={cn(
-                    "px-2 py-1 rounded-full text-xs font-medium shrink-0 border",
-                    brand.is_active 
-                      ? 'bg-green-500/15 text-green-600 border-green-500/30' 
-                      : 'bg-red-500/15 text-red-600 border-red-500/30'
-                  )}>
-                    {brand.is_active ? 'نشط' : 'معطل'}
+                <div className="flex items-start justify-between gap-3">
+                  <div>
+                    <h3 className="font-heading text-xl font-semibold truncate">{brand.name}</h3>
+                    <p className="text-sm text-muted-foreground mt-2">ترتيب العرض {brand.sort_order}</p>
+                  </div>
+                  <span className={cn("px-3 py-1.5 rounded-full text-xs font-medium border shrink-0",brand.is_active?"bg-green-500/10 text-green-600 border-green-500/20":"bg-red-500/10 text-red-600 border-red-500/20")}>
+                    {brand.is_active?"نشط":"معطل"}
                   </span>
                 </div>
-                <div className="flex items-center gap-2 mt-2 text-sm text-muted-foreground">
-                  <span>الترتيب: {brand.sort_order}</span>
-                    <span>•</span>
-                    <span>الأقسام: {(brandToCategoryIds[brand.id] || []).length}</span>
+                <div className="flex items-center gap-2 mt-4 text-sm text-muted-foreground">
+                  <span>{(brandToCategoryIds[brand.id]||[]).length} أقسام</span>
                 </div>
               </div>
             </div>
-            <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex-1 gap-2"
-                onClick={() => toggleActiveMutation.mutate({ id: brand.id, is_active: !brand.is_active })}
-              >
-                {brand.is_active ? 'تعطيل' : 'تفعيل'}
+            <div className="grid grid-cols-3 gap-3 mt-6 pt-5 border-t border-border">
+              <Button size="sm" variant="outline" className="rounded-2xl" onClick={()=>toggleActiveMutation.mutate({id:brand.id,is_active:!brand.is_active})}>
+                {brand.is_active?"تعطيل":"تفعيل"}
               </Button>
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex-1 gap-2"
-                onClick={() => handleEdit(brand)}
-              >
-                <Pencil className="w-4 h-4" />
+              <Button size="sm" variant="outline" className="rounded-2xl gap-2" onClick={()=>handleEdit(brand)}>
+                <Pencil className="w-4 h-4"/>
                 تعديل
               </Button>
-              <Button
-                size="icon"
-                variant="outline"
-                className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                onClick={() => {
-                  if (confirm('هل أنت متأكد من حذف هذه الماركة؟')) {
-                    deleteMutation.mutate(brand.id);
-                  }
-                }}
-              >
-                <Trash2 className="w-4 h-4" />
+              <Button size="icon" variant="outline" className="rounded-2xl text-destructive border-destructive/30 hover:bg-destructive/10" onClick={()=>{if(confirm("هل أنت متأكد من حذف هذه الماركة؟")) deleteMutation.mutate(brand.id)}}>
+                <Trash2 className="w-4 h-4"/>
               </Button>
             </div>
           </motion.div>
         ))}
-        {filteredBrands.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            <Tag className="w-12 h-12 mx-auto mb-4 opacity-50" />
+        {filteredBrands.length===0&&(
+          <div className="text-center py-16 text-muted-foreground">
+            <Tag className="w-14 h-14 mx-auto mb-4 opacity-40"/>
             <p>لا توجد ماركات</p>
           </div>
         )}
       </div>
 
       {/* Desktop Table */}
-      <div className="hidden md:block bg-card border border-border rounded-xl overflow-hidden">
-        <table className="w-full">
-          <thead className="bg-muted/50">
-            <tr>
-              <th className="text-right p-4 font-heading text-sm">الشعار</th>
-              <th className="text-right p-4 font-heading text-sm">الاسم</th>
-              <th className="text-right p-4 font-heading text-sm">الأقسام</th>
-              <th className="text-right p-4 font-heading text-sm">الترتيب</th>
-              <th className="text-right p-4 font-heading text-sm">الحالة</th>
-              <th className="text-right p-4 font-heading text-sm">إجراءات</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredBrands.map((brand) => (
-              <tr key={brand.id} className="border-b border-border hover:bg-muted/30 transition-colors">
-                <td className="p-4">
-                  {brand.logo_url ? (
-                    <img
-                      src={brand.logo_url}
-                      alt={brand.name}
-                      className="h-12 w-12 object-contain bg-muted rounded-lg p-1"
-                    />
-                  ) : (
-                    <div className="h-12 w-12 bg-muted rounded-lg flex items-center justify-center">
-                      <Tag className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                  )}
-                </td>
-                <td className="p-4 font-heading">{brand.name}</td>
-                <td className="p-4 text-muted-foreground">{(brandToCategoryIds[brand.id] || []).length}</td>
-                <td className="p-4 text-muted-foreground">{brand.sort_order}</td>
-                <td className="p-4">
-                  <Switch
-                    checked={brand.is_active ?? true}
-                    onCheckedChange={(checked) =>
-                      toggleActiveMutation.mutate({ id: brand.id, is_active: checked })
-                    }
-                  />
-                </td>
-                <td className="p-4">
-                  <div className="flex gap-1">
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="hover:bg-muted"
-                      onClick={() => handleEdit(brand)}
-                    >
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-destructive hover:bg-destructive/10"
-                      onClick={() => {
-                        if (confirm('هل أنت متأكد من حذف هذه الماركة؟')) {
-                          deleteMutation.mutate(brand.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filteredBrands.length === 0 && (
-              <tr>
-                <td colSpan={6} className="p-12 text-center text-muted-foreground">
-                  <Tag className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>لا توجد ماركات</p>
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
+      <div className="hidden md:grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+        {filteredBrands.map((brand,index)=>(
+          <motion.div key={brand.id} initial={{opacity:0,y:15}} animate={{opacity:1,y:0}} transition={{delay:index*0.04}} className="group relative bg-card border border-border rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 overflow-hidden">
+            <div className="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-primary/30 via-primary to-primary/30 opacity-0 group-hover:opacity-100 transition-opacity"/>
+            <div className="flex items-start justify-between gap-3">
+              <span className={cn("px-3 py-1.5 rounded-full text-xs font-medium border",brand.is_active?"bg-green-500/10 text-green-600 border-green-500/20":"bg-red-500/10 text-red-600 border-red-500/20")}>
+                {brand.is_active?"نشط":"معطل"}
+              </span>
+              <Switch checked={brand.is_active??true} onCheckedChange={(checked)=>toggleActiveMutation.mutate({id:brand.id,is_active:checked})}/>
+            </div>
+            <div className="mt-6 flex justify-center">
+              {brand.logo_url?(
+                <div className="w-32 h-32 rounded-3xl bg-white border border-border flex items-center justify-center p-6 shadow-sm group-hover:scale-105 transition-transform duration-300">
+                  <img src={brand.logo_url} alt={brand.name} className="w-full h-full object-contain"/>
+                </div>
+              ):(
+                <div className="w-32 h-32 rounded-3xl bg-muted flex items-center justify-center">
+                  <Tag className="w-10 h-10 text-muted-foreground"/>
+                </div>
+              )}
+            </div>
+            <div className="text-center mt-6">
+              <h3 className="font-heading text-xl font-semibold">{brand.name}</h3>
+              <p className="text-sm text-muted-foreground mt-2">{(brandToCategoryIds[brand.id]||[]).length} أقسام مرتبطة</p>
+              <p className="text-xs text-muted-foreground mt-1">ترتيب العرض {brand.sort_order}</p>
+            </div>
+            <div className="flex items-center justify-center gap-2 mt-6 pt-5 border-t border-border">
+              <Button size="icon" variant="ghost" className="rounded-2xl hover:bg-muted" onClick={()=>handleEdit(brand)}>
+                <Pencil className="w-4 h-4"/>
+              </Button>
+              <Button size="icon" variant="ghost" className="rounded-2xl text-destructive hover:bg-destructive/10" onClick={()=>{if(confirm("هل أنت متأكد من حذف هذه الماركة؟")) deleteMutation.mutate(brand.id)}}>
+                <Trash2 className="w-4 h-4"/>
+              </Button>
+            </div>
+          </motion.div>
+        ))}
+        {filteredBrands.length===0&&(
+          <div className="col-span-full text-center py-16 text-muted-foreground">
+            <Tag className="w-14 h-14 mx-auto mb-4 opacity-40"/>
+            <p>لا توجد ماركات</p>
+          </div>
+        )}
       </div>
 
       {/* Dialog */}
       <AnimatePresence>
         {isDialogOpen && (
           <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-auto">
+            <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl p-6">
               <DialogHeader>
-                <DialogTitle className="font-heading">
+                <DialogTitle className="font-heading text-2xl">
                   {editingBrand ? 'تعديل الماركة' : 'إضافة ماركة جديدة'}
                 </DialogTitle>
               </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
+              <form onSubmit={handleSubmit} className="space-y-6">
+                <div className="space-y-3">
                   <Label>اسم الماركة</Label>
                   <Input
+                    className="h-12 rounded-2xl"
                     value={formData.name}
                     onChange={(e) =>
                       setFormData({ ...formData, name: e.target.value })
@@ -505,14 +443,14 @@ const AdminBrandsPage = () => {
 
                 <div className="space-y-2">
                   <Label>الشعار</Label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-3">
                     <Input
                       value={formData.logo_url}
                       onChange={(e) =>
                         setFormData({ ...formData, logo_url: e.target.value })
                       }
                       placeholder="رابط الصورة"
-                      className="flex-1"
+                      className="h-12 rounded-2xl flex-1"
                     />
                     <label className="cursor-pointer">
                       <input
@@ -527,11 +465,11 @@ const AdminBrandsPage = () => {
                     </label>
                   </div>
                   {formData.logo_url && (
-                    <div className="relative w-fit">
+                    <div className="relative mx-auto mt-4 w-40 h-40 rounded-3xl bg-muted border border-border flex items-center justify-center">
                       <img
                         src={formData.logo_url}
                         alt="Preview"
-                        className="h-20 object-contain bg-muted rounded-lg p-2"
+                        className="w-full h-full object-contain p-6"
                       />
                       <button
                         type="button"
@@ -551,12 +489,12 @@ const AdminBrandsPage = () => {
 
                 <div className="space-y-2">
                   <Label>الأقسام المرتبطة</Label>
-                  <div className="max-h-48 overflow-auto rounded-lg border border-border p-2 space-y-2 bg-background">
+                  <div className="max-h-60 overflow-auto rounded-3xl border border-border p-4 space-y-3 bg-muted/20">
                     {categories.map((category) => {
                       const parent = category.parent_id ? categoryById.get(category.parent_id) : null;
                       const checked = selectedCategoryIds.includes(category.id);
                       return (
-                        <label key={category.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                        <label key={category.id} className="flex items-center gap-3 p-3 rounded-2xl hover:bg-muted transition cursor-pointer">
                           <Checkbox
                             checked={checked}
                             onCheckedChange={(value) => {
@@ -594,7 +532,7 @@ const AdminBrandsPage = () => {
                   />
                 </div>
 
-                <div className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                <div className="flex items-center justify-between p-4 bg-muted/50 rounded-3xl border border-border">
                   <Label className="cursor-pointer">تفعيل الماركة</Label>
                   <Switch
                     checked={formData.is_active}
@@ -604,16 +542,16 @@ const AdminBrandsPage = () => {
                   />
                 </div>
 
-                <div className="flex gap-2 pt-4">
+                <div className="flex gap-3 pt-6">
                   <Button type="submit" className="flex-1 btn-gold" disabled={saveMutation.isPending}>
                     {saveMutation.isPending ? (
                       <>
-                        <Loader2 className="w-4 h-4 animate-spin ml-2" />
+                        <Loader2 className="flex-1 h-12 rounded-2xl btn-gold" />
                         جاري الحفظ...
                       </>
                     ) : 'حفظ'}
                   </Button>
-                  <Button type="button" variant="outline" onClick={resetForm}>
+                  <Button type="button" variant="outline" onClick={resetForm} className="h-12 rounded-2xl">
                     إلغاء
                   </Button>
                 </div>

@@ -326,292 +326,166 @@ const AdminBrandPageEditor = () => {
 
 
 
-  return(
+  return (
+  <div className="min-h-screen max-w-[1200px] mx-auto px-4 md:px-6 py-8 space-y-8" dir="rtl">
+    <AdminPageHeader
+      category="الماركات"
+      title="إدارة صفحة الماركة"
+      description="إنشاء وتخصيص صفحة عرض الماركة داخل المتجر"
+      actions={[
+        {
+          label:"رجوع",
+          icon:ArrowRight,
+          onClick:()=>navigate("/admin/brand-pages"),
+          variant:"secondary"
+        }
+      ]}
+    />
 
-    <div
-      className="max-w-3xl mx-auto space-y-6"
-      dir="rtl"
-    >
+    <div className="bg-card border border-border rounded-3xl shadow-sm overflow-hidden">
+      <div className="p-6 md:p-8 space-y-8">
 
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-heading font-semibold">بيانات الماركة</h2>
+            <p className="text-sm text-muted-foreground mt-1">اختر الماركة التي تريد إدارة صفحتها</p>
+          </div>
 
-      <AdminPageHeader
+          <div className="bg-muted/30 border border-border rounded-2xl p-4">
+            <Label className="mb-2 block">اختر الماركة</Label>
 
-        category="الماركات"
+            <Select value={brandId} onValueChange={(value)=>setBrandId(value)}>
+              <SelectTrigger className="h-12 rounded-xl bg-background">
+                <SelectValue placeholder="اختر ماركة"/>
+              </SelectTrigger>
 
-        title="إدارة صفحة الماركة"
-
-        actions={[
-          {
-            label:"رجوع",
-            icon:ArrowRight,
-            onClick:()=>navigate("/admin/brand-pages"),
-            variant:"secondary"
-          }
-        ]}
-
-      />
-
-
-
-      <div className="bg-card border rounded-xl p-6 space-y-6">
-
-
-        <div className="space-y-2">
-
-          <Label>
-            اختر الماركة
-          </Label>
-
-
-          <Select
-
-            value={brandId}
-
-            onValueChange={(value)=>setBrandId(value)}
-
-          >
-
-            <SelectTrigger>
-
-              <SelectValue placeholder="اختر ماركة"/>
-
-            </SelectTrigger>
-
-
-            <SelectContent>
-
-
-              {
-                brands.map((brand:any)=>(
-
-                  <SelectItem
-
-                    key={brand.id}
-
-                    value={brand.id}
-
-                  >
-
+              <SelectContent>
+                {brands.map((brand:any)=>(
+                  <SelectItem key={brand.id} value={brand.id}>
                     {brand.name}
-
                   </SelectItem>
-
-                ))
-              }
-
-
-            </SelectContent>
-
-
-          </Select>
-
-
-        </div>
-
-
-
-        <div className="space-y-2">
-
-          <Label>
-            عنوان الصفحة
-          </Label>
-
-
-          <Input
-
-            value={form.title}
-
-            onChange={(e)=>setForm({
-
-              ...form,
-
-              title:e.target.value
-
-            })}
-
-            placeholder="Gucci Collection"
-
-          />
-
-        </div>
-
-
-
-
-        <div className="space-y-2">
-
-          <Label>
-            وصف الماركة
-          </Label>
-
-
-          <Textarea
-
-            rows={5}
-
-            value={form.description}
-
-            onChange={(e)=>setForm({
-
-              ...form,
-
-              description:e.target.value
-
-            })}
-
-          />
-
-        </div>
-
-
-
-
-        <div className="space-y-3">
-
-
-          <Label>
-            صورة الهيرو
-          </Label>
-
-
-
-          {
-            form.hero_image &&
-
-            <img
-
-              src={form.hero_image}
-
-              className="w-full h-48 object-cover rounded-xl"
-
-              alt="hero"
-
-            />
-
-          }
-
-
-
-          <label className="inline-flex items-center gap-2 border rounded-lg px-4 py-2 cursor-pointer">
-
-
-            <Upload size={18}/>
-
-
-            {
-              uploading
-              ?
-              "جاري الرفع..."
-              :
-              "رفع صورة"
-            }
-
-
-
-            <input
-
-              type="file"
-
-              accept="image/*"
-
-              className="hidden"
-
-              onChange={(e)=>{
-
-                const file=e.target.files?.[0];
-
-                if(file)
-                  uploadImage(file);
-
-              }}
-
-            />
-
-
-          </label>
-
-
-        </div>
-
-
-
-
-        <div className="flex items-center gap-3">
-
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </section>
+
+
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-heading font-semibold">محتوى الصفحة</h2>
+            <p className="text-sm text-muted-foreground mt-1">العنوان والوصف الظاهر للعميل</p>
+          </div>
+
+          <div className="space-y-4">
+
+            <div className="space-y-2">
+              <Label>عنوان الصفحة</Label>
+              <Input
+                value={form.title}
+                onChange={(e)=>setForm({...form,title:e.target.value})}
+                placeholder="Gucci Collection"
+                className="h-12 rounded-xl"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label>وصف الماركة</Label>
+              <Textarea
+                rows={6}
+                value={form.description}
+                onChange={(e)=>setForm({...form,description:e.target.value})}
+                className="rounded-xl resize-none"
+                placeholder="اكتب وصفاً أنيقاً للماركة..."
+              />
+            </div>
+
+          </div>
+        </section>
+
+
+        <section className="space-y-4">
+          <div>
+            <h2 className="text-lg font-heading font-semibold">الصورة الرئيسية</h2>
+            <p className="text-sm text-muted-foreground mt-1">الصورة التي تظهر في أعلى صفحة الماركة</p>
+          </div>
+
+          <div className="border border-dashed border-border rounded-3xl p-5 bg-muted/20">
+
+            {form.hero_image ? (
+              <div className="relative group overflow-hidden rounded-2xl">
+                <img
+                  src={form.hero_image}
+                  alt="hero"
+                  className="w-full h-[280px] object-cover rounded-2xl"
+                />
+
+                <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 transition"/>
+              </div>
+            ) : (
+              <div className="h-[220px] rounded-2xl bg-muted flex items-center justify-center text-muted-foreground">
+                لا توجد صورة رئيسية
+              </div>
+            )}
+
+            <label className="mt-5 flex items-center justify-center gap-3 h-12 rounded-xl border border-border bg-background cursor-pointer hover:border-pink-400 hover:text-pink-500 transition">
+              {uploading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Upload className="w-5 h-5"/>}
+              <span>{uploading ? "جاري رفع الصورة..." : "رفع صورة جديدة"}</span>
+
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e)=>{
+                  const file=e.target.files?.[0];
+                  if(file) uploadImage(file);
+                }}
+              />
+            </label>
+
+          </div>
+        </section>
+
+
+        <section className="flex items-center justify-between rounded-2xl border border-border bg-muted/30 p-5">
+          <div>
+            <h3 className="font-medium">حالة الصفحة</h3>
+            <p className="text-sm text-muted-foreground">تفعيل ظهور صفحة الماركة للعملاء</p>
+          </div>
 
           <Switch
-
             checked={form.is_active}
-
-            onCheckedChange={(value)=>setForm({
-
-              ...form,
-
-              is_active:value
-
-            })}
-
+            onCheckedChange={(value)=>setForm({...form,is_active:value})}
           />
+        </section>
 
 
-          <Label>
-            الصفحة نشطة
-          </Label>
-
-
-        </div>
-
-
-
-
-        <div className="flex gap-3">
-
+        <div className="flex flex-col md:flex-row gap-3 pt-4 border-t border-border">
 
           <Button
-
+            className="h-12 px-8 rounded-xl bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-lg shadow-pink-500/20"
             onClick={()=>save.mutate()}
-
             disabled={save.isPending}
-
           >
-
-            {
-              save.isPending
-              ?
-              <Loader2 className="w-4 h-4 animate-spin"/>
-              :
-              "حفظ"
-            }
-
+            {save.isPending ? <Loader2 className="w-5 h-5 animate-spin"/> : "حفظ صفحة الماركة"}
           </Button>
-
-
 
           <Button
-
+            className="h-12 rounded-xl"
             variant="outline"
-
             onClick={()=>navigate("/admin/brand-pages")}
-
           >
-
             إلغاء
-
           </Button>
 
-
         </div>
-
 
       </div>
-
-
     </div>
-
-  );
+  </div>
+);
 
 
 };
-
 
 export default AdminBrandPageEditor;

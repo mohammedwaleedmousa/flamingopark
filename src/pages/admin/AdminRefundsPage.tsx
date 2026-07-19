@@ -58,7 +58,7 @@ export default function AdminRefundsPage() {
   const totalProcessed = refunds.filter(r => r.status === 'processed').reduce((s, r) => s + Number(r.amount), 0);
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto p-2" dir="rtl">
+    <div className="space-y-8 max-w-[1500px] mx-auto px-4 md:px-6 py-8" dir="rtl">
       <AdminPageHeader
         category="المالية"
         title="المرتجعات والاسترجاع"
@@ -74,11 +74,20 @@ export default function AdminRefundsPage() {
       />
 
       <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent>
-            <DialogHeader><DialogTitle>إضافة مرتجع</DialogTitle></DialogHeader>
+          <DialogContent className="rounded-3xl max-w-xl" dir="rtl">
+            <DialogHeader>
+              <DialogTitle className="font-heading text-xl">
+                إضافة مرتجع جديد
+              </DialogTitle>
+            </DialogHeader>
             <div className="space-y-3">
               <div className="grid grid-cols-2 gap-3">
-                <Input placeholder="رقم الطلب" value={form.order_number} onChange={e => setForm({ ...form, order_number: e.target.value })} />
+                <Input
+                  placeholder="رقم الطلب"
+                  className="h-12 rounded-2xl"
+                  value={form.order_number}
+                  onChange={e => setForm({ ...form, order_number: e.target.value })}
+                />
                 <Input placeholder="اسم العميل" value={form.customer_name} onChange={e => setForm({ ...form, customer_name: e.target.value })} />
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -94,7 +103,12 @@ export default function AdminRefundsPage() {
               </div>
               <Textarea placeholder="سبب الإرجاع *" value={form.reason} onChange={e => setForm({ ...form, reason: e.target.value })} />
               <Textarea placeholder="ملاحظات" rows={2} value={form.notes} onChange={e => setForm({ ...form, notes: e.target.value })} />
-              <Button className="w-full" onClick={save}>حفظ</Button>
+              <Button
+                className="w-full h-12 rounded-2xl bg-pink-500 hover:bg-pink-600"
+                onClick={save}
+              >
+                حفظ المرتجع
+              </Button>
             </div>
           </DialogContent>
         </Dialog>

@@ -137,7 +137,7 @@ export default function AdminRefundsPage() {
                       </div>
                       <p className="text-sm font-medium mt-1">{r.customer_name || '—'} {r.order_number && `· #${r.order_number}`}</p>
                       <p className="text-xs text-muted-foreground mt-0.5">{r.reason}</p>
-                    </div>
+                    </div>ئ
                     <div className="text-left">
                       <p className="font-bold">{Number(r.amount).toFixed(2)}</p>
                       <p className="text-xs text-muted-foreground">{r.refund_method}</p>

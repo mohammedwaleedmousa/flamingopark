@@ -47,25 +47,49 @@ const QuickView = ({ product, onClose, isMobile }: { product: Product | null; on
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
 
   useEffect(() => {
-    // reset when product changes
+    if (!product) return;
     setQty(1);
     setActiveImage(0);
-    setActiveVariantIndex(product && product.variants && product.variants.length ? 0 : null);
     setSelectedSize(null);
-  }, [product]);
+    let variants = (product as any)?.color_variants;
+    if (typeof variants === "string") {
+      try {
+        variants = JSON.parse(variants);
+      } catch {
+        variants = [];
+      }
+    }
+    if (Array.isArray(variants) && variants.length > 0) {
+      setActiveVariantIndex(0);
+    } else {
+      setActiveVariantIndex(null);
+    }
+  }, [product?.id]);
 
   if (!product) return null;
 
-  const variants = product.variants || [];
-  const activeVariant = activeVariantIndex !== null ? variants[activeVariantIndex] : undefined;
-
-  const images = activeVariant?.images?.length ? activeVariant.images : product.images;
+  const variants = Array.isArray((product as any)?.color_variants)
+    ? (product as any).color_variants
+    : [];
+  const currentVariantIndex =
+    activeVariantIndex === null && variants.length > 0
+      ? 0
+      : activeVariantIndex;
+  const activeVariant =
+    currentVariantIndex !== null
+      ? variants[currentVariantIndex]
+      : undefined;
+  const images =
+    activeVariant?.images?.length
+      ? activeVariant.images
+      : product.images;
 
   const priceSource = activeVariant?.price ?? product.price;
   const discountSource = activeVariant?.discount ?? product.discount;
   const displayPrice = discountSource ? priceSource * (1 - discountSource / 100) : priceSource;
 
-  const sizesForActiveVariant = activeVariant?.sizes ?? [];
+  const sizesForActiveVariant =
+    activeVariant?.sizes || product.sizes || [];
   const stockForSize = (size?: string) => {
     if (!size) return product.inStock ? 999 : 0;
     const s = sizesForActiveVariant.find((x) => x.size === size);
@@ -73,7 +97,14 @@ const QuickView = ({ product, onClose, isMobile }: { product: Product | null; on
   };
 
   const handleAdd = () => {
-    addToCart(product, qty, selectedSize ?? undefined, undefined, activeVariant?.id, activeVariant?.colorName);
+    addToCart(
+      product,
+      qty,
+      selectedSize ?? undefined,
+      undefined,
+      activeVariant?.id,
+      activeVariant?.colorName || activeVariant?.name
+    );    
     onClose();
   };
 
@@ -128,7 +159,7 @@ const QuickView = ({ product, onClose, isMobile }: { product: Product | null; on
               <p className="text-xs text-muted-foreground mb-2">الألوان</p>
               <div className="flex items-center gap-3">
                 {variants.map((v, idx) => (
-                  <button key={v.id} onClick={() => { setActiveVariantIndex(idx); setActiveImage(0); setSelectedSize(null); }} title={v.colorName} className={`w-9 h-9 rounded-full border ${activeVariantIndex===idx ? 'ring-2 ring-foreground' : ''}`} style={{ background: v.colorHex || '#eee' }} />
+                  <button key={v.id || idx} onClick={() => { setActiveVariantIndex(idx); setActiveImage(0); setSelectedSize(null); }} title={v.name} className={`w-9 h-9 rounded-full border ${currentVariantIndex===idx ? 'ring-2 ring-foreground' : ''}`} style={{background: v.hex || "#eee"}} />
                 ))}
               </div>
             </div>
@@ -251,8 +282,10 @@ const ProductsPage = () => {
         countries: (p.countries || ["GLOBAL"]) as Product["countries"],
         isFeatured: p.is_featured,
         isBestSeller: p.is_best_seller,
-        variants: p.variants || undefined,
-        ...(p.color_variants ? { color_variants: p.color_variants } : {}),
+        color_variants: Array.isArray(p.color_variants)
+        ? p.color_variants
+        : [],
+        sizes: p.sizes || [],
       })) as Product[];
     },
   });
@@ -262,15 +295,10 @@ const ProductsPage = () => {
   }, [products]);
 
   const getProductColors = (p: Product): string[] => {
-    const fromVariants = (p.variants || []).map((v: any) => (v.colorName || "").trim()).filter(Boolean);
-    const colorVariants = (p as any).color_variants;
-    const fromColorVariants = Array.isArray(colorVariants)
-      ? colorVariants.map((c: any) => {
-          if (typeof c === "string") return c.trim();
-          return (c?.colorName || c?.name || c?.label || "").trim();
-        }).filter(Boolean)
-      : [];
-    return Array.from(new Set([...fromVariants, ...fromColorVariants]));
+    const fromVariants = ((p as any).color_variants || [])
+      .map((v: any) => (v.name || "").trim())
+      .filter(Boolean);
+      return Array.from(new Set(fromVariants));
   };
 
   const colorsAvailable = useMemo(() => {
@@ -280,7 +308,10 @@ const ProductsPage = () => {
   }, [products]);
 
   const getProductSizes = (p: Product): string[] => {
-    const sizes = (p.variants || []).flatMap((v: any) => (v.sizes || []).map((s: any) => (s?.size || "").trim()));
+    const sizes = ((p as any).color_variants || [])
+      .flatMap((v: any) =>
+        (v.sizes || []).map((s: any) => (s?.size || "").trim())
+      );
     return Array.from(new Set(sizes.filter(Boolean)));
   };
 

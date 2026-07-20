@@ -307,9 +307,10 @@ if (currentImages + fileArray.length > 5) {
                 className="h-9 w-12"
               />
 
+              {c.hex2 && (
               <input
                 type="color"
-                value={c.hex2 || "#000000"}
+                value={c.hex2}
                 onChange={(e) => {
                   const next = [...value];
                   next[ci].hex2 = e.target.value;
@@ -317,6 +318,7 @@ if (currentImages + fileArray.length > 5) {
                 }}
                 className="h-9 w-12"
               />
+            )}
             </div>
           </div>
 

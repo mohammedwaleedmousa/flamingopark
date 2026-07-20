@@ -86,35 +86,59 @@ const AdminBrandSectionsPage = () => {
   };
 
   const save = useMutation({
-    mutationFn: async () => {
-      if (!activeBrandId) throw new Error("اختر ماركة أولاً");
-      if (!form.name) throw new Error("اسم القسم مطلوب");
-      const payload = {
-        brand_id: activeBrandId,
-        name: form.name.trim(),
-        slug: (form.slug || slugify(form.name)).trim(),
-        image_url: form.image_url || null,
-        description: form.description || null,
-        sort_order: Number(form.sort_order) || 0,
-        is_active: form.is_active,
-      };
-      if (editing) {
-        const { error } = await (supabase as any).from("brand_sections").update(payload).eq("id", editing.id);
-        if (error) throw error;
-            } else {
-        const { error } = await (supabase as any)
-          .from("brand_sections")
-          .insert(payload);
-        if (error) throw error;
-      }
-    },
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["brand-sections-admin", activeBrandId] });
-      toast({ title: editing ? "تم التحديث" : "تمت الإضافة" });
-      setDialogOpen(false); resetForm();
-    },
-    onError: (e: any) => toast({ title: "خطأ", description: e.message, variant: "destructive" }),
-  });
+  mutationFn: async () => {
+    if (!activeBrandId) throw new Error("اختر ماركة أولاً");
+    if (!form.name) throw new Error("اسم القسم مطلوب");
+
+    const { data: brandPage, error: brandPageError } = await (supabase as any)
+      .from("brand_pages")
+      .select("id")
+      .eq("brand_id", activeBrandId)
+      .single();
+
+    if (brandPageError) throw brandPageError;
+
+    const payload = {
+      brand_id: activeBrandId,
+      brand_page_id: brandPage.id,
+      name: form.name.trim(),
+      slug: (form.slug || slugify(form.name)).trim(),
+      image_url: form.image_url || null,
+      description: form.description || null,
+      sort_order: Number(form.sort_order) || 0,
+      is_active: form.is_active,
+    };
+
+    if (editing) {
+      const { error } = await (supabase as any)
+        .from("brand_sections")
+        .update(payload)
+        .eq("id", editing.id);
+
+      if (error) throw error;
+    } else {
+      const { error } = await (supabase as any)
+        .from("brand_sections")
+        .insert(payload);
+
+      if (error) throw error;
+    }
+  },
+
+  onSuccess: () => {
+    qc.invalidateQueries({ queryKey: ["brand-sections-admin", activeBrandId] });
+    toast({ title: editing ? "تم التحديث" : "تمت الإضافة" });
+    setDialogOpen(false);
+    resetForm();
+  },
+
+  onError: (e: any) =>
+    toast({
+      title: "خطأ",
+      description: e.message,
+      variant: "destructive",
+    }),
+});
 
   const del = useMutation({
     mutationFn: async (id: string) => {

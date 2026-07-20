@@ -242,7 +242,9 @@ const ProductsPage = () => {
         discount: p.discount || undefined,
         description: p.description || "",
         descriptionAr: p.description_ar || "",
-        images: p.images || [],
+        images: p.images?.length
+          ? p.images
+          : (p.color_variants?.[0]?.images || []),
         category: p.category,
         brand: p.brand,
         inStock: p.in_stock ?? true,

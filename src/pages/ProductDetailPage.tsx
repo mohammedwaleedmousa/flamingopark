@@ -36,7 +36,6 @@ const ProductDetailPage = () => {
   const [selectedQualityIdx, setSelectedQualityIdx] = useState<number | null>(null);
   const [openSection, setOpenSection] = useState<'specs' | 'return' | null>(null);
   const { format: formatCurrency, symbol: currencySymbol } = useCurrency();
-  const [touchStart, setTouchStart] = useState<number | null>(null);
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', slug],
     queryFn: async () => {
@@ -150,26 +149,7 @@ const ProductDetailPage = () => {
   const isLiked = isFavorite(product.id);
   const nextImage = () => setSelectedImage((i) => (i + 1) % displayImages.length);
   const prevImage = () => setSelectedImage((i) => (i - 1 + displayImages.length) % displayImages.length);
-  const handleTouchStart = (e: React.TouchEvent) => {
-  setTouchStart(e.touches[0].clientX);
-    };
-
-    const handleTouchEnd = (e: React.TouchEvent) => {
-      if (touchStart === null) return;
-
-      const touchEnd = e.changedTouches[0].clientX;
-      const distance = touchStart - touchEnd;
-
-      if (distance > 50) {
-        nextImage();
-      }
-
-      if (distance < -50) {
-        prevImage();
-      }
-
-      setTouchStart(null);
-    };
+  
   const defaultFeatures = [
     { icon: 'truck', title: 'شحن سريع', desc: '2-5 أيام' },
     { icon: 'shield', title: 'ضمان أصلي', desc: 'منتجات 100%' },
@@ -200,13 +180,31 @@ const ProductDetailPage = () => {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="lg:col-span-7 lg:sticky lg:top-24 lg:self-start">
               <div
                 className="relative bg-muted/30 rounded-3xl overflow-hidden aspect-square group touch-pan-y"
-                onTouchStart={handleTouchStart}
-                onTouchEnd={handleTouchEnd}
               >
                 <AnimatePresence mode="wait">
-                  <motion.img key={selectedImage} src={displayImages[selectedImage] || '/placeholder.svg'} alt={product.nameAr}
-                    initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.3 }}
-                    className="w-full h-full object-cover" draggable={false} />
+                  <motion.img
+                    key={selectedImage}
+                    src={displayImages[selectedImage] || '/placeholder.svg'}
+                    alt={product.nameAr}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
+                    className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
+                    draggable={false}
+                    drag="x"
+                    dragConstraints={{ left: 0, right: 0 }}
+                    dragElastic={0.2}
+                    onDragEnd={(e, info) => {
+                      if (info.offset.x < -50) {
+                        nextImage();
+                      }
+
+                      if (info.offset.x > 50) {
+                        prevImage();
+                      }
+                    }}
+                  />
                 </AnimatePresence>
 
                 {/* Nav arrows — subtle */}

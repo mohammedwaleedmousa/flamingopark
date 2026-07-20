@@ -38,6 +38,7 @@ interface Product {
   countries: string[];
   images: string[];
   sort_order: number;
+  color_variants?: any[];
 }
 
 const PAGE_SIZE = 25;
@@ -195,35 +196,47 @@ const AdminProductsPage = () => {
   const activeCount = products.filter(p => p.is_active).length;
   const inStockCount = products.filter(p => p.in_stock).length;
   const outOfStockCount = products.filter(p => !p.in_stock).length;
+  const getProductImage = (product: Product) => {
+    if (product.images?.length > 0) {
+      return product.images[0];
+    }
 
+    const variants = (product as any).color_variants;
+
+    if (Array.isArray(variants) && variants.length > 0) {
+      return variants[0]?.images?.[0] || "/placeholder.svg";
+    }
+
+    return "/placeholder.svg";
+  };
   return (
     <div className="max-w-[1600px] mx-auto space-y-8 px-6 py-4" dir="rtl">
       {/* Header */}
       <AdminPageHeader
-  category="الكتالوج"
-  title="إدارة المنتجات"
-  description={`تحكم في ${total.toLocaleString("ar-EG")} منتج • إدارة الأسعار والمخزون والحالة`}
-  actions={[
-    {
-      label: "إضافة منتج",
-      icon: Plus,
-      href: newProductHref,
-      variant: "primary",
-    },
-    {
-      label: "إدارة المخزون",
-      icon: Package,
-      href: "/admin/inventory",
-      variant: "outline",
-    },
-    {
-      label: "التقارير",
-      icon: BarChart3,
-      href: "/admin/analytics",
-      variant: "outline",
-    },
-  ]}
-/>
+        category="الكتالوج"
+        title="إدارة المنتجات"
+        description={`تحكم في ${total.toLocaleString("ar-EG")} منتج • إدارة الأسعار والمخزون والحالة`}
+        actions={[
+          {
+            label: "إضافة منتج",
+            icon: Plus,
+            href: newProductHref,
+            variant: "primary",
+          },
+          {
+            label: "إدارة المخزون",
+            icon: Package,
+            href: "/admin/inventory",
+            variant: "outline",
+          },
+          {
+            label: "التقارير",
+            icon: BarChart3,
+            href: "/admin/analytics",
+            variant: "outline",
+          },
+        ]}
+      />
 
       <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
         <div className="rounded-3xl border border-border/60 bg-background p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-lg">
@@ -359,7 +372,7 @@ const AdminProductsPage = () => {
                   onCheckedChange={() => toggleSelect(p.id)}
                   className="mt-1"
                 />
-                <img src={p.images?.[0] || "/placeholder.svg"} alt={p.name_ar} className="w-20 h-20 rounded-2xl border border-border object-cover shadow-sm" />
+                <img src={getProductImage(p)} alt={p.name_ar} className="w-20 h-20 rounded-2xl border border-border object-cover shadow-sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-heading text-sm truncate">{p.name_ar}</h3>
@@ -430,7 +443,7 @@ const AdminProductsPage = () => {
                     <td className="p-3"><Checkbox checked={selected.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} /></td>
                     <td className="p-3">
                       <div className="flex items-center gap-3">
-                        <img src={p.images?.[0] || "/placeholder.svg"} alt={p.name_ar} className="w-16 h-16 rounded-2xl border border-border object-cover shadow-sm shrink-0" />
+                        <img src={getProductImage(p)} alt={p.name_ar} className="w-16 h-16 rounded-2xl border border-border object-cover shadow-sm shrink-0" />
                         <div className="min-w-0">
                           <p className="font-semibold text-[15px] truncate max-w-[260px]">{p.name_ar}</p>
                           <p className="mt-1 text-[11px] text-muted-foreground truncate max-w-[260px]">{p.slug}</p>

@@ -55,7 +55,19 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
   };
 
   const aspectClass = size === 'large' ? 'aspect-[4/5] sm:aspect-[3/4]' : size === 'medium' ? 'aspect-[3/5] sm:aspect-[3/4]' : 'aspect-[4/8] sm:aspect-[3/4]';
+  const getProductImage = () => {
+    if (product.images?.length > 0) {
+      return product.images[0];
+    }
 
+    const variants = (product as any).color_variants;
+
+    if (Array.isArray(variants) && variants.length > 0) {
+      return variants[0]?.images?.[0] || "/placeholder.svg";
+    }
+
+    return "/placeholder.svg";
+  };
   return (
     <Link to={`/product/${product.slug}`} className="group block" dir="rtl">
 
@@ -76,7 +88,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
       <div className="relative flex-1 overflow-hidden bg-neutral-100 ">
 
         <img
-          src={product.images?.[0]}
+          src={getProductImage()}
           alt={product.nameAr}
           loading="lazy"
           className="

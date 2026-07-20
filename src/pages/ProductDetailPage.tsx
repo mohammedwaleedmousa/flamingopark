@@ -325,10 +325,31 @@ const ProductDetailPage = () => {
                   </div>
                   <div className="flex flex-wrap gap-3">
                     {product.colorVariants.map((cv, i) => (
-                      <button key={i} onClick={() => { setSelectedColorIdx(selectedColorIdx === i ? null : i); setSelectedImage(0); }}
-                        className={`relative w-10 h-10 rounded-full border-2 transition-all ${selectedColorIdx === i ? 'border-gold scale-110' : 'border-border hover:border-muted-foreground'}`}
-                        style={{ backgroundColor: cv.hex }} title={cv.name}>
-                        {selectedColorIdx === i && <Check className="absolute inset-0 m-auto w-4 h-4 text-white drop-shadow" />}
+                      <button
+                        key={i}
+                        onClick={() => {
+                          setSelectedColorIdx(selectedColorIdx === i ? null : i);
+                          setSelectedImage(0);
+                        }}
+                        className={`relative w-10 h-10 rounded-full border-2 transition-all ${
+                          selectedColorIdx === i
+                            ? 'border-gold scale-110'
+                            : 'border-border hover:border-muted-foreground'
+                        }`}
+                        style={
+                          cv.hex2
+                            ? {
+                                background: `linear-gradient(135deg, ${cv.hex} 50%, ${cv.hex2} 50%)`,
+                              }
+                            : {
+                                backgroundColor: cv.hex,
+                              }
+                        }
+                        title={cv.name}
+                      >
+                        {selectedColorIdx === i && (
+                          <Check className="absolute inset-0 m-auto w-4 h-4 text-white drop-shadow" />
+                        )}
                       </button>
                     ))}
                   </div>

@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
+import imageCompression from "browser-image-compression";
 import { Plus, Pencil, Trash2, Loader2, Upload, ArrowRight, Package } from "lucide-react";
 
 interface Section {
@@ -72,18 +73,59 @@ const AdminBrandSectionsPage = () => {
   };
 
   const upload = async (file: File) => {
-    setUploading(true);
-    try {
-      const ext = file.name.split(".").pop();
-      const path = `brands/section-${Date.now()}.${ext}`;
-      const { error } = await supabase.storage.from("uploads").upload(path, file);
-      if (error) throw error;
-      const { data } = supabase.storage.from("uploads").getPublicUrl(path);
-      setForm((f) => ({ ...f, image_url: data.publicUrl }));
-    } catch (e: any) {
-      toast({ title: "فشل الرفع", description: e.message, variant: "destructive" });
-    } finally { setUploading(false); }
-  };
+  setUploading(true);
+
+  try {
+    if (!file.type.startsWith("image/")) {
+      throw new Error("الملف المختار ليس صورة");
+    }
+
+    console.log("Image:", file.type, file.size);
+
+    const compressedFile = await imageCompression(file, {
+      maxSizeMB: 0.3,
+      maxWidthOrHeight: 1200,
+      useWebWorker: true,
+    });
+
+    const path = `brands/section-${Date.now()}.webp`;
+
+    const { error } = await supabase.storage
+      .from("uploads")
+      .upload(path, compressedFile, {
+        cacheControl: "3600",
+        upsert: false,
+        contentType: "image/webp",
+      });
+
+    if (error) throw error;
+
+    const { data } = supabase.storage
+      .from("uploads")
+      .getPublicUrl(path);
+
+    setForm((f) => ({
+      ...f,
+      image_url: data.publicUrl,
+    }));
+
+    toast({
+      title: "تم رفع الصورة",
+    });
+
+  } catch (e: any) {
+    console.error("UPLOAD ERROR:", e);
+
+    toast({
+      title: "فشل الرفع",
+      description: e.message,
+      variant: "destructive",
+    });
+
+  } finally {
+    setUploading(false);
+  }
+};
 
   const save = useMutation({
   mutationFn: async () => {
@@ -288,7 +330,7 @@ const AdminBrandSectionsPage = () => {
     )}
 
     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-      <DialogContent className="max-w-xl rounded-3xl" dir="rtl">
+      <DialogContent className="max-w-xl rounded-3xl max-h-[90vh] overflow-y-auto" dir="rtl">
         <DialogHeader>
           <DialogTitle className="font-heading text-xl">
             {editing ? "تعديل القسم" : "إضافة قسم جديد"}
@@ -319,12 +361,20 @@ const AdminBrandSectionsPage = () => {
               <img src={form.image_url} alt="" className="w-full h-48 object-cover rounded-2xl"/>
             )}
 
-            <label className="h-12 rounded-xl border border-border flex items-center justify-center gap-2 cursor-pointer hover:border-pink-400 transition">
+            <label className="h-12 rounded-xl border border-border flex items-center justify-center gap-2 cursor-pointer hover:border-pink-400 transition relative">
               {uploading ? <Loader2 className="w-5 h-5 animate-spin"/> : <Upload className="w-5 h-5"/>}
               {uploading ? "جاري الرفع..." : "رفع صورة"}
 
-              <input type="file" accept="image/*" className="hidden" onChange={(e)=>e.target.files?.[0] && upload(e.target.files[0])}/>
-            </label>
+                <input
+                  type="file"
+                  accept="image/jpeg,image/png,image/webp"
+                  className="hidden"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) upload(file);
+                  }}
+                />          
+              </label>
           </div>
 
           <div className="grid grid-cols-2 gap-4">
@@ -340,7 +390,11 @@ const AdminBrandSectionsPage = () => {
           </div>
 
           <div className="flex gap-3 pt-4 border-t border-border">
-            <Button className="flex-1 h-12 rounded-xl" onClick={()=>save.mutate()} disabled={save.isPending}>
+            <Button 
+              className="flex-1 h-12 rounded-xl" 
+              onClick={()=>save.mutate()} 
+              disabled={save.isPending || uploading}
+            >
               {save.isPending && <Loader2 className="w-4 h-4 animate-spin ml-2"/>}
               حفظ
             </Button>

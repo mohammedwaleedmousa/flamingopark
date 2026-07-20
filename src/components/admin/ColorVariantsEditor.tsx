@@ -8,6 +8,7 @@ import { Loader2, Plus, Trash2, Upload, X } from 'lucide-react';
 export interface ColorVariant {
   name: string;
   hex: string;
+  hex2?: string;
   images: string[];
 }
 
@@ -17,7 +18,7 @@ interface Props {
 }
 
 const ColorVariantsEditor = ({ value, onChange }: Props) => {
-  const [newColor, setNewColor] = useState({ name: '', hex: '#F4A6B8' });
+  const [newColor, setNewColor] = useState({ name: '', hex: '#F4A6B8', hex2: '', dual: false });
   const [uploading, setUploading] = useState<number | null>(null);
 
   const addColor = () => {
@@ -25,17 +26,31 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
       toast({ title: 'اسم اللون مطلوب', variant: 'destructive' });
       return;
     }
-    onChange([...value, { name: newColor.name.trim(), hex: newColor.hex, images: [] }]);
-    setNewColor({ name: '', hex: '#F4A6B8' });
+    onChange([
+      ...value,
+      {
+        name: newColor.name.trim(),
+        hex: newColor.hex,
+        hex2: newColor.dual && newColor.hex2 ? newColor.hex2 : undefined,
+        images: [],
+      },
+    ]);
+    setNewColor({ name: '', hex: '#F4A6B8', hex2: '', dual: false });
   };
 
   const removeColor = (i: number) => onChange(value.filter((_, idx) => idx !== i));
 
   const uploadImage = async (colorIdx: number, file: File) => {
+    if (!value[colorIdx]?.name) {
+      toast({ title: 'حدد اسم اللون أولاً', variant: 'destructive' });
+      return;
+    }
     setUploading(colorIdx);
     try {
       const fileName = `color-variants/${Date.now()}-${file.name.replace(/[^\w.\-]/g, '_')}`;
-      const { error } = await supabase.storage.from('uploads').upload(fileName, file);
+      const { error } = await supabase.storage
+        .from('uploads')
+        .upload(fileName, file, { upsert: true, contentType: file.type, cacheControl: '3600' });
       if (error) throw error;
       const { data } = supabase.storage.from('uploads').getPublicUrl(fileName);
       const next = [...value];
@@ -63,7 +78,7 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
         </p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto] gap-3 items-end">
+      <div className="grid grid-cols-1 md:grid-cols-[1fr_auto_auto_auto_auto] gap-3 items-end">
         <div>
           <label className="block text-xs text-muted-foreground mb-1">اسم اللون</label>
           <Input
@@ -74,7 +89,7 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
           />
         </div>
         <div>
-          <label className="block text-xs text-muted-foreground mb-1">اللون</label>
+          <label className="block text-xs text-muted-foreground mb-1">اللون 1</label>
           <input
             type="color"
             value={newColor.hex}
@@ -82,6 +97,25 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
             className="h-10 w-16 rounded border border-input cursor-pointer"
           />
         </div>
+        <label className="flex items-center gap-2 text-xs text-muted-foreground pb-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={newColor.dual}
+            onChange={(e) => setNewColor((p) => ({ ...p, dual: e.target.checked }))}
+          />
+          لونان
+        </label>
+        {newColor.dual && (
+          <div>
+            <label className="block text-xs text-muted-foreground mb-1">اللون 2</label>
+            <input
+              type="color"
+              value={newColor.hex2 || '#000000'}
+              onChange={(e) => setNewColor((p) => ({ ...p, hex2: e.target.value }))}
+              className="h-10 w-16 rounded border border-input cursor-pointer"
+            />
+          </div>
+        )}
         <Button type="button" onClick={addColor}>
           <Plus className="w-4 h-4 ml-1" /> إضافة لون
         </Button>
@@ -98,11 +132,17 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
               <div className="flex items-center gap-3 mb-3">
                 <span
                   className="w-8 h-8 rounded-full border-2 border-white shadow"
-                  style={{ backgroundColor: c.hex }}
+                  style={
+                    c.hex2
+                      ? { background: `linear-gradient(135deg, ${c.hex} 50%, ${c.hex2} 50%)` }
+                      : { backgroundColor: c.hex }
+                  }
                 />
                 <div className="flex-1">
                   <p className="font-medium text-sm">{c.name}</p>
-                  <p className="text-xs text-muted-foreground font-mono">{c.hex}</p>
+                  <p className="text-xs text-muted-foreground font-mono">
+                    {c.hex}{c.hex2 ? ` / ${c.hex2}` : ''}
+                  </p>
                 </div>
                 <button
                   type="button"

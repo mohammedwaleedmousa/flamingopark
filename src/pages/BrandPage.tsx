@@ -83,49 +83,27 @@ const BrandPage = () => {
   queryKey: ["brand-products", brand?.id],
   enabled: !!brand?.id,
   queryFn: async () => {
-
-    const { data: relations, error: relError } = await (supabase as any)
-      .from("brand_section_products")
-      .select(`
-        product_id
-      `);
-
-    if (relError) throw relError;
-
-
-    const productIds = relations?.map(
-      (r: any) => r.product_id
-    ) || [];
-
-
-    if(productIds.length === 0) return [];
-
-
-    const { data, error } = await supabase
+    // Fetch products belonging to this brand only (via brand_id or brand name fallback)
+    const { data, error } = await (supabase as any)
       .from("products")
       .select("*")
-      .in("id", productIds)
+      .or(`brand_id.eq.${brand!.id},brand.eq.${brand!.name}`)
       .eq("is_active", true)
-      .order("created_at", { ascending:false });
-
-
-    if(error) throw error;
-
-
+      .order("created_at", { ascending: false });
+    if (error) throw error;
     return (data || []).map(mapProduct);
   },
 });
 const { data: sectionProducts = [] } = useQuery({
   queryKey: ["brand-section-relations", brand?.id],
-  enabled: !!brand?.id,
+  enabled: !!brand?.id && !!sections.length,
   queryFn: async () => {
-
+    const ids = sections.map((s) => s.id);
     const { data, error } = await (supabase as any)
       .from("brand_section_products")
-      .select("section_id, product_id");
-
+      .select("section_id, product_id")
+      .in("section_id", ids);
     if (error) throw error;
-
     return data || [];
   },
 });

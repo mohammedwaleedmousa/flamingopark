@@ -64,7 +64,7 @@ const BrandSectionPage = () => {
   enabled: !!section?.id,
   queryFn: async () => {
 
-    const { data, error } = await supabase
+    const { data, error } = await (supabase as any)
       .from("brand_section_products")
       .select(`
         product_id,

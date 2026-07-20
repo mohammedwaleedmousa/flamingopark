@@ -202,7 +202,7 @@ const AdminBrandsPage = () => {
 
     const { error: uploadError } = await supabase.storage
       .from('uploads')
-      .upload(fileName, file);
+      .upload(fileName, file, { upsert: true, contentType: file.type, cacheControl: '3600' });
 
     if (uploadError) {
       toast({ title: 'خطأ في رفع الصورة', variant: 'destructive' });
@@ -459,9 +459,9 @@ const AdminBrandsPage = () => {
                         className="hidden"
                         onChange={handleUpload}
                       />
-                      <Button type="button" variant="outline" size="icon" disabled={uploading}>
+                      <span className="inline-flex items-center justify-center h-10 w-10 rounded-md border border-input bg-background hover:bg-muted transition">
                         {uploading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                      </Button>
+                      </span>
                     </label>
                   </div>
                   {formData.logo_url && (

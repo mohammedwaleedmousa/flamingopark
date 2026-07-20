@@ -102,28 +102,10 @@ const AdminBrandSectionsPage = () => {
         const { error } = await (supabase as any).from("brand_sections").update(payload).eq("id", editing.id);
         if (error) throw error;
             } else {
-        const { data: newSection, error } = await (supabase as any)
+        const { error } = await (supabase as any)
           .from("brand_sections")
-          .insert(payload)
-          .select()
-          .single();
-
+          .insert(payload);
         if (error) throw error;
-
-
-        // إنشاء صفحة خاصة بالقسم
-        const { error: pageError } = await (supabase as any)
-          .from("brand_section_pages")
-          .insert({
-            section_id: newSection.id,
-            title: newSection.name,
-            slug: newSection.slug,
-            description: newSection.description,
-            banner_url: newSection.image_url,
-            is_active: true
-          });
-
-        if (pageError) throw pageError;
       }
     },
     onSuccess: () => {

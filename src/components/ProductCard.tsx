@@ -171,7 +171,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
 
           <span className="
             text-[10px]
-            tracking-[0.4em]
+            tracking-[0.02em]
             uppercase
             text-neutral-500
           ">

@@ -435,11 +435,23 @@ const ProductDetailPage = () => {
                     className="w-full flex items-center justify-between px-6 py-4 text-right hover:bg-muted/40 transition"
                   >
                     <span className="font-heading text-lg">سياسة الإرجاع والاستبدال</span>
-                    <ChevronDown className={`w-5 h-5 transition-transform ${openSection === 'return' ? 'rotate-180' : ''}`} />
+
+                    <ChevronDown
+                      className={`w-5 h-5 transition-transform ${
+                        openSection === 'return' ? 'rotate-180' : ''
+                      }`}
+                    />
                   </button>
+
                   {openSection === 'return' && (
-                    <div className="px-6 pb-5 border-t border-border pt-4">
-                      <p className="text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap">{effectiveReturnPolicy}</p>
+                    <div className="px-6 pb-5 text-sm text-muted-foreground leading-8">
+                      <p>
+                        يمكنك إرجاع هذا المنتج خلال 10 أيام في عدن.
+                      </p>
+
+                      <p>
+                        يمكنك إرجاع هذا المنتج خلال 20 أيام في بقية المحافظات.
+                      </p>
                     </div>
                   )}
                 </div>

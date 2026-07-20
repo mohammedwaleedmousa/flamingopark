@@ -1303,18 +1303,6 @@ const AdminProductFormPage = () => {
           )}
         </div>
 
-        {/* Return Policy */}
-        <div className="bg-card border border-border rounded-xl p-6 space-y-3">
-          <h2 className="text-lg font-heading">سياسة الإرجاع الخاصة بهذا المنتج</h2>
-          <p className="text-xs text-muted-foreground">اتركه فارغاً لاستخدام السياسة الافتراضية للموقع.</p>
-          <Textarea
-            rows={4}
-            value={formData.return_policy}
-            onChange={(e) => setFormData({ ...formData, return_policy: e.target.value })}
-            placeholder="مثال: يمكنك إرجاع هذا المنتج خلال 7 أيام..."
-          />
-        </div>
-
         {/* Quality Variants */}
         <div className="bg-card border border-border rounded-xl p-6 space-y-4">
           <div className="flex items-center justify-between">

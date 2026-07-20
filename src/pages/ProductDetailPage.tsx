@@ -377,30 +377,9 @@ const ProductDetailPage = () => {
                 </Button>
               </div>
 
-              {/* Features — clean minimal */}
-              <div className="grid grid-cols-3 gap-3 pt-6 border-t border-border">
-                {features.map((f, i) => {
-                  const Icon = getFeatureIcon(f.icon);
-                  return (
-                    <div key={i} className="text-center space-y-2">
-                      <Icon className="w-5 h-5 mx-auto text-gold" />
-                      <p className="text-xs font-medium">{f.title}</p>
-                      <p className="text-[10px] text-muted-foreground">{f.desc}</p>
-                    </div>
-                  );
-                })}
-              </div>
+              
             </motion.div>
           </div>
-
-          {/* Long description — dedicated section, Apple-clean */}
-          {effectiveDescription && effectiveDescription.length > 100 && (
-            <section className="mt-24 max-w-3xl mx-auto text-center space-y-6">
-              <p className="text-[10px] tracking-[0.2em] uppercase text-muted-foreground">التفاصيل</p>
-              <h2 className="font-heading text-3xl md:text-4xl">قصة هذا المنتج</h2>
-              <p className="text-base text-muted-foreground leading-loose whitespace-pre-wrap">{effectiveDescription}</p>
-            </section>
-          )}
 
           {/* Specifications + Return Policy — collapsible */}
           {((product.specs && product.specs.length > 0) || effectiveReturnPolicy) && (
@@ -429,33 +408,33 @@ const ProductDetailPage = () => {
                 </div>
               )}
               <div className="border border-border rounded-2xl overflow-hidden">
-  <button
-    onClick={() => setOpenSection(openSection === 'delivery' ? null : 'delivery')}
-    className="w-full flex items-center justify-between px-6 py-4 text-right hover:bg-muted/40 transition"
-  >
-    <span className="font-heading text-lg">
-      التوصيل
-    </span>
+                <button
+                  onClick={() => setOpenSection(openSection === 'delivery' ? null : 'delivery')}
+                  className="w-full flex items-center justify-between px-6 py-4 text-right hover:bg-muted/40 transition"
+                >
+                  <span className="font-heading text-lg">
+                    التوصيل
+                  </span>
 
-    <ChevronDown
-      className={`w-5 h-5 transition-transform ${
-        openSection === 'delivery' ? 'rotate-180' : ''
-      }`}
-    />
-  </button>
+                  <ChevronDown
+                    className={`w-5 h-5 transition-transform ${
+                      openSection === 'delivery' ? 'rotate-180' : ''
+                    }`}
+                  />
+                </button>
 
-  {openSection === 'delivery' && (
-    <div className="px-6 pb-5 text-sm text-muted-foreground leading-8">
-      <p>
-        التوصيل داخل عدن يتم في نفس اليوم.
-      </p>
+                {openSection === 'delivery' && (
+                  <div className="px-6 pb-5 text-sm text-muted-foreground leading-8">
+                    <p>
+                      التوصيل داخل عدن يتم في نفس اليوم.
+                    </p>
 
-      <p>
-        التوصيل إلى بقية المحافظات يستغرق من 2 - 7 أيام حسب إجراءات الجمارك.
-      </p>
-    </div>
-  )}
-</div>
+                    <p>
+                      التوصيل إلى بقية المحافظات يستغرق من 2 - 7 أيام حسب إجراءات الجمارك.
+                    </p>
+                  </div>
+                )}
+              </div>
               {effectiveReturnPolicy && (
                 <div className="border border-border rounded-2xl overflow-hidden">
                   <button

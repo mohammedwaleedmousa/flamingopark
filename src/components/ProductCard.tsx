@@ -1,11 +1,11 @@
 import { Link } from "react-router-dom";
 import { useState } from "react";
-import { Heart } from "lucide-react";
 import { motion } from "framer-motion";
 import { Product, useStore } from "@/store/useStore";
 import { toast } from "@/hooks/use-toast";
 import { useCurrency } from "@/lib/currency";
 import { useFavorites } from "@/hooks/useFavorites";
+import { Heart, ShoppingBag } from "lucide-react";
 
 interface ProductCardProps {
   product: Product;
@@ -21,8 +21,6 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
   const { format } = useCurrency();
   const [bagPop, setBagPop] = useState(false);
   const [heartBeat, setHeartBeat] = useState(false);
-  const hasSecondImage = (product.images?.length ?? 0) > 1;
-  const [hovered, setHovered] = useState(false);
   const isLiked = isFavorite(product.id);
 
   const handleFavorite = (e: React.MouseEvent) => {
@@ -62,8 +60,6 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
     <Link to={`/product/${product.slug}`} className="group block" dir="rtl">
 
       <div
-        onMouseEnter={() => setHovered(true)}
-        onMouseLeave={() => setHovered(false)}
         className={`relative ${aspectClass}
           bg-white
           border border-pink-100/10
@@ -80,7 +76,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
       <div className="relative flex-1 overflow-hidden bg-neutral-100 ">
 
         <img
-          src={hovered && hasSecondImage ? product.images?.[1] : product.images?.[0]}
+          src={product.images?.[0]}
           alt={product.nameAr}
           loading="lazy"
           className="
@@ -89,7 +85,6 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
             group-hover:scale-105
           "
         />
-
         {/* quick-action buttons */}
         <div className="absolute top-3 left-3 flex flex-col gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
           <motion.button
@@ -189,22 +184,20 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
             transition={{ duration: 0.45 }}
             whileTap={{ scale: 0.96 }}
             className="
-              px-4 py-2
+              w-10 h-10
 
               rounded-full
               bg-gradient-to-r from-pink-500 to-rose-400
               text-white
 
-              text-[10px]
-              tracking-[0.35em]
-              uppercase
+              flex items-center justify-center
 
               shadow-[0_10px_25px_-10px_rgba(255,105,180,0.5)]
 
               transition
             "
           >
-            أضف للسلة
+            <ShoppingBag className="w-5 h-5" />
           </motion.button>
 
         </div>

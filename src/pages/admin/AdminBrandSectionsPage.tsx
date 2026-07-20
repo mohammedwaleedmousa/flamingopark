@@ -76,25 +76,52 @@ const AdminBrandSectionsPage = () => {
   setUploading(true);
 
   try {
-    if (!file.type.startsWith("image/")) {
-      throw new Error("الملف المختار ليس صورة");
+    // إنشاء نسخة صورة من الملف
+    const imageBitmap = await createImageBitmap(file);
+
+    // ضغط الصورة
+    const canvas = document.createElement("canvas");
+
+    const maxSize = 1200;
+    let width = imageBitmap.width;
+    let height = imageBitmap.height;
+
+    if (width > height && width > maxSize) {
+      height = (height * maxSize) / width;
+      width = maxSize;
+    } else if (height > maxSize) {
+      width = (width * maxSize) / height;
+      height = maxSize;
     }
 
-    console.log("Image:", file.type, file.size);
+    canvas.width = width;
+    canvas.height = height;
 
-    const compressedFile = await imageCompression(file, {
-      maxSizeMB: 0.3,
-      maxWidthOrHeight: 1200,
-      useWebWorker: true,
-    });
+    const ctx = canvas.getContext("2d");
+    ctx?.drawImage(imageBitmap, 0, 0, width, height);
 
-    const path = `brands/section-${Date.now()}.webp`;
+    const blob = await new Promise<Blob>((resolve) =>
+      canvas.toBlob(
+        (b) => resolve(b as Blob),
+        "image/webp",
+        0.8
+      )
+    );
+
+    const compressedFile = new File(
+      [blob],
+      `section-${Date.now()}.webp`,
+      {
+        type: "image/webp",
+      }
+    );
+
+    const path = `brands/${compressedFile.name}`;
 
     const { error } = await supabase.storage
       .from("uploads")
       .upload(path, compressedFile, {
-        cacheControl: "3600",
-        upsert: false,
+        cacheControl: "31536000",
         contentType: "image/webp",
       });
 
@@ -117,7 +144,7 @@ const AdminBrandSectionsPage = () => {
     console.error("UPLOAD ERROR:", e);
 
     toast({
-      title: "فشل الرفع",
+      title: "فشل رفع الصورة",
       description: e.message,
       variant: "destructive",
     });
@@ -367,7 +394,7 @@ const AdminBrandSectionsPage = () => {
 
                 <input
                   type="file"
-                  accept="image/*"
+                  accept="image/*,.heic"
                   className="hidden"
                   onChange={(e) => {
                     const file = e.target.files?.[0];

@@ -428,6 +428,34 @@ const ProductDetailPage = () => {
                   )}
                 </div>
               )}
+              <div className="border border-border rounded-2xl overflow-hidden">
+  <button
+    onClick={() => setOpenSection(openSection === 'delivery' ? null : 'delivery')}
+    className="w-full flex items-center justify-between px-6 py-4 text-right hover:bg-muted/40 transition"
+  >
+    <span className="font-heading text-lg">
+      التوصيل
+    </span>
+
+    <ChevronDown
+      className={`w-5 h-5 transition-transform ${
+        openSection === 'delivery' ? 'rotate-180' : ''
+      }`}
+    />
+  </button>
+
+  {openSection === 'delivery' && (
+    <div className="px-6 pb-5 text-sm text-muted-foreground leading-8">
+      <p>
+        التوصيل داخل عدن يتم في نفس اليوم.
+      </p>
+
+      <p>
+        التوصيل إلى بقية المحافظات يستغرق من 2 - 7 أيام حسب إجراءات الجمارك.
+      </p>
+    </div>
+  )}
+</div>
               {effectiveReturnPolicy && (
                 <div className="border border-border rounded-2xl overflow-hidden">
                   <button

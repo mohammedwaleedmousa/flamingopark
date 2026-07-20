@@ -231,11 +231,41 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
                 />
 
                 <div className="flex-1">
-                  <p className="font-semibold text-sm">{c.name}</p>
-                  <p className="text-xs text-muted-foreground font-mono">
-                    {c.hex}
-                    {c.hex2 && ` / ${c.hex2}`}
-                  </p>
+                  <div className="flex-1 space-y-2">
+  <Input
+    value={c.name}
+    onChange={(e) => {
+      const next = [...value];
+      next[ci].name = e.target.value;
+      onChange(next);
+    }}
+    className="h-9"
+  />
+
+  <div className="flex gap-2 items-center">
+    <input
+      type="color"
+      value={c.hex}
+      onChange={(e) => {
+        const next = [...value];
+        next[ci].hex = e.target.value;
+        onChange(next);
+      }}
+      className="h-9 w-12"
+    />
+
+    <input
+      type="color"
+      value={c.hex2 || "#000000"}
+      onChange={(e) => {
+        const next = [...value];
+        next[ci].hex2 = e.target.value;
+        onChange(next);
+      }}
+      className="h-9 w-12"
+    />
+  </div>
+</div>
                 </div>
 
                 <button

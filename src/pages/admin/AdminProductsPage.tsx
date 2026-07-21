@@ -28,6 +28,7 @@ interface DbProduct {
   name_ar: string;
   slug: string;
   price: number;
+  cost_price: number | null;
   original_price: number | null;
   discount: number | null;
   description: string;
@@ -37,15 +38,17 @@ interface DbProduct {
   brand: string;
   in_stock: boolean;
   countries: string[];
+  is_active: boolean;
   is_featured: boolean;
   is_best_seller: boolean;
   color_variants?: any[];
+  sort_order: number | null;
 }
 
 const PAGE_SIZE = 25;
 
 const AdminProductsPage = () => {
-  const [products, setProducts] = useState<Product[]>([]);
+  const [products, setProducts] = useState<DbProduct[]>([]);
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState({
     active: 0,
@@ -81,7 +84,10 @@ const AdminProductsPage = () => {
 
     let q = supabase
       .from("products")
-      .select("id,name,name_ar,slug,price,cost_price,discount,category,brand,in_stock,is_active,countries,images,sort_order", { count: "exact" });
+      .select(
+        "id,name,name_ar,slug,price,cost_price,discount,category,brand,in_stock,is_active,countries,images,sort_order",
+        { count: "exact" }
+      );
 
     if (search.trim()) {
       const term = `%${search.trim()}%`;
@@ -101,7 +107,7 @@ const AdminProductsPage = () => {
     if (error) {
       toast({ title: "خطأ", description: "فشل في تحميل المنتجات", variant: "destructive" });
     } else {
-      setProducts((data || []) as Product[]);
+      setProducts((data || []) as DbProduct[]);
       setTotal(count || 0);
     }
     setIsLoading(false);
@@ -189,15 +195,12 @@ const AdminProductsPage = () => {
     [products, selected]
   );
 
-  const formatPrice = (p: Product) => `${p.price} ر.ي`;
+  const formatPrice = (p: DbProduct) => `${p.price} ر.ي`;
 
   const newProductHref = "/admin/products/new";
 
   // KPI calculations
-  const activeCount = products.filter(p => p.is_active).length;
-  const inStockCount = products.filter(p => p.in_stock).length;
-  const outOfStockCount = products.filter(p => !p.in_stock).length;
-  const getProductImage = (product: Product) => {
+  const getProductImage = (product: DbProduct) => {
     if (product.images?.length > 0) {
       return product.images[0];
     }
@@ -384,7 +387,7 @@ const AdminProductsPage = () => {
                   <p className="text-xs text-muted-foreground mt-0.5">{p.category}</p>
                   <div className="flex items-center gap-2 mt-1">
                     <span className="font-heading text-primary text-sm">{formatPrice(p)}</span>
-                    {p.discount > 0 && (
+                    {(p.discount ?? 0) > 0 && (
                       <span className="text-[10px] bg-destructive/10 text-destructive px-1.5 rounded">-{p.discount}%</span>
                     )}
                     <div className="text-[10px] text-muted-foreground ml-auto">المتجر الموحد</div>
@@ -454,7 +457,7 @@ const AdminProductsPage = () => {
                     <td className="p-3 text-sm">{p.category || "-"}</td>
                     <td className="p-3">
                       <span className="font-heading text-primary text-sm">{formatPrice(p)}</span>
-                      {p.discount > 0 && (
+                      {(p.discount ?? 0) > 0 && (
                         <span className="block text-[10px] text-destructive mt-0.5">-{p.discount}%</span>
                       )}
                     </td>

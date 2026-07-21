@@ -145,7 +145,7 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
       let dbNotifs: CustomerNotification[] = [];
       try {
         const filters: string[] = ["broadcast.eq.true"];
-        if (userId) filters.push(`user_id.eq.${userId}`);
+        if (userId) filters.push(`customer_id.eq.${userId}`);
         if (userPhone) filters.push(`customer_phone.eq.${userPhone}`);
 
         const { data: notifRows } = await (supabase as any)

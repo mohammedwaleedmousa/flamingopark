@@ -87,6 +87,7 @@ const AdminCustomerNotificationsPage = () => {
         rows = [{
           title: title.trim(),
           message: body.trim(),
+          body: body.trim(),
           type,
           link: link.trim() || null,
           broadcast: true,
@@ -98,6 +99,7 @@ const AdminCustomerNotificationsPage = () => {
         rows = [{
           title: title.trim(),
           message: body.trim(),
+          body: body.trim(),
           type,
           link: link.trim() || null,
           broadcast: false,

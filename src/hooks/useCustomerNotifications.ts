@@ -67,17 +67,28 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
   const { enableToasts = false } = options;
   const [userId, setUserId] = useState<string>("");
   const [userPhone, setUserPhone] = useState<string>("");
+  const [customerId, setCustomerId] = useState<string>("");
   const readIdsRef = useRef<Set<string>>(readLocalSet(READ_KEY));
   const deletedIdsRef = useRef<Set<string>>(readLocalSet(DELETED_KEY));
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getUser().then(({ data }) => {
+    supabase.auth.getUser().then(async ({ data }) => {
       if (!mounted) return;
       const uid = String(data.user?.id || "").trim();
       const phone = String(data.user?.user_metadata?.phone_number || "").trim();
       setUserId(uid);
       setUserPhone(phone);
+      if (phone) {
+        const { data: customer } = await supabase
+          .from("customers")
+          .select("id")
+          .eq("phone", phone)
+          .maybeSingle();
+        if (customer) {
+          setCustomerId(customer.id);
+        }
+      }
     });
 
     const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
@@ -94,8 +105,8 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
   }, []);
 
   const notificationsQuery = useQuery({
-    queryKey: ["customer-notifications", userId, userPhone],
-    enabled: !!(userId || userPhone),
+    queryKey: ["customer-notifications", userId, userPhone, customerId],
+    enabled: !!(customerId || userPhone),
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
     refetchOnMount: "always",
@@ -145,12 +156,16 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
       let dbNotifs: CustomerNotification[] = [];
       try {
         const filters: string[] = ["broadcast.eq.true"];
-        if (userId) filters.push(`customer_id.eq.${userId}`);
-        if (userPhone) filters.push(`customer_phone.eq.${userPhone}`);
+          if (customerId) {
+            filters.push(`customer_id.eq.${customerId}`);
+          }
+          if (userPhone) {
+            filters.push(`customer_phone.eq.${userPhone}`);
+          }
 
         const { data: notifRows } = await (supabase as any)
           .from("customer_notifications")
-          .select("id, title, body, type, link, is_read, created_at")
+          .select("id, title, message, body, type, link, is_read, created_at")
           .or(filters.join(","))
           .order("created_at", { ascending: false })
           .limit(50);
@@ -161,7 +176,7 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
             id: String(r.id),
             type: (r.type === "order" ? "order" : "system") as NotificationType,
             title: String(r.title || ""),
-            message: String(r.body || ""),
+            message: String(r.message || r.body || ""),
             timestamp: String(r.created_at),
             read: Boolean(r.is_read) || readIdsRef.current.has(String(r.id)),
             actionUrl: r.link || undefined,

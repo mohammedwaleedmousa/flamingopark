@@ -230,10 +230,7 @@ const AdminProductFormPage = () => {
         is_best_seller: data.is_best_seller ?? false,
         is_active: data.is_active ?? true,
         countries: data.countries || [SINGLE_COUNTRY],
-        images:
-  data.images?.length > 0
-    ? data.images
-    : ((data as any).color_variants?.[0]?.images || []),
+        images: ((data as any).color_variants?.[0]?.images || []),
         section_ids: (data as any).section_ids || [],
         has_sizes: (data as any).has_sizes ?? false,
         sizes: (data as any).sizes || [],
@@ -332,13 +329,21 @@ const AdminProductFormPage = () => {
     const uploadedUrls = await Promise.all(uploadPromises);
 
 
-    setFormData(prev => ({
-      ...prev,
-      images: [
-        ...prev.images,
-        ...uploadedUrls
-      ],
-    }));
+    setFormData(prev => {
+      const colors = [...prev.color_variants];
+      if (!colors[0]) return prev;
+      colors[0] = {
+        ...colors[0],
+        images: [
+          ...(colors[0].images || []),
+          ...uploadedUrls,
+        ],
+      };
+      return {
+        ...prev,
+        color_variants: colors,
+      };
+    });
 
 
     toast({
@@ -365,10 +370,18 @@ const AdminProductFormPage = () => {
 };
 
   const removeImage = (index: number) => {
-    setFormData(prev => ({
-      ...prev,
-      images: prev.images.filter((_, i) => i !== index),
-    }));
+    setFormData(prev => {
+      const colors = [...prev.color_variants];
+      if (!colors[0]) return prev;
+      colors[0] = {
+        ...colors[0],
+        images: colors[0].images.filter((_, i) => i !== index),
+      };
+      return {
+        ...prev,
+        color_variants: colors,
+      };
+    });
   };
 
   const moveImage = (fromIndex: number, toIndex: number) => {
@@ -423,7 +436,6 @@ const AdminProductFormPage = () => {
       is_best_seller: formData.is_best_seller,
       is_active: formData.is_active,
       countries: formData.countries,
-      images: formData.images,
       section_ids: formData.section_ids,
       has_sizes: formData.has_sizes,
       sizes: formData.sizes,
@@ -704,7 +716,7 @@ const AdminProductFormPage = () => {
           </div>
           
           <div className="flex flex-wrap gap-4">
-            {formData.images.map((img, index) => (
+            {formData.color_variants[0]?.images?.map((img, index) => (
               <div 
                 key={img} 
                 className={`relative w-24 h-24 group overflow-hidden ${index === 0 ? 'ring-2 ring-gold ring-offset-2 ring-offset-background' : ''}`}

@@ -534,7 +534,7 @@ const CheckoutPage = () => {
                             const accTotal = item.selectedAccessories?.reduce((s, a) => s + a.price * a.quantity, 0) || 0;
                             return (
                               <div key={i} className="flex gap-3 items-center">
-                                <img src={item.product.images?.[0] || "/placeholder.svg"} alt="" className="w-12 h-12 object-cover rounded border" />
+                                <img loading="lazy" src={item.product.images?.[0] || "/placeholder.svg"} alt="" className="w-12 h-12 object-cover rounded border" />
                                 <div className="flex-1 min-w-0"><p className="text-sm truncate">{item.product.nameAr}</p><p className="text-xs text-muted-foreground">{item.quantity} × {price.toFixed(0)}</p></div>
                                 <span className="text-sm text-gold font-medium">{((price + accTotal) * item.quantity).toFixed(0)}</span>
                               </div>
@@ -575,7 +575,7 @@ const CheckoutPage = () => {
                     const accTotal = item.selectedAccessories?.reduce((s, a) => s + a.price * a.quantity, 0) || 0;
                     return (
                       <div key={i} className="flex gap-2 items-start text-xs">
-                        <img src={item.product.images?.[0] || "/placeholder.svg"} alt="" className="w-10 h-10 object-cover rounded border" />
+                        <img loading="lazy" src={item.product.images?.[0] || "/placeholder.svg"} alt="" className="w-10 h-10 object-cover rounded border" />
                         <div className="flex-1 min-w-0"><p className="truncate">{item.product.nameAr}</p><p className="text-muted-foreground">{item.quantity}×</p></div>
                         <span className="text-gold font-medium">{((price + accTotal) * item.quantity).toFixed(0)}</span>
                       </div>

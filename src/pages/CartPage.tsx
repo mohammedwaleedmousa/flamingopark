@@ -123,6 +123,7 @@ const CartPage = () => {
                               <img
                                 src={(variant && variant.images && variant.images[0]) || item.product.images[0]}
                                 alt={item.product.nameAr}
+                                loading="lazy"
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                               />
                             )}

@@ -174,6 +174,7 @@ const AdminSidebar = () => {
   <img
     src="/icons/flamingo.jpeg"
     alt="logo"
+    loading="lazy"
     className="w-20 h-20 object-contain transition-all duration-500 ease-in-out
     hover:scale-105"
   />

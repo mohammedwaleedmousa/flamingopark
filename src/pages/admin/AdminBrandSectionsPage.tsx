@@ -271,7 +271,7 @@ const AdminBrandSectionsPage = () => {
 
             <div className="relative h-56 bg-muted overflow-hidden">
               {s.image_url ? (
-                <img src={s.image_url} alt={s.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
+                <img loading="lazy" src={s.image_url} alt={s.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"/>
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground">
                   <Package className="w-12 h-12 opacity-30"/>
@@ -385,7 +385,7 @@ const AdminBrandSectionsPage = () => {
             <Label>الصورة</Label>
 
             {form.image_url && (
-              <img src={form.image_url} alt="" className="w-full h-48 object-cover rounded-2xl"/>
+              <img loading="lazy" src={form.image_url} alt="" className="w-full h-48 object-cover rounded-2xl"/>
             )}
 
             <label className="h-12 rounded-xl border border-border flex items-center justify-center gap-2 cursor-pointer hover:border-pink-400 transition relative">

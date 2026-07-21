@@ -225,6 +225,7 @@ const Navbar = () => {
                     <img
                       src="/icons/flamingo.jpeg"
                       alt="logo"
+                      loading="lazy"
                       className="w-20 h-20 object-contain transition-all duration-500 ease-in-out hover:scale-105"
                     />
                   </div>
@@ -354,7 +355,7 @@ const Navbar = () => {
               text-black/80
             "
           >
-            <img src="/icons/flamingo.jpeg" alt="Flamingo" className="w-12 h-12" />
+            <img loading="lazy" src="/icons/flamingo.jpeg" alt="Flamingo" className="w-12 h-12" />
           </Link>
 
           {/* Left (RTL): account, wishlist, bag */}

@@ -778,7 +778,7 @@ const AdminProductFormPage = () => {
             <div className="flex gap-3 items-center">
               {newAccessory.image_url ? (
                 <div className="relative w-16 h-16 flex-shrink-0">
-                  <img src={newAccessory.image_url} alt="" className="w-full h-full object-cover rounded-lg" />
+                  <img loading="lazy" src={newAccessory.image_url} alt="" className="w-full h-full object-cover rounded-lg" />
                   <button
                     type="button"
                     onClick={() => setNewAccessory(prev => ({ ...prev, image_url: '' }))}
@@ -857,7 +857,7 @@ const AdminProductFormPage = () => {
                 >
                   <div className="flex items-start gap-3">
                     {acc.image_url && (
-                      <img src={acc.image_url} alt={acc.name_ar} className="w-14 h-14 object-cover rounded-lg" />
+                      <img loading="lazy" src={acc.image_url} alt={acc.name_ar} className="w-14 h-14 object-cover rounded-lg" />
                     )}
                     <div className="space-y-1">
                       <div>
@@ -1083,7 +1083,7 @@ const AdminProductFormPage = () => {
                           <div className="flex flex-wrap gap-2">
                             {qv.images.map((img, i) => (
                               <div key={i} className="relative w-16 h-16 rounded overflow-hidden border border-border">
-                                <img src={img} alt="" className="w-full h-full object-cover" />
+                                <img loading="lazy" src={img} alt="" className="w-full h-full object-cover" />
                                 <button
                                   type="button"
                                   onClick={() => {

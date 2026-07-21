@@ -328,7 +328,7 @@ const AdminBrandsPage = () => {
             <div className="flex items-center gap-5">
               {brand.logo_url ? (
                 <div className="w-24 h-24 rounded-3xl bg-white border border-border flex items-center justify-center p-4 shadow-sm shrink-0">
-                  <img src={brand.logo_url} alt={brand.name} className="w-full h-full object-contain"/>
+                  <img loading="lazy" src={brand.logo_url} alt={brand.name} className="w-full h-full object-contain"/>
                 </div>
               ) : (
                 <div className="w-24 h-24 rounded-3xl bg-muted flex items-center justify-center shrink-0">
@@ -386,7 +386,7 @@ const AdminBrandsPage = () => {
             <div className="mt-6 flex justify-center">
               {brand.logo_url?(
                 <div className="w-32 h-32 rounded-3xl bg-white border border-border flex items-center justify-center p-6 shadow-sm group-hover:scale-105 transition-transform duration-300">
-                  <img src={brand.logo_url} alt={brand.name} className="w-full h-full object-contain"/>
+                  <img loading="lazy" src={brand.logo_url} alt={brand.name} className="w-full h-full object-contain"/>
                 </div>
               ):(
                 <div className="w-32 h-32 rounded-3xl bg-muted flex items-center justify-center">
@@ -469,6 +469,7 @@ const AdminBrandsPage = () => {
                       <img
                         src={formData.logo_url}
                         alt="Preview"
+                        loading="lazy"
                         className="w-full h-full object-contain p-6"
                       />
                       <button

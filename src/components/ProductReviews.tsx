@@ -258,7 +258,7 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
                 <div className="flex flex-wrap gap-2">
                   {images.map((src, i) => (
                     <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border group">
-                      <img src={src} className="w-full h-full object-cover" />
+                      <img loading="lazy" src={src} className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => setImages((p) => p.filter((_, idx) => idx !== i))}
@@ -371,7 +371,7 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
                             onClick={() => setZoomImg(src)}
                             className="w-16 h-16 rounded-lg overflow-hidden border border-border hover:ring-2 hover:ring-primary transition"
                           >
-                            <img src={src} className="w-full h-full object-cover" loading="lazy" />
+                            <img loading="lazy" src={src} className="w-full h-full object-cover"/>
                           </button>
                         ))}
                       </div>
@@ -392,7 +392,7 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
 
       <Dialog open={!!zoomImg} onOpenChange={(o) => !o && setZoomImg(null)}>
         <DialogContent className="max-w-3xl p-2 bg-black/95 border-0">
-          {zoomImg && <img src={zoomImg} className="w-full h-auto max-h-[80vh] object-contain rounded" />}
+          {zoomImg && <img loading="lazy" src={zoomImg} className="w-full h-auto max-h-[80vh] object-contain rounded" />}
         </DialogContent>
       </Dialog>
     </motion.div>

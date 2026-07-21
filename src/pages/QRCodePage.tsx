@@ -82,6 +82,7 @@ const QRCodePage = () => {
               <img 
                 src={flamingoLogo} 
                 alt="Flamingo" 
+                loading="lazy"
                 className="h-12 w-auto mx-auto object-contain"
               />
             </div>

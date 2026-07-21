@@ -130,7 +130,7 @@ const QuickView = ({ product, onClose, isMobile }: { product: Product | null; on
         <div className="space-y-3">
           <div className="w-full aspect-[4/3] bg-muted rounded-xl overflow-hidden flex items-center justify-center">
             {images?.[activeImage] ? (
-              <img src={images[activeImage]} alt={product.nameAr} className="w-full h-full object-cover" />
+              <img loading="lazy" src={images[activeImage]} alt={product.nameAr} className="w-full h-full object-cover" />
             ) : (
               <div className="text-muted-foreground">No image</div>
             )}
@@ -139,7 +139,7 @@ const QuickView = ({ product, onClose, isMobile }: { product: Product | null; on
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
             {(images || []).map((img, idx) => (
               <button key={idx} onClick={() => setActiveImage(idx)} className={`w-20 h-14 rounded-md overflow-hidden border ${activeImage===idx ? 'ring-2 ring-foreground' : ''}`}>
-                <img src={img} className="w-full h-full object-cover" />
+                <img loading="lazy" src={img} className="w-full h-full object-cover" />
               </button>
             ))}
           </div>
@@ -428,6 +428,7 @@ const ProductsPage = () => {
             </div>
             <div className="relative min-h-[260px] md:min-h-full">
               <img
+                loading="lazy"
                 src={(currentCategory && currentCategory.image_url) || FALLBACK_IMG[categorySlug] || FALLBACK_IMG.women}
                 alt={currentCategory ? currentCategory.name_ar : getSiteText(content, "products_page_hero_alt", "عرض خاص")}
                 className="absolute inset-0 w-full h-full object-cover"

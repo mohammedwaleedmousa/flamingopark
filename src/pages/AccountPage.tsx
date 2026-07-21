@@ -750,6 +750,7 @@ const AccountPage = () => {
                             {avatarPreview ? (
                               <img
                                 src={avatarPreview}
+                                loading="lazy"
                                 alt="Avatar Preview"
                                 className="w-full h-full object-cover"
                               />

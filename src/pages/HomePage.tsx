@@ -260,6 +260,7 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
                   <div className="h-[280px] overflow-hidden">
                     <img
                       src={active.image}
+                      loading="lazy"
                       className="w-full h-full object-cover hover:scale-105 transition duration-500"
                     />
                   </div>

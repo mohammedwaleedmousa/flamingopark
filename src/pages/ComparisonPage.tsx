@@ -339,6 +339,7 @@ const ComparisonPage = () => {
                           {product.images?.[0] && (
                             <img
                               src={product.images[0]}
+                              loading="lazy"
                               alt={product.nameAr}
                               className="w-full h-full object-cover hover:scale-105 transition"
                             />

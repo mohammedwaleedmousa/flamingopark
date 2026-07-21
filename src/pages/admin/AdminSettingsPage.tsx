@@ -390,7 +390,7 @@ const AdminSettingsPage = () => {
           <div className="flex flex-wrap gap-4">
             {certImages[0] ? (
               <div className="relative w-32 h-32">
-                <img src={certImages[0]} alt="صورة التوثيق" className="w-full h-full object-cover rounded" />
+                <img loading="lazy" src={certImages[0]} alt="صورة التوثيق" className="w-full h-full object-cover rounded" />
                 <button
                   onClick={removeCertImage}
                   className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full"

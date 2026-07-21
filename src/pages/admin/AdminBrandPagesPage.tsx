@@ -65,7 +65,7 @@ const AdminBrandPagesPage = () => {
           <div key={b.id} className="group bg-card border border-border rounded-[32px] overflow-hidden shadow-sm hover:shadow-2xl transition-all duration-500 hover:-translate-y-2">
             <div className="relative h-64 overflow-hidden bg-muted">
               {b.hero_image ? (
-                <img src={b.hero_image} alt={b.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
+                <img loading="lazy" src={b.hero_image} alt={b.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
               ) : (
                 <div className="w-full h-full flex items-center justify-center text-muted-foreground text-sm">
                   لا توجد صورة رئيسية
@@ -82,7 +82,7 @@ const AdminBrandPagesPage = () => {
 
               {b.logo_url && (
                 <div className="absolute bottom-5 right-5 w-20 h-20 bg-white rounded-3xl shadow-xl border border-white/50 flex items-center justify-center p-3">
-                  <img src={b.logo_url} alt={b.name} className="w-full h-full object-contain" />
+                  <img loading="lazy" src={b.logo_url} alt={b.name} className="w-full h-full object-contain" />
                 </div>
               )}
 

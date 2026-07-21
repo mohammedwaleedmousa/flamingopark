@@ -376,7 +376,7 @@ const AdminProductsPage = () => {
                   onCheckedChange={() => toggleSelect(p.id)}
                   className="mt-1"
                 />
-                <img src={getProductImage(p)} alt={p.name_ar} className="w-20 h-20 rounded-2xl border border-border object-cover shadow-sm" />
+                <img loading="lazy" src={getProductImage(p)} alt={p.name_ar} className="w-20 h-20 rounded-2xl border border-border object-cover shadow-sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-heading text-sm truncate">{p.name_ar}</h3>
@@ -447,7 +447,7 @@ const AdminProductsPage = () => {
                     <td className="p-3"><Checkbox checked={selected.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} /></td>
                     <td className="p-3">
                       <div className="flex items-center gap-3">
-                        <img src={getProductImage(p)} alt={p.name_ar} className="w-16 h-16 rounded-2xl border border-border object-cover shadow-sm shrink-0" />
+                        <img loading="lazy" src={getProductImage(p)} alt={p.name_ar} className="w-16 h-16 rounded-2xl border border-border object-cover shadow-sm shrink-0" />
                         <div className="min-w-0">
                           <p className="font-semibold text-[15px] truncate max-w-[260px]">{p.name_ar}</p>
                           <p className="mt-1 text-[11px] text-muted-foreground truncate max-w-[260px]">{p.slug}</p>

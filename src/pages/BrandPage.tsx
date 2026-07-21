@@ -159,6 +159,7 @@ const { data: sectionProducts = [] } = useQuery({
                 {brand.logo_url && (
                   <img
                     src={brand.logo_url}
+                    loading="lazy"
                     alt={`${brand.name} logo`}
                     className="h-16 md:h-20 object-contain mb-4 bg-white/95 rounded-lg px-6 py-2"
                   />

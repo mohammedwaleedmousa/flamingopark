@@ -446,6 +446,7 @@ const AdminOffersPage = () => {
                   {offer.image_url && (
                     <div className="w-32 h-24 flex-shrink-0">
                       <img
+                        loading="lazy"
                         src={offer.image_url}
                         alt={offer.title_ar}
                         className="w-full h-full object-cover"
@@ -650,7 +651,7 @@ const AdminOffersPage = () => {
               <label className="block text-sm text-muted-foreground mb-2">الصورة</label>
               {formData.image_url ? (
                 <div className="relative">
-                  <img src={formData.image_url} alt="" className="w-full h-32 object-cover rounded" />
+                  <img loading="lazy" src={formData.image_url} alt="" className="w-full h-32 object-cover rounded" />
                   <button
                     onClick={() => setFormData({ ...formData, image_url: '' })}
                     className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
@@ -745,7 +746,7 @@ const AdminOffersPage = () => {
                           className="flex items-center gap-2 bg-gold/10 text-gold px-3 py-1.5 rounded-full text-sm"
                         >
                           {product.images?.[0] && (
-                            <img src={product.images[0]} alt="" className="w-5 h-5 rounded object-cover" />
+                            <img loading="lazy" src={product.images[0]} alt="" className="w-5 h-5 rounded object-cover" />
                           )}
                           <span>{product.name_ar}</span>
                           <button onClick={() => toggleProduct(product.id)} className="hover:text-destructive">
@@ -785,7 +786,7 @@ const AdminOffersPage = () => {
                             onCheckedChange={() => toggleProduct(product.id)}
                           />
                           {product.images?.[0] && (
-                            <img src={product.images[0]} alt="" className="w-10 h-10 rounded object-cover" />
+                            <img loading="lazy" src={product.images[0]} alt="" className="w-10 h-10 rounded object-cover" />
                           )}
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{product.name_ar}</p>

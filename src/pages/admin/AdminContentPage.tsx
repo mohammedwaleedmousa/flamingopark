@@ -246,6 +246,7 @@ const AdminContentPage = () => {
                           <div className="relative w-full max-w-md mx-auto">
                             <img
                               src={item.content_ar}
+                              loading="lazy"
                               alt={item.title}
                               className="w-full h-48 object-cover rounded-lg border border-border"
                             />

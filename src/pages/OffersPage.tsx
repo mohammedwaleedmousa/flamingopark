@@ -452,7 +452,7 @@ const OffersPage = () => {
                       <div className="flex flex-col md:flex-row">
                         {offer.image_url && (
                           <div className="md:w-1/3 aspect-video md:aspect-auto relative">
-                            <img src={offer.image_url} alt={offer.title_ar} className="w-full h-full object-cover" />
+                            <img loading="lazy" src={offer.image_url} alt={offer.title_ar} className="w-full h-full object-cover" />
                             {offer.discount_percentage > 0 && (
                               <div className="absolute top-4 left-4 bg-destructive text-destructive-foreground px-4 py-2 rounded-lg text-lg font-bold">
                                 {offer.discount_percentage}% خصم

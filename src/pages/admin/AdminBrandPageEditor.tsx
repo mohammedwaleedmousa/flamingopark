@@ -417,6 +417,7 @@ const AdminBrandPageEditor = () => {
                 <img
                   src={form.hero_image}
                   alt="hero"
+                  loading="lazy"
                   className="w-full h-[280px] object-cover rounded-2xl"
                 />
 

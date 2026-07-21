@@ -284,6 +284,7 @@ const AdminBannersPage = () => {
             <div className="w-48 h-28 relative flex-shrink-0">
               <img
                 src={banner.image_url}
+                loading="lazy"
                 alt={banner.title_ar}
                 className="w-full h-full object-cover"
               />
@@ -353,6 +354,7 @@ const AdminBannersPage = () => {
                     <img 
                       src={formData.image_url} 
                       alt="" 
+                      loading="lazy"
                       className="w-full h-full"
                       style={{
                         objectFit: 'cover',

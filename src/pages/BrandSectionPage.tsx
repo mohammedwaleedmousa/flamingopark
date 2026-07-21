@@ -108,7 +108,7 @@ const BrandSectionPage = () => {
           <>
             <section className="relative w-full h-[36vh] md:h-[50vh] bg-neutral-100 overflow-hidden">
               {section.image_url && (
-                <img src={section.image_url} alt={section.name} className="absolute inset-0 w-full h-full object-cover" />
+                <img loading="lazy" src={section.image_url} alt={section.name} className="absolute inset-0 w-full h-full object-cover" />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
               <div className="relative z-10 h-full max-w-6xl mx-auto px-4 flex flex-col items-center justify-end pb-10 text-center text-white">

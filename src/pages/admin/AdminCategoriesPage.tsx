@@ -347,6 +347,7 @@ const AdminCategoriesPage = () => {
               {category.image_url ? (
                 <img
                   src={`${category.image_url}?v=${Date.now()}`}
+                  loading="lazy"
                   alt={category.name_ar}
                   className="w-20 h-20 object-cover rounded-2xl shadow-sm"
                 />
@@ -434,6 +435,7 @@ const AdminCategoriesPage = () => {
                 <td className="p-4">
                   {category.image_url ? (
                     <img
+                      loading="lazy"
                       src={category.image_url}
                       alt={category.name_ar}
                       className="h-14 w-14 object-cover rounded-xl shadow-sm"
@@ -571,6 +573,7 @@ const AdminCategoriesPage = () => {
                           <img
                             src={formData.image_url}
                             alt="Preview"
+                            loading="lazy"
                             className="w-full h-full"
                             style={{
                               objectFit: "cover",

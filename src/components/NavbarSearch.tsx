@@ -159,6 +159,7 @@ export const NavbarSearch = () => {
                         <img
                           src={item.image}
                           alt={item.name}
+                          loading="lazy"
                           className="w-8 h-8 rounded object-cover"
                         />
                       )}

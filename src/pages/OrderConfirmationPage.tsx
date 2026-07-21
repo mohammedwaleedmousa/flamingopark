@@ -257,7 +257,7 @@ const OrderConfirmationPage = () => {
             {/* Invoice Header */}
             <div className="flex items-center justify-between mb-6 pb-4 border-b border-gray-200">
               <div>
-                <img src={flamingoLogo} alt="Flamingo" className="h-16 w-auto object-contain" />
+                <img loading="lazy" src={flamingoLogo} alt="Flamingo" className="h-16 w-auto object-contain" />
                 <p className="text-sm text-gray-500 mt-1">فاتورة طلب</p>
               </div>
               <div className="text-left">
@@ -307,6 +307,7 @@ const OrderConfirmationPage = () => {
                     <div className="flex items-start gap-4">
                       <img
                         src={item.product_image}
+                        loading="lazy"
                         alt={item.product_name}
                         className="w-16 h-16 object-cover rounded-md print:w-12 print:h-12"
                       />
@@ -339,6 +340,7 @@ const OrderConfirmationPage = () => {
                             >
                               {acc.image_url && (
                                 <img 
+                                  loading="lazy"
                                   src={acc.image_url} 
                                   alt={acc.name_ar} 
                                   className="w-8 h-8 object-cover rounded"

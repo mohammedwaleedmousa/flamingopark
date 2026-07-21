@@ -258,7 +258,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
                 <div key={index} className="p-2 bg-muted/30 rounded space-y-2">
                   <div className="flex gap-2 items-center">
                     {item.product_image && (
-                      <img src={item.product_image} alt="" className="w-10 h-10 object-cover rounded flex-shrink-0" />
+                      <img loading="lazy" src={item.product_image} alt="" className="w-10 h-10 object-cover rounded flex-shrink-0" />
                     )}
                     <div className="flex-1 relative">
                       <Input
@@ -284,7 +284,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
                                 className="w-full text-right px-3 py-2 text-xs hover:bg-muted flex items-center gap-2"
                               >
                                 {product.images?.[0] && (
-                                  <img src={product.images[0]} alt="" className="w-6 h-6 object-cover rounded" />
+                                  <img loading="lazy" src={product.images[0]} alt="" className="w-6 h-6 object-cover rounded" />
                                 )}
                                 <span className="flex-1">{product.name_ar}</span>
                                 <span className="text-muted-foreground">{product.price} {currency}</span>

@@ -422,7 +422,7 @@ const AdminBrandSectionProductsPage = () => {
               <img
 
                 src={section.image_url}
-
+                loading="lazy"
                 className="
                   w-28
                   h-28
@@ -659,7 +659,7 @@ const AdminBrandSectionProductsPage = () => {
                           src={
                             product.images[0]
                           }
-
+                          loading="lazy"
                           className="
                             w-16
                             h-16
@@ -814,7 +814,7 @@ const AdminBrandSectionProductsPage = () => {
                     product.images?.[0] &&
 
                     <img
-
+                      loading="lazy"
                       src={product.images[0]}
 
                       className="

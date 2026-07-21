@@ -45,6 +45,7 @@ const Footer = () => {
               <img
                 src="/icons/flamingo.jpeg"
                 alt="Flamingo"
+                loading="lazy"
                 className="h-20 md:h-10 w-auto object-contain pr-8"
               />
             </Link>

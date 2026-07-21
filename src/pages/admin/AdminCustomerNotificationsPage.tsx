@@ -20,7 +20,7 @@ interface CustomerLite {
 interface NotifRow {
   id: string;
   title: string;
-  body: string;
+  message: string;
   type: string;
   link: string | null;
   broadcast: boolean;
@@ -55,7 +55,7 @@ const AdminCustomerNotificationsPage = () => {
   const loadRecent = async () => {
     const { data } = await (supabase as any)
       .from("customer_notifications")
-      .select("id,title,body,type,link,broadcast,customer_id,created_at,is_read")
+      .select("id,title,message,type,link,broadcast,customer_id,created_at,is_read")
       .order("created_at", { ascending: false })
       .limit(30);
     setRecent((data || []) as NotifRow[]);
@@ -86,7 +86,7 @@ const AdminCustomerNotificationsPage = () => {
       if (target === "broadcast") {
         rows = [{
           title: title.trim(),
-          body: body.trim(),
+          message: body.trim(),
           type,
           link: link.trim() || null,
           broadcast: true,
@@ -97,7 +97,7 @@ const AdminCustomerNotificationsPage = () => {
       } else if (selectedCustomer) {
         rows = [{
           title: title.trim(),
-          body: body.trim(),
+          message: body.trim(),
           type,
           link: link.trim() || null,
           broadcast: false,
@@ -278,7 +278,7 @@ const AdminCustomerNotificationsPage = () => {
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex-1 min-w-0">
                     <p className="text-sm font-medium">{n.title}</p>
-                    <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{n.body}</p>
+                    <p className="text-xs text-muted-foreground line-clamp-2 mt-1">{n.message}</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-[10px] bg-primary/10 text-primary px-2 py-0.5 rounded">
                         {n.broadcast ? "بث عام" : "مخصص"}

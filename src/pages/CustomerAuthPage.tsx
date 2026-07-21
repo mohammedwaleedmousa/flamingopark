@@ -13,9 +13,11 @@ const CustomerAuthPage = () => {
   const navigate = useNavigate();
   const { customer, setCustomer, setCountry, country } = useStore();
   const [isLoading, setIsLoading] = useState(false);
+  const [mode, setMode] = useState<"login" | "register">("login");
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
+    password: "",
   });
 
   // Redirect if already logged in and country is available
@@ -38,7 +40,7 @@ const CustomerAuthPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.name.trim() || !formData.phone.trim()) {
+    if (!formData.phone.trim() || !formData.password.trim() || (mode === "register" && !formData.name.trim())) {
       toast({
         title: "خطأ",
         description: "يرجى ملء جميع الحقول",
@@ -60,18 +62,21 @@ const CustomerAuthPage = () => {
     setIsLoading(true);
 
     try {
-      // Use edge function for customer auth since customers table is protected
-      const response = await supabase.functions.invoke("customer-auth", {
-        body: {
-          name: formData.name,
-          phone: formData.phone,
-          country: detectedCountry,
-        },
-      });
-
-      if (response.error) throw response.error;
-
-      const customer = response.data.customer;
+      const rpcName = mode === "login" ? "customer_login" : "customer_register";
+      const args = mode === "login"
+        ? { _phone: formData.phone, _password: formData.password }
+        : { _name: formData.name, _phone: formData.phone, _country: detectedCountry, _password: formData.password };
+      const { data, error } = await (supabase as any).rpc(rpcName, args);
+      if (error) throw error;
+      const customer = Array.isArray(data) ? data[0] : data;
+      if (!customer) {
+        toast({
+          title: mode === "login" ? "بيانات الدخول غير صحيحة" : "تعذّر إنشاء الحساب",
+          description: mode === "login" ? "تأكد من رقم الهاتف وكلمة السر" : "قد يكون الرقم مسجّلاً مسبقاً",
+          variant: "destructive",
+        });
+        return;
+      }
 
       setCustomer({
         id: customer.id,
@@ -91,7 +96,7 @@ const CustomerAuthPage = () => {
       console.error("Auth error:", error);
       toast({
         title: "خطأ",
-        description: "حدث خطأ أثناء التسجيل",
+        description: error?.message === "phone_exists" ? "الرقم مسجّل مسبقاً — سجّل الدخول" : "حدث خطأ أثناء العملية",
         variant: "destructive",
       });
     } finally {
@@ -158,21 +163,25 @@ const CustomerAuthPage = () => {
 
           {/* Welcome Text */}
           <div className="text-center space-y-2">
-            <h1 className="text-2xl font-heading text-primary">مرحباً</h1>
-            <p className="text-sm text-muted-foreground">أدخل بياناتك للمتابعة</p>
+            <h1 className="text-2xl font-heading text-primary">{mode === "login" ? "تسجيل الدخول" : "إنشاء حساب"}</h1>
+            <p className="text-sm text-muted-foreground">
+              {mode === "login" ? "أدخل رقم هاتفك وكلمة السر" : "أدخل بياناتك لإنشاء حساب جديد"}
+            </p>
           </div>
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="space-y-4">
-            <div className="relative">
-              <Input
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                placeholder="الاسم"
-                className="bg-background/50 border-0 ring-1 ring-border/50 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary h-12 rounded-xl text-center"
-                dir="rtl"
-              />
-            </div>
+            {mode === "register" && (
+              <div className="relative">
+                <Input
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                  placeholder="الاسم"
+                  className="bg-background/50 border-0 ring-1 ring-border/50 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary h-12 rounded-xl text-center"
+                  dir="rtl"
+                />
+              </div>
+            )}
 
             <div className="relative">
               <Input
@@ -184,13 +193,32 @@ const CustomerAuthPage = () => {
               />
             </div>
 
+            <div className="relative">
+              <Input
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder="كلمة السر"
+                className="bg-background/50 border-0 ring-1 ring-border/50 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary h-12 rounded-xl text-center"
+                dir="ltr"
+              />
+            </div>
+
             <Button
               type="submit"
               disabled={isLoading}
               className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 rounded-xl font-heading tracking-wider text-base shadow-lg shadow-primary/20 transition-all hover:shadow-xl hover:shadow-primary/30"
             >
-              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : "دخول"}
+              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (mode === "login" ? "دخول" : "إنشاء حساب")}
             </Button>
+
+            <button
+              type="button"
+              onClick={() => setMode(mode === "login" ? "register" : "login")}
+              className="w-full text-sm text-primary hover:underline"
+            >
+              {mode === "login" ? "ليس لديك حساب؟ سجّل الآن" : "لديك حساب؟ سجّل الدخول"}
+            </button>
           </form>
 
           {/* Skip Login Button */}

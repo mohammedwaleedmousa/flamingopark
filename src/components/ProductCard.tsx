@@ -56,16 +56,13 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
 
   const aspectClass = size === 'large' ? 'aspect-[4/5] sm:aspect-[3/4]' : size === 'medium' ? 'aspect-[3/5] sm:aspect-[3/4]' : 'aspect-[4/8] sm:aspect-[3/4]';
   const getProductImage = () => {
-    if (product.images?.length > 0) {
-      return product.images[0];
-    }
-
+    // Always prefer first color variant's first image so admin's color order drives the card.
     const variants = (product as any).color_variants;
-
     if (Array.isArray(variants) && variants.length > 0) {
-      return variants[0]?.images?.[0] || "/placeholder.svg";
+      const first = variants[0]?.images?.[0];
+      if (first) return first;
     }
-
+    if (product.images?.length > 0) return product.images[0];
     return "/placeholder.svg";
   };
   return (

@@ -34,7 +34,7 @@ const ProductDetailPage = () => {
   const [accessoryQuantities, setAccessoryQuantities] = useState<Record<string, number>>({});
   const [justAdded, setJustAdded] = useState(false);
   const [selectedQualityIdx, setSelectedQualityIdx] = useState<number | null>(null);
-  const [openSection, setOpenSection] = useState<'specs' | 'return' | null>(null);
+  const [openSection, setOpenSection] = useState<'specs' | 'return' | 'delivery' | null>(null);
   const { format: formatCurrency, symbol: currencySymbol } = useCurrency();
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', slug],
@@ -55,7 +55,7 @@ const ProductDetailPage = () => {
         hasSizes: (data as any).has_sizes ?? false, sizes: (data as any).sizes || [],
         accessories: accessories as { name: string; name_ar: string; price: number; image_url?: string; description?: string; description_ar?: string }[],
         features: ((data as any).features || []) as { icon: string; title: string; desc: string }[],
-        colorVariants: ((data as any).color_variants || []) as { name: string; hex: string; images: string[] }[],
+        colorVariants: ((data as any).color_variants || []) as { name: string; hex: string; hex2?: string; images: string[] }[],
         specs: ((data as any).specs || []) as { label: string; value: string }[],
         returnPolicy: (data as any).return_policy as string | null,
         hasQualityVariants: (data as any).has_quality_variants ?? false,

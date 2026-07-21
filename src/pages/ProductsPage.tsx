@@ -89,7 +89,7 @@ const QuickView = ({ product, onClose, isMobile }: { product: Product | null; on
   const displayPrice = discountSource ? priceSource * (1 - discountSource / 100) : priceSource;
 
   const sizesForActiveVariant =
-    activeVariant?.sizes || product.sizes || [];
+    activeVariant?.sizes || (product as any).sizes || [];
   const stockForSize = (size?: string) => {
     if (!size) return product.inStock ? 999 : 0;
     const s = sizesForActiveVariant.find((x) => x.size === size);

@@ -754,16 +754,36 @@ const AdminProductFormPage = () => {
                 </button>
               </div>
             ))}
-            <label className="w-24 h-24 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-gold transition-colors">
-              <Upload className="w-6 h-6 text-muted-foreground" />
-              <input
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handleImageUpload}
-                className="hidden h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
-              />
-            </label>
+            {formData.color_variants.length === 0 ? (
+              <label className="w-24 h-24 border-2 border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-gold transition-colors text-center p-1">
+                <Upload className="w-5 h-5 text-muted-foreground" />
+                <span className="text-[9px] text-muted-foreground mt-1">أضف لون أولاً</span>
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  disabled
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+              </label>
+            ) : (
+              <label className="w-24 h-24 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-gold transition-colors">
+                <Upload className="w-6 h-6 text-muted-foreground" />
+                <input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={handleImageUpload}
+                  className="hidden"
+                />
+              </label>
+            )}
+          </div>
+          <p className="text-xs text-muted-foreground -mt-2">
+            الصور الأساسية تعتمد على أول لون تضيفه في قسم "ألوان المنتج" أدناه. أضف لوناً أولاً ثم ارفع الصور الخاصة بكل لون.
+          </p>
+          <div className="hidden">
           </div>
 
           {/* Image Zoom & Position Controls */}

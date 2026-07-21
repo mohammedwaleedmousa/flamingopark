@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Loader2, UserX } from "lucide-react";
 import Logo from "@/components/Logo";
+import { motion } from "framer-motion";
 const CustomerAuthPage = () => {
   const [searchParams] = useSearchParams();
   
@@ -157,104 +158,253 @@ const CustomerAuthPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-background flex items-center justify-center p-4">
-      <div className="w-full max-w-sm animate-fade-in">
-        <div className="bg-card rounded-2xl shadow-2xl shadow-primary/10 p-8 space-y-8 border border-primary/40">
-          {/* Logo */}
-          <div className="flex justify-center">
-            <Logo size="lg" variant="auth" />
-          </div>
-
-          {/* Welcome Text */}
-          <div className="text-center space-y-2">
-            <h1 className="text-2xl font-heading text-primary">{mode === "login" ? "تسجيل الدخول" : "إنشاء حساب"}</h1>
-            <p className="text-sm text-muted-foreground">
-              {mode === "login" ? "أدخل رقم هاتفك وكلمة السر" : "أدخل بياناتك لإنشاء حساب جديد"}
-            </p>
-          </div>
-
-          {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {mode === "register" && (
-              <div className="relative">
-                <Input
-                  value={formData.name}
-                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                  placeholder="الاسم"
-                  className="bg-background/50 border-0 ring-1 ring-border/50 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary h-12 rounded-xl text-center"
-                  dir="rtl"
-                />
-              </div>
-            )}
-
-            <div className="relative">
-              <Input
-                value={formData.phone}
-                onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                placeholder="رقم الهاتف"
-                className="bg-background/50 border-0 ring-1 ring-border/50 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary h-12 rounded-xl text-center"
-                dir="ltr"
-              />
-            </div>
-
-            <div className="relative">
-              <Input
-                type="password"
-                value={formData.password}
-                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                placeholder="كلمة السر"
-                className="bg-background/50 border-0 ring-1 ring-border/50 text-foreground placeholder:text-muted-foreground focus:ring-2 focus:ring-primary h-12 rounded-xl text-center"
-                dir="ltr"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-full bg-primary hover:bg-primary/90 text-primary-foreground h-12 rounded-xl font-heading tracking-wider text-base shadow-lg shadow-primary/20 transition-all hover:shadow-xl hover:shadow-primary/30"
-            >
-              {isLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : (mode === "login" ? "دخول" : "إنشاء حساب")}
-            </Button>
-
-            <button
-              type="button"
-              onClick={() => setMode(mode === "login" ? "register" : "login")}
-              className="w-full text-sm text-primary hover:underline"
-            >
-              {mode === "login" ? "ليس لديك حساب؟ سجّل الآن" : "لديك حساب؟ سجّل الدخول"}
-            </button>
-          </form>
-
-          {/* Skip Login Button */}
-          <div className="pt-2 border-t border-border/30">
-            <Button
-              type="button"
-              variant="ghost"
-              onClick={handleSkipLogin}
-              disabled={isDetectingLocation}
-              className="w-full text-muted-foreground hover:text-foreground h-10 rounded-xl font-body text-sm gap-2"
-            >
-              {isDetectingLocation ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  جاري تحديد الموقع...
-                </>
-              ) : (
-                <>
-                  <UserX className="w-4 h-4" />
-                  تخطي التسجيل والتصفح كضيف
-                </>
-              )}
-            </Button>
-            <p className="text-xs text-muted-foreground/70 text-center mt-2">
-              سيتم تحديد موقعك تلقائياً
-            </p>
-          </div>
-          
-        </div>
-      </div>
+  <div
+    className="min-h-screen bg-background flex items-center justify-center px-6 relative overflow-hidden"
+    dir="rtl"
+  >
+    {/* Luxury Background */}
+    <div className="absolute inset-0">
+      <div className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl" />
+      <div className="absolute bottom-0 left-0 w-80 h-80 bg-primary/5 rounded-full blur-3xl" />
     </div>
-  );
+
+
+    <div className="relative z-10 w-full max-w-md">
+
+      {/* Logo */}
+      <div className="flex justify-center mb-12">
+        <Logo size="lg" variant="auth" />
+      </div>
+
+
+      {/* Title */}
+      <div className="text-center mb-10">
+
+        <h1 className="font-heading text-4xl tracking-wide text-foreground mb-4">
+          {mode === "login" ? "مرحباً بعودتك" : "إنشاء حساب جديد"}
+        </h1>
+
+        <div className="w-16 h-px bg-primary mx-auto mb-5" />
+
+        <p className="text-muted-foreground text-sm font-body">
+          {mode === "login"
+            ? "سجل دخولك للوصول إلى مجموعتك المفضلة"
+            : "انضم إلينا واستمتع بتجربة تسوق فاخرة"}
+        </p>
+
+      </div>
+
+
+
+      {/* Form */}
+      <form onSubmit={handleSubmit} className="space-y-8">
+
+
+        {mode === "register" && (
+          <div className="relative">
+
+            <Input
+              value={formData.name}
+              onChange={(e)=>setFormData({
+                ...formData,
+                name:e.target.value
+              })}
+              placeholder="الاسم الكامل"
+              dir="rtl"
+              className="
+              h-14
+              rounded-none
+              border-0
+              border-b
+              border-border
+              bg-transparent
+              text-center
+              text-base
+              focus-visible:ring-0
+              focus-visible:border-primary
+              transition-all
+              "
+            />
+
+          </div>
+        )}
+
+
+
+        <Input
+          value={formData.phone}
+          onChange={(e)=>setFormData({
+            ...formData,
+            phone:e.target.value
+          })}
+          placeholder="رقم الهاتف"
+          dir="ltr"
+          className="
+          h-14
+          rounded-none
+          border-0
+          border-b
+          border-border
+          bg-transparent
+          text-center
+          text-base
+          focus-visible:ring-0
+          focus-visible:border-primary
+          transition-all
+          "
+        />
+
+
+
+        <Input
+          type="password"
+          value={formData.password}
+          onChange={(e)=>setFormData({
+            ...formData,
+            password:e.target.value
+          })}
+          placeholder="كلمة المرور"
+          dir="ltr"
+          className="
+          h-14
+          rounded-none
+          border-0
+          border-b
+          border-border
+          bg-transparent
+          text-center
+          text-base
+          focus-visible:ring-0
+          focus-visible:border-primary
+          transition-all
+          "
+        />
+
+
+
+        {/* Luxury Button */}
+        <Button
+          type="submit"
+          disabled={isLoading}
+          className="
+          group
+          relative
+          w-full
+          h-14
+          rounded-none
+          bg-black
+          text-white
+          overflow-hidden
+          font-heading
+          tracking-widest
+          text-sm
+          hover:bg-black/90
+          transition-all
+          duration-500
+          shadow-xl
+          "
+        >
+
+          <span className="
+          absolute
+          inset-0
+          bg-gradient-to-r
+          from-transparent
+          via-white/20
+          to-transparent
+          translate-x-[-100%]
+          group-hover:translate-x-[100%]
+          transition-transform
+          duration-700
+          "/>
+
+
+          {isLoading ? (
+            <Loader2 className="w-5 h-5 animate-spin mx-auto"/>
+          ) : (
+            mode === "login"
+              ? "تسجيل الدخول"
+              : "إنشاء الحساب"
+          )}
+
+        </Button>
+
+
+
+        {/* Switch Mode */}
+        <button
+          type="button"
+          onClick={() =>
+            setMode(mode === "login" ? "register" : "login")
+          }
+          className="
+          w-full
+          text-sm
+          text-muted-foreground
+          hover:text-primary
+          transition-colors
+          "
+        >
+
+          {mode === "login"
+            ? "ليس لديك حساب؟ إنشاء حساب"
+            : "لديك حساب؟ تسجيل الدخول"}
+
+        </button>
+
+
+      </form>
+
+
+
+
+      {/* Guest Access */}
+
+      <div className="mt-12 pt-8 border-t border-border/40 text-center">
+
+        <button
+          type="button"
+          onClick={handleSkipLogin}
+          disabled={isDetectingLocation}
+          className="
+          text-xs
+          tracking-wide
+          text-muted-foreground
+          hover:text-primary
+          transition-colors
+          flex
+          items-center
+          justify-center
+          gap-2
+          mx-auto
+          "
+        >
+
+          {isDetectingLocation ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin"/>
+              جاري الدخول...
+            </>
+          ) : (
+            <>
+              <UserX className="w-4 h-4"/>
+              متابعة التصفح كضيف
+            </>
+          )}
+
+        </button>
+
+        <p className="mt-3 text-[11px] text-muted-foreground/60">
+          يمكنك إنشاء حساب لاحقاً عند إتمام الطلب
+        </p>
+
+      </div>
+
+
+    </div>
+
+  </div>
+);
 };
 
 export default CustomerAuthPage;

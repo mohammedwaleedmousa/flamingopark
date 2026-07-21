@@ -25,7 +25,6 @@ import { useStore } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
-import type { User as SupaUser } from "@supabase/supabase-js";
 import { useAuthActions } from "@/hooks/useAuthActions";
 import { useCurrency, getActiveCurrencies, hydrateCurrencies } from "@/lib/currency";
 import { Link, NavLink, useNavigate } from "react-router-dom";
@@ -82,15 +81,15 @@ const NavItem = ({
 
         <span
           className={`
-    w-9 h-9 rounded-xl
-    flex items-center justify-center
-    transition-all duration-300
-    ${
-      isActive
-        ? "bg-pink-50 text-pink-500"
-        : "bg-gray-50 text-black/60 group-hover:bg-pink-50 group-hover:text-pink-600"
-    }
-  `}
+            w-9 h-9 rounded-xl
+            flex items-center justify-center
+            transition-all duration-300
+            ${
+              isActive
+                ? "bg-pink-50 text-pink-500"
+                : "bg-gray-50 text-black/60 group-hover:bg-pink-50 group-hover:text-pink-600"
+            }
+          `}
         >
           <Icon size={18} weight="regular" className="w-[18px] h-[18px]" />
         </span>
@@ -117,9 +116,8 @@ const Navbar = () => {
   const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [sideSearch, setSideSearch] = useState("");
-  const [user, setUser] = useState<SupaUser | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const { openCart, getCartCount } = useStore();
+  const { openCart, getCartCount, customer, setCustomer } = useStore();
   const { favorites } = useFavorites();
   const cartCount = getCartCount();
   const { unreadCount } = useCustomerNotifications({ enableToasts: true });
@@ -146,37 +144,6 @@ const Navbar = () => {
     flag: staticLabels[c.code]?.flag ?? "💱",
   }));
 
-  useEffect(() => {
-    // Get initial session and verify it's valid
-    supabase.auth.getSession().then(({ data, error }) => {
-      if (error) {
-        console.error("Session error:", error);
-        setUser(null);
-      } else {
-        // Verify the session is still active
-        if (data.session?.user) {
-          // Session is valid, set the user
-          setUser(data.session?.user ?? null);
-        } else {
-          setUser(null);
-        }
-      }
-    });
-
-    // Listen for auth state changes
-    const { data: subscription } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event);
-      if (session?.user) {
-        // Session is valid, update user
-        setUser(session.user);
-      } else {
-        setUser(null);
-      }
-    });
-
-    return () => subscription?.subscription.unsubscribe();
-  }, []);
-
   const { data: categories = [] } = useQuery({
     queryKey: ["nav-categories"],
     queryFn: async () => {
@@ -198,14 +165,10 @@ const Navbar = () => {
     setSearchTerm("");
   };
 
-  const handleLogout = async () => {
-    await logout({
-      redirectTo: "/home",
-      onSuccess: () => {
-        setUser(null);
-        setMenuOpen(false);
-      },
-    });
+  const handleLogout = () => {
+    setCustomer(null);
+    setMenuOpen(false);
+    navigate("/home");
   };
 
   const goTo = (href: string) => {
@@ -294,7 +257,7 @@ const Navbar = () => {
                     </Section>
                   </nav>
                   <div className="border-t border-border px-6 py-5 bg-white">
-                    {user ? (
+                    {customer ? (
                       <button
                         onClick={handleLogout}
                         className="
@@ -326,7 +289,7 @@ const Navbar = () => {
                       </button>
                     ) : (
                       <button
-                        onClick={() => goTo("/signin")}
+                        onClick={() => goTo("/auth")}
                         className="
                         w-full flex items-center justify-center gap-2
                         py-3

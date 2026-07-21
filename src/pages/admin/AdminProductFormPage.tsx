@@ -230,7 +230,10 @@ const AdminProductFormPage = () => {
         is_best_seller: data.is_best_seller ?? false,
         is_active: data.is_active ?? true,
         countries: data.countries || [SINGLE_COUNTRY],
-        images: data.images || [],
+        images:
+  data.images?.length > 0
+    ? data.images
+    : ((data as any).color_variants?.[0]?.images || []),
         section_ids: (data as any).section_ids || [],
         has_sizes: (data as any).has_sizes ?? false,
         sizes: (data as any).sizes || [],

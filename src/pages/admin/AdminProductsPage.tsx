@@ -22,22 +22,23 @@ import { AdminPagination } from "@/components/admin/AdminPagination";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useDebounce } from "@/hooks/useDebounce";
 
-interface Product {
+interface DbProduct {
   id: string;
   name: string;
   name_ar: string;
   slug: string;
   price: number;
-  cost_price: number | null;
-  discount: number;
+  original_price: number | null;
+  discount: number | null;
+  description: string;
+  description_ar: string;
+  images: string[];
   category: string;
   brand: string;
   in_stock: boolean;
-  stock_quantity: number | null;
-  is_active: boolean;
   countries: string[];
-  images: string[];
-  sort_order: number;
+  is_featured: boolean;
+  is_best_seller: boolean;
   color_variants?: any[];
 }
 

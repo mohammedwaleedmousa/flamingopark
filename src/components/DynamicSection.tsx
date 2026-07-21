@@ -49,7 +49,10 @@ const mapRowToProduct = (p: any): Product => ({
   discount: p.discount || undefined,
   description: p.description || '',
   descriptionAr: p.description_ar || '',
-  images: p.images || [],
+  images:
+  p.images?.length > 0
+    ? p.images
+    : ((p as any).color_variants?.[0]?.images || []),
   category: p.category,
   brand: p.brand,
   inStock: p.in_stock ?? true,

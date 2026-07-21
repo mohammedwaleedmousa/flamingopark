@@ -22,6 +22,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
   const [bagPop, setBagPop] = useState(false);
   const [heartBeat, setHeartBeat] = useState(false);
   const isLiked = isFavorite(product.id);
+  console.log("PRODUCT CARD:", product);
 
   const handleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -56,18 +57,21 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
 
   const aspectClass = size === 'large' ? 'aspect-[4/5] sm:aspect-[3/4]' : size === 'medium' ? 'aspect-[3/5] sm:aspect-[3/4]' : 'aspect-[4/8] sm:aspect-[3/4]';
   const getProductImage = () => {
-    // Always prefer first color variant's first image so admin's color order drives the card.
-    const variants = (product as any).color_variants;
+    // عرض صورة أول لون مضاف للمنتج
+    const variants = (product as any).colorVariants || (product as any).color_variants;
     if (Array.isArray(variants) && variants.length > 0) {
-      const first = variants[0]?.images?.[0];
-      if (first) return first;
+      const firstColorImage = variants[0]?.images?.[0];
+      if (firstColorImage) {
+        return firstColorImage;
+      }
     }
-    if (product.images?.length > 0) return product.images[0];
+    if (product.images?.length > 0) {
+      return product.images[0];
+    }
     return "/placeholder.svg";
   };
   return (
     <Link to={`/product/${product.slug}`} className="group block" dir="rtl">
-
       <div
         className={`relative ${aspectClass}
           bg-white
@@ -75,7 +79,6 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
           rounded-[20px]
           overflow-hidden
           flex flex-col
-
           transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]
           hover:-translate-y-1 hover:shadow-2xl
         `}
@@ -83,7 +86,6 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
 
       {/* IMAGE FULL AREA */}
       <div className="relative flex-1 overflow-hidden bg-neutral-100 ">
-
         <img
           src={getProductImage()}
           alt={product.nameAr}
@@ -106,7 +108,6 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
             <Heart className={`w-4 h-4 ${isLiked ? 'text-pink-500 fill-pink-500' : 'text-neutral-600'}`} />
           </motion.button>
         </div>
-
         {/* soft cinematic flamingo overlay */}
         <div className="
           absolute inset-0
@@ -114,25 +115,19 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
           opacity-0 group-hover:opacity-100
           transition duration-500
         " />
-
       </div>
 
       {/* INFO BASE (always visible minimal) */}
       <div className="p-4 space-y-2 bg-white">
-
         <div className="flex items-center justify-between">
-
           <p className="text-[10px] tracking-[0.08em] uppercase text-pink-400">
             {product.brand}
           </p>
-
           <span className="text-[11px] text-neutral-500 flex items-center gap-1">
             <span className="text-pink-400">★</span>
             {(product as any).rating ? Number((product as any).rating).toFixed(1) : "4.5"}
           </span>
-
         </div>
-
         <h3 className="text-sm font-medium text-neutral-900 line-clamp-2">
           {product.nameAr}
         </h3>
@@ -152,32 +147,36 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
         </div>
 
         {/* swatches */}
-        {(product as any).variants && (product as any).variants.length > 0 && (
-          <div className="mt-2 flex items-center gap-2">
-            {((product as any).variants as any[]).slice(0,4).map((v: any) => (
-              <div key={v.id} title={v.colorName} className="w-6 h-6 rounded-full border" style={{ background: v.colorHex || '#eee' }} />
-            ))}
-          </div>
+        {(product as any).colorVariants &&
+          (product as any).colorVariants.length > 0 && (
+            <div className="mt-2 flex items-center gap-2">
+              {((product as any).colorVariants as any[])
+                .slice(0, 4)
+                .map((v: any, index: number) => (
+                  <div
+                    key={index}
+                    title={v.name}
+                    className="w-6 h-6 rounded-full border border-gray-300"
+                    style={{
+                      background: v.hex || "#eee",
+                    }}
+                  />
+                ))}
+            </div>
         )}
-
       </div>
 
       {/* 🛒 EDITORIAL ACTION BAR (NEW CONCEPT) */}
       {product.inStock && (
         <div className="
           absolute bottom-0 left-0 right-0
-
           translate-y-full group-hover:translate-y-0
           transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]
-
           bg-white/80 backdrop-blur-xl
           border-t border-pink-100/30
-
           flex items-center justify-between
-
           px-4 py-3
         ">
-
           <span className="
             text-[10px]
             tracking-[0.02em]
@@ -186,7 +185,6 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
           ">
             فلامنجو
           </span>
-
           <motion.button
             onClick={handleAdd}
             animate={bagPop ? { scale: [1, 1.06, 1] } : { scale: 1 }}
@@ -194,24 +192,18 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
             whileTap={{ scale: 0.96 }}
             className="
               w-10 h-10
-
               rounded-full
               bg-gradient-to-r from-pink-500 to-rose-400
               text-white
-
               flex items-center justify-center
-
               shadow-[0_10px_25px_-10px_rgba(255,105,180,0.5)]
-
               transition
             "
           >
             <ShoppingBag className="w-5 h-5" />
           </motion.button>
-
         </div>
       )}
-
     </div>
   </Link>
 );

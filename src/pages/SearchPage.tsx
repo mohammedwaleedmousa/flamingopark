@@ -40,7 +40,10 @@ const convertToProduct = (data: any): Product => ({
   discount: data.discount,
   description: data.description || '',
   descriptionAr: data.description_ar || '',
-  images: data.images || [],
+  images:
+  data.images?.length > 0
+    ? data.images
+    : ((data as any).color_variants?.[0]?.images || []),
   category: data.category || '',
   brand: data.brand || '',
   inStock: data.in_stock || false,

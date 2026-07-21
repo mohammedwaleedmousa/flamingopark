@@ -30,6 +30,11 @@ interface DbProduct {
   countries: string[];
   is_featured: boolean;
   is_best_seller: boolean;
+  color_variants?: {
+    hex: string;
+    name: string;
+    images: string[];
+  }[];
 }
 
 const toProduct = (p: DbProduct): Product => ({
@@ -42,13 +47,20 @@ const toProduct = (p: DbProduct): Product => ({
   discount: p.discount ?? undefined,
   description: p.description,
   descriptionAr: p.description_ar,
-  images: Array.isArray(p.images) ? p.images : [],
+
+  images:
+    p.images?.length > 0
+      ? p.images
+      : p.color_variants?.[0]?.images || [],
+
   category: p.category,
   brand: p.brand,
   inStock: p.in_stock,
   countries: (p.countries || ["GLOBAL"]) as Product["countries"],
   isFeatured: p.is_featured,
   isBestSeller: p.is_best_seller,
+
+  colorVariants: p.color_variants || [],
 });
 
 type FeaturedCategoryItem = {

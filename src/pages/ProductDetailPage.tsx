@@ -39,7 +39,7 @@ const ProductDetailPage = () => {
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', slug],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('*').eq('slug', slug).eq('is_active', true).maybeSingle();
+      const { data, error } = await supabase.from('products').select(`*,color_variants`).eq('slug', slug).eq('is_active', true).maybeSingle();
       if (error) throw error;
       if (!data) return null;
       const accessories = (data as any).accessories || [];
@@ -48,7 +48,10 @@ const ProductDetailPage = () => {
         price: Number(data.price), costPrice: data.cost_price ? Number(data.cost_price) : undefined,
         originalPrice: data.original_price ? Number(data.original_price) : undefined,
         discount: data.discount || undefined, description: data.description || '',
-        descriptionAr: data.description_ar || '', images: data.images || [],
+        descriptionAr: data.description_ar || '', images:
+  data.images?.length > 0
+    ? data.images
+    : ((data as any).color_variants?.[0]?.images || []),
         category: data.category, brand: data.brand, inStock: data.in_stock ?? true,
         countries: (data.countries || ['GLOBAL']) as Product['countries'],
         isFeatured: data.is_featured, isBestSeller: data.is_best_seller,
@@ -89,17 +92,30 @@ const ProductDetailPage = () => {
   const { data: relatedProducts = [] } = useQuery({
     queryKey: ['related-products', product?.category, product?.id, country],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('*').eq('is_active', true).eq('category', product!.category).neq('id', product!.id).contains('countries', [country]).limit(4);
+      const { data, error } = await supabase.from('products').select(`*,color_variants`).eq('is_active', true).eq('category', product!.category).neq('id', product!.id).contains('countries', [country]).limit(4);
       if (error) throw error;
       return data.map((p) => ({
-        id: p.id, name: p.name, nameAr: p.name_ar, slug: p.slug,
-        price: Number(p.price), costPrice: p.cost_price ? Number(p.cost_price) : undefined,
+        id: p.id,
+        name: p.name,
+        nameAr: p.name_ar,
+        slug: p.slug,
+        price: Number(p.price),
+        costPrice: p.cost_price ? Number(p.cost_price) : undefined,
         originalPrice: p.original_price ? Number(p.original_price) : undefined,
-        discount: p.discount || undefined, description: p.description || '',
-        descriptionAr: p.description_ar || '', images: p.images || [],
-        category: p.category, brand: p.brand, inStock: p.in_stock ?? true,
+        discount: p.discount || undefined,
+        description: p.description || '',
+        descriptionAr: p.description_ar || '',
+        images:
+          p.images?.length > 0
+            ? p.images
+            : ((p as any).color_variants?.[0]?.images || []),
+        colorVariants: (p as any).color_variants || [],
+        category: p.category,
+        brand: p.brand,
+        inStock: p.in_stock ?? true,
         countries: (p.countries || ['GLOBAL']) as Product['countries'],
-        isFeatured: p.is_featured, isBestSeller: p.is_best_seller,
+        isFeatured: p.is_featured,
+        isBestSeller: p.is_best_seller,
       })) as Product[];
     },
     enabled: !!product && !!country,
@@ -157,6 +173,7 @@ const ProductDetailPage = () => {
   };
 
   const isLiked = isFavorite(product.id);
+  console.log("PRODUCT CARD:", product);
   const nextImage = () => setSelectedImage((i) => (i + 1) % displayImages.length);
   const prevImage = () => setSelectedImage((i) => (i - 1 + displayImages.length) % displayImages.length);
   

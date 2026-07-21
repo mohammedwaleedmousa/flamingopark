@@ -26,7 +26,10 @@ const NewArrivalsPage = () => {
         originalPrice: p.original_price ? Number(p.original_price) : undefined,
         discount: p.discount || undefined,
         description: p.description || "", descriptionAr: p.description_ar || "",
-        images: p.images || [], category: p.category, brand: p.brand,
+        images:
+  p.images?.length > 0
+    ? p.images
+    : ((p as any).color_variants?.[0]?.images || []), category: p.category, brand: p.brand,
         inStock: p.in_stock ?? true,
         countries: (p.countries || ["GLOBAL"]) as Product["countries"],
         isFeatured: p.is_featured, isBestSeller: p.is_best_seller,

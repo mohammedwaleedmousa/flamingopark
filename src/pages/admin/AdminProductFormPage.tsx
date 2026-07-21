@@ -74,7 +74,6 @@ const AdminProductFormPage = () => {
     is_best_seller: false,
     is_active: true,
     countries: [SINGLE_COUNTRY] as string[],
-    images: [] as string[],
     section_ids: [] as string[],
     has_sizes: false,
     sizes: [] as string[],
@@ -82,9 +81,6 @@ const AdminProductFormPage = () => {
     features: [] as ProductFeature[],
     color_variants: [] as ColorVariant[],
     stock_quantity: '0',
-    image_zoom: 1,
-    image_position_x: 50,
-    image_position_y: 50,
     return_policy: '',
     specs: [] as { label: string; value: string }[],
     has_quality_variants: false,
@@ -230,7 +226,6 @@ const AdminProductFormPage = () => {
         is_best_seller: data.is_best_seller ?? false,
         is_active: data.is_active ?? true,
         countries: data.countries || [SINGLE_COUNTRY],
-        images: ((data as any).color_variants?.[0]?.images || []),
         section_ids: (data as any).section_ids || [],
         has_sizes: (data as any).has_sizes ?? false,
         sizes: (data as any).sizes || [],
@@ -238,9 +233,6 @@ const AdminProductFormPage = () => {
         features: ((data as any).features || []) as ProductFeature[],
         color_variants: ((data as any).color_variants || []) as ColorVariant[],
         stock_quantity: (data as any).stock_quantity?.toString() || '0',
-        image_zoom: 1,
-        image_position_x: 50,
-        image_position_y: 50,
         return_policy: (data as any).return_policy || '',
         specs: ((data as any).specs || []) as { label: string; value: string }[],
         has_quality_variants: (data as any).has_quality_variants ?? false,
@@ -259,138 +251,6 @@ const AdminProductFormPage = () => {
       ...formData,
       name: value,
       slug: generateSlug(value),
-    });
-  };
-
-  const handleImageUpload = async (
-  e: React.ChangeEvent<HTMLInputElement>
-) => {
-  const files = e.target.files;
-
-  if (!files || files.length === 0) return;
-
-  try {
-
-    const uploadPromises = Array.from(files).slice(0, 10).map(async (file) => {
-
-      // ضغط وتحويل الصورة
-      const compressedFile = await imageCompression(file, {
-        maxSizeMB: 0.05,
-        maxWidthOrHeight: 600,
-        useWebWorker: true,
-        initialQuality: 0.65,
-      });
-
-      console.log(
-        "Original:",
-        (file.size / 1024 / 1024).toFixed(2),
-        "MB"
-      );
-
-      console.log(
-        "Compressed:",
-        (compressedFile.size / 1024).toFixed(0),
-        "KB"
-      );
-
-
-      const fileName = `${crypto.randomUUID()}.webp`;
-
-      const filePath = `products/${fileName}`;
-
-
-      const { error: uploadError } = await supabase.storage
-        .from("uploads")
-        .upload(
-          filePath,
-          compressedFile,
-          {
-            upsert: false,
-            cacheControl: "3600",
-          }
-        );
-
-
-      if (uploadError) {
-        throw uploadError;
-      }
-
-
-      const { data } = supabase.storage
-        .from("uploads")
-        .getPublicUrl(filePath);
-
-
-      return data.publicUrl;
-
-    });
-
-
-    const uploadedUrls = await Promise.all(uploadPromises);
-
-
-    setFormData(prev => {
-      const colors = [...prev.color_variants];
-      if (!colors[0]) return prev;
-      colors[0] = {
-        ...colors[0],
-        images: [
-          ...(colors[0].images || []),
-          ...uploadedUrls,
-        ],
-      };
-      return {
-        ...prev,
-        color_variants: colors,
-      };
-    });
-
-
-    toast({
-      title: "تم",
-      description: "تم رفع الصور بسرعة",
-    });
-
-
-  } catch(error:any){
-
-    console.error(error);
-
-    toast({
-      title:"خطأ",
-      description:error.message,
-      variant:"destructive"
-    });
-
-  } finally {
-
-    e.target.value = "";
-
-  }
-};
-
-  const removeImage = (index: number) => {
-    setFormData(prev => {
-      const colors = [...prev.color_variants];
-      if (!colors[0]) return prev;
-      colors[0] = {
-        ...colors[0],
-        images: colors[0].images.filter((_, i) => i !== index),
-      };
-      return {
-        ...prev,
-        color_variants: colors,
-      };
-    });
-  };
-
-  const moveImage = (fromIndex: number, toIndex: number) => {
-    if (toIndex < 0 || toIndex >= formData.images.length) return;
-    setFormData(prev => {
-      const newImages = [...prev.images];
-      const [movedImage] = newImages.splice(fromIndex, 1);
-      newImages.splice(toIndex, 0, movedImage);
-      return { ...prev, images: newImages };
     });
   };
 
@@ -706,165 +566,6 @@ const AdminProductFormPage = () => {
               dir="rtl"
             />
           </div>
-        </div>
-
-        {/* Images */}
-        <div className="bg-background border border-border/60 rounded-3xl p-7 space-y-6 shadow-sm hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <h2 className="font-heading text-xl font-bold flex items-center gap-2">الصور</h2>
-            <span className="text-xs text-muted-foreground">اسحب الصورة لتغيير ترتيبها • الصورة الأولى هي الرئيسية</span>
-          </div>
-          
-          <div className="flex flex-wrap gap-4">
-            {formData.color_variants[0]?.images?.map((img, index) => (
-              <div 
-                key={img} 
-                className={`relative w-24 h-24 group overflow-hidden ${index === 0 ? 'ring-2 ring-gold ring-offset-2 ring-offset-background' : ''}`}
-              >
-                <img 
-                  src={img} 
-                  alt="" 
-                  className="w-full h-full rounded" 
-                  style={{
-                    objectFit: 'cover',
-                    transform: `scale(${formData.image_zoom})`,
-                    objectPosition: `${formData.image_position_x}% ${formData.image_position_y}%`,
-                  }}
-                />
-                
-                {/* Main image badge */}
-                {index === 0 && (
-                  <span className="absolute -top-1 -left-1 bg-gold text-secondary text-[10px] px-1.5 py-0.5 rounded font-bold z-10">
-                    رئيسية
-                  </span>
-                )}
-                
-                {/* Move buttons */}
-                <div className="absolute bottom-0 left-0 right-0 flex justify-center gap-1 p-1 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity z-10">
-                  <button
-                    type="button"
-                    onClick={() => moveImage(index, index - 1)}
-                    disabled={index === 0}
-                    className="p-1 text-xs bg-muted rounded hover:bg-muted-foreground/20 disabled:opacity-30"
-                  >
-                    ◀
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => moveImage(index, index + 1)}
-                    disabled={index === formData.images.length - 1}
-                    className="p-1 text-xs bg-muted rounded hover:bg-muted-foreground/20 disabled:opacity-30"
-                  >
-                    ▶
-                  </button>
-                </div>
-
-                {/* Delete button */}
-                <button
-                  type="button"
-                  onClick={() => removeImage(index)}
-                  className="absolute -top-2 -right-2 p-1 bg-destructive text-destructive-foreground rounded-full opacity-0 group-hover:opacity-100 transition-opacity z-10"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </div>
-            ))}
-            {formData.color_variants.length === 0 ? (
-              <label className="w-24 h-24 border-2 border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-gold transition-colors text-center p-1">
-                <Upload className="w-5 h-5 text-muted-foreground" />
-                <span className="text-[9px] text-muted-foreground mt-1">أضف لون أولاً</span>
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  disabled
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </label>
-            ) : (
-              <label className="w-24 h-24 border-2 border-dashed border-border rounded flex items-center justify-center cursor-pointer hover:border-gold transition-colors">
-                <Upload className="w-6 h-6 text-muted-foreground" />
-                <input
-                  type="file"
-                  accept="image/*"
-                  multiple
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-              </label>
-            )}
-          </div>
-          <p className="text-xs text-muted-foreground -mt-2">
-            الصور الأساسية تعتمد على أول لون تضيفه في قسم "ألوان المنتج" أدناه. أضف لوناً أولاً ثم ارفع الصور الخاصة بكل لون.
-          </p>
-          <div className="hidden">
-          </div>
-
-          {/* Image Zoom & Position Controls */}
-          {formData.images.length > 0 && (
-            <div className="space-y-4 p-4 bg-muted/50 rounded-lg">
-              <p className="text-sm font-medium text-foreground">تحكم في عرض الصور</p>
-              
-              {/* Zoom */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <ZoomIn className="w-4 h-4 text-muted-foreground" />
-                  <label className="text-xs text-muted-foreground">التكبير: {formData.image_zoom.toFixed(1)}x</label>
-                </div>
-                <Slider
-                  value={[formData.image_zoom]}
-                  onValueChange={([v]) => setFormData({ ...formData, image_zoom: v })}
-                  min={1}
-                  max={2}
-                  step={0.1}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Position X */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Move className="w-4 h-4 text-muted-foreground" />
-                  <label className="text-xs text-muted-foreground">الموضع الأفقي: {formData.image_position_x}%</label>
-                </div>
-                <Slider
-                  value={[formData.image_position_x]}
-                  onValueChange={([v]) => setFormData({ ...formData, image_position_x: v })}
-                  min={0}
-                  max={100}
-                  step={1}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Position Y */}
-              <div>
-                <div className="flex items-center gap-2 mb-2">
-                  <Move className="w-4 h-4 text-muted-foreground rotate-90" />
-                  <label className="text-xs text-muted-foreground">الموضع العمودي: {formData.image_position_y}%</label>
-                </div>
-                <Slider
-                  value={[formData.image_position_y]}
-                  onValueChange={([v]) => setFormData({ ...formData, image_position_y: v })}
-                  min={0}
-                  max={100}
-                  step={1}
-                  className="w-full"
-                />
-              </div>
-
-              {/* Reset Button */}
-              <Button 
-                type="button"
-                variant="outline" 
-                size="sm"
-                onClick={() => setFormData({ ...formData, image_zoom: 1, image_position_x: 50, image_position_y: 50 })}
-              >
-                إعادة تعيين الموضع
-              </Button>
-            </div>
-          )}
         </div>
 
         {/* Settings */}

@@ -73,34 +73,28 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getUser().then(async ({ data }) => {
+    const loadCustomer = async () => {
+      const savedCustomer = localStorage.getItem("customer");
+      if (savedCustomer) {
+        try {
+          const customer = JSON.parse(savedCustomer);
+          setUserId(String(customer.id || ""));
+          setUserPhone(String(customer.phone || ""));
+          console.log("CUSTOMER FROM STORAGE:", customer);
+          return;
+        } catch {}
+      }
+      const { data } = await supabase.auth.getUser();
       if (!mounted) return;
       const uid = String(data.user?.id || "").trim();
       const phone = String(data.user?.user_metadata?.phone_number || "").trim();
       setUserId(uid);
       setUserPhone(phone);
-      if (phone) {
-        const { data: customer } = await supabase
-          .from("customers")
-          .select("id")
-          .eq("phone", phone)
-          .maybeSingle();
-        if (customer) {
-          setCustomerId(customer.id);
-        }
-      }
-    });
-
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      const uid = String(session?.user?.id || "").trim();
-      const phone = String(session?.user?.user_metadata?.phone_number || "").trim();
-      setUserId(uid);
-      setUserPhone(phone);
-    });
-
+      console.log("AUTH CUSTOMER:", uid, phone);
+    };
+    loadCustomer();
     return () => {
       mounted = false;
-      sub.subscription.unsubscribe();
     };
   }, []);
 
@@ -155,20 +149,23 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
       // Also fetch admin-sent customer notifications (broadcasts + targeted)
       let dbNotifs: CustomerNotification[] = [];
       try {
-        const filters: string[] = ["broadcast.eq.true"];
-          if (customerId) {
-            filters.push(`customer_id.eq.${customerId}`);
-          }
-          if (userPhone) {
-            filters.push(`customer_phone.eq.${userPhone}`);
-          }
+        const filters: string[] = [
+          "broadcast.eq.true"
+        ];
+        if (userId) {
+          filters.push(`customer_id.eq.${userId}`);
+        }
+        if (userPhone) {
+          filters.push(`customer_phone.eq.${userPhone}`);
+        }
 
         const { data: notifRows } = await (supabase as any)
           .from("customer_notifications")
-          .select("id, title, message, body, type, link, is_read, created_at")
+          .select("id, title, message, body, type, link, is_read, created_at, customer_id, customer_phone, broadcast")
           .or(filters.join(","))
           .order("created_at", { ascending: false })
           .limit(50);
+          
 
         dbNotifs = (notifRows || [])
           .filter((r: any) => !deletedIdsRef.current.has(String(r.id)))

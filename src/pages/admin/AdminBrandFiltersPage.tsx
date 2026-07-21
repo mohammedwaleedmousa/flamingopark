@@ -32,6 +32,7 @@ const AdminBrandFiltersPage = () => {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [selectedBrandId, setSelectedBrandId] = useState<string | undefined>(routeBrandId);
+  const [selectedSectionId, setSelectedSectionId] = useState<string | undefined>();
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Filter | null>(null);
   const [form, setForm] = useState({
@@ -54,15 +55,32 @@ const AdminBrandFiltersPage = () => {
   });
 
   const activeBrandId = selectedBrandId || brands[0]?.id;
+  const { data: sections = [] } = useQuery({
+    queryKey: ["brand-sections-filters", activeBrandId],
+    enabled: !!activeBrandId && !!selectedSectionId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("brand_sections")
+        .select("id,name")
+        .eq("brand_id", activeBrandId)
+        .eq("section_id", selectedSectionId)
+        .order("sort_order");
+
+      if (error) throw error;
+
+      return data || [];
+    },
+  });
 
   const { data: filters = [], isLoading } = useQuery({
     queryKey: ["brand-filters-admin", activeBrandId],
-    enabled: !!activeBrandId,
+    enabled: !!activeBrandId && !!selectedSectionId,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("brand_filters")
         .select("*")
         .eq("brand_id", activeBrandId)
+        .eq("section_id", selectedSectionId)
         .order("sort_order");
       if (error) throw error;
       return (data || []).map((f: any) => ({ ...f, options: Array.isArray(f.options) ? f.options : [] })) as Filter[];
@@ -91,10 +109,12 @@ const AdminBrandFiltersPage = () => {
   const save = useMutation({
     mutationFn: async () => {
       if (!activeBrandId) throw new Error("اختر ماركة أولاً");
+      if (!selectedSectionId) throw new Error("اختر القسم أولاً");
       if (!form.name.trim()) throw new Error("اسم الفلتر مطلوب");
       const options = form.optionsText.split("\n").map((s) => s.trim()).filter(Boolean);
       const payload = {
         brand_id: activeBrandId,
+        section_id: selectedSectionId,
         name: form.name.trim(),
         slug: (form.slug || slugify(form.name)).trim(),
         filter_type: form.filter_type,
@@ -144,10 +164,34 @@ const AdminBrandFiltersPage = () => {
 
       <div className="flex items-center gap-3">
         <Label>الماركة:</Label>
-        <Select value={activeBrandId || ""} onValueChange={setSelectedBrandId}>
+        <Select value={activeBrandId || ""} onValueChange={(value) => {setSelectedBrandId(value);setSelectedSectionId(undefined);}}>
           <SelectTrigger className="w-64"><SelectValue placeholder="اختر ماركة" /></SelectTrigger>
           <SelectContent>
             {brands.map((b: any) => (<SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="flex items-center gap-3">
+        <Label>القسم:</Label>
+
+        <Select
+          value={selectedSectionId || ""}
+          onValueChange={setSelectedSectionId}
+        >
+          <SelectTrigger className="w-64">
+            <SelectValue placeholder="اختر القسم" />
+          </SelectTrigger>
+
+          <SelectContent>
+            {sections.map((section: any) => (
+              <SelectItem
+                key={section.id}
+                value={section.id}
+              >
+                {section.name}
+              </SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>

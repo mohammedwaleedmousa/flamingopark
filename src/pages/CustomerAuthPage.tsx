@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useStore, detectCountryFromPhone, Country } from "@/store/useStore";
+import { useStore, detectCountryFromPhone } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
@@ -11,7 +11,7 @@ const CustomerAuthPage = () => {
   const [searchParams] = useSearchParams();
   
   const navigate = useNavigate();
-  const { customer, setCustomer, setCountry, country } = useStore();
+  const { customer, setCustomer, setRegion, region } = useStore();
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "register">("login");
   const [formData, setFormData] = useState({
@@ -20,22 +20,18 @@ const CustomerAuthPage = () => {
     password: "",
   });
 
-  // Redirect if already logged in and country is available
+  // Redirect if already logged in and region is available
   useEffect(() => {
-    if (!customer) return;
+    const checkSession = async () => {
+      const { data } = await supabase.auth.getSession();
 
-    const fallbackCountry = customer.country || "GLOBAL";
+      if (data.session?.user) {
+        navigate("/home", { replace: true });
+      }
+    };
 
-    if (!country && fallbackCountry) {
-      setCountry(fallbackCountry);
-      navigate("/home", { replace: true });
-      return;
-    }
-
-    if (country) {
-      navigate("/home", { replace: true });
-    }
-  }, [customer, country, setCountry, navigate]);
+    checkSession();
+  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -64,8 +60,16 @@ const CustomerAuthPage = () => {
     try {
       const rpcName = mode === "login" ? "customer_login" : "customer_register";
       const args = mode === "login"
-        ? { _phone: formData.phone, _password: formData.password }
-        : { _name: formData.name, _phone: formData.phone, _country: detectedCountry, _password: formData.password };
+      ? { 
+          _phone: formData.phone, 
+          _password: formData.password 
+        }
+      : { 
+          _name: formData.name,
+          _phone: formData.phone,
+          _region: detectedCountry,
+          _password: formData.password
+        };
       const { data, error } = await (supabase as any).rpc(rpcName, args);
       if (error) throw error;
       const customer = Array.isArray(data) ? data[0] : data;
@@ -82,9 +86,9 @@ const CustomerAuthPage = () => {
         id: customer.id,
         name: customer.name,
         phone: customer.phone,
-        country: customer.country as Country,
+        region: customer.region,
       });
-      setCountry(customer.country as Country);
+      setRegion(customer.region);
 
       toast({
         title: "مرحباً بك",
@@ -109,20 +113,20 @@ const CustomerAuthPage = () => {
   const handleSkipLogin = async () => {
     setIsDetectingLocation(true);
     
-    const detectCountryFromIP = async (): Promise<Country> => {
-      return "GLOBAL";
+    const detectRegionFromIP = async (): Promise<string> => {
+      return "عدن";
     };
     
     try {
-      const detectedCountry = await detectCountryFromIP();
+      const detectedRegion = await detectRegionFromIP();
       
       setCustomer({
         id: "guest",
         name: "ضيف",
         phone: "",
-        country: detectedCountry,
+        region: detectedRegion,
       });
-      setCountry(detectedCountry);
+      setRegion(detectedRegion);
       
       toast({
         title: "مرحباً بك",
@@ -137,9 +141,9 @@ const CustomerAuthPage = () => {
         id: "guest",
         name: "ضيف",
         phone: "",
-        country: "GLOBAL",
+        region: "عدن",
       });
-      setCountry("GLOBAL");
+      setRegion("عدن");
       
       toast({
         title: "مرحباً بك",

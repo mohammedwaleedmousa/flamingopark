@@ -11,7 +11,7 @@ export interface Customer {
   id: string;
   name: string;
   phone: string;
-  country?: Country;
+  region?: string;
 }
 
 export interface Product {
@@ -72,8 +72,8 @@ interface StoreState {
   customer: Customer | null;
   cart: CartItem[];
   isCartOpen: boolean;
-  country: Country;
-  setCountry: (c: Country) => void;
+  region: string;
+  setRegion: (region: string) => void;
 
   currencyMode: CurrencyMode;
   setCurrencyMode: (m: CurrencyMode) => void;
@@ -109,8 +109,8 @@ export const useStore = create<StoreState>()(
       customer: null,
       cart: [],
       isCartOpen: false,
-      country: "GLOBAL",
-      setCountry: (country) => set({ country }),
+      region: "عدن",
+      setRegion: (region) => set({ region }),
 
       currencyMode: "SAR",
       setCurrencyMode: (currencyMode) => set({ currencyMode }),

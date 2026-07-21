@@ -13,7 +13,6 @@ import { hydrateCurrencies } from "@/lib/currency";
 import AdminBrandSectionProductsPage from "@/pages/admin/AdminBrandSectionProductsPage";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
-const AuthPage = lazy(() => import("./pages/AuthPage"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
 const ProductsPage = lazy(() => import("./pages/ProductsPage"));
@@ -105,13 +104,12 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-// Redirect logged in customers to home
-// Also handles referral code from URL
 const AuthRedirect = () => {
   const searchParams = new URLSearchParams(window.location.search);
   const refCode = searchParams.get("ref");
-  // Single unified platform: go straight to home (auth only required at checkout).
+
   if (!refCode) return <Navigate to="/home" replace />;
+
   return <CustomerAuthPage />;
 };
 
@@ -152,10 +150,9 @@ const App = () => {
             <Route path="/" element={<AuthRedirect />} />
             <Route path="/index" element={<AuthRedirect />} />
             <Route path="/index.html" element={<AuthRedirect />} />
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/signin" element={<AuthPage />} />
-            <Route path="/signup" element={<AuthPage />} />
-            <Route path="/legacy-auth" element={<CustomerAuthPage />} />
+            <Route path="/auth" element={<CustomerAuthPage />} />
+            <Route path="/signin" element={<CustomerAuthPage />} />
+            <Route path="/signup" element={<CustomerAuthPage />} />
             <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
             <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />

@@ -326,7 +326,7 @@ const Navbar = () => {
                       </button>
                     ) : (
                       <button
-                        onClick={() => goTo("/auth")}
+                        onClick={() => goTo("/signin")}
                         className="
                         w-full flex items-center justify-center gap-2
                         py-3

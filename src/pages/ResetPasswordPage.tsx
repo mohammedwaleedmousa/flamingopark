@@ -14,11 +14,14 @@ const ResetPasswordPage = () => {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    // Supabase puts type=recovery in the hash on redirect
-    const hash = window.location.hash;
-    if (hash.includes("type=recovery") || hash.includes("access_token")) setReady(true);
-    supabase.auth.getSession().then(({ data }) => { if (data.session) setReady(true); });
-  }, []);
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session) navigate("/home", { replace: true });
+    });
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      if (session) navigate("/home", { replace: true });
+    });
+    return () => sub.subscription.unsubscribe();
+  }, [navigate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

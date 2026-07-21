@@ -65,6 +65,16 @@ const ProductDetailPage = () => {
     enabled: !!slug,
   });
 
+    useEffect(() => {
+      if (
+        product?.colorVariants &&
+        product.colorVariants.length > 0 &&
+        selectedColorIdx === null
+      ) {
+        setSelectedColorIdx(0);
+      }
+    }, [product, selectedColorIdx]);
+
   // Default return policy from site settings
   const { data: defaultReturnPolicy } = useQuery({
     queryKey: ['default-return-policy'],

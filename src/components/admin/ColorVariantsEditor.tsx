@@ -336,13 +336,13 @@ if (currentImages + fileArray.length > 5) {
           {c.images.map((img, ii) => (
             <div
               key={ii}
-              className="relative aspect-square rounded-xl overflow-hidden bg-muted group"
+              className="relative aspect-[3/4] rounded-xl overflow-hidden bg-muted group"
             >
               <img
                 src={img}
                 alt=""
                 loading="lazy"
-                className="w-full h-full object-cover object-bottom"
+                className="w-full h-full object-contain"
               />
 
               <button

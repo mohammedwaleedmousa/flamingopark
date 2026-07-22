@@ -162,7 +162,7 @@ const CheckoutPage = () => {
     queryKey: ["whatsapp-number"],
     queryFn: async () => {
       const { data } = await supabase.from("site_settings").select("key, value").in("key", ["whatsapp", "whatsapp_ye", "whatsapp_sa"]);
-      return (data?.find((r) => r.key === "whatsapp")?.value as string) || (data?.find((r) => r.key === "whatsapp_ye")?.value as string) || (data?.find((r) => r.key === "whatsapp_sa")?.value as string) || "967123456789";
+      return (data?.find((r) => r.key === "whatsapp")?.value as string) || (data?.find((r) => r.key === "whatsapp_ye")?.value as string) || (data?.find((r) => r.key === "whatsapp_sa")?.value as string) || "967773335065";
     },
   });
 

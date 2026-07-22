@@ -29,6 +29,7 @@ export interface Product {
   category: string;
   brand: string;
   inStock: boolean;
+  stockQuantity?: number;
   countries?: Country[];
   isFeatured?: boolean;
   isBestSeller?: boolean;
@@ -119,6 +120,23 @@ export const useStore = create<StoreState>()(
 
       addToCart: (product, quantity = 1, selectedSize, selectedAccessories, variantId, variantColor) => {
         const cart = get().cart;
+
+        // Enforce stock quantity if provided on product
+        const stock = (product as any).stockQuantity;
+        if (typeof stock === "number" && stock >= 0) {
+          const existingQty = cart
+            .filter((it) => it.product.id === product.id && (it.variantId || "") === (variantId || ""))
+            .reduce((s, it) => s + it.quantity, 0);
+          if (existingQty + quantity > stock) {
+            const remaining = Math.max(0, stock - existingQty);
+            const win: any = typeof window !== "undefined" ? window : {};
+            if (win.__flamingoStockToast) {
+              win.__flamingoStockToast(remaining);
+            }
+            return;
+          }
+        }
+
 
         const accPrice = (selectedAccessories ?? []).reduce(
           (s, a) => s + a.price * a.quantity,

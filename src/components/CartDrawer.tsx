@@ -140,7 +140,11 @@ const CartDrawer = () => {
                             </button>
                             <span className="font-body text-sm w-8 text-center">{item.quantity}</span>
                             <button
-                              onClick={() => updateQuantity(item.product.id, item.quantity + 1, item.variantId)}
+                              onClick={() => {
+                                const stock = (item.product as any).stockQuantity;
+                                if (typeof stock === "number" && item.quantity >= stock) return;
+                                updateQuantity(item.product.id, item.quantity + 1, item.variantId);
+                              }}
                               className="w-7 h-7 flex items-center justify-center border border-border rounded-md hover:border-pink-50 transition-colors"
                             >
                               <Plus className="w-3 h-3" />

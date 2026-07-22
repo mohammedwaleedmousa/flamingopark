@@ -7,6 +7,9 @@ import ProductCard from "@/components/ProductCard";
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/store/useStore";
 import { ChevronRight } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Button } from "@/components/ui/button";
+
 
 const mapProduct = (p: any): Product => ({
   id: p.id,
@@ -32,6 +35,8 @@ const mapProduct = (p: any): Product => ({
 
 const BrandSectionPage = () => {
   const { slug, sectionSlug } = useParams<{ slug: string; sectionSlug: string }>();
+  const [priceSort, setPriceSort] = useState<"none" | "asc" | "desc">("none");
+  const [activeFilters, setActiveFilters] = useState<Record<string, string>>({});
 
   const { data: brand } = useQuery({
     queryKey: ["brand-by-slug-sec", slug],
@@ -44,6 +49,21 @@ const BrandSectionPage = () => {
         .maybeSingle();
       if (error) throw error;
       return data as { id: string; name: string; slug: string } | null;
+    },
+  });
+
+  const { data: brandFilters = [] } = useQuery({
+    queryKey: ["brand-filters-for-section", brand?.id],
+    enabled: !!brand?.id,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("brand_filters")
+        .select("id,name,slug,filter_type,options,sort_order")
+        .eq("brand_id", brand!.id)
+        .eq("is_active", true)
+        .order("sort_order");
+      if (error) throw error;
+      return (data || []) as Array<{ id: string; name: string; slug: string; filter_type: string; options: any }>;
     },
   });
 
@@ -90,6 +110,20 @@ const BrandSectionPage = () => {
   },
 });
 
+  const visibleProducts = useMemo(() => {
+    let list = [...products];
+    Object.entries(activeFilters).forEach(([key, val]) => {
+      if (!val) return;
+      list = list.filter((p: any) => {
+        const haystack = `${p.name || ""} ${p.nameAr || ""} ${p.description || ""} ${p.descriptionAr || ""} ${p.category || ""}`.toLowerCase();
+        return haystack.includes(val.toLowerCase());
+      });
+    });
+    if (priceSort === "asc") list.sort((a, b) => a.price - b.price);
+    if (priceSort === "desc") list.sort((a, b) => b.price - a.price);
+    return list;
+  }, [products, activeFilters, priceSort]);
+
   if (!slug || !sectionSlug) return <Navigate to="/home" replace />;
 
   return (
@@ -129,13 +163,50 @@ const BrandSectionPage = () => {
                   <ChevronRight className="w-4 h-4" /> العودة إلى {brand?.name}
                 </Link>
               </div>
+              {(brandFilters.length > 0 || products.length > 0) && (
+                <div className="mb-6 flex flex-wrap gap-3 items-center justify-center">
+                  <div className="flex gap-1">
+                    <Button size="sm" variant={priceSort === "none" ? "default" : "outline"} onClick={() => setPriceSort("none")}>الترتيب الافتراضي</Button>
+                    <Button size="sm" variant={priceSort === "asc" ? "default" : "outline"} onClick={() => setPriceSort("asc")}>السعر ↑</Button>
+                    <Button size="sm" variant={priceSort === "desc" ? "default" : "outline"} onClick={() => setPriceSort("desc")}>السعر ↓</Button>
+                  </div>
+                  {brandFilters.map((f) => {
+                    const opts: string[] = Array.isArray(f.options)
+                      ? f.options.map((o: any) => (typeof o === "string" ? o : o?.value || o?.label || "")).filter(Boolean)
+                      : [];
+                    if (opts.length === 0) return null;
+                    return (
+                      <div key={f.id} className="flex flex-wrap gap-1 items-center">
+                        <span className="text-xs text-muted-foreground ml-1">{f.name}:</span>
+                        <Button
+                          size="sm"
+                          variant={!activeFilters[f.slug] ? "default" : "outline"}
+                          onClick={() => setActiveFilters((prev) => ({ ...prev, [f.slug]: "" }))}
+                        >
+                          الكل
+                        </Button>
+                        {opts.map((opt) => (
+                          <Button
+                            key={opt}
+                            size="sm"
+                            variant={activeFilters[f.slug] === opt ? "default" : "outline"}
+                            onClick={() => setActiveFilters((prev) => ({ ...prev, [f.slug]: opt }))}
+                          >
+                            {opt}
+                          </Button>
+                        ))}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
               {prodLoading ? (
                 <div className="py-16 text-center text-muted-foreground">جاري التحميل...</div>
-              ) : products.length === 0 ? (
+              ) : visibleProducts.length === 0 ? (
                 <div className="py-16 text-center text-muted-foreground">لا توجد منتجات في هذا القسم بعد</div>
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
-                  {products.map((p, i) => (<ProductCard key={p.id} product={p} index={i} />))}
+                  {visibleProducts.map((p, i) => (<ProductCard key={p.id} product={p} index={i} />))}
                 </div>
               )}
             </section>

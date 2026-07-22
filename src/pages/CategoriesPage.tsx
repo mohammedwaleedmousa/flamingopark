@@ -56,24 +56,46 @@ const CategoriesPage = () => {
     [categories, selectedParent],
   );
   const selectedSub = useMemo(() => subCategories.find((s) => s.slug === subSlug) || null, [subCategories, subSlug]);
+  const showAllForParent = searchParams.get("all") === "1";
 
   const effectiveLeafCategory = selectedSub
     ? selectedSub
-    : selectedParent && subCategories.length === 0
+    : selectedParent && (subCategories.length === 0 || showAllForParent)
       ? selectedParent
       : null;
 
   const effectiveLeafSlug = effectiveLeafCategory?.slug || "";
 
+  const scopedCategoryIds = useMemo(() => {
+    if (!effectiveLeafCategory) return [] as string[];
+    if (selectedSub) return [selectedSub.id];
+    const descendants = categories.filter((c) => c.parent_id === effectiveLeafCategory.id).map((c) => c.id);
+    return [effectiveLeafCategory.id, ...descendants];
+  }, [categories, effectiveLeafCategory, selectedSub]);
+  const scopedCategorySlugs = useMemo(() => {
+    if (!effectiveLeafCategory) return [] as string[];
+    if (selectedSub) return [selectedSub.slug];
+    const descendants = categories.filter((c) => c.parent_id === effectiveLeafCategory.id).map((c) => c.slug);
+    return [effectiveLeafCategory.slug, ...descendants];
+  }, [categories, effectiveLeafCategory, selectedSub]);
+
   const { data: leafProducts = [], isLoading: productsLoading } = useQuery({
-    queryKey: ["categories-leaf-products", effectiveLeafSlug],
+    queryKey: ["categories-leaf-products", effectiveLeafSlug, scopedCategoryIds.join(","), scopedCategorySlugs.join(",")],
     enabled: !!effectiveLeafSlug,
     queryFn: async () => {
+      const slugList = scopedCategorySlugs.map((s) => `"${s}"`).join(",");
+      const idList = scopedCategoryIds.join(",");
+      const orFilter = [
+        slugList ? `category.in.(${slugList})` : null,
+        idList ? `category_id.in.(${idList})` : null,
+      ]
+        .filter(Boolean)
+        .join(",");
       const { data, error } = await supabase
         .from("products")
         .select("id,name,name_ar,slug,price,original_price,discount,description,description_ar,images,category,brand,in_stock,countries,is_featured,is_best_seller,variants,color_variants")
         .eq("is_active", true)
-        .eq("category", effectiveLeafSlug)
+        .or(orFilter)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -210,6 +232,15 @@ const CategoriesPage = () => {
         {selectedParent && !selectedSub && subCategories.length > 0 && (
           <section className="container mx-auto px-4 md:px-6 space-y-5">
             <h2 className="font-heading text-2xl text-center">اختاري نوع المنتجات داخل {selectedParent.name_ar}</h2>
+            <div className="flex justify-center">
+              <Button
+                variant={showAllForParent ? "default" : "outline"}
+                size="sm"
+                onClick={() => setStepParams({ all: showAllForParent ? null : "1", sub: null })}
+              >
+                {showAllForParent ? "إخفاء كل المنتجات" : "عرض كل منتجات القسم"}
+              </Button>
+            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
               {subCategories.map((c) => (
                 <Link

@@ -53,6 +53,7 @@ const ProductDetailPage = () => {
     ? data.images
     : ((data as any).color_variants?.[0]?.images || []),
         category: data.category, brand: data.brand, inStock: data.in_stock ?? true,
+        stockQuantity: typeof (data as any).stock_quantity === "number" ? (data as any).stock_quantity : undefined,
         countries: (data.countries || ['GLOBAL']) as Product['countries'],
         isFeatured: data.is_featured, isBestSeller: data.is_best_seller,
         hasSizes: (data as any).has_sizes ?? false, sizes: (data as any).sizes || [],
@@ -404,8 +405,18 @@ const ProductDetailPage = () => {
                 <div className="flex items-center bg-muted rounded-xl">
                   <button onClick={() => setQuantity(Math.max(1, quantity - 1))} className="p-3 hover:bg-muted-foreground/10 rounded-r-xl transition"><Minus className="w-4 h-4" /></button>
                   <span className="w-12 text-center font-medium">{quantity}</span>
-                  <button onClick={() => setQuantity(quantity + 1)} className="p-3 hover:bg-muted-foreground/10 rounded-l-xl transition"><Plus className="w-4 h-4" /></button>
-                </div>
+                  <button
+                    onClick={() => {
+                      const stock = (product as any)?.stockQuantity;
+                      if (typeof stock === "number" && quantity >= stock) {
+                        toast({ title: "الكمية غير متوفرة", description: `المتاح: ${stock} فقط`, variant: "destructive" });
+                        return;
+                      }
+                      setQuantity(quantity + 1);
+                    }}
+                    className="p-3 hover:bg-muted-foreground/10 rounded-l-xl transition"
+                  ><Plus className="w-4 h-4" /></button>                
+                  </div>
               </div>
 
               {/* Accessories — collapsible feel */}

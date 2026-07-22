@@ -342,7 +342,7 @@ if (currentImages + fileArray.length > 5) {
                 src={img}
                 alt=""
                 loading="lazy"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-cover object-bottom"
               />
 
               <button

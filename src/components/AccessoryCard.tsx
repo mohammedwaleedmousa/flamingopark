@@ -113,7 +113,7 @@ const AccessoryCard = ({ accessory, quantity, currency, onQuantityChange }: Acce
             {/* Modal Container - centered wrapper */}
             <motion.div
               initial={{ opacity: 0, scale: 0.9, y: 50 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
+              animate={{ opacity: 1, scale: 0.7, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 50 }}
               transition={{ type: "spring", damping: 25, stiffness: 300 }}
               className="fixed inset-0 z-[60] flex items-center justify-center p-4"

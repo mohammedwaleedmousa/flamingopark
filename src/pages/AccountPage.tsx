@@ -744,7 +744,7 @@ const AccountPage = () => {
                           {/* Avatar Preview */}
                           <motion.div
                             initial={{ scale: 0.8, opacity: 0 }}
-                            animate={{ scale: 1, opacity: 1 }}
+                            animate={{ scale: 0.7, opacity: 1 }}
                             className="relative w-24 h-24 rounded-full overflow-hidden bg-gradient-to-br from-primary/10 to-primary/5 border-2 border-primary/20 flex items-center justify-center"
                           >
                             {avatarPreview ? (

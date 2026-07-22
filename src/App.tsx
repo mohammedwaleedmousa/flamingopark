@@ -129,6 +129,7 @@ const App = () => {
     return !sessionStorage.getItem("flamingo-splash-seen");
   });
 
+  // هنا يتم تجهيز العملات عند تشغيل الموقع
   useEffect(() => {
     hydrateCurrencies();
   }, []);

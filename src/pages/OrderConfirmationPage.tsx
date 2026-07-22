@@ -9,7 +9,11 @@ import { CheckCircle, MessageCircle, Home, Copy, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { track } from '@/lib/analytics';
-import { CURRENCY_RATES, convertPrice } from '@/lib/currency';
+import {
+  CURRENCY_RATES,
+  convertPrice,
+  hydrateCurrencies
+} from '@/lib/currency';
 
 interface SelectedAccessory {
   name: string;
@@ -60,9 +64,13 @@ const OrderConfirmationPage = () => {
   const flamingoLogo = '/icons/flamingo.jpeg';
 
   // Currency snapshot: prices from checkout are in SAR (base). Convert & display in order's currency.
-  const currencyMode = (orderData?.currencyMode as string) || 'SAR';
+  const currencyMode = orderData?.currencyMode || "SAR";
   const currency = CURRENCY_RATES[currencyMode]?.symbol || 'ر.س';
   const fmt = (amountSAR: number) => convertPrice(amountSAR, currencyMode).toLocaleString('en-US');
+
+    useEffect(() => {
+      hydrateCurrencies();
+    }, []);
 
   useEffect(() => {
     if (location.state?.orderData) {
@@ -101,23 +109,21 @@ const OrderConfirmationPage = () => {
     setIsConfirming(true);
     
     try {
-      // Dynamic imports
-      const html2canvasModule = await import('html2canvas');
-      const jsPDFModule = await import('jspdf');
-      const html2canvasFn = html2canvasModule.default;
-      const jsPDFClass = jsPDFModule.default;
+      const [{ default: html2canvasFn }, { default: jsPDFClass }] = await Promise.all([
+        import('html2canvas'),
+        import('jspdf'),
+      ]);
 
-      // Use lower scale for faster generation
       const canvas = await html2canvasFn(invoiceRef.current, {
-        scale: 1,
+        scale: 0.7,
         useCORS: true,
         allowTaint: true,
         backgroundColor: '#ffffff',
         logging: false,
-        imageTimeout: 5000,
+        imageTimeout: 3000,
       });
       
-      const imgData = canvas.toDataURL('image/jpeg', 0.8);
+      const imgData = canvas.toDataURL('image/jpeg', 0.6);
       const pdf = new jsPDFClass({
         orientation: 'portrait',
         unit: 'mm',

@@ -175,8 +175,16 @@ const ProductDetailPage = () => {
 
   const isLiked = isFavorite(product.id);
   console.log("PRODUCT CARD:", product);
-  const nextImage = () => setSelectedImage((i) => (i + 1) % displayImages.length);
-  const prevImage = () => setSelectedImage((i) => (i - 1 + displayImages.length) % displayImages.length);
+  const nextImage = () => {
+    setSelectedImage((i) =>
+      i === displayImages.length - 1 ? 0 : i + 1
+    );
+  };
+  const prevImage = () => {
+    setSelectedImage((i) =>
+      i === 0 ? displayImages.length - 1 : i - 1
+    );
+  };
   
   const defaultFeatures = [
     { icon: 'truck', title: 'شحن سريع', desc: '2-5 أيام' },

@@ -16,7 +16,6 @@ import { useFavorites } from '@/hooks/useFavorites';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { useCurrency } from '@/lib/currency';
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
 import {
   ShoppingBag, Share2, ChevronLeft, ChevronRight, Minus, Plus, Check, Heart,
   Truck, Shield, RotateCcw, Star, Package, ChevronDown,
@@ -216,12 +215,7 @@ const ProductDetailPage = () => {
         <div className="container mx-auto px-4 pt-8 lg:pt-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
             {/* Gallery — dominant, Apple-style */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ duration: 0.5 }}
-              className="lg:col-span-7 lg:sticky lg:top-24 lg:self-start"
-            >
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="lg:col-span-7 lg:sticky lg:top-24 lg:self-start">
               <div
                 className="relative bg-muted/30 rounded-3xl overflow-hidden aspect-[2/3] group touch-pan-y"
               >
@@ -231,23 +225,17 @@ const ProductDetailPage = () => {
                     src={displayImages[selectedImage] || '/placeholder.svg'}
                     alt={product.nameAr}
                     initial={{ opacity: 0 }}
-                    animate={{
-                      opacity: 1,
-                      scale: isZoomed ? 2 : 1,
-                    }}
+                    animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    className={`w-full h-full object-contain select-none ${
-                      isZoomed ? 'cursor-zoom-out' : 'cursor-zoom-in'
-                    }`}
+                    whileHover={{ scale: 1.15 }}
+                    whileTap={{ scale: 1.8 }}
+                    className="w-full h-full object-contain cursor-zoom-in active:cursor-zoom-out"
                     draggable={false}
-                    drag={!isZoomed ? "x" : false}
+                    drag="x"
                     dragConstraints={{ left: 0, right: 0 }}
                     dragElastic={0.2}
-                    onClick={() => setIsZoomed(!isZoomed)}
                     onDragEnd={(e, info) => {
-                      if (isZoomed) return;
-
                       if (info.offset.x < -50) {
                         nextImage();
                       }
@@ -259,50 +247,27 @@ const ProductDetailPage = () => {
                   />
                 </AnimatePresence>
 
-                {/* Nav arrows */}
+                {/* Nav arrows — subtle */}
                 {displayImages.length > 1 && (
                   <>
-                    <button
-                      onClick={() => {
-                        setIsZoomed(false);
-                        prevImage();
-                      }}
-                      aria-label="السابق"
-                      className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-background/70 hover:bg-background shadow-md items-center justify-center hidden md:flex opacity-0 group-hover:opacity-100 transition-all"
-                    >
+                    <button onClick={prevImage} aria-label="السابق" className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-background/70 hover:bg-background shadow-md items-center justify-center hidden md:flex opacity-0 group-hover:opacity-100 transition-all">
                       <ChevronRight className="w-5 h-5" />
                     </button>
-
-                    <button
-                      onClick={() => {
-                        setIsZoomed(false);
-                        nextImage();
-                      }}
-                      aria-label="التالي"
-                      className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-background/70 hover:bg-background shadow-md items-center justify-center hidden md:flex opacity-0 group-hover:opacity-100 transition-all"
-                    >
+                    <button onClick={nextImage} aria-label="التالي" className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-background/70 hover:bg-background shadow-md items-center justify-center hidden md:flex opacity-0 group-hover:opacity-100 transition-all">
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                   </>
                 )}
 
                 {/* Wishlist */}
-                <button
-                  onClick={() => toggleFavorite(product)}
-                  className={`absolute top-4 left-4 w-11 h-11 rounded-full flex items-center justify-center transition-all ${
-                    isLiked
-                      ? 'bg-gold text-white'
-                      : 'bg-background/80 hover:bg-background'
-                  }`}
-                >
+                <button onClick={() => { toggleFavorite(product); }}
+                  className={`absolute top-4 left-4 w-11 h-11 rounded-full flex items-center justify-center transition-all ${isLiked ? 'bg-gold text-white' : 'bg-background/80 hover:bg-background'}`}>
                   <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
                 </button>
 
-                {/* Discount */}
+                {/* Discount tag */}
                 {product.discount && (
-                  <span className="absolute top-4 right-4 bg-gold text-white text-xs font-medium px-3 py-1.5 rounded-full">
-                    -{product.discount}%
-                  </span>
+                  <span className="absolute top-4 right-4 bg-gold text-white text-xs font-medium px-3 py-1.5 rounded-full">-{product.discount}%</span>
                 )}
 
                 {/* Counter */}
@@ -317,23 +282,9 @@ const ProductDetailPage = () => {
               {displayImages.length > 1 && (
                 <div className="flex gap-2 mt-4 overflow-x-auto scrollbar-none">
                   {displayImages.map((img, i) => (
-                    <button
-                      key={i}
-                      onClick={() => {
-                        setIsZoomed(false);
-                        setSelectedImage(i);
-                      }}
-                      className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
-                        selectedImage === i
-                          ? 'border-gold'
-                          : 'border-transparent hover:border-border'
-                      }`}
-                    >
-                      <img
-                        src={img}
-                        alt=""
-                        className="w-full h-full object-cover"
-                      />
+                    <button key={i} onClick={() => setSelectedImage(i)}
+                      className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${selectedImage === i ? 'border-gold' : 'border-transparent hover:border-border'}`}>
+                      <img src={img} alt="" className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>

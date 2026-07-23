@@ -50,7 +50,7 @@ const STEPS = [
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
-  const { country, customer, cart, getCartTotal, clearCart, currencyMode } = useStore();
+  const { customer, cart, getCartTotal, clearCart, currencyMode } = useStore();
   const isGuestLike = !customer || customer.id === "guest";
   const subtotal = getCartTotal();
   const currency = "ر.ي";
@@ -275,7 +275,6 @@ const CheckoutPage = () => {
         order_number: orderNumber, customer_name: customerName || "عميل",
         customer_phone: customerPhone, customer_address: formData.address || "-",
         customer_city: formData.city || "", customer_notes: formData.notes || null,
-        country: country || "GLOBAL",
         currency_code: currencyMode,
         exchange_rate_snapshot: (await import("@/lib/currency")).getRateSnapshot(currencyMode),
         total_base: total,
@@ -295,7 +294,7 @@ const CheckoutPage = () => {
         discountAmount, couponCode: discountAmount > 0 ? couponCode.trim().toUpperCase() : null,
         total, paymentMethod, deliveryCompany: selectedCompany?.name || "",
         selectedRegion: paymentMethod === "cod" && regionData ? regionData.region_name_ar : null,
-        country: country || "GLOBAL", currencyMode,
+        currencyMode,
         whatsappNumber: whatsappNumber || "967123456789", createdAt: new Date().toISOString(),
       };
       clearCart();
@@ -425,7 +424,7 @@ const CheckoutPage = () => {
                       <h2 className="font-heading text-xl flex items-center gap-2"><CreditCard className="w-5 h-5 text-gold" /> الشحن والدفع</h2>
 
                       <div>
-                        <label className="block text-sm mb-3 flex items-center gap-2"><Truck className="w-4 h-4" /> شركة التوصيل *</label>
+                        <label className="block text-sm mb-3 items-center gap-2"><Truck className="w-4 h-4" /> شركة التوصيل *</label>
                         {deliveryCompanies.length > 0 ? (
                           <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                             {deliveryCompanies.map((c) => (
@@ -482,7 +481,7 @@ const CheckoutPage = () => {
                       )}
 
                       <div>
-                        <label className="block text-sm mb-2 flex items-center gap-2"><Ticket className="w-4 h-4" /> كود الخصم (اختياري)</label>
+                        <label className="block text-sm mb-2 items-center gap-2"><Ticket className="w-4 h-4" /> كود الخصم (اختياري)</label>
                         {appliedCoupon ? (
                           <div className="flex items-center justify-between gap-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
                             <div className="flex items-center gap-2">

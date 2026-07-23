@@ -99,36 +99,33 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
         }
 
         let imageFile = file;
-        const isHeic =
-          extension === "heic" ||
-          extension === "heif" ||
+        const isHEIC =
           file.type === "image/heic" ||
-          file.type === "image/heif";
-
-        if (isHeic) {
+          file.type === "image/heif" ||
+          extension === "heic" ||
+          extension === "heif";
+        if (isHEIC) {
           try {
-            const converted = await heic2any({
+            const convertedBlob = await heic2any({
               blob: file,
               toType: "image/jpeg",
               quality: 0.9,
             });
-
-            const blob = Array.isArray(converted)
-              ? converted[0]
-              : converted;
-
+            const jpegBlob = Array.isArray(convertedBlob)
+              ? convertedBlob[0]
+              : convertedBlob;
             imageFile = new File(
-              [blob],
-              `${crypto.randomUUID()}.jpg`,
+              [jpegBlob],
+              file.name.replace(/\.(heic|heif)$/i, ".jpg"),
               {
                 type: "image/jpeg",
-                lastModified: Date.now(),
               }
             );
 
           } catch (err) {
-            console.error("HEIC CONVERSION ERROR:", err);
-            throw new Error("فشل تحويل صورة HEIC");
+            throw new Error(
+              `${file.name}: فشل تحويل صورة HEIC`
+            );
           }
         }
 
@@ -413,7 +410,7 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
 
             <input
               type="file"
-              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
               multiple
               className="hidden"
               disabled={uploading === ci}

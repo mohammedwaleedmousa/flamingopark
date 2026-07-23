@@ -86,6 +86,11 @@ if (currentImages + fileArray.length > 5) {
 }
 
       const uploadPromises = fileArray.map(async (file) => {
+        console.log("FILE INFO:", {
+  name: file.name,
+  type: file.type,
+  size: file.size
+});
         const extension = file.name.split('.').pop()?.toLowerCase();
         const allowed = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
 
@@ -98,25 +103,31 @@ if (currentImages + fileArray.length > 5) {
         }
 
         let imageFile = file;
-        if (
-          file.type === "image/heic" ||
-          file.type === "image/heif" ||
-          extension === "heic" ||
-          extension === "heif"
-        ) {
-          const converted = await heic2any({
-            blob: file,
-            toType: "image/jpeg",
-            quality: 0.9,
-          });
-          imageFile = new File(
-            [converted as Blob],
-            `${crypto.randomUUID()}.jpg`,
-            {
-              type: "image/jpeg",
-            }
-          );
-        }
+        if (file.type === "image/heic" || file.type === "image/heif") {
+  try {
+    const converted = await heic2any({
+      blob: file,
+      toType: "image/jpeg",
+      quality: 0.9,
+    });
+
+    const blob = Array.isArray(converted)
+      ? converted[0]
+      : converted;
+
+    imageFile = new File(
+      [blob],
+      `${crypto.randomUUID()}.jpg`,
+      {
+        type: "image/jpeg",
+      }
+    );
+
+  } catch (err) {
+    console.error("HEIC CONVERSION ERROR:", err);
+    throw new Error("فشل تحويل صورة HEIC");
+  }
+}
 
         const compressedFile = await imageCompression(imageFile, {
           maxSizeMB: 0.3,
@@ -399,7 +410,7 @@ if (currentImages + fileArray.length > 5) {
 
             <input
               type="file"
-              accept="image/*,.heic,.heif"
+              accept="image/jpeg,image/png,image/webp,image/heic,image/heif"
               multiple
               className="hidden"
               disabled={uploading === ci}

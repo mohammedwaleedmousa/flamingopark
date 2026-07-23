@@ -207,7 +207,7 @@ const ProductDetailPage = () => {
             {/* Gallery — dominant, Apple-style */}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="lg:col-span-7 lg:sticky lg:top-24 lg:self-start">
               <div
-                className="relative bg-muted/30 rounded-3xl overflow-hidden aspect-[3/4] group touch-pan-y"
+                className="relative bg-muted/30 rounded-3xl overflow-hidden aspect-[4/5] group touch-pan-y"
               >
                 <AnimatePresence mode="wait">
                   <motion.img

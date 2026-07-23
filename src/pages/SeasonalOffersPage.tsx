@@ -14,46 +14,42 @@ type FilterTab = 'all' | 'seasonal' | 'clearance' | 'flash';
 
 const SeasonalOffersPage = () => {
   const { data: content } = useSiteContent('seasonal_offers_');
-  const { country } = useStore();
   const [activeTab, setActiveTab] = useState<FilterTab>('all');
 
   // Fetch seasonal offers
   const { data: offers = [], isLoading } = useQuery({
-    queryKey: ['seasonal-offers', country],
+    queryKey: ['seasonal-offers'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('products')
         .select('*')
         .eq('is_active', true)
-        .contains('countries', [country])
         .gt('discount', 0)
         .order('discount', { ascending: false })
         .limit(50);
-      
       if (error) throw error;
-      
       return (data || []).map(p => ({
         id: p.id,
         name: p.name,
         nameAr: p.name_ar,
         slug: p.slug,
         price: Number(p.price),
-        originalPrice: p.original_price ? Number(p.original_price) : undefined,
+        originalPrice: p.original_price
+          ? Number(p.original_price)
+          : undefined,
         discount: p.discount || 0,
         description: p.description || '',
         descriptionAr: p.description_ar || '',
         images:
-  p.images?.length > 0
-    ? p.images
-    : ((p as any).color_variants?.[0]?.images || []),
+          p.images?.length > 0
+            ? p.images
+            : ((p as any).color_variants?.[0]?.images || []),
         category: p.category,
         brand: p.brand,
         inStock: p.in_stock ?? true,
-        countries: (p.countries || ['GLOBAL']) as Product['countries'],
       })) as Product[];
     },
   });
-
   // Categorize offers by discount level
   const categorized = useMemo(() => {
     return {

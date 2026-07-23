@@ -18,37 +18,35 @@ interface Review {
 
 const ReviewsSection = () => {
   const { data: content } = useSiteContent('reviews_section_');
-  const { country } = useStore();
 
   const { data: reviews = [] } = useQuery({
-    queryKey: ['reviews', country],
+    queryKey: ['reviews'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('reviews')
         .select('*')
         .eq('is_approved', true)
-        .eq('country', country)
         .order('created_at', { ascending: false })
         .limit(6);
+
       if (error) throw error;
+
       return data as Review[];
     },
-    enabled: !!country,
   });
 
   // Fetch total reviews count
   const { data: totalCount = 0 } = useQuery({
-    queryKey: ['reviews-count', country],
+    queryKey: ['reviews-count'],
     queryFn: async () => {
       const { count, error } = await supabase
         .from('reviews')
         .select('*', { count: 'exact', head: true })
-        .eq('is_approved', true)
-        .eq('country', country);
+        .eq('is_approved', true);
       if (error) throw error;
+
       return count || 0;
     },
-    enabled: !!country,
   });
 
   if (reviews.length === 0) return null;

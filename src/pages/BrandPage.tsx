@@ -90,7 +90,7 @@ const BrandPage = () => {
     const { data, error } = await (supabase as any)
       .from("products")
       .select("*")
-      .or(`brand_id.eq.${brand!.id},brand.eq.${brand!.name}`)
+      .eq("brand_id", brand!.id)      
       .eq("is_active", true)
       .order("created_at", { ascending: false });
     if (error) throw error;

@@ -27,7 +27,6 @@ interface BrandViewModel {
 }
 
 const BrandsStrip = () => {
-  const { country } = useStore();
 
   const trackRef = useRef<HTMLDivElement | null>(null);
 
@@ -36,7 +35,7 @@ const BrandsStrip = () => {
   const [startScrollLeft, setStartScrollLeft] = useState(0);
 
   const { data: brands = [] } = useQuery({
-    queryKey: ["home-brands", country],
+    queryKey: ["home-brands"],
 
     queryFn: async () => {
       const { data, error } = await (supabase as any)
@@ -55,16 +54,8 @@ const BrandsStrip = () => {
 
 
   const visibleBrands = useMemo(() => {
-    return brands.filter((brand) => {
-      if (!brand.countries || brand.countries.length === 0) {
-        return true;
-      }
-      if (!country || country === "GLOBAL") {
-        return true;
-      }
-      return brand.countries.includes(country);
-    });
-  }, [brands, country]);
+    return brands;
+  }, [brands]);
 
 
   const renderBrands: BrandViewModel[] = visibleBrands.map(

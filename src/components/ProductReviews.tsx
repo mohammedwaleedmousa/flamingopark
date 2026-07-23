@@ -26,7 +26,7 @@ interface ProductReview {
 }
 
 const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
-  const { customer, country } = useStore();
+  const { customer } = useStore();
   const queryClient = useQueryClient();
   const [authUser, setAuthUser] = useState<SupaUser | null>(null);
   const [authChecking, setAuthChecking] = useState(true);
@@ -103,42 +103,47 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
   // Submit review mutation
   const submitReview = useMutation({
     mutationFn: async () => {
-      if (!canReview) throw new Error('يجب تسجيل الدخول أولاً');
-      if (rating === 0) throw new Error('يرجى اختيار التقييم');
+      if (!canReview) throw new Error("يجب تسجيل الدخول أولاً");
+      if (rating === 0) throw new Error("يرجى اختيار التقييم");
 
       const authorName =
         customer?.name ||
         authUser?.user_metadata?.full_name ||
         authUser?.email ||
-        'عميل';
-      const reviewCountry = country || customer?.country || 'GLOBAL';
-      
-      const { error } = await supabase.from('product_reviews').insert({
+        "عميل";
+
+      const { error } = await supabase.from("product_reviews").insert({
         product_id: productId,
         customer_name: authorName,
         rating,
         comment: comment.trim() || null,
-        country: reviewCountry,
         is_approved: false,
         images,
       } as any);
+
       if (error) throw error;
     },
+
     onSuccess: () => {
       toast({
-        title: 'تم إرسال التقييم',
-        description: 'شكراً لك! سيتم مراجعة تقييمك قريباً',
+        title: "تم إرسال التقييم",
+        description: "شكراً لك! سيتم مراجعة تقييمك قريباً",
       });
+
       setRating(0);
-      setComment('');
+      setComment("");
       setImages([]);
-      queryClient.invalidateQueries({ queryKey: ['product-reviews', productId] });
+
+      queryClient.invalidateQueries({
+        queryKey: ["product-reviews", productId],
+      });
     },
+
     onError: (error: Error) => {
       toast({
-        title: 'خطأ',
+        title: "خطأ",
         description: error.message,
-        variant: 'destructive',
+        variant: "destructive",
       });
     },
   });

@@ -257,10 +257,23 @@ const ProductsPage = () => {
   }, [currentCategory, isParent, subCategories]);
 
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ["products-list", leafSlugs, searchQuery],
+    queryKey: ["products-list", leafSlugs, currentCategory?.id, searchQuery],
     queryFn: async () => {
       let q = supabase.from("products").select("*").eq("is_active", true);
-      if (leafSlugs && leafSlugs.length) q = q.in("category", leafSlugs);
+      if (leafSlugs && leafSlugs.length) {
+        // Match either the slug in `category` OR the UUID in `category_id`.
+        const slugList = leafSlugs.map((s) => `"${s}"`).join(",");
+        const idList = (isParent ? subCategories.map((c) => c.id) : currentCategory ? [currentCategory.id] : [])
+          .filter(Boolean)
+          .join(",");
+        const or = [
+          slugList ? `category.in.(${slugList})` : null,
+          idList ? `category_id.in.(${idList})` : null,
+        ]
+          .filter(Boolean)
+          .join(",");
+        if (or) q = q.or(or);
+      }
       const { data, error } = await q.order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []).map((p: any) => ({
@@ -442,6 +455,36 @@ const ProductsPage = () => {
 
         <section id="products-grid" className="container mx-auto px-6 py-8">
           <div>
+            {/* Quick category strip */}
+              <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-3 mb-4 -mx-1 px-1">
+                <button
+                  onClick={() => setParam("category", null)}
+                  className={`shrink-0 px-4 py-2 rounded-full text-sm border transition-colors ${!categorySlug ? "bg-foreground text-background border-foreground" : "bg-card text-muted-foreground border-border hover:bg-muted"}`}
+                >
+                  كل المنتجات
+                </button>
+                {categories
+                  .filter((c) => !c.parent_id)
+                  .map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => setParam("category", c.slug)}
+                      className={`shrink-0 px-4 py-2 rounded-full text-sm border transition-colors ${categorySlug === c.slug ? "bg-foreground text-background border-foreground" : "bg-card text-muted-foreground border-border hover:bg-muted"}`}
+                    >
+                      {c.name_ar}
+                    </button>
+                  ))}
+                {isParent &&
+                  subCategories.map((c) => (
+                    <button
+                      key={c.id}
+                      onClick={() => setParam("category", c.slug)}
+                      className="shrink-0 px-4 py-2 rounded-full text-sm border border-dashed border-border/70 text-muted-foreground hover:bg-muted transition-colors"
+                    >
+                      {c.name_ar}
+                    </button>
+                  ))}
+              </div>
               <div className="flex flex-wrap items-center gap-2 mb-4">
                 {brandFilter !== "all" && <button onClick={() => setParam("brand", null)} className="px-3 py-1 rounded-lg text-xs bg-muted text-muted-foreground border border-border">{brandFilter} <X className="inline w-3 h-3" /></button>}
                 {colorFilter !== "all" && <button onClick={() => setParam("color", null)} className="px-3 py-1 rounded-lg text-xs bg-muted text-muted-foreground border border-border">{colorFilter} <X className="inline w-3 h-3" /></button>}

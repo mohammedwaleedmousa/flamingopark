@@ -120,13 +120,12 @@ const CopyCodeButton = ({ code }: { code: string }) => {
 
 const OffersPage = () => {
   const { data: content } = useSiteContent("offers_page_");
-  const { country } = useStore();
   const queryClient = useQueryClient();
   const [mainTimeLeft, setMainTimeLeft] = useState<TimeLeft>({ days: 0, hours: 0, minutes: 0, seconds: 0, expired: false });
 
   // Fetch offers settings
   const { data: settings } = useQuery({
-    queryKey: ["offers-settings", country],
+    queryKey: ["offers-settings"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("offers_settings")
@@ -134,14 +133,14 @@ const OffersPage = () => {
         .limit(1)
         .maybeSingle();
       if (error) throw error;
+
       return data as OffersSettings | null;
     },
-    enabled: !!country,
   });
 
   // Fetch active offers that haven't expired
   const { data: offers = [], isLoading: offersLoading } = useQuery({
-    queryKey: ["offers", country],
+    queryKey: ["offers"],
     queryFn: async () => {
       const now = new Date().toISOString();
       const { data, error } = await supabase
@@ -151,16 +150,14 @@ const OffersPage = () => {
         .or(`end_date.is.null,end_date.gt.${now}`)
         .order("sort_order", { ascending: true });
       if (error) throw error;
-      return (data || []).filter(offer => {
-        // Double check end_date
+      return (data || []).filter((offer) => {
         if (offer.end_date) {
           return new Date(offer.end_date) > new Date();
         }
         return true;
       }) as Offer[];
     },
-    enabled: !!country,
-    refetchInterval: 60000, // Refetch every minute to check for expired offers
+    refetchInterval: 60000,
   });
 
   // Collect all product IDs from offers
@@ -189,18 +186,17 @@ const OffersPage = () => {
         description: p.description || "",
         descriptionAr: p.description_ar || "",
         images:
-  p.images?.length > 0
-    ? p.images
-    : ((p as any).color_variants?.[0]?.images || []),
+          p.images?.length > 0
+            ? p.images
+            : ((p as any).color_variants?.[0]?.images || []),
         category: p.category,
         brand: p.brand,
         inStock: p.in_stock ?? true,
-        countries: (p.countries || ["GLOBAL"]) as Product["countries"],
         isFeatured: p.is_featured,
         isBestSeller: p.is_best_seller,
       })) as Product[];
     },
-    enabled: offerProductIds.length > 0 && !!country,
+    enabled: offerProductIds.length > 0,
   });
 
   // Main countdown timer

@@ -25,7 +25,6 @@ interface Review {
 
 const ReviewsPage = () => {
   const { data: content } = useSiteContent('reviews_page_');
-  const { country } = useStore();
   const queryClient = useQueryClient();
   const [name, setName] = useState('');
   const [message, setMessage] = useState('');
@@ -34,80 +33,105 @@ const ReviewsPage = () => {
 
   // Fetch all approved reviews
   const { data: reviews = [], isLoading } = useQuery({
-    queryKey: ['all-reviews', country],
+    queryKey: ['all-reviews'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('reviews')
         .select('*')
         .eq('is_approved', true)
-        .eq('country', country)
         .order('created_at', { ascending: false });
       if (error) throw error;
       return data as Review[];
     },
-    enabled: !!country,
   });
 
   // Fetch stats
   const { data: stats } = useQuery({
-    queryKey: ['review-stats', country],
+    queryKey: ['review-stats'],
     queryFn: async () => {
       const { data, error } = await supabase
         .from('reviews')
         .select('rating')
-        .eq('is_approved', true)
-        .eq('country', country);
+        .eq('is_approved', true);
       if (error) throw error;
-      
       const totalReviews = data.length;
-      const avgRating = totalReviews > 0 
-        ? (data.reduce((sum, r) => sum + r.rating, 0) / totalReviews).toFixed(1)
-        : '0';
-      
-      // Calculate rating distribution
-      const distribution = [5, 4, 3, 2, 1].map(star => ({
+      const avgRating =
+        totalReviews > 0
+          ? (
+              data.reduce((sum, r) => sum + r.rating, 0) /
+              totalReviews
+            ).toFixed(1)
+          : '0';
+      const distribution = [5, 4, 3, 2, 1].map((star) => ({
         star,
-        count: data.filter(r => r.rating === star).length,
-        percentage: totalReviews > 0 ? (data.filter(r => r.rating === star).length / totalReviews) * 100 : 0
+        count: data.filter((r) => r.rating === star).length,
+        percentage:
+          totalReviews > 0
+            ? (data.filter((r) => r.rating === star).length /
+                totalReviews) *
+              100
+            : 0,
       }));
-
-      return { totalReviews, avgRating, distribution };
+      return {
+        totalReviews,
+        avgRating,
+        distribution,
+      };
     },
-    enabled: !!country,
   });
 
   // Submit review mutation
   const submitMutation = useMutation({
-    mutationFn: async () => {
-      const { error } = await supabase
-        .from('reviews')
-        .insert({
-          customer_name: name.trim(),
-          message: message.trim(),
-          message_ar: message.trim(),
-          rating,
-          country,
-          is_approved: false // Requires admin approval
-        });
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      toast({
-        title: getSiteText(content, 'reviews_page_toast_success_title', 'شكراً لك!'),
-        description: getSiteText(content, 'reviews_page_toast_success_desc', 'تم إرسال تقييمك وسيتم مراجعته قريباً'),
+  mutationFn: async () => {
+    const { error } = await supabase
+      .from('reviews')
+      .insert({
+        customer_name: name.trim(),
+        message: message.trim(),
+        message_ar: message.trim(),
+        rating,
+        country: "YE",
+        is_approved: false,
       });
-      setName('');
-      setMessage('');
-      setRating(5);
-    },
-    onError: () => {
-      toast({
-        title: getSiteText(content, 'reviews_page_toast_error_title', 'خطأ'),
-        description: getSiteText(content, 'reviews_page_toast_error_desc', 'حدث خطأ أثناء إرسال التقييم'),
-        variant: 'destructive',
-      });
-    },
-  });
+
+    if (error) throw error;
+  },
+
+  onSuccess: () => {
+    toast({
+      title: getSiteText(
+        content,
+        'reviews_page_toast_success_title',
+        'شكراً لك!'
+      ),
+      description: getSiteText(
+        content,
+        'reviews_page_toast_success_desc',
+        'تم إرسال تقييمك وسيتم مراجعته قريباً'
+      ),
+    });
+
+    setName('');
+    setMessage('');
+    setRating(5);
+  },
+
+  onError: () => {
+    toast({
+      title: getSiteText(
+        content,
+        'reviews_page_toast_error_title',
+        'خطأ'
+      ),
+      description: getSiteText(
+        content,
+        'reviews_page_toast_error_desc',
+        'حدث خطأ أثناء إرسال التقييم'
+      ),
+      variant: 'destructive',
+    });
+  },
+});
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

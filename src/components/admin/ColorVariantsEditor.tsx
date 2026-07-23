@@ -150,7 +150,7 @@ if (isHEIC) {
         const compressedFile = await imageCompression(imageFile, {
           maxSizeMB: 1,
           maxWidthOrHeight: 1200,
-          useWebWorker: false,
+          useWebWorker: true,
           fileType: 'image/webp',
         });
 

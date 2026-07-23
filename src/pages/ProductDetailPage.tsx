@@ -242,11 +242,11 @@ const ProductDetailPage = () => {
                     dragConstraints={{ left: 0, right: 0 }}
                     dragElastic={0.2}
                     onDragEnd={(e, info) => {
-                      if (info.offset.x < -50) {
+                      if (info.offset.x > 50) {
                         nextImage();
                       }
 
-                      if (info.offset.x > 50) {
+                      if (info.offset.x < -50) {
                         prevImage();
                       }
                     }}

@@ -207,7 +207,7 @@ const ProductDetailPage = () => {
             {/* Gallery — dominant, Apple-style */}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="lg:col-span-7 lg:sticky lg:top-24 lg:self-start">
               <div
-                className="relative bg-muted/30 rounded-3xl overflow-hidden aspect-square group touch-pan-y"
+                className="relative bg-muted/30 rounded-3xl overflow-hidden aspect-[4/5] group touch-pan-y"
               >
                 <AnimatePresence mode="wait">
                   <motion.img
@@ -218,7 +218,7 @@ const ProductDetailPage = () => {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
+                    className="w-full h-full object-contain cursor-grab active:cursor-grabbing"
                     draggable={false}
                     drag="x"
                     dragConstraints={{ left: 0, right: 0 }}

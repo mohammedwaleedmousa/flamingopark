@@ -222,9 +222,9 @@ const ProductDetailPage = () => {
     key={selectedImage}
     src={displayImages[selectedImage] || '/placeholder.svg'}
     alt={product.nameAr}
-    initial={{ opacity: 0, x: 80 }}
+    initial={{ opacity: 0, x: -80 }}
     animate={{ opacity: 1, x: 0 }}
-    exit={{ opacity: 0, x: -80 }}
+    exit={{ opacity: 0, x: 80 }}
     transition={{ 
       duration: 0.3,
       ease: "easeOut"
@@ -235,11 +235,11 @@ const ProductDetailPage = () => {
     dragConstraints={{ left: 0, right: 0 }}
     dragElastic={0.2}
     onDragEnd={(e, info) => {
-      if (info.offset.x > 50) {
+      if (info.offset.x < -50) {
         nextImage();
       }
 
-      if (info.offset.x < -50) {
+      if (info.offset.x > 50) {
         prevImage();
       }
     }}

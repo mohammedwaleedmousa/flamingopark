@@ -207,7 +207,7 @@ speed={800}
 
 
 
-loop={true}
+loop={false}
 
 
 

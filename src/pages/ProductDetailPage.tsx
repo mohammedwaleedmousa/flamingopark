@@ -232,25 +232,10 @@ const ProductDetailPage = () => {
                     key={selectedImage}
                     src={displayImages[selectedImage] || '/placeholder.svg'}
                     alt={product.nameAr}
-                    initial={{
-                      opacity: 0,
-                      x: 30,
-                      scale: 1.02,
-                    }}
-                    animate={{
-                      opacity: 1,
-                      x: 0,
-                      scale: 1,
-                    }}
-                    exit={{
-                      opacity: 0,
-                      x: -30,
-                      scale: 0.98,
-                    }}
-                    transition={{
-                      duration: 0.45,
-                      ease: [0.22, 1, 0.36, 1],
-                    }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.3 }}
                     className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
                     draggable={false}
                     drag="x"

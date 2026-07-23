@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { Link, useSearchParams, useLocation, useNavigationType } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
@@ -221,6 +221,21 @@ const ProductsPage = () => {
   const [quickViewProd, setQuickViewProd] = useState<Product | null>(null);
   const PAGE_SIZE = 12;
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+  const location = useLocation();
+  const navigationType = useNavigationType();
+
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      sessionStorage.setItem(
+        "products-scroll-position",
+        String(window.scrollY)
+      );
+    };
+    window.addEventListener("beforeunload", handleBeforeUnload);
+    return () => {
+      window.removeEventListener("beforeunload", handleBeforeUnload);
+    };
+  }, []);
 
   useEffect(() => setPage(1), [categorySlug, searchQuery, brandFilter, colorFilter, sizeFilter, sortBy, saleOnly, inStockOnly, minPriceParam, maxPriceParam]);
 
@@ -302,6 +317,24 @@ const ProductsPage = () => {
       })) as Product[];
     },
   });
+  useEffect(() => {
+    if (!isLoading && products.length > 0 && navigationType === "POP") {
+      const savedPosition = sessionStorage.getItem(
+        "products-scroll-position"
+      );
+      if (savedPosition) {
+        setTimeout(() => {
+          window.scrollTo({
+            top: Number(savedPosition),
+            behavior: "instant",
+          });
+          sessionStorage.removeItem(
+            "products-scroll-position"
+          );
+        }, 200);
+      }
+    }
+  }, [isLoading, products.length, navigationType]);
 
   const brandsAvailable = useMemo(() => {
     const set = new Set<string>(); products.forEach((p) => p.brand && set.add(p.brand.trim())); return Array.from(set);

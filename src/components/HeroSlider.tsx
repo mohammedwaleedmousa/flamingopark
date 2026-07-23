@@ -95,8 +95,8 @@ export default function HeroSlider() {
             duration-300
             ${
               activeIndex === index
-                ? "w-[75px] bg-white"
-                : "w-[32px] bg-white/40"
+                ? "w-[45px] bg-white"
+                : "w-[18px] bg-white/40"
             }
           `}
         />

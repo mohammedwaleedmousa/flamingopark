@@ -115,18 +115,18 @@ gap:6px;
 
 .hero-slider .swiper-pagination-bullet{
 
-width:18px;
+width:40px;
 height:3px;
 
-margin:0 !important;
+transform:scaleX(.5);
 
-transition:all .35s ease;
+transition:transform .35s ease, opacity .35s ease;
 
 }
 
 .hero-slider .swiper-pagination-bullet-active{
 
-width:38px;
+transform:scaleX(1);
 
 }
 

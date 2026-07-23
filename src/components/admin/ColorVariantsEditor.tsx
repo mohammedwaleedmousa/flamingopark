@@ -98,7 +98,12 @@ if (currentImages + fileArray.length > 5) {
         }
 
         let imageFile = file;
-        if (extension === "heic" || extension === "heif") {
+        if (
+          file.type === "image/heic" ||
+          file.type === "image/heif" ||
+          extension === "heic" ||
+          extension === "heif"
+        ) {
           const converted = await heic2any({
             blob: file,
             toType: "image/jpeg",

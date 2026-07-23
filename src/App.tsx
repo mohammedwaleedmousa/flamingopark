@@ -21,7 +21,6 @@ const BrandPage = lazy(() => import("./pages/BrandPage"));
 const BrandSectionPage = lazy(() => import("./pages/BrandSectionPage"));
 const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
 const OrderConfirmationPage = lazy(() => import("./pages/OrderConfirmationPage"));
-const AboutPage = lazy(() => import("./pages/AboutPage"));
 const OffersPage = lazy(() => import("./pages/OffersPage"));
 const ReviewsPage = lazy(() => import("./pages/ReviewsPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
@@ -30,7 +29,6 @@ const CategoriesPage = lazy(() => import("./pages/CategoriesPage"));
 const BestSellersPage = lazy(() => import("./pages/BestSellersPage"));
 const NewArrivalsPage = lazy(() => import("./pages/NewArrivalsPage"));
 const SearchPage = lazy(() => import("./pages/SearchPage"));
-const ComparisonPage = lazy(() => import("./pages/ComparisonPage"));
 const SeasonalOffersPage = lazy(() => import("./pages/SeasonalOffersPage"));
 const CartPage = lazy(() => import("./pages/CartPage"));
 const AccountPage = lazy(() => import("./pages/AccountPage"));
@@ -157,7 +155,6 @@ const App = () => {
             <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
             <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
             <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
-            <Route path="/comparison" element={<ProtectedRoute><ComparisonPage /></ProtectedRoute>} />
             <Route path="/seasonal-offers" element={<ProtectedRoute><SeasonalOffersPage /></ProtectedRoute>} />
             <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
             <Route path="/best-sellers" element={<ProtectedRoute><BestSellersPage /></ProtectedRoute>} />
@@ -174,7 +171,6 @@ const App = () => {
             <Route path="/brand/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />
             <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
             <Route path="/order-confirmation" element={<ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>} />
-            <Route path="/about" element={<ProtectedRoute><AboutPage /></ProtectedRoute>} />
             <Route path="/offers" element={<ProtectedRoute><OffersPage /></ProtectedRoute>} />
             <Route path="/reviews" element={<ProtectedRoute><ReviewsPage /></ProtectedRoute>} />
             <Route path="/favorites" element={<ProtectedRoute><FavoritesPage /></ProtectedRoute>} />

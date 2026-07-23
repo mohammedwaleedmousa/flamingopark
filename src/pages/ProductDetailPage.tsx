@@ -222,152 +222,86 @@ const ProductDetailPage = () => {
   transition={{ duration: 0.5 }}
   className="lg:col-span-7 lg:sticky lg:top-24 lg:self-start"
 >
-  <div
-    className="
-      relative
-      bg-muted/30
-      rounded-3xl
-      overflow-hidden
-      aspect-[2/3]
-      group
-    "
-  >
+  <div className="relative bg-muted/30 rounded-3xl overflow-hidden aspect-[2/3] group">
 
-    <TransformWrapper
-      initialScale={1}
-      minScale={1}
-      maxScale={4}
-      doubleClick={{
-        disabled: true,
-      }}
-      pinch={{
-        disabled: false,
-      }}
-      wheel={{
-        disabled: true,
-      }}
-      panning={{
-        disabled: false,
-      }}
-    >
+    <AnimatePresence mode="wait" initial={false}>
 
-      <TransformComponent
-        wrapperStyle={{
-          width: "100%",
-          height: "100%",
+      <motion.div
+        key={selectedImage}
+        initial={{ x: 80, opacity: 0 }}
+        animate={{ x: 0, opacity: 1 }}
+        exit={{ x: -80, opacity: 0 }}
+        transition={{
+          duration: 0.35,
+          ease: "easeInOut"
         }}
-        contentStyle={{
-          width: "100%",
-          height: "100%",
-        }}
+        className="absolute inset-0"
       >
 
-        <img
-          src={
-            displayImages[selectedImage] ||
-            "/placeholder.svg"
-          }
+        <TransformWrapper
+          initialScale={1}
+          minScale={1}
+          maxScale={4}
+          doubleClick={{
+            disabled: true
+          }}
+          pinch={{
+            disabled: false
+          }}
+          wheel={{
+            disabled: false
+          }}
+          panning={{
+            disabled: false
+          }}
+        >
 
-          alt={product.nameAr}
+          <TransformComponent
+            wrapperClass="!w-full !h-full"
+            contentClass="!w-full !h-full"
+          >
 
-          className="
-            w-full
-            h-full
-            object-cover
-            select-none
-            touch-none
-          "
+            <img
+              src={
+                displayImages[selectedImage] ||
+                "/placeholder.svg"
+              }
+              alt={product.nameAr}
+              draggable={false}
+              className="
+                w-full
+                h-full
+                object-contain
+                select-none
+                cursor-zoom-in
+              "
+            />
 
-          draggable={false}
-        />
+          </TransformComponent>
 
-      </TransformComponent>
+        </TransformWrapper>
 
-    </TransformWrapper>
+      </motion.div>
 
-
-    {/* سحب الصور */}
-
-    <div
-      className="
-        absolute
-        inset-0
-        z-10
-      "
-
-      onTouchStart={(e) => {
-
-        if(e.touches.length === 1){
-
-          const startX =
-            e.touches[0].clientX;
-
-
-          e.currentTarget.dataset.startX =
-            startX.toString();
-
-        }
-
-      }}
-
-
-      onTouchEnd={(e)=>{
-
-        if(e.changedTouches.length !== 1)
-          return;
-
-
-        const startX =
-          Number(
-            e.currentTarget.dataset.startX
-          );
-
-
-        const endX =
-          e.changedTouches[0].clientX;
-
-
-        const diff =
-          endX - startX;
-
-
-        // عند التكبير لا تغير الصور
-        if(diff === 0)
-          return;
-
-
-        if(diff < -80){
-
-          nextImage();
-
-        }
-
-
-        if(diff > 80){
-
-          prevImage();
-
-        }
-
-      }}
-
-    />
+    </AnimatePresence>
 
 
     {/* الأسهم */}
 
     {displayImages.length > 1 && (
       <>
-
         <button
-          onClick={prevImage}
-
+          onClick={() =>
+            setSelectedImage(
+              (selectedImage - 1 + displayImages.length) %
+              displayImages.length
+            )
+          }
           className="
             absolute
             right-4
             top-1/2
             -translate-y-1/2
-            z-20
             w-11
             h-11
             rounded-full
@@ -382,19 +316,22 @@ const ProductDetailPage = () => {
             transition
           "
         >
-          <ChevronRight className="w-5 h-5"/>
+          <ChevronRight className="w-5 h-5" />
         </button>
 
 
         <button
-          onClick={nextImage}
-
+          onClick={() =>
+            setSelectedImage(
+              (selectedImage + 1) %
+              displayImages.length
+            )
+          }
           className="
             absolute
             left-4
             top-1/2
             -translate-y-1/2
-            z-20
             w-11
             h-11
             rounded-full
@@ -409,24 +346,20 @@ const ProductDetailPage = () => {
             transition
           "
         >
-          <ChevronLeft className="w-5 h-5"/>
+          <ChevronLeft className="w-5 h-5" />
         </button>
-
       </>
     )}
 
 
-
-    {/* المفضلة */}
+    {/* Wishlist */}
 
     <button
       onClick={() => toggleFavorite(product)}
-
       className={`
         absolute
         top-4
         left-4
-        z-30
         w-11
         h-11
         rounded-full
@@ -440,33 +373,22 @@ const ProductDetailPage = () => {
         }
       `}
     >
-
       <Heart
-        className={`
-          w-5
-          h-5
-          ${
-            isLiked
-            ? "fill-current"
-            : ""
-          }
-        `}
+        className={`w-5 h-5 ${
+          isLiked ? "fill-current" : ""
+        }`}
       />
-
     </button>
 
 
-
-    {/* الخصم */}
+    {/* Discount */}
 
     {product.discount && (
-
       <span
         className="
           absolute
           top-4
           right-4
-          z-30
           bg-gold
           text-white
           text-xs
@@ -477,63 +399,43 @@ const ProductDetailPage = () => {
       >
         -{product.discount}%
       </span>
-
     )}
 
 
-
-    {/* العداد */}
+    {/* Counter */}
 
     {displayImages.length > 1 && (
-
       <div
         className="
           absolute
           bottom-4
           left-1/2
           -translate-x-1/2
-          z-30
           bg-background/80
-          backdrop-blur
+          backdrop-blur-sm
           text-xs
           px-3
           py-1
           rounded-full
         "
       >
-
         {selectedImage + 1} / {displayImages.length}
-
       </div>
-
     )}
 
   </div>
 
 
-
   {/* الصور الصغيرة */}
 
   {displayImages.length > 1 && (
+    <div className="flex gap-2 mt-4 overflow-x-auto scrollbar-none">
 
-    <div
-      className="
-        flex
-        gap-2
-        mt-4
-        overflow-x-auto
-        scrollbar-none
-      "
-    >
-
-      {displayImages.map((img,i)=>(
+      {displayImages.map((img, i) => (
 
         <button
-
           key={i}
-
-          onClick={()=>setSelectedImage(i)}
-
+          onClick={() => setSelectedImage(i)}
           className={`
             shrink-0
             w-16
@@ -541,13 +443,13 @@ const ProductDetailPage = () => {
             rounded-xl
             overflow-hidden
             border-2
+            transition
             ${
               selectedImage === i
               ? "border-gold"
               : "border-transparent"
             }
           `}
-
         >
 
           <img
@@ -565,7 +467,6 @@ const ProductDetailPage = () => {
       ))}
 
     </div>
-
   )}
 
 </motion.div>

@@ -218,30 +218,33 @@ const ProductDetailPage = () => {
                 className="relative bg-muted/30 rounded-3xl overflow-hidden aspect-[4/5] group touch-pan-y"
               >
                 <AnimatePresence mode="wait">
-                  <motion.img
-                    key={selectedImage}
-                    src={displayImages[selectedImage] || '/placeholder.svg'}
-                    alt={product.nameAr}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
-                    draggable={false}
-                    drag="x"
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.2}
-                    onDragEnd={(e, info) => {
-                      if (info.offset.x < -50) {
-                        nextImage();
-                      }
+  <motion.img
+    key={selectedImage}
+    src={displayImages[selectedImage] || '/placeholder.svg'}
+    alt={product.nameAr}
+    initial={{ opacity: 0, x: -80 }}
+    animate={{ opacity: 1, x: 0 }}
+    exit={{ opacity: 0, x: 80 }}
+    transition={{ 
+      duration: 0.35,
+      ease: "easeOut"
+    }}
+    className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
+    draggable={false}
+    drag="x"
+    dragConstraints={{ left: 0, right: 0 }}
+    dragElastic={0.2}
+    onDragEnd={(e, info) => {
+      if (info.offset.x < -50) {
+        nextImage();
+      }
 
-                      if (info.offset.x > 50) {
-                        prevImage();
-                      }
-                    }}
-                  />
-                </AnimatePresence>
+      if (info.offset.x > 50) {
+        prevImage();
+      }
+    }}
+  />
+</AnimatePresence>
 
                 {/* Nav arrows — subtle */}
                 {displayImages.length > 1 && (

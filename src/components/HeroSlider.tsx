@@ -99,26 +99,36 @@ opacity:1;
 }
 
 
-
-@media(max-width:640px){
+@media (max-width:640px){
 
 .hero-slider .swiper-pagination{
 
-bottom:18px!important;
+bottom:18px !important;
+
+display:flex;
+justify-content:center;
+align-items:center;
+
+gap:6px;
 
 }
-
 
 .hero-slider .swiper-pagination-bullet{
 
-width:25px;
+width:18px;
+height:3px;
+
+margin:0 !important;
+
+transition:all .35s ease;
 
 }
 
-
 .hero-slider .swiper-pagination-bullet-active{
 
-width:55px;
+width:38px;
+
+}
 
 }
 

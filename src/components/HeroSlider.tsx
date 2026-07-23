@@ -132,7 +132,6 @@ transform:scaleX(1);
 
 }
 
-}
 
 
 `;
@@ -176,63 +175,55 @@ overflow-hidden
 
 <Swiper
 
-
 modules={[
-Pagination,
-Autoplay
+  Pagination,
+  Autoplay
 ]}
 
 
 pagination={{
-
-clickable:true
-
+  clickable: true,
 }}
-
 
 
 autoplay={{
 
-delay:5000,
+  delay: 5000,
 
-disableOnInteraction:false,
+  disableOnInteraction: false,
 
-pauseOnMouseEnter:true,
+  pauseOnMouseEnter: true,
+
+  waitForTransition: true,
 
 }}
-
 
 
 speed={800}
 
 
+loop={true}
 
-loop={false}
 
+loopPreventsSliding={true}
 
 
 grabCursor={true}
 
 
-
 touchRatio={1}
-
 
 
 resistance={true}
 
 
-
 resistanceRatio={0.85}
-
 
 
 className="
 hero-slider
 h-full
 "
-
-
 
 >
 

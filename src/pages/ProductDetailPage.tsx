@@ -243,12 +243,12 @@ const ProductDetailPage = () => {
                     dragElastic={0.2}
                     onDragEnd={(e, info) => {
                       if (info.offset.x > 50) {
-                      nextImage();
-                    }
+                        nextImage();
+                      }
 
-                    if (info.offset.x < -50) {
-                      prevImage();
-                    }
+                      if (info.offset.x < -50) {
+                        prevImage();
+                      }
                     }}
                   />
                 </AnimatePresence>

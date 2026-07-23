@@ -11,7 +11,11 @@ import { useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { SlidersHorizontal, X, Heart } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
+import { useLocation } from "react-router-dom";
 import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
+if ("scrollRestoration" in window.history) {
+  window.history.scrollRestoration = "manual";
+}
 
 interface Category {
   id: string;
@@ -48,10 +52,13 @@ const QuickView = ({ product, onClose, isMobile }: { product: Product | null; on
 
   useEffect(() => {
     if (!product) return;
+
     setQty(1);
     setActiveImage(0);
     setSelectedSize(null);
-    let variants = (product as any)?.color_variants;
+
+    let variants = product.color_variants;
+
     if (typeof variants === "string") {
       try {
         variants = JSON.parse(variants);
@@ -59,12 +66,14 @@ const QuickView = ({ product, onClose, isMobile }: { product: Product | null; on
         variants = [];
       }
     }
+
     if (Array.isArray(variants) && variants.length > 0) {
       setActiveVariantIndex(0);
     } else {
       setActiveVariantIndex(null);
     }
-  }, [product?.id]);
+
+  }, [product]);
 
   if (!product) return null;
 
@@ -159,7 +168,14 @@ const QuickView = ({ product, onClose, isMobile }: { product: Product | null; on
               <p className="text-xs text-muted-foreground mb-2">الألوان</p>
               <div className="flex items-center gap-3">
                 {variants.map((v, idx) => (
-                  <button key={v.id || idx} onClick={() => { setActiveVariantIndex(idx); setActiveImage(0); setSelectedSize(null); }} title={v.name} className={`w-9 h-9 rounded-full border ${currentVariantIndex===idx ? 'ring-2 ring-foreground' : ''}`} style={{background: v.hex || "#eee"}} />
+                  <button key={v.id || idx} 
+                  onClick={() => {
+                    setActiveVariantIndex(idx);
+                    setActiveImage(0);
+                    setSelectedSize(null);
+                    setQty(1);
+                  }}
+                  title={v.name} className={`w-9 h-9 rounded-full border ${currentVariantIndex===idx ? 'ring-2 ring-foreground' : ''}`} style={{background: v.hex || "#eee"}} />
                 ))}
               </div>
             </div>
@@ -205,6 +221,7 @@ const QuickView = ({ product, onClose, isMobile }: { product: Product | null; on
 const ProductsPage = () => {
   const { data: content } = useSiteContent("products_page_");
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const categorySlug = searchParams.get("category") || "";
   const searchQuery = searchParams.get("search") || "";
   const brandFilter = searchParams.get("brand") || "all";
@@ -221,6 +238,19 @@ const ProductsPage = () => {
   const [quickViewProd, setQuickViewProd] = useState<Product | null>(null);
   const PAGE_SIZE = 12;
   const [isMobileViewport, setIsMobileViewport] = useState(false);
+
+  useEffect(() => {
+    const restoreScroll = () => {
+      window.scrollTo({
+        top: 0,
+        behavior: "instant",
+      });
+    };
+    restoreScroll();
+    requestAnimationFrame(() => {
+      restoreScroll();
+    });
+  }, [location.key]);
 
   useEffect(() => setPage(1), [categorySlug, searchQuery, brandFilter, colorFilter, sizeFilter, sortBy, saleOnly, inStockOnly, minPriceParam, maxPriceParam]);
 

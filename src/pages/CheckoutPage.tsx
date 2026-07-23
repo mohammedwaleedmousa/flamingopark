@@ -334,7 +334,7 @@ const CheckoutPage = () => {
                 const active = i === currentStep;
                 return (
                   <div key={step.key} className="flex items-center flex-1">
-                    <div className="flex flex-col items-center pr-5">
+                    <div className="flex flex-col items-center pr-3">
                       <button
                         onClick={() => { if (i < currentStep) setCurrentStep(i); }}
                         disabled={i > currentStep}

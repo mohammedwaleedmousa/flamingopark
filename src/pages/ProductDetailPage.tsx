@@ -222,11 +222,11 @@ const ProductDetailPage = () => {
     key={selectedImage}
     src={displayImages[selectedImage] || '/placeholder.svg'}
     alt={product.nameAr}
-    initial={{ opacity: 0, x: -80 }}
+    initial={{ opacity: 0, x: 80 }}
     animate={{ opacity: 1, x: 0 }}
-    exit={{ opacity: 0, x: 80 }}
+    exit={{ opacity: 0, x: -80 }}
     transition={{ 
-      duration: 0.35,
+      duration: 0.3,
       ease: "easeOut"
     }}
     className="w-full h-full object-cover cursor-grab active:cursor-grabbing"

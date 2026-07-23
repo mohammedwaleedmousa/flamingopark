@@ -2,6 +2,7 @@ import { useState } from 'react';
 import imageCompression from 'browser-image-compression';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
+import heic2any from 'heic2any';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Plus, Trash2, Upload, X } from 'lucide-react';
@@ -97,11 +98,19 @@ if (currentImages + fileArray.length > 5) {
         }
 
         let imageFile = file;
-
-        if (extension === 'heic' || extension === 'heif') {
-          imageFile = new File([file], `${crypto.randomUUID()}.jpg`, {
-            type: 'image/jpeg',
+        if (extension === "heic" || extension === "heif") {
+          const convertedBlob = await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.9,
           });
+          imageFile = new File(
+            [convertedBlob as Blob],
+            `${crypto.randomUUID()}.jpg`,
+            {
+              type: "image/jpeg",
+            }
+          );
         }
 
         const compressedFile = await imageCompression(imageFile, {

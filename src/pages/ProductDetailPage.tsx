@@ -222,76 +222,191 @@ const ProductDetailPage = () => {
   transition={{ duration: 0.5 }}
   className="lg:col-span-7 lg:sticky lg:top-24 lg:self-start"
 >
-  <div
-    className="relative bg-muted/30 rounded-3xl overflow-hidden aspect-[2/3] group touch-none"
-  >
-    <AnimatePresence mode="popLayout">
-      <TransformWrapper
-        key={selectedImage}
-        initialScale={1}
-        minScale={1}
-        maxScale={3}
-        wheel={{ disabled: true }}
-        doubleClick={{ disabled: true }}
-        pinch={{ disabled: false }}
-        panning={{
-          disabled: false,
-        }}
-      >
+  <div className="relative bg-muted/30 rounded-3xl overflow-hidden aspect-[2/3] group">
+
+    <TransformWrapper
+      initialScale={1}
+      minScale={1}
+      maxScale={3}
+      doubleClick={{ disabled: true }}
+      pinch={{ disabled: false }}
+      wheel={{ disabled: true }}
+      panning={{
+        disabled: false,
+        velocityDisabled: true,
+      }}
+      onZoomStop={({ state }) => {
+        if (state.scale === 1) {
+          setIsZoomed(false);
+        } else {
+          setIsZoomed(true);
+        }
+      }}
+    >
+
+      {({ zoomIn, zoomOut, resetTransform, state }) => (
+
         <TransformComponent
           wrapperClass="!w-full !h-full"
           contentClass="!w-full !h-full"
         >
-          <motion.img
-            src={displayImages[selectedImage] || '/placeholder.svg'}
-            alt={product.nameAr}
-            initial={{
-              opacity: 0,
-              x: 40,
-            }}
-            animate={{
-              opacity: 1,
-              x: 0,
-            }}
-            exit={{
-              opacity: 0,
-              x: -40,
-            }}
-            transition={{
-              duration: 0.4,
-              ease: "easeInOut",
-            }}
-            className="w-full h-full object-contain select-none cursor-grab active:cursor-grabbing"
-            draggable={false}
-          />
+
+          <AnimatePresence mode="wait" initial={false}>
+
+            <motion.img
+              key={selectedImage}
+              src={displayImages[selectedImage] || '/placeholder.svg'}
+              alt={product.nameAr}
+
+              initial={{
+                opacity: 0,
+                x: 80,
+              }}
+
+              animate={{
+                opacity: 1,
+                x: 0,
+              }}
+
+              exit={{
+                opacity: 0,
+                x: -80,
+              }}
+
+              transition={{
+                duration: 0.35,
+                ease: "easeInOut",
+              }}
+
+              className="
+                w-full
+                h-full
+                object-cover
+                select-none
+                touch-none
+              "
+
+              draggable={false}
+
+              onPointerDown={(e) => {
+                const startX = e.clientX;
+
+                const handleMove = (moveEvent: PointerEvent) => {
+                  const diff = moveEvent.clientX - startX;
+
+                  // لا تغير الصورة إذا كان المستخدم يعمل زوم
+                  if (state.scale > 1) return;
+
+
+                  // السحب من اليمين إلى اليسار
+                  if (diff < -80) {
+                    nextImage();
+                    cleanup();
+                  }
+
+
+                  // السحب من اليسار إلى اليمين
+                  if (diff > 80) {
+                    prevImage();
+                    cleanup();
+                  }
+                };
+
+
+                const cleanup = () => {
+                  window.removeEventListener(
+                    "pointermove",
+                    handleMove
+                  );
+
+                  window.removeEventListener(
+                    "pointerup",
+                    cleanup
+                  );
+                };
+
+
+                window.addEventListener(
+                  "pointermove",
+                  handleMove
+                );
+
+                window.addEventListener(
+                  "pointerup",
+                  cleanup
+                );
+              }}
+
+            />
+
+          </AnimatePresence>
+
         </TransformComponent>
-      </TransformWrapper>
-    </AnimatePresence>
+
+      )}
+
+    </TransformWrapper>
 
 
-    {/* Nav arrows */}
+    {/* الأسهم */}
+
     {displayImages.length > 1 && (
       <>
         <button
           onClick={() => {
-            setSelectedImage((i) =>
-              i === displayImages.length - 1 ? 0 : i + 1
-            );
+            resetTransform?.();
+            prevImage();
           }}
           aria-label="السابق"
-          className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-background/70 hover:bg-background shadow-md items-center justify-center hidden md:flex opacity-0 group-hover:opacity-100 transition-all"
+          className="
+          absolute
+          right-4
+          top-1/2
+          -translate-y-1/2
+          w-11
+          h-11
+          rounded-full
+          bg-background/70
+          hover:bg-background
+          shadow-md
+          items-center
+          justify-center
+          hidden
+          md:flex
+          opacity-0
+          group-hover:opacity-100
+          transition-all
+          "
         >
           <ChevronRight className="w-5 h-5" />
         </button>
 
+
         <button
           onClick={() => {
-            setSelectedImage((i) =>
-              i === 0 ? displayImages.length - 1 : i - 1
-            );
+            resetTransform?.();
+            nextImage();
           }}
           aria-label="التالي"
-          className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-background/70 hover:bg-background shadow-md items-center justify-center hidden md:flex opacity-0 group-hover:opacity-100 transition-all"
+          className="
+          absolute
+          left-4
+          top-1/2
+          -translate-y-1/2
+          w-11
+          h-11
+          rounded-full
+          bg-background/70
+          hover:bg-background
+          shadow-md
+          items-center
+          justify-center
+          hidden
+          md:flex
+          opacity-0
+          group-hover:opacity-100
+          transition-all
+          "
         >
           <ChevronLeft className="w-5 h-5" />
         </button>
@@ -300,57 +415,123 @@ const ProductDetailPage = () => {
 
 
     {/* Wishlist */}
+
     <button
       onClick={() => toggleFavorite(product)}
-      className={`absolute top-4 left-4 w-11 h-11 rounded-full flex items-center justify-center transition-all ${
-        isLiked
+      className={`
+        absolute
+        top-4
+        left-4
+        w-11
+        h-11
+        rounded-full
+        flex
+        items-center
+        justify-center
+        transition-all
+        ${
+          isLiked
           ? 'bg-gold text-white'
           : 'bg-background/80 hover:bg-background'
-      }`}
+        }
+      `}
     >
-      <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+      <Heart
+        className={`w-5 h-5 ${
+          isLiked ? 'fill-current' : ''
+        }`}
+      />
     </button>
 
 
     {/* Discount */}
+
     {product.discount && (
-      <span className="absolute top-4 right-4 bg-gold text-white text-xs font-medium px-3 py-1.5 rounded-full">
+      <span
+        className="
+        absolute
+        top-4
+        right-4
+        bg-gold
+        text-white
+        text-xs
+        font-medium
+        px-3
+        py-1.5
+        rounded-full
+        "
+      >
         -{product.discount}%
       </span>
     )}
 
 
     {/* Counter */}
+
     {displayImages.length > 1 && (
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-sm text-xs px-3 py-1 rounded-full">
+      <div
+        className="
+        absolute
+        bottom-4
+        left-1/2
+        -translate-x-1/2
+        bg-background/80
+        backdrop-blur-sm
+        text-xs
+        px-3
+        py-1
+        rounded-full
+        "
+      >
         {selectedImage + 1} / {displayImages.length}
       </div>
     )}
+
   </div>
 
 
   {/* Thumbnails */}
+
   {displayImages.length > 1 && (
     <div className="flex gap-2 mt-4 overflow-x-auto scrollbar-none">
+
       {displayImages.map((img, i) => (
+
         <button
           key={i}
-          onClick={() => setSelectedImage(i)}
-          className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${
-            selectedImage === i
+          onClick={() => {
+            setSelectedImage(i);
+          }}
+
+          className={`
+            shrink-0
+            w-16
+            h-16
+            rounded-xl
+            overflow-hidden
+            border-2
+            transition-all
+            ${
+              selectedImage === i
               ? 'border-gold'
               : 'border-transparent hover:border-border'
-          }`}
+            }
+          `}
         >
+
           <img
             src={img}
             alt=""
             className="w-full h-full object-cover"
           />
+
         </button>
+
       ))}
+
     </div>
   )}
+
 </motion.div>
 
             {/* Details — spacious, refined */}

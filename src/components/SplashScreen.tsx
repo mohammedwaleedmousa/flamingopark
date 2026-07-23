@@ -41,7 +41,7 @@ const SplashScreen = ({ onDone }: { onDone: () => void }) => {
               reduceMotion ? "" : "animate-splash-rise"
             }`}
           >
-            FLAMINGO
+            FLAMINGO 
           </h1>
           <div className={`absolute inset-0 shimmer-text ${reduceMotion ? "opacity-40" : ""}`} />
         </div>

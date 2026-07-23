@@ -7,7 +7,6 @@ const LoadingScreen = ({ label = "FLAMINGO" }: { label?: string }) => (
         <h1 className="font-heading text-4xl md:text-6xl tracking-[0.45em] text-foreground select-none">{label}</h1>
         <div className="absolute inset-0 shimmer-text" />
       </div>
-      <p className="text-xs tracking-[0.45em] uppercase text-muted-foreground">Loading</p>
     </div>
 
     <style>{`

@@ -214,45 +214,212 @@ const ProductDetailPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
             {/* Gallery — dominant, Apple-style */}
             <motion.div
-              key={selectedImage}
-              initial={{ x: -80, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 80, opacity: 0 }}
-              transition={{
-                duration: 0.45,
-                ease: [0.22, 1, 0.36, 1]
-              }}
-              className="absolute inset-0"
-            >              
-            <div
-                className="relative bg-muted/30 rounded-3xl overflow-hidden aspect-[4/5] group touch-pan-y"
-              >
-                <AnimatePresence mode="wait">
-                  <motion.img
-                    key={selectedImage}
-                    src={displayImages[selectedImage] || '/placeholder.svg'}
-                    alt={product.nameAr}
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
-                    draggable={false}
-                    drag="x"
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.2}
-                    onDragEnd={(e, info) => {
-                      if (info.offset.x > 50) {
-                        nextImage();
-                      }
+  initial={{ opacity: 0 }}
+  animate={{ opacity: 1 }}
+  transition={{ duration: 0.5 }}
+  className="lg:col-span-7 lg:sticky lg:top-24 lg:self-start"
+>
+  <div
+    className="
+      relative
+      bg-muted/30
+      rounded-3xl
+      overflow-hidden
+      aspect-[4/5]
+      group
+      touch-pan-y
+    "
+  >
 
-                      if (info.offset.x < -50) {
-                        prevImage();
-                      }
-                    }}
-                  />
-                </AnimatePresence>
+    <AnimatePresence mode="wait" initial={false}>
+      <motion.img
+        key={selectedImage}
+        src={displayImages[selectedImage] || "/placeholder.svg"}
+        alt={product.nameAr}
 
+        initial={{
+          x: 80,
+          opacity: 0
+        }}
+
+        animate={{
+          x: 0,
+          opacity: 1
+        }}
+
+        exit={{
+          x: -80,
+          opacity: 0
+        }}
+
+        transition={{
+          duration: 0.35,
+          ease: "easeInOut"
+        }}
+
+        className="
+          absolute
+          inset-0
+          w-full
+          h-full
+          object-contain
+          select-none
+          cursor-grab
+          active:cursor-grabbing
+        "
+
+        draggable={false}
+
+        drag="x"
+
+        dragConstraints={{
+          left: 0,
+          right: 0
+        }}
+
+        dragElastic={0.15}
+
+        onDragEnd={(e, info) => {
+
+          // سحب لليسار = الصورة التالية
+          if (info.offset.x < -50) {
+            nextImage();
+          }
+
+
+          // سحب لليمين = الصورة السابقة
+          if (info.offset.x > 50) {
+            prevImage();
+          }
+
+        }}
+      />
+
+    </AnimatePresence>
+
+
+    {/* الأسهم */}
+    {displayImages.length > 1 && (
+      <>
+        <button
+          onClick={prevImage}
+          className="
+            absolute
+            right-4
+            top-1/2
+            -translate-y-1/2
+            w-11
+            h-11
+            rounded-full
+            bg-background/70
+            shadow-md
+            hidden
+            md:flex
+            items-center
+            justify-center
+            opacity-0
+            group-hover:opacity-100
+            transition
+          "
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+
+
+        <button
+          onClick={nextImage}
+          className="
+            absolute
+            left-4
+            top-1/2
+            -translate-y-1/2
+            w-11
+            h-11
+            rounded-full
+            bg-background/70
+            shadow-md
+            hidden
+            md:flex
+            items-center
+            justify-center
+            opacity-0
+            group-hover:opacity-100
+            transition
+          "
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+
+      </>
+    )}
+
+
+    {/* Counter */}
+    {displayImages.length > 1 && (
+      <div
+        className="
+          absolute
+          bottom-4
+          left-1/2
+          -translate-x-1/2
+          bg-background/80
+          backdrop-blur-sm
+          text-xs
+          px-3
+          py-1
+          rounded-full
+        "
+      >
+        {selectedImage + 1} / {displayImages.length}
+      </div>
+    )}
+
+  </div>
+
+
+  {/* Thumbnails */}
+  {displayImages.length > 1 && (
+    <div className="flex gap-2 mt-4 overflow-x-auto scrollbar-none">
+
+      {displayImages.map((img, i) => (
+
+        <button
+          key={i}
+          onClick={() => setSelectedImage(i)}
+          className={`
+            shrink-0
+            w-16
+            h-16
+            rounded-xl
+            overflow-hidden
+            border-2
+            transition
+            ${
+              selectedImage === i
+                ? "border-gold"
+                : "border-transparent hover:border-border"
+            }
+          `}
+        >
+
+          <img
+            src={img}
+            alt=""
+            className="
+              w-full
+              h-full
+              object-cover
+            "
+          />
+
+        </button>
+
+      ))}
+
+    </div>
+  )}
+
+</motion.div>
                 {/* Nav arrows — subtle */}
                 {displayImages.length > 1 && (
                   <>

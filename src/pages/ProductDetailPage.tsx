@@ -24,7 +24,7 @@ import {
 const ProductDetailPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { addToCart } = useStore();
+  const { country, addToCart } = useStore();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { items: recentItems, add: addRecent } = useRecentlyViewed();
   const [selectedImage, setSelectedImage] = useState(0);
@@ -91,9 +91,9 @@ const ProductDetailPage = () => {
   });
 
   const { data: relatedProducts = [] } = useQuery({
-    queryKey: ['related-products', product?.category, product?.id],
+    queryKey: ['related-products', product?.category, product?.id, country],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select(`*,color_variants`).eq('is_active', true).eq('category', product!.category).neq('id', product!.id).limit(4);
+      const { data, error } = await supabase.from('products').select(`*,color_variants`).eq('is_active', true).eq('category', product!.category).neq('id', product!.id).contains('countries', [country]).limit(4);
       if (error) throw error;
       return data.map((p) => ({
         id: p.id,
@@ -119,7 +119,7 @@ const ProductDetailPage = () => {
         isBestSeller: p.is_best_seller,
       })) as Product[];
     },
-    enabled: !!product,
+    enabled: !!product && !!country,
   });
 
   useEffect(() => { if (product) addRecent(product as Product); /* eslint-disable-next-line */ }, [product?.id]);

@@ -79,7 +79,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
           rounded-[20px]
           overflow-hidden
           flex flex-col
-          transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]
+          transition-all duration-700 ease-[cubic-bezier(0.22_1_0.36_1)]
           hover:-translate-y-1 hover:shadow-2xl
         `}
       >
@@ -171,7 +171,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
         <div className="
           absolute bottom-0 left-0 right-0
           translate-y-full group-hover:translate-y-0
-          transition-all duration-700 ease-[cubic-bezier(0.22,1,0.36,1)]
+          transition-all duration-700 ease-[cubic-bezier(0.22_1_0.36_1)]
           bg-white/80 backdrop-blur-xl
           border-t border-pink-100/30
           flex items-center justify-between

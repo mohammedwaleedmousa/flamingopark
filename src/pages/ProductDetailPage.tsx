@@ -222,286 +222,317 @@ const ProductDetailPage = () => {
   transition={{ duration: 0.5 }}
   className="lg:col-span-7 lg:sticky lg:top-24 lg:self-start"
 >
-  <div className="relative bg-muted/30 rounded-3xl overflow-hidden aspect-[2/3] group">
+  <div
+    className="
+      relative
+      bg-muted/30
+      rounded-3xl
+      overflow-hidden
+      aspect-[2/3]
+      group
+    "
+  >
 
     <TransformWrapper
       initialScale={1}
       minScale={1}
-      maxScale={3}
-      doubleClick={{ disabled: true }}
-      pinch={{ disabled: false }}
-      wheel={{ disabled: true }}
+      maxScale={4}
+      doubleClick={{
+        disabled: true,
+      }}
+      pinch={{
+        disabled: false,
+      }}
+      wheel={{
+        disabled: true,
+      }}
       panning={{
         disabled: false,
-        velocityDisabled: true,
-      }}
-      onZoomStop={({ state }) => {
-        if (state.scale === 1) {
-          setIsZoomed(false);
-        } else {
-          setIsZoomed(true);
-        }
       }}
     >
 
-      {({ zoomIn, zoomOut, resetTransform, state }) => (
+      <TransformComponent
+        wrapperStyle={{
+          width: "100%",
+          height: "100%",
+        }}
+        contentStyle={{
+          width: "100%",
+          height: "100%",
+        }}
+      >
 
-        <TransformComponent
-          wrapperClass="!w-full !h-full"
-          contentClass="!w-full !h-full"
-        >
+        <img
+          src={
+            displayImages[selectedImage] ||
+            "/placeholder.svg"
+          }
 
-          <AnimatePresence mode="wait" initial={false}>
+          alt={product.nameAr}
 
-            <motion.img
-              key={selectedImage}
-              src={displayImages[selectedImage] || '/placeholder.svg'}
-              alt={product.nameAr}
+          className="
+            w-full
+            h-full
+            object-cover
+            select-none
+            touch-none
+          "
 
-              initial={{
-                opacity: 0,
-                x: 80,
-              }}
+          draggable={false}
+        />
 
-              animate={{
-                opacity: 1,
-                x: 0,
-              }}
-
-              exit={{
-                opacity: 0,
-                x: -80,
-              }}
-
-              transition={{
-                duration: 0.35,
-                ease: "easeInOut",
-              }}
-
-              className="
-                w-full
-                h-full
-                object-cover
-                select-none
-                touch-none
-              "
-
-              draggable={false}
-
-              onPointerDown={(e) => {
-                const startX = e.clientX;
-
-                const handleMove = (moveEvent: PointerEvent) => {
-                  const diff = moveEvent.clientX - startX;
-
-                  // لا تغير الصورة إذا كان المستخدم يعمل زوم
-                  if (state.scale > 1) return;
-
-
-                  // السحب من اليمين إلى اليسار
-                  if (diff < -80) {
-                    nextImage();
-                    cleanup();
-                  }
-
-
-                  // السحب من اليسار إلى اليمين
-                  if (diff > 80) {
-                    prevImage();
-                    cleanup();
-                  }
-                };
-
-
-                const cleanup = () => {
-                  window.removeEventListener(
-                    "pointermove",
-                    handleMove
-                  );
-
-                  window.removeEventListener(
-                    "pointerup",
-                    cleanup
-                  );
-                };
-
-
-                window.addEventListener(
-                  "pointermove",
-                  handleMove
-                );
-
-                window.addEventListener(
-                  "pointerup",
-                  cleanup
-                );
-              }}
-
-            />
-
-          </AnimatePresence>
-
-        </TransformComponent>
-
-      )}
+      </TransformComponent>
 
     </TransformWrapper>
+
+
+    {/* سحب الصور */}
+
+    <div
+      className="
+        absolute
+        inset-0
+        z-10
+      "
+
+      onTouchStart={(e) => {
+
+        if(e.touches.length === 1){
+
+          const startX =
+            e.touches[0].clientX;
+
+
+          e.currentTarget.dataset.startX =
+            startX.toString();
+
+        }
+
+      }}
+
+
+      onTouchEnd={(e)=>{
+
+        if(e.changedTouches.length !== 1)
+          return;
+
+
+        const startX =
+          Number(
+            e.currentTarget.dataset.startX
+          );
+
+
+        const endX =
+          e.changedTouches[0].clientX;
+
+
+        const diff =
+          endX - startX;
+
+
+        // عند التكبير لا تغير الصور
+        if(diff === 0)
+          return;
+
+
+        if(diff < -80){
+
+          nextImage();
+
+        }
+
+
+        if(diff > 80){
+
+          prevImage();
+
+        }
+
+      }}
+
+    />
 
 
     {/* الأسهم */}
 
     {displayImages.length > 1 && (
       <>
+
         <button
-          onClick={() => {
-            resetTransform?.();
-            prevImage();
-          }}
-          aria-label="السابق"
+          onClick={prevImage}
+
           className="
-          absolute
-          right-4
-          top-1/2
-          -translate-y-1/2
-          w-11
-          h-11
-          rounded-full
-          bg-background/70
-          hover:bg-background
-          shadow-md
-          items-center
-          justify-center
-          hidden
-          md:flex
-          opacity-0
-          group-hover:opacity-100
-          transition-all
+            absolute
+            right-4
+            top-1/2
+            -translate-y-1/2
+            z-20
+            w-11
+            h-11
+            rounded-full
+            bg-background/70
+            shadow-md
+            hidden
+            md:flex
+            items-center
+            justify-center
+            opacity-0
+            group-hover:opacity-100
+            transition
           "
         >
-          <ChevronRight className="w-5 h-5" />
+          <ChevronRight className="w-5 h-5"/>
         </button>
 
 
         <button
-          onClick={() => {
-            resetTransform?.();
-            nextImage();
-          }}
-          aria-label="التالي"
+          onClick={nextImage}
+
           className="
-          absolute
-          left-4
-          top-1/2
-          -translate-y-1/2
-          w-11
-          h-11
-          rounded-full
-          bg-background/70
-          hover:bg-background
-          shadow-md
-          items-center
-          justify-center
-          hidden
-          md:flex
-          opacity-0
-          group-hover:opacity-100
-          transition-all
+            absolute
+            left-4
+            top-1/2
+            -translate-y-1/2
+            z-20
+            w-11
+            h-11
+            rounded-full
+            bg-background/70
+            shadow-md
+            hidden
+            md:flex
+            items-center
+            justify-center
+            opacity-0
+            group-hover:opacity-100
+            transition
           "
         >
-          <ChevronLeft className="w-5 h-5" />
+          <ChevronLeft className="w-5 h-5"/>
         </button>
+
       </>
     )}
 
 
-    {/* Wishlist */}
+
+    {/* المفضلة */}
 
     <button
       onClick={() => toggleFavorite(product)}
+
       className={`
         absolute
         top-4
         left-4
+        z-30
         w-11
         h-11
         rounded-full
         flex
         items-center
         justify-center
-        transition-all
         ${
           isLiked
-          ? 'bg-gold text-white'
-          : 'bg-background/80 hover:bg-background'
+          ? "bg-gold text-white"
+          : "bg-background/80"
         }
       `}
     >
+
       <Heart
-        className={`w-5 h-5 ${
-          isLiked ? 'fill-current' : ''
-        }`}
+        className={`
+          w-5
+          h-5
+          ${
+            isLiked
+            ? "fill-current"
+            : ""
+          }
+        `}
       />
+
     </button>
 
 
-    {/* Discount */}
+
+    {/* الخصم */}
 
     {product.discount && (
+
       <span
         className="
-        absolute
-        top-4
-        right-4
-        bg-gold
-        text-white
-        text-xs
-        font-medium
-        px-3
-        py-1.5
-        rounded-full
+          absolute
+          top-4
+          right-4
+          z-30
+          bg-gold
+          text-white
+          text-xs
+          px-3
+          py-1.5
+          rounded-full
         "
       >
         -{product.discount}%
       </span>
+
     )}
 
 
-    {/* Counter */}
+
+    {/* العداد */}
 
     {displayImages.length > 1 && (
+
       <div
         className="
-        absolute
-        bottom-4
-        left-1/2
-        -translate-x-1/2
-        bg-background/80
-        backdrop-blur-sm
-        text-xs
-        px-3
-        py-1
-        rounded-full
+          absolute
+          bottom-4
+          left-1/2
+          -translate-x-1/2
+          z-30
+          bg-background/80
+          backdrop-blur
+          text-xs
+          px-3
+          py-1
+          rounded-full
         "
       >
+
         {selectedImage + 1} / {displayImages.length}
+
       </div>
+
     )}
 
   </div>
 
 
-  {/* Thumbnails */}
+
+  {/* الصور الصغيرة */}
 
   {displayImages.length > 1 && (
-    <div className="flex gap-2 mt-4 overflow-x-auto scrollbar-none">
 
-      {displayImages.map((img, i) => (
+    <div
+      className="
+        flex
+        gap-2
+        mt-4
+        overflow-x-auto
+        scrollbar-none
+      "
+    >
+
+      {displayImages.map((img,i)=>(
 
         <button
+
           key={i}
-          onClick={() => {
-            setSelectedImage(i);
-          }}
+
+          onClick={()=>setSelectedImage(i)}
 
           className={`
             shrink-0
@@ -510,19 +541,23 @@ const ProductDetailPage = () => {
             rounded-xl
             overflow-hidden
             border-2
-            transition-all
             ${
               selectedImage === i
-              ? 'border-gold'
-              : 'border-transparent hover:border-border'
+              ? "border-gold"
+              : "border-transparent"
             }
           `}
+
         >
 
           <img
             src={img}
             alt=""
-            className="w-full h-full object-cover"
+            className="
+              w-full
+              h-full
+              object-cover
+            "
           />
 
         </button>
@@ -530,6 +565,7 @@ const ProductDetailPage = () => {
       ))}
 
     </div>
+
   )}
 
 </motion.div>

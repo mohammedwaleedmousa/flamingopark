@@ -246,7 +246,7 @@ const CategoriesPage = () => {
                 <Link
                   key={c.id}
                   to={`/categories?parent=${selectedParent.slug}&sub=${c.slug}`}
-                  className="group relative aspect-[4/5] overflow-hidden bg-muted rounded-xl"
+                  className="group relative aspect-[4/5] overflow-hidden bg-muted"
                 >
                   <img
                     src={c.image_url || FALLBACK[c.slug] || FALLBACK.women}

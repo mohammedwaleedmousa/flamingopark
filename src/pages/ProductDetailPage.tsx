@@ -213,18 +213,8 @@ const ProductDetailPage = () => {
         <div className="container mx-auto px-4 pt-8 lg:pt-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
             {/* Gallery — dominant, Apple-style */}
-            <motion.div
-              key={selectedImage}
-              initial={{ x: -80, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 80, opacity: 0 }}
-              transition={{
-                duration: 0.45,
-                ease: [0.22, 1, 0.36, 1]
-              }}
-              className="absolute inset-0"
-            >              
-            <div
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="lg:col-span-7 lg:sticky lg:top-24 lg:self-start">
+              <div
                 className="relative bg-muted/30 rounded-3xl overflow-hidden aspect-[4/5] group touch-pan-y"
               >
                 <AnimatePresence mode="wait">
@@ -242,11 +232,11 @@ const ProductDetailPage = () => {
                     dragConstraints={{ left: 0, right: 0 }}
                     dragElastic={0.2}
                     onDragEnd={(e, info) => {
-                      if (info.offset.x > 50) {
+                      if (info.offset.x < -50) {
                         nextImage();
                       }
 
-                      if (info.offset.x < -50) {
+                      if (info.offset.x > 50) {
                         prevImage();
                       }
                     }}

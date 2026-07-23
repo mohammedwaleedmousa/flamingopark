@@ -74,23 +74,19 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
     try {
       const fileArray = Array.from(files);
       const currentImages = value[colorIdx].images.length;
+      if (currentImages + fileArray.length > 5) {
+        toast({
+          title: "الحد الأقصى هو 5 صور لكل لون",
+          variant: "destructive",
+        });
 
-if (currentImages + fileArray.length > 5) {
-  toast({
-    title: "الحد الأقصى هو 5 صور لكل لون",
-    variant: "destructive",
-  });
+        setUploading(null);
+        return;
+      }
 
-  setUploading(null);
-  return;
-}
+      
 
       const uploadPromises = fileArray.map(async (file) => {
-        console.log("FILE INFO:", {
-  name: file.name,
-  type: file.type,
-  size: file.size
-});
         const extension = file.name.split('.').pop()?.toLowerCase();
         const allowed = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
 
@@ -103,34 +99,41 @@ if (currentImages + fileArray.length > 5) {
         }
 
         let imageFile = file;
-        if (file.type === "image/heic" || file.type === "image/heif") {
-  try {
-    const converted = await heic2any({
-      blob: file,
-      toType: "image/jpeg",
-      quality: 0.9,
-    });
+        const isHeic =
+          extension === "heic" ||
+          extension === "heif" ||
+          file.type === "image/heic" ||
+          file.type === "image/heif";
 
-    const blob = Array.isArray(converted)
-      ? converted[0]
-      : converted;
+        if (isHeic) {
+          try {
+            const converted = await heic2any({
+              blob: file,
+              toType: "image/jpeg",
+              quality: 0.9,
+            });
 
-    imageFile = new File(
-      [blob],
-      `${crypto.randomUUID()}.jpg`,
-      {
-        type: "image/jpeg",
-      }
-    );
+            const blob = Array.isArray(converted)
+              ? converted[0]
+              : converted;
 
-  } catch (err) {
-    console.error("HEIC CONVERSION ERROR:", err);
-    throw new Error("فشل تحويل صورة HEIC");
-  }
-}
+            imageFile = new File(
+              [blob],
+              `${crypto.randomUUID()}.jpg`,
+              {
+                type: "image/jpeg",
+                lastModified: Date.now(),
+              }
+            );
+
+          } catch (err) {
+            console.error("HEIC CONVERSION ERROR:", err);
+            throw new Error("فشل تحويل صورة HEIC");
+          }
+        }
 
         const compressedFile = await imageCompression(imageFile, {
-          maxSizeMB: 0.3,
+          maxSizeMB: 1,
           maxWidthOrHeight: 1200,
           useWebWorker: true,
           fileType: 'image/webp',

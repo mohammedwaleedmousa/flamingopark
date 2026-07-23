@@ -180,26 +180,88 @@ const CategoriesPage = () => {
       <CartDrawer />
       <main className="pt-24 pb-20">
         <section className="container mx-auto px-6 mb-10 text-center">
-          <p className="text-[10px] tracking-[0.08em] uppercase text-muted-foreground mb-3">{getSiteText(content, "categories_page_eyebrow", "Flamingo Park")}</p>
+          <p className="text-[10px] tracking-[0.08em] uppercase text-muted-foreground mb-3">{getSiteText(content, "categories_page_eyebrow", " ")}</p>
           <h1 className="font-heading text-4xl md:text-6xl">{getSiteText(content, "categories_page_title", "الأقسام")}</h1>
           <p className="text-sm text-muted-foreground mt-3">{getSiteText(content, "categories_page_subtitle", "اختاري القسم ثم الماركة واستعرضي المنتجات")}</p>
 
           {(selectedParent || selectedSub) && (
-            <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs">
-              <Button variant="outline" size="sm" onClick={() => setStepParams({ parent: null, sub: null, brand: null })}>
-                كل الأقسام
-              </Button>
-              {selectedParent && (
-                <Button variant="outline" size="sm" onClick={() => setStepParams({ sub: null, brand: null })}>
+            <div className="
+            mt-8
+            flex
+            items-center
+            justify-center
+            gap-3
+            text-xs
+            tracking-[0.15em]
+            uppercase
+          ">
+            <button
+              onClick={() =>
+                setStepParams({
+                  parent:null,
+                  sub:null,
+                  brand:null
+                })
+              }
+              className="
+                text-muted-foreground
+                hover:text-foreground
+                transition-colors
+                duration-300
+              "
+            >
+              الأقسام
+            </button>
+            {selectedParent && (
+              <>
+                <span className="text-muted-foreground/40">
+                  /
+                </span>
+                <button
+                  onClick={() =>
+                    setStepParams({
+                      sub:null,
+                      brand:null
+                    })
+                  }
+                  className="
+                    text-foreground
+                    hover:opacity-60
+                    transition-opacity
+                    duration-300
+                  "
+                >
                   {selectedParent.name_ar}
-                </Button>
-              )}
-              {selectedSub && (
-                <Button variant="outline" size="sm" onClick={() => setStepParams({ brand: null })}>
+                </button>
+              </>
+            )}
+
+
+            {selectedSub && (
+              <>
+                <span className="text-muted-foreground/40">
+                  /
+                </span>
+
+                <button
+                  onClick={() =>
+                    setStepParams({
+                      brand:null
+                    })
+                  }
+                  className="
+                    text-muted-foreground
+                    hover:text-foreground
+                    transition-colors
+                    duration-300
+                  "
+                >
                   {selectedSub.name_ar}
-                </Button>
-              )}
-            </div>
+                </button>
+              </>
+            )}
+
+          </div>
           )}
         </section>
 
@@ -231,16 +293,6 @@ const CategoriesPage = () => {
 
         {selectedParent && !selectedSub && subCategories.length > 0 && (
           <section className="container mx-auto px-4 md:px-6 space-y-5">
-            <h2 className="font-heading text-2xl text-center">اختاري نوع المنتجات داخل {selectedParent.name_ar}</h2>
-            <div className="flex justify-center">
-              <Button
-                variant={showAllForParent ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStepParams({ all: showAllForParent ? null : "1", sub: null })}
-              >
-                {showAllForParent ? "إخفاء كل المنتجات" : "عرض كل منتجات القسم"}
-              </Button>
-            </div>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-5">
               {subCategories.map((c) => (
                 <Link

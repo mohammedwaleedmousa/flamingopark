@@ -77,9 +77,17 @@ const QuickView = ({ product, onClose, isMobile }: { product: Product | null; on
 
   if (!product) return null;
 
-  const variants = Array.isArray((product as any)?.color_variants)
-    ? (product as any).color_variants
-    : [];
+  const variants = (() => {
+    let data = (product as any)?.color_variants;
+    if (typeof data === "string") {
+      try {
+        data = JSON.parse(data);
+      } catch {
+        data = [];
+      }
+    }
+    return Array.isArray(data) ? data : [];
+  })();
   const currentVariantIndex =
     activeVariantIndex === null && variants.length > 0
       ? 0
@@ -240,17 +248,12 @@ const ProductsPage = () => {
   const [isMobileViewport, setIsMobileViewport] = useState(false);
 
   useEffect(() => {
-    const restoreScroll = () => {
-      window.scrollTo({
-        top: 0,
-        behavior: "instant",
-      });
-    };
-    restoreScroll();
-    requestAnimationFrame(() => {
-      restoreScroll();
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
     });
-  }, [location.key]);
+  }, [location.pathname, location.search]);
 
   useEffect(() => setPage(1), [categorySlug, searchQuery, brandFilter, colorFilter, sizeFilter, sortBy, saleOnly, inStockOnly, minPriceParam, maxPriceParam]);
 
@@ -309,12 +312,21 @@ const ProductsPage = () => {
         category: p.category,
         brand: p.brand,
         inStock: p.in_stock ?? true,
-        countries: (p.countries || ["GLOBAL"]) as Product["countries"],
+        countries:[],
         isFeatured: p.is_featured,
         isBestSeller: p.is_best_seller,
-        color_variants: Array.isArray(p.color_variants)
-        ? p.color_variants
-        : [],
+        color_variants: (() => {
+        if (typeof p.color_variants === "string") {
+          try {
+            return JSON.parse(p.color_variants);
+          } catch {
+            return [];
+          }
+        }
+        return Array.isArray(p.color_variants)
+          ? p.color_variants
+          : [];
+      })(),
         sizes: p.sizes || [],
       })) as Product[];
     },

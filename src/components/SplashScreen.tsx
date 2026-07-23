@@ -45,8 +45,6 @@ const SplashScreen = ({ onDone }: { onDone: () => void }) => {
           </h1>
           <div className={`absolute inset-0 shimmer-text ${reduceMotion ? "opacity-40" : ""}`} />
         </div>
-
-        <p className="text-center text-muted-foreground text-xs md:text-sm tracking-[0.45em] uppercase">Loading</p>
       </div>
 
       <style>{`

@@ -99,35 +99,53 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
         }
 
         let imageFile = file;
-        const isHEIC =
-          file.type === "image/heic" ||
-          file.type === "image/heif" ||
-          extension === "heic" ||
-          extension === "heif";
-        if (isHEIC) {
-          try {
-            const convertedBlob = await heic2any({
-              blob: file,
-              toType: "image/jpeg",
-              quality: 0.9,
-            });
-            const jpegBlob = Array.isArray(convertedBlob)
-              ? convertedBlob[0]
-              : convertedBlob;
-            imageFile = new File(
-              [jpegBlob],
-              file.name.replace(/\.(heic|heif)$/i, ".jpg"),
-              {
-                type: "image/jpeg",
-              }
-            );
 
-          } catch (err) {
-            throw new Error(
-              `${file.name}: فشل تحويل صورة HEIC`
-            );
-          }
-        }
+const isHEIC =
+  extension === "heic" ||
+  extension === "heif" ||
+  file.type === "image/heic" ||
+  file.type === "image/heif" ||
+  file.name.toLowerCase().endsWith(".heic") ||
+  file.name.toLowerCase().endsWith(".heif");
+
+
+if (isHEIC) {
+  try {
+    console.log("HEIC detected:", file);
+
+    const result = await heic2any({
+      blob: file,
+      toType: "image/jpeg",
+      quality: 0.85,
+    });
+
+
+    const blob = Array.isArray(result)
+      ? result[0]
+      : result;
+
+
+    imageFile = new File(
+      [blob],
+      `${crypto.randomUUID()}.jpg`,
+      {
+        type: "image/jpeg",
+        lastModified: Date.now(),
+      }
+    );
+
+
+    console.log("HEIC converted:", imageFile);
+
+  } catch (error) {
+
+    console.error("HEIC CONVERSION ERROR:", error);
+
+    throw new Error(
+      "تعذر تحويل صورة HEIC. جرّب حفظها JPG من الهاتف"
+    );
+  }
+}
 
         const compressedFile = await imageCompression(imageFile, {
           maxSizeMB: 1,

@@ -24,7 +24,7 @@ import {
 const ProductDetailPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { country, addToCart } = useStore();
+  const { addToCart } = useStore();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { items: recentItems, add: addRecent } = useRecentlyViewed();
   const [selectedImage, setSelectedImage] = useState(0);
@@ -33,6 +33,7 @@ const ProductDetailPage = () => {
   const [selectedColorIdx, setSelectedColorIdx] = useState<number | null>(null);
   const [accessoryQuantities, setAccessoryQuantities] = useState<Record<string, number>>({});
   const [justAdded, setJustAdded] = useState(false);
+  const [isZoomed, setIsZoomed] = useState(false);
   const [selectedQualityIdx, setSelectedQualityIdx] = useState<number | null>(null);
   const [openSection, setOpenSection] = useState<'specs' | 'return' | 'delivery' | null>(null);
   const { format: formatCurrency, symbol: currencySymbol } = useCurrency();
@@ -91,10 +92,19 @@ const ProductDetailPage = () => {
   });
 
   const { data: relatedProducts = [] } = useQuery({
-    queryKey: ['related-products', product?.category, product?.id, country],
+    queryKey: ['related-products', product?.category, product?.id],
+
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select(`*,color_variants`).eq('is_active', true).eq('category', product!.category).neq('id', product!.id).contains('countries', [country]).limit(4);
+      const { data, error } = await supabase
+        .from('products')
+        .select(`*,color_variants`)
+        .eq('is_active', true)
+        .eq('category', product!.category)
+        .neq('id', product!.id)
+        .limit(4);
+
       if (error) throw error;
+
       return data.map((p) => ({
         id: p.id,
         name: p.name,
@@ -114,12 +124,12 @@ const ProductDetailPage = () => {
         category: p.category,
         brand: p.brand,
         inStock: p.in_stock ?? true,
-        countries: (p.countries || ['GLOBAL']) as Product['countries'],
         isFeatured: p.is_featured,
         isBestSeller: p.is_best_seller,
       })) as Product[];
     },
-    enabled: !!product && !!country,
+
+    enabled: !!product,
   });
 
   useEffect(() => { if (product) addRecent(product as Product); /* eslint-disable-next-line */ }, [product?.id]);
@@ -218,7 +228,9 @@ const ProductDetailPage = () => {
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="w-full h-full object-contain cursor-grab active:cursor-grabbing"
+                    whileHover={{ scale: 1.15 }}
+                    whileTap={{ scale: 1.8 }}
+                    className="w-full h-full object-contain cursor-zoom-in active:cursor-zoom-out"
                     draggable={false}
                     drag="x"
                     dragConstraints={{ left: 0, right: 0 }}

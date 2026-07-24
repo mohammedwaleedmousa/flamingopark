@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
@@ -18,9 +18,9 @@ import { toast } from '@/hooks/use-toast';
 import { useCurrency } from '@/lib/currency';
 import {
   ShoppingBag, Share2, ChevronLeft, ChevronRight, Minus, Plus, Check, Heart,
-  Truck, Shield, RotateCcw, Star, Package, ChevronDown,
+  Truck, Shield, RotateCcw, Star, Package, ChevronDown, ZoomIn, ZoomOut,
 } from 'lucide-react';
-
+ 
 const ProductDetailPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -28,6 +28,8 @@ const ProductDetailPage = () => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { items: recentItems, add: addRecent } = useRecentlyViewed();
   const [selectedImage, setSelectedImage] = useState(0);
+  // اتجاه التنقل بين الصور: 1 = للأمام (تالي)، -1 = للخلف (سابق)
+  const [direction, setDirection] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColorIdx, setSelectedColorIdx] = useState<number | null>(null);
@@ -35,6 +37,10 @@ const ProductDetailPage = () => {
   const [justAdded, setJustAdded] = useState(false);
   const [selectedQualityIdx, setSelectedQualityIdx] = useState<number | null>(null);
   const [openSection, setOpenSection] = useState<'specs' | 'return' | 'delivery' | null>(null);
+  // حالة تكبير الصورة (زوم على الصورة فقط، مش الصفحة)
+  const [isZoomed, setIsZoomed] = useState(false);
+  const [zoomOrigin, setZoomOrigin] = useState('center center');
+  const lastTapRef = useRef(0);
   const { format: formatCurrency, symbol: currencySymbol } = useCurrency();
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', slug],
@@ -68,7 +74,7 @@ const ProductDetailPage = () => {
     },
     enabled: !!slug,
   });
-
+ 
     useEffect(() => {
       if (
         product?.colorVariants &&
@@ -78,7 +84,7 @@ const ProductDetailPage = () => {
         setSelectedColorIdx(0);
       }
     }, [product, selectedColorIdx]);
-
+ 
   // Default return policy from site settings
   const { data: defaultReturnPolicy } = useQuery({
     queryKey: ['default-return-policy'],
@@ -89,7 +95,7 @@ const ProductDetailPage = () => {
       return (typeof v === 'string' ? v : v ?? null) as string | null;
     },
   });
-
+ 
   const { data: relatedProducts = [] } = useQuery({
     queryKey: ['related-products', product?.category, product?.id, country],
     queryFn: async () => {
@@ -121,9 +127,9 @@ const ProductDetailPage = () => {
     },
     enabled: !!product && !!country,
   });
-
+ 
   useEffect(() => { if (product) addRecent(product as Product); /* eslint-disable-next-line */ }, [product?.id]);
-
+ 
   if (isLoading) return <ProductDetailSkeleton />;
   if (!product) return (
     <div className="min-h-screen bg-background flex items-center justify-center">
@@ -134,7 +140,7 @@ const ProductDetailPage = () => {
       </div>
     </div>
   );
-
+ 
   const accessoriesTotal = product.accessories?.reduce((sum, acc, idx) => sum + acc.price * (accessoryQuantities[`${idx}-${acc.name_ar}`] || 0), 0) || 0;
   // Quality variant swap: overrides price/description/images when selected
   const activeQuality = product.hasQualityVariants && selectedQualityIdx !== null
@@ -151,11 +157,11 @@ const ProductDetailPage = () => {
     : (activeColorVariant && activeColorVariant.images.length > 0 ? activeColorVariant.images : product.images);
   const sizesToShow = product.sizes || [];
   const effectiveReturnPolicy = product.returnPolicy || defaultReturnPolicy;
-
+ 
   const updateAccessoryQuantity = (key: string, delta: number) => {
     setAccessoryQuantities((prev) => ({ ...prev, [key]: Math.max(0, (prev[key] || 0) + delta) }));
   };
-
+ 
   const handleAddToCart = () => {
     if (product.hasSizes && sizesToShow.length > 0 && !selectedSize) {
       toast({ title: 'اختر المقاس أولاً', variant: 'destructive' }); return;
@@ -167,25 +173,63 @@ const ProductDetailPage = () => {
     setTimeout(() => setJustAdded(false), 3500);
     toast({ title: '✓ تمت الإضافة إلى السلة', description: `${product.nameAr} × ${quantity}` });
   };
-
+ 
   const handleShare = async () => {
     try { await navigator.share({ title: product.nameAr, text: product.descriptionAr, url: window.location.href }); }
     catch { navigator.clipboard.writeText(window.location.href); toast({ title: 'تم نسخ الرابط' }); }
   };
-
+ 
   const isLiked = isFavorite(product.id);
-  console.log("PRODUCT CARD:", product);
+ 
+  // التنقل بين الصور مع تحديد الاتجاه الصحيح للحركة (يمين/يسار)
   const nextImage = () => {
+    setDirection(1);
+    setIsZoomed(false);
     setSelectedImage((i) =>
       i === displayImages.length - 1 ? 0 : i + 1
     );
   };
   const prevImage = () => {
+    setDirection(-1);
+    setIsZoomed(false);
     setSelectedImage((i) =>
       i === 0 ? displayImages.length - 1 : i - 1
     );
   };
-  
+  const goToImage = (i: number) => {
+    setDirection(i > selectedImage ? 1 : i < selectedImage ? -1 : 0);
+    setIsZoomed(false);
+    setSelectedImage(i);
+  };
+ 
+  // تكبير الصورة بالضغط المزدوج (ديسكتوب) أو التاب المزدوج (موبايل) - بيأثر على الصورة فقط
+  const handleImageDoubleClick = (e: React.MouseEvent<HTMLImageElement>) => {
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = ((e.clientX - rect.left) / rect.width) * 100;
+    const y = ((e.clientY - rect.top) / rect.height) * 100;
+    setZoomOrigin(`${x}% ${y}%`);
+    setIsZoomed((z) => !z);
+  };
+ 
+  const handleImageTouchEnd = (e: React.TouchEvent<HTMLImageElement>) => {
+    const now = Date.now();
+    if (now - lastTapRef.current < 300) {
+      const touch = e.changedTouches[0];
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = ((touch.clientX - rect.left) / rect.width) * 100;
+      const y = ((touch.clientY - rect.top) / rect.height) * 100;
+      setZoomOrigin(`${x}% ${y}%`);
+      setIsZoomed((z) => !z);
+    }
+    lastTapRef.current = now;
+  };
+ 
+  const imageVariants = {
+    enter: (dir: number) => ({ opacity: 0, x: dir >= 0 ? 80 : -80 }),
+    center: { opacity: 1, x: 0 },
+    exit: (dir: number) => ({ opacity: 0, x: dir >= 0 ? -80 : 80 }),
+  };
+ 
   const defaultFeatures = [
     { icon: 'truck', title: 'شحن سريع', desc: '2-5 أيام' },
     { icon: 'shield', title: 'ضمان أصلي', desc: 'منتجات 100%' },
@@ -193,23 +237,23 @@ const ProductDetailPage = () => {
   ];
   const features = product.features?.length ? product.features : defaultFeatures;
   const getFeatureIcon = (n: string) => ({ truck: Truck, shield: Shield, rotate: RotateCcw, star: Star, check: Check } as any)[n] || Truck;
-
+ 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <Navbar /><CartDrawer />
-
+ 
       <main className="pt-16 md:pt-20 pb-24">
         {/* Minimal breadcrumb */}
         <div className="container mx-auto px-4 pt-6">
           <nav className="text-xs text-muted-foreground flex items-center gap-2">
             <button onClick={() => navigate('/home')} className="hover:text-foreground transition">الرئيسية</button>
             <ChevronLeft className="w-3 h-3" />
-            <button onClick={() => navigate('/products')} className="hover:text-foreground transition">المنتجات</button>
+            <button onClick={() => navigate(-1)} className="hover:text-foreground transition">المنتجات</button>
             <ChevronLeft className="w-3 h-3" />
             <span className="text-foreground truncate max-w-[180px]">{product.nameAr}</span>
           </nav>
         </div>
-
+ 
         <div className="container mx-auto px-4 pt-8 lg:pt-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
             {/* Gallery — dominant, Apple-style */}
@@ -217,24 +261,34 @@ const ProductDetailPage = () => {
               <div
                 className="relative bg-muted/30 rounded-3xl overflow-hidden aspect-[4/5] group touch-pan-y"
               >
-                <AnimatePresence mode="wait">
+                <AnimatePresence mode="wait" custom={direction}>
                   <motion.img
                     key={selectedImage}
-                    src={displayImages[selectedImage] || '/placeholder.svg'}
-                    alt={product.nameAr}
-                    initial={{ opacity: 0, x: -80 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: 80 }}
-                    transition={{ 
+                    custom={direction}
+                    variants={imageVariants}
+                    initial="enter"
+                    animate="center"
+                    exit="exit"
+                    transition={{
                       duration: 0.3,
                       ease: "easeOut"
                     }}
+                    src={displayImages[selectedImage] || '/placeholder.svg'}
+                    alt={product.nameAr}
+                    style={{
+                      transformOrigin: zoomOrigin,
+                      scale: isZoomed ? 2.2 : 1,
+                      touchAction: isZoomed ? 'none' : 'pan-y',
+                    }}
                     className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
                     draggable={false}
-                    drag="x"
-                    dragConstraints={{ left: 0, right: 0 }}
-                    dragElastic={0.2}
+                    drag={isZoomed ? true : "x"}
+                    dragConstraints={isZoomed ? { left: -150, right: 150, top: -150, bottom: 150 } : { left: 0, right: 0 }}
+                    dragElastic={isZoomed ? 0.05 : 0.2}
+                    onDoubleClick={handleImageDoubleClick}
+                    onTouchEnd={handleImageTouchEnd}
                     onDragEnd={(e, info) => {
+                      if (isZoomed) return;
                       if (info.offset.x < -50) {
                         nextImage();
                       }
@@ -244,9 +298,9 @@ const ProductDetailPage = () => {
                     }}
                   />
                 </AnimatePresence>
-
+ 
                 {/* Nav arrows — subtle */}
-                {displayImages.length > 1 && (
+                {displayImages.length > 1 && !isZoomed && (
                   <>
                     <button onClick={prevImage} aria-label="السابق" className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-background/70 hover:bg-background shadow-md items-center justify-center hidden md:flex opacity-0 group-hover:opacity-100 transition-all">
                       <ChevronRight className="w-5 h-5" />
@@ -256,31 +310,43 @@ const ProductDetailPage = () => {
                     </button>
                   </>
                 )}
-
+ 
                 {/* Wishlist */}
-                <button onClick={() => { toggleFavorite(product); }}
-                  className={`absolute top-4 left-4 w-11 h-11 rounded-full flex items-center justify-center transition-all ${isLiked ? 'bg-gold text-white' : 'bg-background/80 hover:bg-background'}`}>
-                  <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
-                </button>
-
+                {!isZoomed && (
+                  <button onClick={() => { toggleFavorite(product); }}
+                    className={`absolute top-4 left-4 w-11 h-11 rounded-full flex items-center justify-center transition-all ${isLiked ? 'bg-gold text-white' : 'bg-background/80 hover:bg-background'}`}>
+                    <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
+                  </button>
+                )}
+ 
                 {/* Discount tag */}
-                {product.discount && (
+                {product.discount && !isZoomed && (
                   <span className="absolute top-4 right-4 bg-gold text-white text-xs font-medium px-3 py-1.5 rounded-full">-{product.discount}%</span>
                 )}
-
+ 
                 {/* Counter */}
-                {displayImages.length > 1 && (
+                {displayImages.length > 1 && !isZoomed && (
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-sm text-xs px-3 py-1 rounded-full">
                     {selectedImage + 1} / {displayImages.length}
                   </div>
                 )}
+ 
+                {/* Zoom toggle button */}
+                <button
+                  type="button"
+                  onClick={() => setIsZoomed((z) => !z)}
+                  aria-label={isZoomed ? 'تصغير الصورة' : 'تكبير الصورة'}
+                  className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-background/80 hover:bg-background shadow-md flex items-center justify-center transition-all"
+                >
+                  {isZoomed ? <ZoomOut className="w-4 h-4" /> : <ZoomIn className="w-4 h-4" />}
+                </button>
               </div>
-
+ 
               {/* Thumbnails */}
               {displayImages.length > 1 && (
                 <div className="flex gap-2 mt-4 overflow-x-auto scrollbar-none">
                   {displayImages.map((img, i) => (
-                    <button key={i} onClick={() => setSelectedImage(i)}
+                    <button key={i} onClick={() => goToImage(i)}
                       className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${selectedImage === i ? 'border-gold' : 'border-transparent hover:border-border'}`}>
                       <img src={img} alt="" className="w-full h-full object-cover" />
                     </button>
@@ -288,7 +354,7 @@ const ProductDetailPage = () => {
                 </div>
               )}
             </motion.div>
-
+ 
             {/* Details — spacious, refined */}
             <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.1 }} className="lg:col-span-5 space-y-8">
               {/* Brand tag */}
@@ -297,7 +363,7 @@ const ProductDetailPage = () => {
                 <h1 className="font-heading text-3xl md:text-4xl lg:text-5xl leading-tight text-foreground">{product.nameAr}</h1>
                 <p className="text-sm text-muted-foreground mt-3 leading-relaxed">{product.descriptionAr || 'منتج فاخر من فلامنجو'}</p>
               </div>
-
+ 
               {/* Price */}
               <div className="flex items-baseline gap-3">
                 <span className="text-3xl md:text-4xl font-heading text-foreground">{formatCurrency(totalPrice * quantity)}</span>
@@ -305,13 +371,13 @@ const ProductDetailPage = () => {
                   <span className="text-base text-muted-foreground line-through">{formatCurrency(product.originalPrice)}</span>
                 )}
               </div>
-
+ 
               {/* Stock pill */}
               <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${product.inStock ? 'bg-emerald-500/10 text-emerald-700' : 'bg-destructive/10 text-destructive'}`}>
                 <span className={`w-2 h-2 rounded-full ${product.inStock ? 'bg-emerald-500' : 'bg-destructive'}`} />
                 {product.inStock ? 'متوفر الآن' : 'غير متوفر'}
               </div>
-
+ 
               {/* Quality / Material variants — swaps images, description, price */}
               {product.hasQualityVariants && product.qualityVariants && product.qualityVariants.length > 0 && (
                 <div className="space-y-3 pt-2 border-t border-border">
@@ -327,7 +393,7 @@ const ProductDetailPage = () => {
                       return (
                         <button
                           key={i}
-                          onClick={() => { setSelectedQualityIdx(isActive ? null : i); setSelectedImage(0); }}
+                          onClick={() => { setSelectedQualityIdx(isActive ? null : i); goToImage(0); }}
                           className={`flex items-center gap-3 p-3 rounded-xl border-2 text-right transition-all ${isActive ? 'border-gold bg-gold/5' : 'border-border hover:border-muted-foreground'}`}
                         >
                           {qv.images && qv.images[0] ? (
@@ -353,7 +419,7 @@ const ProductDetailPage = () => {
                   </div>
                 </div>
               )}
-
+ 
               {/* Color */}
               {product.colorVariants && product.colorVariants.length > 0 && (
                 <div className="space-y-3">
@@ -367,7 +433,7 @@ const ProductDetailPage = () => {
                         key={i}
                         onClick={() => {
                           setSelectedColorIdx(selectedColorIdx === i ? null : i);
-                          setSelectedImage(0);
+                          goToImage(0);
                         }}
                         className={`relative w-10 h-10 rounded-full border-2 transition-all ${
                           selectedColorIdx === i
@@ -393,7 +459,7 @@ const ProductDetailPage = () => {
                   </div>
                 </div>
               )}
-
+ 
               {/* Size */}
               {product.hasSizes && sizesToShow.length > 0 && (
                 <div className="space-y-3">
@@ -408,7 +474,7 @@ const ProductDetailPage = () => {
                   </div>
                 </div>
               )}
-
+ 
               {/* Quantity */}
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">الكمية</span>
@@ -428,7 +494,7 @@ const ProductDetailPage = () => {
                   ><Plus className="w-4 h-4" /></button>                
                   </div>
               </div>
-
+ 
               {/* Accessories — collapsible feel */}
               {product.accessories && product.accessories.length > 0 && (
                 <div className="space-y-3 pt-2 border-t border-border">
@@ -444,7 +510,7 @@ const ProductDetailPage = () => {
                   </div>
                 </div>
               )}
-
+ 
               {/* CTA buttons */}
               <div className="space-y-3 pt-4">
                 {justAdded && (
@@ -466,11 +532,11 @@ const ProductDetailPage = () => {
                   <Share2 className="w-4 h-4" /> مشاركة
                 </Button>
               </div>
-
+ 
               
             </motion.div>
           </div>
-
+ 
           {/* Specifications + Return Policy — collapsible */}
           {((product.specs && product.specs.length > 0) || effectiveReturnPolicy) && (
             <section className="mt-16 max-w-3xl mx-auto space-y-3">
@@ -505,20 +571,20 @@ const ProductDetailPage = () => {
                   <span className="font-heading text-lg">
                     التوصيل
                   </span>
-
+ 
                   <ChevronDown
                     className={`w-5 h-5 transition-transform ${
                       openSection === 'delivery' ? 'rotate-180' : ''
                     }`}
                   />
                 </button>
-
+ 
                 {openSection === 'delivery' && (
                   <div className="px-6 pb-5 text-sm text-muted-foreground leading-8">
                     <p>
                       التوصيل داخل عدن يتم في نفس اليوم.
                     </p>
-
+ 
                     <p>
                       التوصيل إلى بقية المحافظات يستغرق من 2 - 7 أيام حسب إجراءات الجمارك.
                     </p>
@@ -532,20 +598,20 @@ const ProductDetailPage = () => {
                     className="w-full flex items-center justify-between px-6 py-4 text-right hover:bg-muted/40 transition"
                   >
                     <span className="font-heading text-lg">سياسة الإرجاع والاستبدال</span>
-
+ 
                     <ChevronDown
                       className={`w-5 h-5 transition-transform ${
                         openSection === 'return' ? 'rotate-180' : ''
                       }`}
                     />
                   </button>
-
+ 
                   {openSection === 'return' && (
                     <div className="px-6 pb-5 text-sm text-muted-foreground leading-8">
                       <p>
                         يمكنك إرجاع هذا المنتج خلال 10 أيام في عدن.
                       </p>
-
+ 
                       <p>
                         يمكنك إرجاع هذا المنتج خلال 20 أيام في بقية المحافظات.
                       </p>
@@ -555,12 +621,12 @@ const ProductDetailPage = () => {
               )}
             </section>
           )}
-
+ 
           {/* Reviews */}
           <div className="mt-24">
             <ProductReviews productId={product.id} productName={product.nameAr} />
           </div>
-
+ 
           {/* Related */}
           {relatedProducts.length > 0 && (
             <section className="mt-24">
@@ -573,7 +639,7 @@ const ProductDetailPage = () => {
               </div>
             </section>
           )}
-
+ 
           {/* Recently viewed */}
           {recentItems.filter((p) => p.id !== product.id).length > 0 && (
             <section className="mt-24">
@@ -588,10 +654,10 @@ const ProductDetailPage = () => {
           )}
         </div>
       </main>
-
+ 
       <Footer />
     </div>
   );
 };
-
+ 
 export default ProductDetailPage;

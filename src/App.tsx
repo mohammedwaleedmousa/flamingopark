@@ -3,7 +3,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigationType } from "react-router-dom";
 import { useStore } from "@/store/useStore";
 import SplashScreen from "@/components/SplashScreen";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -113,10 +113,13 @@ const AuthRedirect = () => {
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
+  const navType = useNavigationType();
 
   useEffect(() => {
+    // On POP (back/forward) let the browser restore the previous scroll position.
+    if (navType === "POP") return;
     window.scrollTo(0, 0);
-  }, [pathname]);
+  }, [pathname, navType]);
 
   return null;
 };

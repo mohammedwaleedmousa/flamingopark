@@ -323,25 +323,31 @@ const CategoriesPage = () => {
               <p className="text-sm text-muted-foreground mt-1">اختاري الماركة ثم شاهدي المنتجات</p>
             </div>
 
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <Button
-                variant={brandFilter === "all" ? "default" : "outline"}
-                size="sm"
-                onClick={() => setStepParams({ brand: null })}
-              >
-                كل الماركات
-              </Button>
-              {availableBrands.map((brand) => (
-                <Button
-                  key={brand}
-                  variant={brandFilter === brand ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setStepParams({ brand })}
-                >
-                  {brand}
-                </Button>
-              ))}
-            </div>
+            {availableBrands.length > 0 && (
+              <div className="-mx-4 md:-mx-6 px-4 md:px-6 overflow-x-auto scrollbar-none">
+                <div className="flex items-center gap-2 min-w-max py-1">
+                  <Button
+                    variant={brandFilter === "all" ? "default" : "outline"}
+                    size="sm"
+                    className="rounded-full whitespace-nowrap"
+                    onClick={() => setStepParams({ brand: null })}
+                  >
+                    كل الماركات
+                  </Button>
+                  {availableBrands.map((brand) => (
+                    <Button
+                      key={brand}
+                      variant={brandFilter === brand ? "default" : "outline"}
+                      size="sm"
+                      className="rounded-full whitespace-nowrap"
+                      onClick={() => setStepParams({ brand })}
+                    >
+                      {brand}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {productsLoading ? (
               <div className="text-center py-12 text-muted-foreground">جاري تحميل المنتجات...</div>

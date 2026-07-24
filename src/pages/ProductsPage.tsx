@@ -11,10 +11,11 @@ import { useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { SlidersHorizontal, X, Heart } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigationType } from "react-router-dom";
 import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
 if ("scrollRestoration" in window.history) {
-  window.history.scrollRestoration = "manual";
+  // Let the browser restore scroll on back/forward so we return to the same product row.
+  window.history.scrollRestoration = "auto";
 }
 
 interface Category {
@@ -247,13 +248,11 @@ const ProductsPage = () => {
   const PAGE_SIZE = 12;
   const [isMobileViewport, setIsMobileViewport] = useState(false);
 
+  const navType = useNavigationType();
   useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      left: 0,
-      behavior: "auto",
-    });
-  }, [location.pathname, location.search]);
+    if (navType === "POP") return; // preserve scroll on back/forward
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+  }, [location.pathname, location.search, navType]);
 
   useEffect(() => setPage(1), [categorySlug, searchQuery, brandFilter, colorFilter, sizeFilter, sortBy, saleOnly, inStockOnly, minPriceParam, maxPriceParam]);
 

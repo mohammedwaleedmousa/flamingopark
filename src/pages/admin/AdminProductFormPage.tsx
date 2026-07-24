@@ -12,6 +12,7 @@ import { Slider } from '@/components/ui/slider';
 import { ArrowRight, Loader2, Upload, X, LayoutGrid, Plus, Trash2, Truck, Shield, RotateCcw, GripVertical, ZoomIn, Move } from 'lucide-react';
 import ColorVariantsEditor, { ColorVariant } from '@/components/admin/ColorVariantsEditor';
 import imageCompression from "browser-image-compression";
+import { prepareImageUpload } from "@/lib/prepareImageUpload";
 
 interface HomepageSection {
   id: string;
@@ -799,23 +800,27 @@ const AdminProductFormPage = () => {
                   )}
                   <input
                     type="file"
-                    accept="image/*"
+                    accept="image/*,.heic,.heif"
                     className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30 hidden"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
                       if (!file) return;
                       setUploadingAccessoryImage(true);
-                      const fileName = `${Date.now()}-${file.name}`;
-                      const { error } = await supabase.storage
-                        .from('uploads')
-                        .upload(`accessories/${fileName}`, file);
-                      if (!error) {
-                        const { data: urlData } = supabase.storage
+                      try {
+                        const prepared = await prepareImageUpload(file);
+                        const path = `accessories/${Date.now()}-${prepared.name}`;
+                        const { error } = await supabase.storage
                           .from('uploads')
-                          .getPublicUrl(`accessories/${fileName}`);
+                          .upload(path, prepared, { contentType: 'image/webp', upsert: false });
+                        if (error) throw error;
+                        const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(path);
                         setNewAccessory(prev => ({ ...prev, image_url: urlData.publicUrl }));
+                      } catch (err: any) {
+                        toast({ title: 'فشل رفع الصورة', description: err?.message, variant: 'destructive' });
+                      } finally {
+                        setUploadingAccessoryImage(false);
+                        e.target.value = '';
                       }
-                      setUploadingAccessoryImage(false);
                     }}
                   />
                 </label>
@@ -943,7 +948,7 @@ const AdminProductFormPage = () => {
                 type="checkbox"
                 checked={formData.has_quality_variants}
                 onChange={(e) => setFormData({ ...formData, has_quality_variants: e.target.checked })}
-                className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30 w-4 h-4"
+                className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30 w-4"
               />
               <span className="text-sm">مفعّل</span>
             </label>
@@ -1053,7 +1058,7 @@ const AdminProductFormPage = () => {
                             {uploadingQualityIdx === idx ? 'جاري الرفع...' : 'رفع صور'}
                             <input
                               type="file"
-                              accept="image/*"
+                              accept="image/*,.heic,.heif"
                               multiple
                               className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30 hidden"
                               onChange={async (e) => {
@@ -1062,12 +1067,16 @@ const AdminProductFormPage = () => {
                                 setUploadingQualityIdx(idx);
                                 const urls: string[] = [];
                                 for (const f of files) {
-                                  const ext = (f.name.split('.').pop() || 'jpg').toLowerCase();
-                                  const path = `products/quality-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${ext}`;
-                                  const { error } = await supabase.storage.from('uploads').upload(path, f, { upsert: true });
-                                  if (!error) {
-                                    const { data } = supabase.storage.from('uploads').getPublicUrl(path);
-                                    urls.push(data.publicUrl);
+                                  try {
+                                    const prepared = await prepareImageUpload(f);
+                                    const path = `products/quality-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
+                                    const { error } = await supabase.storage.from('uploads').upload(path, prepared, { contentType: 'image/webp', upsert: false });
+                                    if (!error) {
+                                      const { data } = supabase.storage.from('uploads').getPublicUrl(path);
+                                      urls.push(data.publicUrl);
+                                    }
+                                  } catch (err: any) {
+                                    toast({ title: `فشل رفع ${f.name}`, description: err?.message, variant: 'destructive' });
                                   }
                                 }
                                 const v = [...formData.quality_variants];

@@ -5,7 +5,8 @@ import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Plus, Trash2, Upload, X } from 'lucide-react';
-import heic2any from "heic2any";
+import { heicTo, isHeic } from "heic-to";
+import { prepareImageUpload } from "@/lib/prepareImageUpload";
 
 export interface ColorVariant {
   name: string;
@@ -87,88 +88,43 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
       
 
       const uploadPromises = fileArray.map(async (file) => {
-        const extension = file.name.split('.').pop()?.toLowerCase();
-        const allowed = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
+  const extension = file.name.split('.').pop()?.toLowerCase();
+  const allowed = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
 
-        if (!allowed.includes(extension || '')) {
-          throw new Error(`${file.name} ليس صورة مدعومة`);
-        }
+  if (!allowed.includes(extension || '')) {
+    throw new Error(`${file.name} ليس صورة مدعومة`);
+  }
 
-        if (file.size > 15 * 1024 * 1024) {
-          throw new Error(`${file.name} أكبر من 15MB`);
-        }
+  if (file.size > 15 * 1024 * 1024) {
+    throw new Error(`${file.name} أكبر من 15MB`);
+  }
 
-        let imageFile = file;
-
-const isHEIC =
-  extension === "heic" ||
-  extension === "heif" ||
-  file.type === "image/heic" ||
-  file.type === "image/heif" ||
-  file.name.toLowerCase().endsWith(".heic") ||
-  file.name.toLowerCase().endsWith(".heif");
-
-
-if (isHEIC) {
+  let finalFile: File;
   try {
-    console.log("HEIC detected:", file);
+    finalFile = await prepareImageUpload(file, {
+      maxSizeMB: 1,
+      maxWidthOrHeight: 1200,
+    });
+  } catch (error: any) {
+    console.error('IMAGE PREP ERROR:', file.name, error);
+    throw new Error(`تعذر معالجة صورة ${file.name} (${error?.message || 'خطأ غير معروف'})`);
+  }
 
-    const result = await heic2any({
-      blob: file,
-      toType: "image/jpeg",
-      quality: 0.85,
+  const fileName = `color-variants/${crypto.randomUUID()}`;
+
+  const { error } = await supabase.storage
+    .from('uploads')
+    .upload(fileName, finalFile, {
+      cacheControl: '31536000',
+      upsert: false,
+      contentType: finalFile.type,
     });
 
+  if (error) throw error;
 
-    const blob = Array.isArray(result)
-      ? result[0]
-      : result;
-
-
-    imageFile = new File(
-      [blob],
-      `${crypto.randomUUID()}.jpg`,
-      {
-        type: "image/jpeg",
-        lastModified: Date.now(),
-      }
-    );
-
-
-    console.log("HEIC converted:", imageFile);
-
-  } catch (error) {
-
-    console.error("HEIC CONVERSION ERROR:", error);
-
-    throw new Error(
-      "تعذر تحويل صورة HEIC. جرّب حفظها JPG من الهاتف"
-    );
-  }
-}
-
-        const compressedFile = await imageCompression(imageFile, {
-          maxSizeMB: 1,
-          maxWidthOrHeight: 1200,
-          useWebWorker: true,
-          fileType: 'image/webp',
-        });
-
-        const fileName = `color-variants/${crypto.randomUUID()}.webp`;
-
-        const { error } = await supabase.storage
-          .from('uploads')
-          .upload(fileName, compressedFile, {
-            cacheControl: '31536000',
-            upsert: false,
-            contentType: 'image/webp',
-          });
-
-        if (error) throw error;
-
-        const { data } = supabase.storage.from('uploads').getPublicUrl(fileName);
-        return data.publicUrl;
-      });
+  const { data } = supabase.storage.from('uploads').getPublicUrl(fileName);
+  return data.publicUrl;
+});
 
       const urls = await Promise.all(uploadPromises);
 

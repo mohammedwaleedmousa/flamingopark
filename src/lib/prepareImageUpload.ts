@@ -26,6 +26,22 @@ async function bitmapToJpegFile(file: File): Promise<File> {
   });
 }
 
+async function convertHeic(file: File): Promise<File> {
+  try {
+    const convertedBlob = await heicTo({
+      blob: file,
+      type: "image/jpeg",
+      quality: 0.85,
+    });
+    return new File([convertedBlob], `${crypto.randomUUID()}.jpg`, {
+      type: "image/jpeg",
+      lastModified: Date.now(),
+    });
+  } catch {
+    return await bitmapToJpegFile(file); // خطة احتياطية عبر محرك المتصفح نفسه
+  }
+}
+
 export async function prepareImageUpload(
   file: File,
   opts: { maxSizeMB?: number; maxWidthOrHeight?: number } = {}
@@ -33,39 +49,42 @@ export async function prepareImageUpload(
   const name = file.name.toLowerCase();
   const type = (file.type || "").toLowerCase();
 
-  let isHEIC = false;
+  const looksLikeHeicByNameOrType =
+    type === "image/heic" ||
+    type === "image/heif" ||
+    name.endsWith(".heic") ||
+    name.endsWith(".heif");
+
+  let looksLikeHeicByContent = false;
   try {
-    isHEIC = await isHeic(file); // فحص فعلي لمحتوى الملف (أدق من الاسم/النوع)
+    looksLikeHeicByContent = await isHeic(file);
   } catch {
-    isHEIC =
-      type === "image/heic" ||
-      type === "image/heif" ||
-      name.endsWith(".heic") ||
-      name.endsWith(".heif");
+    // تجاهل: إن فشل الفحص سنعتمد على الامتداد/النوع فقط
   }
+
+  // نعتبره HEIC لو أي من الفحصين أثبت ذلك (وليس فقط عند فشل isHeic)
+  const isHEIC = looksLikeHeicByNameOrType || looksLikeHeicByContent;
 
   let working: File | Blob = file;
 
   if (isHEIC) {
     try {
-      const convertedBlob = await heicTo({
-        blob: file,
-        type: "image/jpeg",
-        quality: 0.85,
-      });
-      working = new File([convertedBlob], `${crypto.randomUUID()}.jpg`, {
-        type: "image/jpeg",
-        lastModified: Date.now(),
-      });
-    } catch (heicToError) {
-      // محاولة أخيرة: فك الترميز عبر محرك المتصفح/النظام نفسه بدل WASM
-      try {
-        working = await bitmapToJpegFile(file);
-      } catch (bitmapError) {
-        throw new Error(
-          "تعذر قراءة هذه الصورة. جرّب فتحها في تطبيق الصور بآيفون، ثم Export/مشاركة كـ JPEG قبل رفعها"
-        );
-      }
+      working = await convertHeic(file);
+    } catch {
+      throw new Error(
+        "تعذر قراءة هذه الصورة. جرّب فتحها في تطبيق الصور بآيفون، ثم Export/مشاركة كـ JPEG قبل رفعها"
+      );
+    }
+  }
+
+  // حماية أخيرة: لو وصلنا هنا وما زال النوع ليس صورة (مثلاً HEIC لم يُكتشف إطلاقًا)، حاول تحويله كخيار أخير
+  if (!/^image\//.test((working as File).type || "")) {
+    try {
+      working = await convertHeic(file);
+    } catch {
+      throw new Error(
+        "هذا الملف غير صالح كصورة قابلة للقراءة في المتصفح. جرّب حفظه كـ JPEG من الهاتف أولاً"
+      );
     }
   }
 

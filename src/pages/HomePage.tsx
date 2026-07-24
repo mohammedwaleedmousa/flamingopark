@@ -178,37 +178,26 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
   return (
     <section className="py-10 md:py-14 bg-background">
       <div className="container mx-auto px-6">
-
         {/* Header */}
         <div className="mb-10 text-center md:text-right">
-  
           <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
             فلامنجو
           </p>
-
           <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">
             عوالم فلامنجو
           </h2>
-
           <div className="mt-4 h-[1px] w-16 bg-[#E91E63] mx-auto md:mx-0" />
-
           <p className="mt-4 text-sm text-muted-foreground max-w-md">
             اكتشف تشكيلات مختارة بعناية تجمع بين الأناقة العصرية والهوية الفاخرة
           </p>
-
         </div>
-
         {/* Layout */}
         <div className="grid md:grid-cols-12 gap-8 items-start">
-
           {/* LEFT: Navigation */}
           <div className="md:col-span-7">
-
             <div className="flex flex-wrap gap-x-6 gap-y-3 border-b border-gray-200 pb-4">
-
               {items.map((item) => {
                 const isActive = active.title === item.title;
-
                 return (
                   <button
                     key={item.title}

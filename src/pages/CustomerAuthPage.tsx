@@ -15,6 +15,7 @@ const CustomerAuthPage = () => {
   const { customer, setCustomer, setRegion, region } = useStore();
   const [isLoading, setIsLoading] = useState(false);
   const [mode, setMode] = useState<"login" | "register">("login");
+  const [claimExisting, setClaimExisting] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     phone: "",
@@ -36,77 +37,38 @@ const CustomerAuthPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (!formData.phone.trim() || !formData.password.trim() || (mode === "register" && !formData.name.trim())) {
-      toast({
-        title: "خطأ",
-        description: "يرجى ملء جميع الحقول",
-        variant: "destructive",
-      });
+      toast({ title: "خطأ", description: "يرجى ملء جميع الحقول", variant: "destructive" });
       return;
     }
-
-    const detectedCountry = detectCountryFromPhone(formData.phone);
-    if (!detectedCountry) {
-      toast({
-        title: "خطأ",
-        description: "يرجى إدخال رقم هاتف صحيح",
-        variant: "destructive",
-      });
-      return;
-    }
-
     setIsLoading(true);
-
     try {
-      const rpcName = mode === "login" ? "customer_login" : "customer_register";
-      const args = mode === "login"
-      ? { 
-          _phone: formData.phone, 
-          _password: formData.password 
-        }
-      : { 
-          _name: formData.name,
-          _phone: formData.phone,
-          _region: detectedCountry,
-          _password: formData.password
-        };
-      const { data, error } = await (supabase as any).rpc(rpcName, args);
-      if (error) throw error;
-      const customer = Array.isArray(data) ? data[0] : data;
-      if (!customer) {
-        toast({
-          title: mode === "login" ? "بيانات الدخول غير صحيحة" : "تعذّر إنشاء الحساب",
-          description: mode === "login" ? "تأكد من رقم الهاتف وكلمة السر" : "قد يكون الرقم مسجّلاً مسبقاً",
-          variant: "destructive",
+      const phone = formData.phone.trim();
+      if (mode === "register") {
+        const { data, error } = await supabase.auth.signUp({
+          phone, password: formData.password,
+          options: { data: { full_name: formData.name.trim(), phone_number: phone, country: detectCountryFromPhone(phone) } },
         });
-        return;
+        if (error) throw error;
+        if (!data.session) {
+          toast({ title: "تحقق من رقم الهاتف", description: "أكمل تأكيد رقم الهاتف ثم سجّل الدخول." });
+          return;
+        }
+      } else {
+        const { error } = await supabase.auth.signInWithPassword({ phone, password: formData.password });
+        if (error) throw error;
       }
-
-      setCustomer({
-        id: customer.id,
-        name: customer.name,
-        phone: customer.phone,
-        region: customer.region,
-      });
-      setRegion(customer.region);
-
-      toast({
-        title: "مرحباً بك",
-        description: `أهلاً ${customer.name}`,
-      });
-
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData.user) throw new Error("لم يتم إنشاء جلسة مصادقة");
+      const { data: customer, error: linkError } = await (supabase as any).rpc('link_authenticated_customer', { p_claim_existing: mode === 'login' && claimExisting });
+      if (linkError) throw linkError;
+      setCustomer({ id: customer.id, name: customer.name, phone: customer.phone, region: customer.country });
+      setRegion(customer.country);
+      toast({ title: "مرحباً بك", description: `أهلاً ${customer.name}` });
       navigate("/home");
     } catch (error: any) {
-      console.error("Auth error:", error);
-      toast({
-        title: "خطأ",
-        description: error?.message === "phone_exists" ? "الرقم مسجّل مسبقاً — سجّل الدخول" : "حدث خطأ أثناء العملية",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
+      toast({ title: "خطأ", description: error?.message || "تعذر إتمام المصادقة", variant: "destructive" });
+    } finally { setIsLoading(false); }
   };
 
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
@@ -283,6 +245,13 @@ const CustomerAuthPage = () => {
 
 
         {/* Luxury Button */}
+        {mode === "login" && (
+          <label className="flex items-center gap-2 text-xs text-muted-foreground">
+            <input type="checkbox" checked={claimExisting} onChange={(e) => setClaimExisting(e.target.checked)} />
+            ربط سجل العميل السابق المطابق لرقم الهاتف المؤكد
+          </label>
+        )}
+
         <Button
           type="submit"
           disabled={isLoading}

@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, MessageCircle, Home, Copy, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { getGuestTrackingUrl } from '@/lib/orderAccess';
 import { track } from '@/lib/analytics';
 import {
   CURRENCY_RATES,
@@ -52,6 +53,7 @@ interface OrderData {
   currencyMode?: string;
   whatsappNumber: string;
   createdAt: string;
+  guestAccessToken: string;
 }
 
 const OrderConfirmationPage = () => {
@@ -138,19 +140,21 @@ const OrderConfirmationPage = () => {
       // Try to upload to storage (non-blocking)
       try {
         const pdfBlob = pdf.output('blob');
-        const fileName = `invoice-${orderData.orderNumber}-${Date.now()}.pdf`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('invoices')
-          .upload(fileName, pdfBlob, {
-            contentType: 'application/pdf',
-            cacheControl: '3600',
-          });
-
-        if (uploadError) {
-          console.warn('Upload warning:', uploadError);
-          // Continue anyway so the customer isn't blocked
-        }
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(new Error('Could not encode invoice'));
+          reader.readAsDataURL(pdfBlob);
+        });
+        const { error: uploadError } = await supabase.functions.invoke('invoice-access', {
+          body: {
+            action: 'upload',
+            orderId: orderData.orderId,
+            guestToken: orderData.guestAccessToken,
+            pdfBase64: dataUrl.split(',')[1],
+          },
+        });
+        if (uploadError) console.warn('Upload warning:', uploadError);
       } catch (uploadErr) {
         console.warn('Upload failed:', uploadErr);
         // Continue anyway
@@ -164,11 +168,13 @@ const OrderConfirmationPage = () => {
       });
 
       // Open WhatsApp immediately
+      const trackingUrl = `${window.location.origin}${getGuestTrackingUrl(orderData.orderNumber, orderData.guestAccessToken)}`;
       const message = `طلب جديد ✨
 
 الاسم: ${orderData.customerName}
 الهاتف: ${orderData.customerPhone}
 رقم الفاتورة: ${orderData.orderNumber}
+رابط التتبع الآمن: ${trackingUrl}
 
 يرجى مراجعة الطلب من لوحة التحكم`;
       
@@ -186,11 +192,13 @@ const OrderConfirmationPage = () => {
         description: 'جاري فتح الواتساب...',
       });
       
+      const trackingUrl = `${window.location.origin}${getGuestTrackingUrl(orderData.orderNumber, orderData.guestAccessToken)}`;
       const message = `طلب جديد ✨
 
 الاسم: ${orderData.customerName}
 الهاتف: ${orderData.customerPhone}
 رقم الفاتورة: ${orderData.orderNumber}
+رابط التتبع الآمن: ${trackingUrl}
 
 يرجى مراجعة الطلب من لوحة التحكم`;
       

@@ -8,6 +8,7 @@ import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { getAccessibleOrder } from '@/lib/orderAccess';
 
 interface TrackingStep {
   title: string;
@@ -33,21 +34,16 @@ const normalizeStatus = (raw: string) => {
 const OrderTrackingPage = () => {
   const [searchParams] = useSearchParams();
   const selectedOrder = searchParams.get('order')?.trim() || '';
+  const guestToken = searchParams.get('token')?.trim() || sessionStorage.getItem(`flamingopark:guest-order:${selectedOrder}`) || undefined;
 
   const { data: order, isLoading } = useQuery({
-    queryKey: ['tracking-order', selectedOrder],
+    queryKey: ['tracking-order', selectedOrder, guestToken],
     enabled: Boolean(selectedOrder),
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
     refetchOnMount: 'always',
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('id, order_number, customer_phone, customer_address, customer_notes, delivery_company_id, status, created_at')
-        .eq('order_number', selectedOrder)
-        .maybeSingle();
-      if (error) throw error;
-      return data;
+      return getAccessibleOrder(selectedOrder, guestToken);
     },
   });
 

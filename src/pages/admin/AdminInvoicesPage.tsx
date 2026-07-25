@@ -133,23 +133,17 @@ const AdminInvoicesPage = () => {
 
       if (error) throw error;
 
-      const invoiceFiles: InvoiceFile[] = (data || [])
+      const invoiceFiles = await Promise.all((data || [])
         .filter(file => file.name.endsWith('.pdf'))
-        .map(file => {
-          const { data: urlData } = supabase.storage
+        .map(async (file) => {
+          const { data: signed, error: signedError } = await supabase.storage
             .from('invoices')
-            .getPublicUrl(file.name);
-          
+            .createSignedUrl(file.name, 300);
+          if (signedError || !signed?.signedUrl) throw signedError || new Error('Could not sign invoice');
           const orderMatch = file.name.match(/invoice-([^-]+)-/);
           const orderNumber = orderMatch ? orderMatch[1] : 'غير معروف';
-
-          return {
-            name: file.name,
-            created_at: file.created_at || new Date().toISOString(),
-            url: urlData.publicUrl,
-            orderNumber,
-          };
-        });
+          return { name: file.name, created_at: file.created_at || new Date().toISOString(), url: signed.signedUrl, orderNumber };
+        }));
 
       setInvoices(invoiceFiles);
       setFilteredInvoices(invoiceFiles);

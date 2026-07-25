@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Package, CheckCircle2, Truck, MapPin, Clock, Phone, MessageCircle, XCircle } from 'lucide-react';
+import { Package, CheckCircle2, Truck, Clock, MessageCircle, XCircle } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
@@ -33,39 +33,24 @@ const normalizeStatus = (raw: string) => {
 const OrderTrackingPage = () => {
   const [searchParams] = useSearchParams();
   const selectedOrder = searchParams.get('order')?.trim() || '';
+  const trackingToken = searchParams.get('token')?.trim() || '';
 
   const { data: order, isLoading } = useQuery({
-    queryKey: ['tracking-order', selectedOrder],
-    enabled: Boolean(selectedOrder),
+    queryKey: ['tracking-order', selectedOrder, trackingToken],
+    enabled: Boolean(selectedOrder && trackingToken),
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
     refetchOnMount: 'always',
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('id, order_number, customer_phone, customer_address, customer_notes, delivery_company_id, status, created_at')
-        .eq('order_number', selectedOrder)
-        .maybeSingle();
+      const { data, error } = await (supabase as any).rpc('get_order_tracking', {
+        p_order_number: selectedOrder,
+        p_tracking_token: trackingToken,
+      });
       if (error) throw error;
-      return data;
+      return Array.isArray(data) ? data[0] ?? null : data;
     },
   });
 
-  const { data: deliveryCompanyName } = useQuery({
-    queryKey: ['tracking-delivery-company', order?.delivery_company_id],
-    enabled: Boolean(order?.delivery_company_id),
-    refetchInterval: 60000,
-    refetchOnWindowFocus: true,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('delivery_companies')
-        .select('name')
-        .eq('id', order!.delivery_company_id)
-        .maybeSingle();
-      if (error) throw error;
-      return data?.name || '—';
-    },
-  });
 
   const statusSteps = ['pending', 'confirmed', 'processing', 'shipped', 'delivered'] as const;
   const statusLabelMap: Record<string, string> = {
@@ -183,9 +168,9 @@ const OrderTrackingPage = () => {
         </motion.section>
 
         <div className="container mx-auto px-4 py-12">
-          {!selectedOrder && (
+          {(!selectedOrder || !trackingToken) && (
             <div className="max-w-2xl mx-auto mb-8 bg-amber-50 border border-amber-200 rounded-xl p-4 text-amber-700 text-sm">
-              لم يتم تمرير رقم طلب. افتح صفحة التتبع من سجل الفواتير في حسابك.
+              يلزم رقم الطلب ورابط التتبع الآمن الصادر عند إتمام الطلب.
             </div>
           )}
 
@@ -195,7 +180,7 @@ const OrderTrackingPage = () => {
             </div>
           )}
 
-          {!isLoading && selectedOrder && !order && (
+          {!isLoading && selectedOrder && trackingToken && !order && (
             <div className="max-w-2xl mx-auto mb-8 bg-destructive/10 border border-destructive/30 rounded-xl p-4 text-destructive text-sm">
               لم يتم العثور على طلب بهذا الرقم: {selectedOrder}
             </div>
@@ -303,29 +288,11 @@ const OrderTrackingPage = () => {
             <div className="space-y-4">
               <div className="flex gap-4">
                 <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-5 h-5 text-gold" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">عنوان التسليم</p>
-                  <p className="text-foreground font-body">{order?.customer_address || '—'}</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center flex-shrink-0">
-                  <Phone className="w-5 h-5 text-gold" />
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">رقم التواصل</p>
-                  <p className="text-foreground font-body">{order?.customer_phone || '—'}</p>
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <div className="w-10 h-10 rounded-full bg-gold/10 flex items-center justify-center flex-shrink-0">
                   <Truck className="w-5 h-5 text-gold" />
                 </div>
                 <div>
                   <p className="text-sm text-muted-foreground">شركة التوصيل</p>
-                  <p className="text-foreground font-body">{deliveryCompanyName || '—'}</p>
+                  <p className="text-foreground font-body">{order?.delivery_company_name || '—'}</p>
                 </div>
               </div>
             </div>

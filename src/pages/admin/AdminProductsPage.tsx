@@ -34,8 +34,10 @@ interface DbProduct {
   description: string;
   description_ar: string;
   images: string[];
-  category: string;
-  brand: string;
+  category: string | null;
+  brand: string | null;
+  category_id: string | null;
+  brand_id: string | null;
   in_stock: boolean;
   countries: string[];
   is_active: boolean;
@@ -85,7 +87,7 @@ const AdminProductsPage = () => {
     let q = supabase
       .from("products")
       .select(
-        "id,name,name_ar,slug,price,cost_price,discount,category,brand,in_stock,is_active,countries,images,sort_order",
+        "id,name,name_ar,slug,price,cost_price,discount,category,brand,category_id,brand_id,in_stock,is_active,countries,images,sort_order",
         { count: "exact" }
       );
 

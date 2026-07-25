@@ -284,15 +284,17 @@ const ProductsPage = () => {
   const subCategories = useMemo(() => categories.filter((c) => currentCategory && c.parent_id === currentCategory.id), [categories, currentCategory]);
   const isParent = subCategories.length > 0;
 
-  const leafSlugs = useMemo(() => {
-    if (!currentCategory) return null; if (isParent) return subCategories.map((c) => c.slug); return [currentCategory.slug];
+  const leafCategoryIds = useMemo(() => {
+    if (!currentCategory) return null;
+    if (isParent) return subCategories.map((category) => category.id);
+    return [currentCategory.id];
   }, [currentCategory, isParent, subCategories]);
 
   const { data: products = [], isLoading } = useQuery({
-    queryKey: ["products-list", leafSlugs, searchQuery],
+    queryKey: ["products-list", leafCategoryIds, searchQuery],
     queryFn: async () => {
       let q = supabase.from("products").select("*").eq("is_active", true);
-      if (leafSlugs && leafSlugs.length) q = q.in("category", leafSlugs);
+      if (leafCategoryIds && leafCategoryIds.length) q = q.in("category_id", leafCategoryIds);
       const { data, error } = await q.order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []).map((p: any) => ({
@@ -308,8 +310,10 @@ const ProductsPage = () => {
         images: p.images?.length
           ? p.images
           : (p.color_variants?.[0]?.images || []),
-        category: p.category,
-        brand: p.brand,
+        category: p.category || '',
+        brand: p.brand || '',
+        categoryId: p.category_id || undefined,
+        brandId: p.brand_id || undefined,
         inStock: p.in_stock ?? true,
         countries:[],
         isFeatured: p.is_featured,
@@ -332,7 +336,11 @@ const ProductsPage = () => {
   });
 
   const brandsAvailable = useMemo(() => {
-    const set = new Set<string>(); products.forEach((p) => p.brand && set.add(p.brand.trim())); return Array.from(set);
+    const brands = new Map<string, string>();
+    products.forEach((product) => {
+      if (product.brandId && product.brand) brands.set(product.brandId, product.brand.trim());
+    });
+    return [...brands.entries()].map(([id, name]) => ({ id, name }));
   }, [products]);
 
   const getProductColors = (p: Product): string[] => {
@@ -380,7 +388,7 @@ const ProductsPage = () => {
     const q = searchQuery.trim().toLowerCase();
     let arr = products.filter((p) => {
       const okSearch = !q || p.nameAr.toLowerCase().includes(q) || p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q) || p.descriptionAr.toLowerCase().includes(q);
-      const okBrand = brandFilter === "all" || p.brand?.trim() === brandFilter;
+      const okBrand = brandFilter === "all" || p.brandId === brandFilter;
       const pColors = getProductColors(p);
       const okColor = colorFilter === "all" || pColors.some((c) => c.toLowerCase() === colorFilter.toLowerCase());
       const pSizes = getProductSizes(p);
@@ -484,7 +492,7 @@ const ProductsPage = () => {
         <section id="products-grid" className="container mx-auto px-6 py-8">
           <div>
               <div className="flex flex-wrap items-center gap-2 mb-4">
-                {brandFilter !== "all" && <button onClick={() => setParam("brand", null)} className="px-3 py-1 rounded-lg text-xs bg-muted text-muted-foreground border border-border">{brandFilter} <X className="inline w-3 h-3" /></button>}
+                {brandFilter !== "all" && <button onClick={() => setParam("brand", null)} className="px-3 py-1 rounded-lg text-xs bg-muted text-muted-foreground border border-border">{brandsAvailable.find((brand) => brand.id === brandFilter)?.name || brandFilter} <X className="inline w-3 h-3" /></button>}
                 {colorFilter !== "all" && <button onClick={() => setParam("color", null)} className="px-3 py-1 rounded-lg text-xs bg-muted text-muted-foreground border border-border">{colorFilter} <X className="inline w-3 h-3" /></button>}
                 {sizeFilter !== "all" && <button onClick={() => setParam("size", null)} className="px-3 py-1 rounded-lg text-xs bg-muted text-muted-foreground border border-border">{sizeFilter} <X className="inline w-3 h-3" /></button>}
                 {saleOnly && <button onClick={() => setParam("sale", null)} className="px-3 py-1 rounded-lg text-xs bg-muted text-muted-foreground border border-border">{getSiteText(content, "products_page_chip_sale", "عروض")} <X className="inline w-3 h-3" /></button>}
@@ -556,8 +564,8 @@ const ProductsPage = () => {
                       <p className="text-[10px] tracking-[0.35em] uppercase text-muted-foreground mb-3">{getSiteText(content, "products_page_filter_brand", "الماركة")}</p>
                       <div className="flex flex-wrap gap-3">
                         <button onClick={() => setParam('brand', null)} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${brandFilter === 'all' ? 'bg-foreground text-background' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>جميع الماركات</button>
-                        {brandsAvailable.map((b) => (
-                          <button key={b} onClick={() => setParam('brand', b)} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${brandFilter === b ? 'bg-foreground text-background' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>{b}</button>
+                        {brandsAvailable.map((brand) => (
+                          <button key={brand.id} onClick={() => setParam('brand', brand.id)} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${brandFilter === brand.id ? 'bg-foreground text-background' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>{brand.name}</button>
                         ))}
                       </div>
                     </div>

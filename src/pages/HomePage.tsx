@@ -53,8 +53,10 @@ const toProduct = (p: DbProduct): Product => ({
       ? p.images
       : p.color_variants?.[0]?.images || [],
 
-  category: p.category,
-  brand: p.brand,
+  category: p.category || '',
+  brand: p.brand || '',
+  categoryId: p.category_id || undefined,
+  brandId: p.brand_id || undefined,
   inStock: p.in_stock,
   countries: (p.countries || ["GLOBAL"]) as Product["countries"],
   isFeatured: p.is_featured,

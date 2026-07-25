@@ -72,30 +72,17 @@ const CategoriesPage = () => {
     const descendants = categories.filter((c) => c.parent_id === effectiveLeafCategory.id).map((c) => c.id);
     return [effectiveLeafCategory.id, ...descendants];
   }, [categories, effectiveLeafCategory, selectedSub]);
-  const scopedCategorySlugs = useMemo(() => {
-    if (!effectiveLeafCategory) return [] as string[];
-    if (selectedSub) return [selectedSub.slug];
-    const descendants = categories.filter((c) => c.parent_id === effectiveLeafCategory.id).map((c) => c.slug);
-    return [effectiveLeafCategory.slug, ...descendants];
-  }, [categories, effectiveLeafCategory, selectedSub]);
+
 
   const { data: leafProducts = [], isLoading: productsLoading } = useQuery({
-    queryKey: ["categories-leaf-products", effectiveLeafSlug, scopedCategoryIds.join(","), scopedCategorySlugs.join(",")],
+    queryKey: ["categories-leaf-products", effectiveLeafSlug, scopedCategoryIds.join(",")],
     enabled: !!effectiveLeafSlug,
     queryFn: async () => {
-      const slugList = scopedCategorySlugs.map((s) => `"${s}"`).join(",");
-      const idList = scopedCategoryIds.join(",");
-      const orFilter = [
-        slugList ? `category.in.(${slugList})` : null,
-        idList ? `category_id.in.(${idList})` : null,
-      ]
-        .filter(Boolean)
-        .join(",");
       const { data, error } = await supabase
         .from("products")
-        .select("id,name,name_ar,slug,price,original_price,discount,description,description_ar,images,category,brand,in_stock,countries,is_featured,is_best_seller,variants,color_variants")
+        .select("id,name,name_ar,slug,price,original_price,discount,description,description_ar,images,category,brand,category_id,brand_id,in_stock,countries,is_featured,is_best_seller,variants,color_variants")
         .eq("is_active", true)
-        .or(orFilter)
+        .in("category_id", scopedCategoryIds)
         .order("created_at", { ascending: false });
 
       if (error) throw error;
@@ -114,8 +101,10 @@ const CategoriesPage = () => {
   p.images?.length > 0
     ? p.images
     : ((p as any).color_variants?.[0]?.images || []),
-        category: p.category,
-        brand: p.brand,
+        category: p.category || '',
+        brand: p.brand || '',
+        categoryId: p.category_id || undefined,
+        brandId: p.brand_id || undefined,
         inStock: p.in_stock ?? true,
         countries: (p.countries || ["GLOBAL"]) as Product["countries"],
         isFeatured: p.is_featured,
@@ -127,11 +116,11 @@ const CategoriesPage = () => {
   });
 
   const brands = useMemo(() => {
-    const set = new Set<string>();
-    leafProducts.forEach((p) => {
-      if (p.brand?.trim()) set.add(p.brand.trim());
+    const values = new Map<string, string>();
+    leafProducts.forEach((product) => {
+      if (product.brandId && product.brand) values.set(product.brandId, product.brand.trim());
     });
-    return Array.from(set);
+    return [...values.entries()].map(([id, name]) => ({ id, name }));
   }, [leafProducts]);
 
   const { data: mappedBrands = [] } = useQuery({
@@ -145,16 +134,16 @@ const CategoriesPage = () => {
       if (linkError) throw linkError;
 
       const brandIds = (links || []).map((row: any) => row.brand_id).filter(Boolean);
-      if (brandIds.length === 0) return [] as string[];
+      if (brandIds.length === 0) return [] as { id: string; name: string }[];
 
       const { data: rows, error: brandsError } = await supabase
         .from("brands")
-        .select("name")
+        .select("id,name")
         .eq("is_active", true)
         .in("id", brandIds as string[]);
       if (brandsError) throw brandsError;
 
-      return Array.from(new Set((rows || []).map((r: any) => (r.name || "").trim()).filter(Boolean)));
+      return (rows || []).filter((row) => row.id && row.name).map((row) => ({ id: row.id, name: row.name.trim() }));
     },
   });
 
@@ -162,7 +151,7 @@ const CategoriesPage = () => {
 
   const visibleProducts = useMemo(() => {
     if (brandFilter === "all") return leafProducts;
-    return leafProducts.filter((p) => p.brand?.trim() === brandFilter);
+    return leafProducts.filter((product) => product.brandId === brandFilter);
   }, [leafProducts, brandFilter]);
 
   const setStepParams = (next: Record<string, string | null>) => {
@@ -336,13 +325,13 @@ const CategoriesPage = () => {
                   </Button>
                   {availableBrands.map((brand) => (
                     <Button
-                      key={brand}
-                      variant={brandFilter === brand ? "default" : "outline"}
+                      key={brand.id}
+                      variant={brandFilter === brand.id ? "default" : "outline"}
                       size="sm"
                       className="rounded-full whitespace-nowrap"
-                      onClick={() => setStepParams({ brand })}
+                      onClick={() => setStepParams({ brand: brand.id })}
                     >
-                      {brand}
+                      {brand.name}
                     </Button>
                   ))}
                 </div>

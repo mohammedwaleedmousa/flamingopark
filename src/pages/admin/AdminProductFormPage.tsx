@@ -70,6 +70,8 @@ const AdminProductFormPage = () => {
     description_ar: '',
     category: '',
     brand: '',
+    category_id: '',
+    brand_id: '',
     in_stock: true,
     is_featured: false,
     is_best_seller: false,
@@ -138,7 +140,7 @@ const AdminProductFormPage = () => {
     },
   });
 
-  const selectedCategory = categories.find((c) => c.slug === formData.category) || null;
+  const selectedCategory = categories.find((category) => category.id === formData.category_id) || null;
 
   const { data: mappedBrandRows = [] } = useQuery({
     queryKey: ['category-brand-links', selectedCategory?.id],
@@ -165,8 +167,8 @@ const AdminProductFormPage = () => {
   }, [id]);
 
   useEffect(() => {
-    if (!categories.length || !formData.category) return;
-    const category = categories.find((c) => c.slug === formData.category);
+    if (!categories.length || !formData.category_id) return;
+    const category = categories.find((item) => item.id === formData.category_id);
     if (!category) return;
 
     if (category.parent_id) {
@@ -175,16 +177,17 @@ const AdminProductFormPage = () => {
     } else {
       setSelectedParentSlug(category.slug);
     }
-  }, [categories, formData.category]);
+  }, [categories, formData.category_id]);
 
   useEffect(() => {
-    if (!formData.brand) return;
+    if (!formData.brand_id) return;
     if (filteredBrands.length === 0) return;
-    const exists = filteredBrands.some((b: any) => b.name?.trim() === formData.brand);
+    const exists = filteredBrands.some((brand: any) => brand.id === formData.brand_id);
     if (!exists) {
-      setFormData((prev) => ({ ...prev, brand: filteredBrands[0].name?.trim() || '' }));
+      const first = filteredBrands[0];
+      setFormData((prev) => ({ ...prev, brand_id: first?.id || '', brand: first?.name?.trim() || '' }));
     }
-  }, [filteredBrands, formData.brand]);
+  }, [filteredBrands, formData.brand_id]);
 
   const parentCategories = useMemo(() => categories.filter((c) => !c.parent_id), [categories]);
 
@@ -222,6 +225,8 @@ const AdminProductFormPage = () => {
         description_ar: data.description_ar || '',
         category: data.category || '',
         brand: data.brand || '',
+        category_id: data.category_id || categories.find((category) => category.slug === data.category)?.id || '',
+        brand_id: data.brand_id || brands.find((brand) => brand.name?.trim() === data.brand?.trim())?.id || '',
         in_stock: data.in_stock ?? true,
         is_featured: data.is_featured ?? false,
         is_best_seller: data.is_best_seller ?? false,
@@ -275,8 +280,6 @@ const AdminProductFormPage = () => {
     setIsSaving(true);
 
     const stockQty = Math.max(0, parseInt(formData.stock_quantity || '0') || 0);
-    const selectedCat = categories.find((c) => c.slug === formData.category) || null;
-    const selectedBrand = (brands as any[]).find((b: any) => b.name?.trim() === formData.brand?.trim()) || null;
     const productData = {
       name: formData.name,
       name_ar: formData.name_ar,
@@ -289,8 +292,8 @@ const AdminProductFormPage = () => {
       description_ar: formData.description_ar,
       category: formData.category || null,
       brand: formData.brand || null,
-      category_id: selectedCat?.id ?? null,
-      brand_id: selectedBrand?.id ?? null,
+      category_id: formData.category_id || null,
+      brand_id: formData.brand_id || null,
       in_stock: stockQty > 0 ? formData.in_stock : false,
       stock_quantity: stockQty,
       is_featured: formData.is_featured,
@@ -492,7 +495,8 @@ const AdminProductFormPage = () => {
                   const children = nextParent ? categories.filter((c) => c.parent_id === nextParent.id) : [];
                   setFormData({
                     ...formData,
-                    category: children.length ? children[0].slug : value,
+                    category: children.length ? children[0].slug : nextParent?.slug || '',
+                    category_id: children.length ? children[0].id : nextParent?.id || '',
                   });
                 }}
               >
@@ -512,8 +516,11 @@ const AdminProductFormPage = () => {
             <div>
               <label className="block text-sm font-body text-muted-foreground mb-2">القسم الفرعي</label>
               <Select
-                value={formData.category}
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
+                value={formData.category_id}
+                onValueChange={(value) => {
+                  const category = categories.find((item) => item.id === value);
+                  setFormData({ ...formData, category_id: value, category: category?.slug || '' });
+                }}
                 disabled={subCategoriesForSelectedParent.length === 0}
               >
                 <SelectTrigger>
@@ -521,7 +528,7 @@ const AdminProductFormPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {subCategoriesForSelectedParent.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.slug}>
+                    <SelectItem key={cat.id} value={cat.id}>
                       {cat.name_ar} ({cat.name})
                     </SelectItem>
                   ))}
@@ -535,8 +542,11 @@ const AdminProductFormPage = () => {
             <div>
               <label className="block text-sm font-body text-muted-foreground mb-2">الماركة (اختياري)</label>
               <Select
-                value={formData.brand || "__none__"}
-                onValueChange={(value) => setFormData({ ...formData, brand: value === "__none__" ? "" : value })}
+                value={formData.brand_id || "__none__"}
+                onValueChange={(value) => {
+                  const brand = filteredBrands.find((item: any) => item.id === value);
+                  setFormData({ ...formData, brand_id: value === "__none__" ? "" : value, brand: brand?.name?.trim() || "" });
+                }}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="بدون ماركة" />
@@ -544,7 +554,7 @@ const AdminProductFormPage = () => {
                 <SelectContent>
                   <SelectItem value="__none__">بدون ماركة</SelectItem>
                   {filteredBrands.map((brand: any) => (
-                    <SelectItem key={brand.id} value={brand.name.trim()}>
+                    <SelectItem key={brand.id} value={brand.id}>
                       {brand.name.trim()}
                     </SelectItem>
                   ))}

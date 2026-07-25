@@ -70,7 +70,6 @@ const AdminInventoryAdjustmentsPage = lazy(() => import("./pages/admin/AdminInve
 const ReportsOverviewPage = lazy(() => import("./pages/admin/reports/ReportsOverviewPage"));
 const ReportsFinancePage = lazy(() => import("./pages/admin/reports/ReportsFinancePage"));
 const ReportsCustomersPage = lazy(() => import("./pages/admin/reports/ReportsCustomersPage"));
-const MohammedInvoicesPage = lazy(() => import("./pages/MohammedInvoicesPage"));
 const AdminBrandPagesPage = lazy(() => import("./pages/admin/AdminBrandPagesPage"));
 const AdminBrandSectionsPage = lazy(() => import("./pages/admin/AdminBrandSectionsPage"));
 const AdminBrandPageEditor = lazy(() => import("./pages/admin/AdminBrandPageEditor"));
@@ -236,7 +235,6 @@ const App = () => {
               <Route path="brand-sections/:id/products" element={<AdminBrandSectionProductsPage />} />
             </Route>
 
-            <Route path="/mohammed" element={<MohammedInvoicesPage />} />
             <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

@@ -35,6 +35,7 @@ interface OrderItem {
 
 interface OrderData {
   orderNumber: string;
+  trackingToken: string;
   customerName: string;
   customerPhone: string;
   customerAddress: string;
@@ -102,6 +103,10 @@ const OrderConfirmationPage = () => {
       });
     }
   };
+
+  const trackingUrl = orderData
+    ? `/order-tracking?order=${encodeURIComponent(orderData.orderNumber)}&token=${encodeURIComponent(orderData.trackingToken)}`
+    : "/order-tracking";
 
   const handleConfirmOrder = async () => {
     if (!orderData || !invoiceRef.current) return;
@@ -435,6 +440,12 @@ const OrderConfirmationPage = () => {
               </Button>
             </motion.div>
           )}
+
+          <div className="mt-4 text-center print:hidden">
+            <Button asChild variant="outline">
+              <Link to={trackingUrl}>تتبع الطلب</Link>
+            </Button>
+          </div>
 
           {/* Back to Home */}
           <motion.div

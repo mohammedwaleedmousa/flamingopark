@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -179,31 +179,34 @@ const CheckoutPage = () => {
   const deliveryFee = selectedCompany?.base_fee || 0;
   const total = subtotal + deliveryFee - discountAmount;
 
-  const createOrderMutation = useMutation({
-    mutationFn: async (orderData: any) => {
-      const insertOrder = async (payload: Record<string, unknown>) => {
-        const { data, error } = await supabase.from("orders").insert(payload as any).select().single();
-        if (error) throw error;
-        return data;
-      };
-      const normalizeCountry = (payload: Record<string, unknown>) => payload.country === "GLOBAL" ? { ...payload, country: "YE" } : payload;
-      try {
-        return await insertOrder(normalizeCountry(orderData));
-      } catch (error) {
-        const message = String((error as { message?: string })?.message || "");
-        if (/country/i.test(message) && /constraint|check/i.test(message)) {
-          return await insertOrder({ ...orderData, country: "YE" });
-        }
-        if (!/column .* does not exist|Could not find the '.*' column|schema cache/i.test(message)) throw error;
-        const legacy = { ...orderData };
-        const notes = String(legacy.customer_notes || "").trim();
-        const city = String(legacy.customer_city || "").trim();
-        delete legacy.customer_city; delete legacy.coupon_code; delete legacy.discount_amount; delete legacy.currency_mode;
-        legacy.customer_notes = [notes || null, city ? `المدينة: ${city}` : null].filter(Boolean).join(" | ") || null;
-        return await insertOrder(legacy);
-      }
-    },
-  });
+  const createSecureOrder = async (items: unknown[]) => {
+    const { data, error } = await (supabase as any).rpc("create_secure_order", {
+      p_customer_name: String(customer?.name || formData.name || "").trim(),
+      p_customer_phone: String(customer?.phone || formData.phone || "").trim(),
+      p_customer_address: formData.address.trim(),
+      p_customer_city: formData.city.trim(),
+      p_customer_notes: formData.notes.trim() || null,
+      p_country: "GLOBAL",
+      p_currency_mode: currencyMode,
+      p_payment_method: paymentMethod,
+      p_delivery_company_id: selectedDelivery,
+      p_coupon_code: couponCode.trim() || null,
+      p_items: items,
+    });
+    if (error) throw error;
+    return data as {
+      order_number: string;
+      tracking_token: string;
+      items: typeof items;
+      subtotal: number;
+      delivery_fee: number;
+      discount_amount: number;
+      total: number;
+      currency_mode: string;
+      delivery_company: string;
+      created_at: string;
+    };
+  };
 
   const validateStep = (step: number): boolean => {
     if (step === 0) {
@@ -246,7 +249,6 @@ const CheckoutPage = () => {
     if (isSubmitting) return;
     if (!validateStep(0) || !validateStep(1) || !validateStep(2)) return;
     setIsSubmitting(true);
-    const orderNumber = `ORD-${Date.now()}`;
     const rawOrderItems = cart.map((item) => {
       const basePrice = item.product.discount ? item.product.price * (1 - item.product.discount / 100) : item.product.price;
       const accessoriesTotal = item.selectedAccessories?.reduce((sum, acc) => sum + acc.price * acc.quantity, 0) || 0;
@@ -271,31 +273,21 @@ const CheckoutPage = () => {
       const customerPhone = String(customer?.phone || formData.phone || "").trim();
       saveAddressToLocal();
 
-      const orderPayload: Record<string, unknown> = {
-        order_number: orderNumber, customer_name: customerName || "عميل",
-        customer_phone: customerPhone, customer_address: formData.address || "-",
-        customer_city: formData.city || "", customer_notes: formData.notes || null,
-        currency_code: currencyMode,
-        exchange_rate_snapshot: (await import("@/lib/currency")).getRateSnapshot(currencyMode),
-        total_base: total,
-        items: validation.data, subtotal, delivery_fee: deliveryFee, total,
-        delivery_company_id: selectedDelivery, payment_method: paymentMethod,
-        coupon_code: discountAmount > 0 ? couponCode.trim().toUpperCase() : null,
-        discount_amount: discountAmount,
-      };
-      if (customer?.id && customer.id !== "guest") orderPayload.customer_id = customer.id;
-
-      await createOrderMutation.mutateAsync(orderPayload);
+      const createdOrder = await createSecureOrder(validation.data);
       const regionData = codRegions.find((r) => r.id === selectedRegion);
       const orderData = {
-        orderNumber, customerName: customerName || "عميل", customerPhone,
+        orderNumber: createdOrder.order_number, trackingToken: createdOrder.tracking_token,
+        customerName: customerName || "عميل", customerPhone,
         customerAddress: formData.address || "-", customerCity: formData.city || "",
-        customerNotes: formData.notes || "", items: validation.data, subtotal, deliveryFee,
-        discountAmount, couponCode: discountAmount > 0 ? couponCode.trim().toUpperCase() : null,
-        total, paymentMethod, deliveryCompany: selectedCompany?.name || "",
+        customerNotes: formData.notes || "", items: createdOrder.items as typeof validation.data,
+        subtotal: Number(createdOrder.subtotal), deliveryFee: Number(createdOrder.delivery_fee),
+        discountAmount: Number(createdOrder.discount_amount),
+        couponCode: Number(createdOrder.discount_amount) > 0 ? couponCode.trim().toUpperCase() : null,
+        total: Number(createdOrder.total), paymentMethod,
+        deliveryCompany: createdOrder.delivery_company || selectedCompany?.name || "",
         selectedRegion: paymentMethod === "cod" && regionData ? regionData.region_name_ar : null,
-        currencyMode,
-        whatsappNumber: whatsappNumber || "967123456789", createdAt: new Date().toISOString(),
+        country: "GLOBAL", currencyMode: createdOrder.currency_mode || currencyMode,
+        whatsappNumber: whatsappNumber || "967123456789", createdAt: createdOrder.created_at || new Date().toISOString(),
       };
       clearCart();
       navigate("/order-confirmation", { state: { orderData } });

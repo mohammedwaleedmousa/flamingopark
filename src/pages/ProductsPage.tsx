@@ -149,7 +149,7 @@ const QuickView = ({ product, onClose, isMobile }: { product: Product | null; on
         <div className="space-y-3">
           <div className="w-full aspect-[4/3] bg-muted rounded-xl overflow-hidden flex items-center justify-center">
             {images?.[activeImage] ? (
-              <img loading="lazy" src={images[activeImage]} alt={product.nameAr} className="w-full h-full object-cover" />
+              <img loading="lazy" decoding="async" width={1200} height={900} sizes="(max-width: 768px) 100vw, 50vw" src={images[activeImage]} alt={product.nameAr} className="w-full h-full object-cover" />
             ) : (
               <div className="text-muted-foreground">No image</div>
             )}

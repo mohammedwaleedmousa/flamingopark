@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadOptimizedImage } from '@/lib/prepareImageUpload';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -139,23 +140,9 @@ const AdminBannersPage = () => {
     setIsUploading(true);
 
     try {
-      // Create unique file name with proper extension
-      const fileExt = file.name.split('.').pop() || 'jpg';
-      const fileName = `banners/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-      
-      const { error } = await supabase.storage.from('uploads').upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
-
-      if (error) {
-        console.error('Upload error:', error);
-        toast({ title: 'خطأ', description: `فشل في رفع الصورة: ${error.message}`, variant: 'destructive' });
-      } else {
-        const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName);
-        setFormData(prev => ({ ...prev, image_url: urlData.publicUrl }));
-        toast({ title: 'تم', description: 'تم رفع الصورة بنجاح' });
-      }
+      const imageUrl = await uploadOptimizedImage(file, 'banners', { maxSizeMB: 0.8, maxWidthOrHeight: 1600 });
+      setFormData(prev => ({ ...prev, image_url: imageUrl }));
+      toast({ title: 'تم', description: 'تم رفع الصورة بنجاح' });
     } catch (err: any) {
       console.error('Upload exception:', err);
       toast({ title: 'خطأ', description: 'حدث خطأ غير متوقع', variant: 'destructive' });

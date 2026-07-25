@@ -10,7 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
-import imageCompression from "browser-image-compression";
+import { uploadOptimizedImage } from "@/lib/prepareImageUpload";
 import { Plus, Pencil, Trash2, Loader2, Upload, ArrowRight, Package } from "lucide-react";
 
 interface Section {
@@ -73,86 +73,17 @@ const AdminBrandSectionsPage = () => {
   };
 
   const upload = async (file: File) => {
-  setUploading(true);
-
-  try {
-    // إنشاء نسخة صورة من الملف
-    const imageBitmap = await createImageBitmap(file);
-
-    // ضغط الصورة
-    const canvas = document.createElement("canvas");
-
-    const maxSize = 1200;
-    let width = imageBitmap.width;
-    let height = imageBitmap.height;
-
-    if (width > height && width > maxSize) {
-      height = (height * maxSize) / width;
-      width = maxSize;
-    } else if (height > maxSize) {
-      width = (width * maxSize) / height;
-      height = maxSize;
+    setUploading(true);
+    try {
+      const imageUrl = await uploadOptimizedImage(file, "brands/sections", { maxSizeMB: 0.8, maxWidthOrHeight: 1200 });
+      setForm((current) => ({ ...current, image_url: imageUrl }));
+      toast({ title: "تم رفع الصورة" });
+    } catch (error: any) {
+      toast({ title: "فشل رفع الصورة", description: error.message, variant: "destructive" });
+    } finally {
+      setUploading(false);
     }
-
-    canvas.width = width;
-    canvas.height = height;
-
-    const ctx = canvas.getContext("2d");
-    ctx?.drawImage(imageBitmap, 0, 0, width, height);
-
-    const blob = await new Promise<Blob>((resolve) =>
-      canvas.toBlob(
-        (b) => resolve(b as Blob),
-        "image/webp",
-        0.8
-      )
-    );
-
-    const compressedFile = new File(
-      [blob],
-      `section-${Date.now()}.webp`,
-      {
-        type: "image/webp",
-      }
-    );
-
-    const path = `brands/${compressedFile.name}`;
-
-    const { error } = await supabase.storage
-      .from("uploads")
-      .upload(path, compressedFile, {
-        cacheControl: "31536000",
-        contentType: "image/webp",
-      });
-
-    if (error) throw error;
-
-    const { data } = supabase.storage
-      .from("uploads")
-      .getPublicUrl(path);
-
-    setForm((f) => ({
-      ...f,
-      image_url: data.publicUrl,
-    }));
-
-    toast({
-      title: "تم رفع الصورة",
-    });
-
-  } catch (e: any) {
-    console.error("UPLOAD ERROR:", e);
-
-    toast({
-      title: "فشل رفع الصورة",
-      description: e.message,
-      variant: "destructive",
-    });
-
-  } finally {
-    setUploading(false);
-  }
-};
+  };
 
   const save = useMutation({
   mutationFn: async () => {

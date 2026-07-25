@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadOptimizedImage } from '@/lib/prepareImageUpload';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -214,24 +215,12 @@ const AdminBrandsPage = () => {
     if (!file) return;
  
     setUploading(true);
-    const fileExt = file.name.split('.').pop();
-    const fileName = `brands/${Date.now()}.${fileExt}`;
- 
-    const { error: uploadError } = await supabase.storage
-      .from('uploads')
-      .upload(fileName, file, { upsert: true, contentType: file.type, cacheControl: '3600' });
- 
-    if (uploadError) {
+    try {
+      const imageUrl = await uploadOptimizedImage(file, 'brands', { maxSizeMB: 0.4, maxWidthOrHeight: 800 });
+      setFormData({ ...formData, logo_url: imageUrl });
+    } catch {
       toast({ title: 'خطأ في رفع الصورة', variant: 'destructive' });
-      setUploading(false);
-      return;
     }
- 
-    const { data: urlData } = supabase.storage
-      .from('uploads')
-      .getPublicUrl(fileName);
- 
-    setFormData({ ...formData, logo_url: urlData.publicUrl });
     setUploading(false);
   };
  

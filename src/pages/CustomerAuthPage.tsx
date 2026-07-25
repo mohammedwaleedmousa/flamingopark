@@ -136,7 +136,6 @@ const CustomerAuthPage = () => {
       
       navigate("/home");
     } catch (error) {
-      console.log('All geolocation APIs failed, using default');
       
       setCustomer({
         id: "guest",

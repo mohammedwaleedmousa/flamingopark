@@ -78,7 +78,6 @@ const NotificationsDropdown = () => {
           table: 'admin_notifications'
         },
         (payload) => {
-          console.log('New notification:', payload);
           fetchCounts();
         }
       )

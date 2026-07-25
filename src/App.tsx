@@ -10,7 +10,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
 import { DateRangeProvider } from "@/lib/analytics/dateRange";
 import { hydrateCurrencies } from "@/lib/currency";
-import AdminBrandSectionProductsPage from "@/pages/admin/AdminBrandSectionProductsPage";
+import { SpeedInsights } from "@vercel/speed-insights/react";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
@@ -73,6 +73,7 @@ const ReportsCustomersPage = lazy(() => import("./pages/admin/reports/ReportsCus
 const MohammedInvoicesPage = lazy(() => import("./pages/MohammedInvoicesPage"));
 const AdminBrandPagesPage = lazy(() => import("./pages/admin/AdminBrandPagesPage"));
 const AdminBrandSectionsPage = lazy(() => import("./pages/admin/AdminBrandSectionsPage"));
+const AdminBrandSectionProductsPage = lazy(() => import("./pages/admin/AdminBrandSectionProductsPage"));
 const AdminBrandPageEditor = lazy(() => import("./pages/admin/AdminBrandPageEditor"));
 const AdminBrandFiltersPage = lazy(() => import("./pages/admin/AdminBrandFiltersPage"));
 const AdminCustomerNotificationsPage = lazy(() => import("./pages/admin/AdminCustomerNotificationsPage"));
@@ -147,6 +148,7 @@ const App = () => {
         <BrowserRouter>
           <ScrollToTop />
           <AnalyticsTracker />
+          <SpeedInsights />
           <Suspense fallback={<RouteFallback />}>
             <Routes>
             <Route path="/" element={<AuthRedirect />} />

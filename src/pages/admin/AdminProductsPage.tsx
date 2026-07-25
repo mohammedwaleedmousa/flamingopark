@@ -123,7 +123,6 @@ const AdminProductsPage = () => {
       return;
     }
 
-    console.log("PRODUCT STATS:", data);
 
     setStats({
       active: data.filter((p) => p.is_active).length,

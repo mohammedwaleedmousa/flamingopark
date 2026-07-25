@@ -60,7 +60,6 @@ const AdminCategoriesPage = () => {
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData & { id?: string }) => {
       const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, "-");
-      console.log("Saving category:", data);
 
       if (data.id) {
         const { data: result, error } = await supabase
@@ -78,7 +77,6 @@ const AdminCategoriesPage = () => {
           .eq("id", data.id)
           .select();
 
-        console.log("Update result:", result, "Error:", error);
         if (error) throw error;
       } else {
         const { data: result, error } = await supabase
@@ -95,7 +93,6 @@ const AdminCategoriesPage = () => {
           })
           .select();
 
-        console.log("Insert result:", result, "Error:", error);
         if (error) throw error;
       }
     },

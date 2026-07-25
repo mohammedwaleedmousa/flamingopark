@@ -145,9 +145,9 @@ const Navbar = () => {
   }));
 
   const { data: categories = [] } = useQuery({
-    queryKey: ["nav-categories"],
+    queryKey: ["categories-all-active"],
     queryFn: async () => {
-      const { data } = await supabase.from("categories").select("*").eq("is_active", true).order("sort_order");
+      const { data } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order");
       return (data || []) as any[];
     },
   });

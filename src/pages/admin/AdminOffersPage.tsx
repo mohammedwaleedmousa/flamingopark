@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadOptimizedImage } from '@/lib/prepareImageUpload';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -221,21 +222,9 @@ const AdminOffersPage = () => {
     setIsUploading(true);
 
     try {
-      const fileExt = file.name.split('.').pop() || 'jpg';
-      const fileName = `offers/${Date.now()}-${Math.random().toString(36).substr(2, 9)}.${fileExt}`;
-      
-      const { error } = await supabase.storage.from('uploads').upload(fileName, file, {
-        cacheControl: '3600',
-        upsert: false,
-      });
-
-      if (error) {
-        toast({ title: 'خطأ', description: `فشل في رفع الصورة: ${error.message}`, variant: 'destructive' });
-      } else {
-        const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(fileName);
-        setFormData(prev => ({ ...prev, image_url: urlData.publicUrl }));
-        toast({ title: 'تم', description: 'تم رفع الصورة بنجاح' });
-      }
+      const imageUrl = await uploadOptimizedImage(file, 'offers', { maxSizeMB: 0.8, maxWidthOrHeight: 1600 });
+      setFormData(prev => ({ ...prev, image_url: imageUrl }));
+      toast({ title: 'تم', description: 'تم رفع الصورة بنجاح' });
     } catch (err: any) {
       toast({ title: 'خطأ', description: 'حدث خطأ غير متوقع', variant: 'destructive' });
     } finally {

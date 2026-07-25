@@ -1,9 +1,11 @@
 import { motion } from 'framer-motion';
-import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import { Sparkles, Crown, Percent, Star, ChevronDown, Loader2 } from 'lucide-react';
 import ProductCard from '@/components/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
 import { Product } from '@/store/useStore';
+import { PRODUCT_CARD_SELECT, mapProductCard } from '@/lib/productCardData';
+import { useNearViewport } from '@/hooks/useNearViewport';
 import { Button } from '@/components/ui/button';
 
 interface HomepageSection {
@@ -33,141 +35,64 @@ const filterIcons: Record<string, typeof Sparkles> = {
 const INITIAL_DISPLAY = 8;
 const LOAD_MORE_COUNT = 8;
 
-type ProductsCountInfo = {
-  totalCount: number;
+type ProductPage = {
+  products: Product[];
   useDirect: boolean;
 };
-
-const mapRowToProduct = (p: any): Product => ({
-  id: p.id,
-  name: p.name,
-  nameAr: p.name_ar,
-  slug: p.slug,
-  price: Number(p.price),
-  costPrice: p.cost_price ? Number(p.cost_price) : undefined,
-  originalPrice: p.original_price ? Number(p.original_price) : undefined,
-  discount: p.discount || undefined,
-  description: p.description || '',
-  descriptionAr: p.description_ar || '',
-  images:
-  p.images?.length > 0
-    ? p.images
-    : ((p as any).color_variants?.[0]?.images || []),
-  category: p.category,
-  brand: p.brand,
-  inStock: p.in_stock ?? true,
-  countries: (p.countries || ['GLOBAL']) as Product['countries'],
-  isFeatured: p.is_featured,
-  isBestSeller: p.is_best_seller,
-});
 
 const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
   const Icon = filterIcons[section.filter_type] || Sparkles;
   const isDiscounted = section.filter_type === 'discounted';
+  const { ref, isNearViewport } = useNearViewport<HTMLElement>();
 
-  const { data: countInfo } = useQuery<ProductsCountInfo>({
-    queryKey: ['section-products-count', section.id, country, section.filter_type],
-    queryFn: async () => {
-      // First check for directly assigned products
-      const { count: directCount } = await supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true)
-        .contains('countries', [country])
-        .contains('section_ids', [section.id]);
-
-      if ((directCount ?? 0) > 0) {
-        return { totalCount: directCount ?? 0, useDirect: true };
-      }
-
-      // Fall back to filter_type based count
-      let query = supabase
-        .from('products')
-        .select('*', { count: 'exact', head: true })
-        .eq('is_active', true)
-        .contains('countries', [country]);
-
-      switch (section.filter_type) {
-        case 'featured':
-          query = query.eq('is_featured', true);
-          break;
-        case 'best_seller':
-          query = query.eq('is_best_seller', true);
-          break;
-        case 'discounted':
-          query = query.gt('discount', 0);
-          break;
-        default:
-          break;
-      }
-
-      const { count } = await query;
-      return { totalCount: count || 0, useDirect: false };
-    },
-    enabled: !!country,
-  });
-
-  const totalCount = countInfo?.totalCount ?? 0;
-  const useDirect = countInfo?.useDirect ?? false;
-
-  const productsQuery = useInfiniteQuery<Product[]>({
-    queryKey: ['section-products', section.id, country, section.filter_type, useDirect],
-    enabled: !!country && !!countInfo,
-    initialPageParam: { offset: 0, limit: INITIAL_DISPLAY },
+  const productsQuery = useInfiniteQuery<ProductPage>({
+    queryKey: ['section-products', section.id, country, section.filter_type],
+    enabled: !!country && isNearViewport,
+    initialPageParam: { offset: 0, limit: INITIAL_DISPLAY, useDirect: null as boolean | null },
     queryFn: async ({ pageParam }) => {
-      const offset = (pageParam as any)?.offset ?? 0;
-      const limit = (pageParam as any)?.limit ?? INITIAL_DISPLAY;
-
-      let query = supabase
+      const { offset, limit, useDirect } = pageParam as { offset: number; limit: number; useDirect: boolean | null };
+      const baseQuery = () => supabase
         .from('products')
-        .select('*')
+        .select(PRODUCT_CARD_SELECT)
         .eq('is_active', true)
         .contains('countries', [country]);
 
-      if (useDirect) {
-        query = query.contains('section_ids', [section.id]);
-        query = query.order('sort_order', { ascending: true });
-      } else {
+      const runFilterQuery = async () => {
+        let query = baseQuery();
         switch (section.filter_type) {
-          case 'featured':
-            query = query.eq('is_featured', true);
-            break;
-          case 'best_seller':
-            query = query.eq('is_best_seller', true);
-            break;
-          case 'discounted':
-            query = query.gt('discount', 0).order('discount', { ascending: false });
-            break;
-          case 'new':
-            query = query.order('created_at', { ascending: false });
-            break;
-          default:
-            break;
+          case 'featured': query = query.eq('is_featured', true); break;
+          case 'best_seller': query = query.eq('is_best_seller', true); break;
+          case 'discounted': query = query.gt('discount', 0).order('discount', { ascending: false }); break;
+          case 'new': query = query.order('created_at', { ascending: false }); break;
         }
+        return query.order('sort_order', { ascending: true }).range(offset, offset + limit - 1);
+      };
 
-        // Always use sort_order as secondary sort
-        query = query.order('sort_order', { ascending: true });
+      if (useDirect !== false) {
+        const { data, error } = await baseQuery()
+          .contains('section_ids', [section.id])
+          .order('sort_order', { ascending: true })
+          .range(offset, offset + limit - 1);
+        if (error) throw error;
+        if (useDirect || (data || []).length > 0) return { products: (data || []).map(mapProductCard), useDirect: true };
       }
 
-      const { data, error } = await query.range(offset, offset + limit - 1);
+      const { data, error } = await runFilterQuery();
       if (error) throw error;
-
-      return (data || []).map(mapRowToProduct);
+      return { products: (data || []).map(mapProductCard), useDirect: false };
     },
-    getNextPageParam: (_lastPage, allPages) => {
-      const loaded = allPages.reduce((sum, page) => sum + page.length, 0);
-      if (loaded >= totalCount) return undefined;
-      return { offset: loaded, limit: LOAD_MORE_COUNT };
+    getNextPageParam: (lastPage, allPages) => {
+      const loaded = allPages.reduce((sum, page) => sum + page.products.length, 0);
+      if (lastPage.products.length < LOAD_MORE_COUNT) return undefined;
+      return { offset: loaded, limit: LOAD_MORE_COUNT, useDirect: lastPage.useDirect };
     },
   });
+  const products = productsQuery.data?.pages.flatMap((page) => page.products) ?? [];
 
-  const products = productsQuery.data?.pages.flat() ?? [];
-
-  if (products.length === 0) return null;
+  if (products.length === 0) return <section ref={ref} className="min-h-px" aria-hidden="true" />;
 
   const isEven = index % 2 === 0;
-  const hasMore = products.length < totalCount;
-  const remainingCount = totalCount - products.length;
+  const hasMore = productsQuery.hasNextPage;
 
   const handleLoadMore = async () => {
     if (!productsQuery.hasNextPage || productsQuery.isFetchingNextPage) return;
@@ -180,6 +105,7 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
 
   return (
     <section
+      ref={ref}
       className={`py-16 md:py-20 ${isEven ? '' : 'bg-gradient-to-b from-muted/50 to-muted'} ${
         isDiscounted ? 'relative overflow-hidden' : ''
       }`}
@@ -265,7 +191,7 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
               ) : (
                 <ChevronDown className="w-4 h-4" />
               )}
-              عرض المزيد ({remainingCount > 0 ? remainingCount : ''} منتج)
+              عرض المزيد
             </Button>
           </motion.div>
         )}

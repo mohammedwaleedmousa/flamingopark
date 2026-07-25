@@ -376,6 +376,45 @@ export type Database = {
           },
         ]
       }
+      brand_section_products: {
+        Row: {
+          created_at: string
+          product_id: string
+          section_id: string
+          sort_order: number
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          product_id: string
+          section_id: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          product_id?: string
+          section_id?: string
+          sort_order?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brand_section_products_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brand_section_products_section_id_fkey"
+            columns: ["section_id"]
+            isOneToOne: false
+            referencedRelation: "brand_sections"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       brands: {
         Row: {
           countries: string[] | null
@@ -697,8 +736,10 @@ export type Database = {
           customer_id: string | null
           customer_phone: string | null
           id: string
+          is_public: boolean
           is_read: boolean
           link: string | null
+          message: string | null
           title: string
           type: string
           updated_at: string
@@ -712,8 +753,10 @@ export type Database = {
           customer_id?: string | null
           customer_phone?: string | null
           id?: string
+          is_public?: boolean
           is_read?: boolean
           link?: string | null
+          message?: string | null
           title: string
           type?: string
           updated_at?: string
@@ -727,8 +770,10 @@ export type Database = {
           customer_id?: string | null
           customer_phone?: string | null
           id?: string
+          is_public?: boolean
           is_read?: boolean
           link?: string | null
+          message?: string | null
           title?: string
           type?: string
           updated_at?: string

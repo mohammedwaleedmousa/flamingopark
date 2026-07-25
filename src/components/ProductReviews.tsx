@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Star, Send, Loader2, User, ImagePlus, X, LogIn } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import { uploadOptimizedImage } from '@/lib/prepareImageUpload';
 import { useStore } from '@/store/useStore';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
@@ -71,15 +72,11 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
     setUploading(true);
     const uploaded: string[] = [];
     for (const file of list) {
-      const ext = file.name.split('.').pop();
-      const path = `reviews/${productId}/${crypto.randomUUID()}.${ext}`;
-      const { error } = await supabase.storage.from('uploads').upload(path, file, { upsert: false });
-      if (error) {
+      try {
+        uploaded.push(await uploadOptimizedImage(file, `reviews/${productId}`, { maxSizeMB: 0.6, maxWidthOrHeight: 1200 }));
+      } catch (error: any) {
         toast({ title: 'تعذر رفع الصورة', description: error.message, variant: 'destructive' });
-        continue;
       }
-      const { data } = supabase.storage.from('uploads').getPublicUrl(path);
-      uploaded.push(data.publicUrl);
     }
     setImages((prev) => [...prev, ...uploaded]);
     setUploading(false);
@@ -263,7 +260,7 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
                 <div className="flex flex-wrap gap-2">
                   {images.map((src, i) => (
                     <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border group">
-                      <img loading="lazy" src={src} className="w-full h-full object-cover" />
+                      <img loading="lazy" decoding="async" width={128} height={128} src={src} className="w-full h-full object-cover" />
                       <button
                         type="button"
                         onClick={() => setImages((p) => p.filter((_, idx) => idx !== i))}
@@ -376,7 +373,7 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
                             onClick={() => setZoomImg(src)}
                             className="w-16 h-16 rounded-lg overflow-hidden border border-border hover:ring-2 hover:ring-primary transition"
                           >
-                            <img loading="lazy" src={src} className="w-full h-full object-cover"/>
+                            <img loading="lazy" decoding="async" width={128} height={128} src={src} className="w-full h-full object-cover"/>
                           </button>
                         ))}
                       </div>
@@ -397,7 +394,7 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
 
       <Dialog open={!!zoomImg} onOpenChange={(o) => !o && setZoomImg(null)}>
         <DialogContent className="max-w-3xl p-2 bg-black/95 border-0">
-          {zoomImg && <img loading="lazy" src={zoomImg} className="w-full h-auto max-h-[80vh] object-contain rounded" />}
+          {zoomImg && <img loading="lazy" decoding="async" width={1200} height={1200} src={zoomImg} className="w-full h-auto max-h-[80vh] object-contain rounded" />}
         </DialogContent>
       </Dialog>
     </motion.div>

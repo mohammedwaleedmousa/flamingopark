@@ -10,7 +10,7 @@ import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import type { Product } from "@/store/useStore";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
-import { restoreCatalogScroll } from "@/lib/catalogScroll";
+import { clearCatalogScroll, restoreCatalogScroll } from "@/lib/catalogScroll";
 
 interface Category {
   id: string;
@@ -36,7 +36,7 @@ const CategoriesPage = () => {
   const location = useLocation();
   const { data: content } = useSiteContent("categories_page_");
   const { data: categories = [] } = useQuery({
-    queryKey: ["categories-all-for-hierarchy"],
+    queryKey: ["categories-all-active"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("categories")
@@ -74,9 +74,10 @@ const CategoriesPage = () => {
   const scopedCategoryIds = useMemo(() => {
     if (!effectiveLeafCategory) return [] as string[];
     if (selectedSub) return [selectedSub.id];
-    const descendants = categories.filter((c) => c.parent_id === effectiveLeafCategory.id).map((c) => c.id);
+    const descendants = categories.filter((category) => category.parent_id === effectiveLeafCategory.id).map((category) => category.id);
     return [effectiveLeafCategory.id, ...descendants];
   }, [categories, effectiveLeafCategory, selectedSub]);
+
   const productQueries = useQueries({
     queries: Array.from({ length: page }, (_, pageIndex) => ({
       queryKey: ["categories-leaf-products", scopedCategoryIds.join(","), brandFilter, pageIndex + 1],
@@ -108,14 +109,7 @@ const CategoriesPage = () => {
     if (!productsLoading && leafProducts.length > 0) restoreCatalogScroll(`${location.pathname}${location.search}`);
   }, [productsLoading, leafProducts.length, location.pathname, location.search]);
 
-
-  const brands = useMemo(() => {
-    const set = new Set<string>();
-    leafProducts.forEach((p) => {
-      if (p.brand?.trim()) set.add(p.brand.trim());
-    });
-    return Array.from(set);
-  }, [leafProducts]);
+  const brands = useMemo(() => Array.from(new Set(leafProducts.map((product) => product.brand?.trim()).filter(Boolean))) as string[], [leafProducts]);
 
   const { data: mappedBrands = [] } = useQuery({
     queryKey: ["categories-mapped-brands", effectiveLeafCategory?.id],
@@ -149,6 +143,7 @@ const CategoriesPage = () => {
   }, [leafProducts, brandFilter]);
 
   const setStepParams = (next: Record<string, string | null>) => {
+    if (!("page" in next)) clearCatalogScroll(`${location.pathname}${location.search}`);
     const p = new URLSearchParams(searchParams);
     Object.entries(next).forEach(([key, value]) => {
       if (!value) p.delete(key);

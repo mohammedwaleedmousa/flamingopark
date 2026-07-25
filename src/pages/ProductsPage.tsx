@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
@@ -14,7 +14,7 @@ import { SlidersHorizontal, X, Heart } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
-import { restoreCatalogScroll } from "@/lib/catalogScroll";
+import { clearCatalogScroll, restoreCatalogScroll } from "@/lib/catalogScroll";
 if ("scrollRestoration" in window.history) {
   // Let the browser restore scroll on back/forward so we return to the same product row.
   window.history.scrollRestoration = "auto";
@@ -251,8 +251,14 @@ const ProductsPage = () => {
   const [isMobileViewport, setIsMobileViewport] = useState(false);
 
   const navType = useNavigationType();
+  const previousCatalogSearch = useRef(location.search);
   useEffect(() => {
-    if (navType === "POP") return; // preserve scroll on back/forward
+    const previous = new URLSearchParams(previousCatalogSearch.current);
+    const current = new URLSearchParams(location.search);
+    previousCatalogSearch.current = location.search;
+    const onlyPageChanged = [...new Set([...previous.keys(), ...current.keys()])]
+      .every((key) => key === "page" || previous.get(key) === current.get(key));
+    if (navType === "POP" || onlyPageChanged) return;
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [location.pathname, location.search, navType]);
 
@@ -273,7 +279,7 @@ const ProductsPage = () => {
   }, []);
 
   const { data: categories = [] } = useQuery({
-    queryKey: ["categories-all"],
+    queryKey: ["categories-all-active"],
     queryFn: async () => {
       const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order");
       if (error) throw error; return data as unknown as Category[];
@@ -333,6 +339,10 @@ const ProductsPage = () => {
   }, [productQueries]);
   const isLoading = productQueries.some((query) => query.isLoading);
   const fetchedProducts = productQueries[productQueries.length - 1]?.data || [];
+
+  useEffect(() => {
+    if (!isLoading && products.length > 0) restoreCatalogScroll(`${location.pathname}${location.search}`);
+  }, [isLoading, products.length, location.pathname, location.search]);
 
   const { data: brandsAvailable = [] } = useQuery({
     queryKey: ["product-filter-brands"],
@@ -405,6 +415,7 @@ const ProductsPage = () => {
   }, [products, searchQuery, brandFilter, colorFilter, sizeFilter, sortBy, saleOnly, inStockOnly, effectiveMin, effectiveMax]);
 
   const setParam = (k: string, v: string | null) => {
+    if (k !== "page") clearCatalogScroll(`${location.pathname}${location.search}`);
     const next = new URLSearchParams(searchParams);
     if (v === null || v === "" || v === "all") next.delete(k); else next.set(k, v);
     // A changed filter defines a new result set; preserve `page` only for Load More itself.

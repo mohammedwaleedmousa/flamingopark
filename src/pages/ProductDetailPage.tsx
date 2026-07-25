@@ -14,6 +14,7 @@ import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
 import { useStore, Product } from '@/store/useStore';
 import { useFavorites } from '@/hooks/useFavorites';
 import { supabase } from '@/integrations/supabase/client';
+import { PRODUCT_CARD_SELECT, mapProductCard } from '@/lib/productCardData';
 import { toast } from '@/hooks/use-toast';
 import { useCurrency } from '@/lib/currency';
 import {
@@ -45,7 +46,7 @@ const ProductDetailPage = () => {
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', slug],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select(`*,color_variants`).eq('slug', slug).eq('is_active', true).maybeSingle();
+      const { data, error } = await supabase.from('products').select('id,name,name_ar,slug,price,cost_price,original_price,discount,description,description_ar,images,category,brand,in_stock,stock_quantity,countries,is_featured,is_best_seller,accessories,has_sizes,sizes,features,color_variants,specs,return_policy,has_quality_variants,quality_variants').eq('slug', slug).eq('is_active', true).maybeSingle();
       if (error) throw error;
       if (!data) return null;
       const accessories = (data as any).accessories || [];
@@ -99,31 +100,9 @@ const ProductDetailPage = () => {
   const { data: relatedProducts = [] } = useQuery({
     queryKey: ['related-products', product?.category, product?.id, country],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select(`*,color_variants`).eq('is_active', true).eq('category', product!.category).neq('id', product!.id).contains('countries', [country]).limit(4);
+      const { data, error } = await supabase.from('products').select(PRODUCT_CARD_SELECT).eq('is_active', true).eq('category', product!.category).neq('id', product!.id).contains('countries', [country]).limit(4);
       if (error) throw error;
-      return data.map((p) => ({
-        id: p.id,
-        name: p.name,
-        nameAr: p.name_ar,
-        slug: p.slug,
-        price: Number(p.price),
-        costPrice: p.cost_price ? Number(p.cost_price) : undefined,
-        originalPrice: p.original_price ? Number(p.original_price) : undefined,
-        discount: p.discount || undefined,
-        description: p.description || '',
-        descriptionAr: p.description_ar || '',
-        images:
-          p.images?.length > 0
-            ? p.images
-            : ((p as any).color_variants?.[0]?.images || []),
-        colorVariants: (p as any).color_variants || [],
-        category: p.category,
-        brand: p.brand,
-        inStock: p.in_stock ?? true,
-        countries: (p.countries || ['GLOBAL']) as Product['countries'],
-        isFeatured: p.is_featured,
-        isBestSeller: p.is_best_seller,
-      })) as Product[];
+      return (data || []).map(mapProductCard);
     },
     enabled: !!product && !!country,
   });

@@ -75,6 +75,7 @@ export const NavbarSearch = () => {
         name: p.name_ar,
       }));
     },
+    enabled: isOpen,
   });
 
   const handleSearch = (q: string) => {

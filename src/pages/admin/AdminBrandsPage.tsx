@@ -115,7 +115,6 @@ const AdminBrandsPage = () => {
  
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData & { id?: string; category_ids: string[] }) => {
-      console.log('Saving brand:', data);
  
       const slug = data.slug?.trim() || generateSlug(data.name);
       let brandId = data.id;
@@ -134,7 +133,6 @@ const AdminBrandsPage = () => {
           .eq('id', data.id)
           .select();
  
-        console.log('Update result:', result, 'Error:', error);
         if (error) throw error;
         brandId = result?.[0]?.id || data.id;
       } else {
@@ -150,7 +148,6 @@ const AdminBrandsPage = () => {
           })
           .select();
  
-        console.log('Insert result:', result, 'Error:', error);
         if (error) throw error;
         brandId = result?.[0]?.id;
       }

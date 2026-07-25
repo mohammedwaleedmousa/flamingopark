@@ -7,12 +7,12 @@ import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import HeroSlider from "@/components/HeroSlider";
 import ProductCard from "@/components/ProductCard";
-import PromoBannerGrid from "@/components/PromoBannerGrid";
 import BrandsStrip from "@/components/BrandsStrip";
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import type { Product } from "@/store/useStore";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNearViewport } from "@/hooks/useNearViewport";
 
 type FeaturedCategoryItem = {
   title: string;
@@ -271,13 +271,12 @@ const fallbackEditorial: EditorialItem[] = [
 
 const HomePage = () => {
   const { data: categories = [] } = useQuery({
-    queryKey: ["home-categories"],
+    queryKey: ["categories-all-active"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("categories")
-        .select("slug,name,name_ar,image_url,parent_id,is_active,sort_order")
+        .select("id,slug,name,name_ar,parent_id,image_url,sort_order")
         .eq("is_active", true)
-        .is("parent_id", null)
         .order("sort_order", { ascending: true });
       if (error) throw error;
       return data || [];
@@ -301,7 +300,7 @@ const HomePage = () => {
 
   const featuredCategories = useMemo<FeaturedCategoryItem[]>(() => {
     if (!categories.length) return fallbackFeaturedCategories;
-    return categories.map((c: any) => ({
+    return categories.filter((category: any) => !category.parent_id).map((c: any) => ({
       title: c.name_ar || c.name || c.slug,
       subtitle: c.name || c.name_ar || c.slug,
       image: c.image_url || fallbackCategoryImages[c.slug] || fallbackFeaturedCategories[0].image,
@@ -334,8 +333,14 @@ const HomePage = () => {
     ];
   }, [homeContent]);
 
+  const featuredViewport = useNearViewport<HTMLDivElement>();
+  const bestSellersViewport = useNearViewport<HTMLDivElement>();
+  const newArrivalsViewport = useNearViewport<HTMLDivElement>();
+  const brandsViewport = useNearViewport<HTMLDivElement>();
+
   const { data: products = [] } = useQuery({
     queryKey: ["home-products"],
+    enabled: featuredViewport.isNearViewport,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
@@ -350,6 +355,7 @@ const HomePage = () => {
 
   const { data: bestSellers = [] } = useQuery({
     queryKey: ["home-best-sellers"],
+    enabled: bestSellersViewport.isNearViewport,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
@@ -365,6 +371,7 @@ const HomePage = () => {
 
   const { data: newArrivals = [] } = useQuery({
     queryKey: ["home-new-arrivals"],
+    enabled: newArrivalsViewport.isNearViewport,
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
@@ -387,10 +394,13 @@ const HomePage = () => {
         <HeroSlider />
 
         {/* Brands strip */}
-        <BrandsStrip />
+        <div ref={brandsViewport.ref} style={{ minHeight: 96 }}>
+          <BrandsStrip enabled={brandsViewport.isNearViewport} />
+        </div>
 
         {/* Categories — replaced with horizontal CategoryCarousel for improved UX */}
         <CategoryCarousel items={featuredCategories} />
+        <div ref={featuredViewport.ref} style={{ minHeight: 640 }}>
         {products.length > 0 && (
           <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-6">
@@ -432,6 +442,7 @@ const HomePage = () => {
             </div>
           </section>
         )}
+        </div>
 
         {/* Editorial split — image left, text right (alternating) */}
 
@@ -533,6 +544,7 @@ const HomePage = () => {
         ))}
         
         {/* Best Sellers */}
+        <div ref={bestSellersViewport.ref} style={{ minHeight: 640 }}>
         {bestSellers.length > 0 && (
           <section className="py-20 md:py-28 bg-muted">
             <div className="container mx-auto px-6">
@@ -548,8 +560,10 @@ const HomePage = () => {
             </div>
           </section>
         )}
+        </div>
 
         {/* New Arrivals */}
+        <div ref={newArrivalsViewport.ref} style={{ minHeight: 640 }}>
         {newArrivals.length > 0 && (
           <section className="py-20 md:py-28">
             <div className="container mx-auto px-6">
@@ -573,6 +587,7 @@ const HomePage = () => {
             </div>
           </section>
         )}
+        </div>
 
       </main>
 

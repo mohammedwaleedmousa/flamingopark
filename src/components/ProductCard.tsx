@@ -22,7 +22,6 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
   const [bagPop, setBagPop] = useState(false);
   const [heartBeat, setHeartBeat] = useState(false);
   const isLiked = isFavorite(product.id);
-  console.log("PRODUCT CARD:", product);
 
   const handleFavorite = (e: React.MouseEvent) => {
     e.preventDefault();

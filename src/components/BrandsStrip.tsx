@@ -26,7 +26,7 @@ interface BrandViewModel {
   logo_url: string | null;
 }
 
-const BrandsStrip = () => {
+const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
 
   const trackRef = useRef<HTMLDivElement | null>(null);
 
@@ -36,6 +36,7 @@ const BrandsStrip = () => {
 
   const { data: brands = [] } = useQuery({
     queryKey: ["home-brands"],
+    enabled,
 
     queryFn: async () => {
       const { data, error } = await (supabase as any)

@@ -147,24 +147,22 @@ const CheckoutPage = () => {
     },
   });
 
-  const { data: bankAccounts = [] } = useQuery({
-    queryKey: ["bank-accounts"],
+  const { data: checkoutSettings = {} } = useQuery<Record<string, unknown>>({
+    queryKey: ["checkout-settings"],
     queryFn: async () => {
-      const { data } = await supabase.from("site_settings").select("key, value").in("key", ["bank_accounts", "bank_accounts_ye", "bank_accounts_sa"]);
-      let value: any = data?.find((r) => r.key === "bank_accounts")?.value ?? data?.find((r) => r.key === "bank_accounts_ye")?.value ?? data?.find((r) => r.key === "bank_accounts_sa")?.value;
-      if (typeof value === "string") try { value = JSON.parse(value); } catch { return [] as BankAccount[]; }
-      if (Array.isArray(value)) return value.map((v: any) => ({ bank: String(v?.bank || ""), account: String(v?.account || ""), name: String(v?.name || "") })) as BankAccount[];
-      return [] as BankAccount[];
+      const { data } = await supabase.from("site_settings").select("key, value").in("key", ["bank_accounts", "bank_accounts_ye", "bank_accounts_sa", "whatsapp", "whatsapp_ye", "whatsapp_sa"]);
+      return Object.fromEntries((data || []).map((setting) => [setting.key, setting.value]));
     },
   });
 
-  const { data: whatsappNumber } = useQuery({
-    queryKey: ["whatsapp-number"],
-    queryFn: async () => {
-      const { data } = await supabase.from("site_settings").select("key, value").in("key", ["whatsapp", "whatsapp_ye", "whatsapp_sa"]);
-      return (data?.find((r) => r.key === "whatsapp")?.value as string) || (data?.find((r) => r.key === "whatsapp_ye")?.value as string) || (data?.find((r) => r.key === "whatsapp_sa")?.value as string) || "967773335065";
-    },
-  });
+  const bankAccounts = useMemo(() => {
+    let value: any = checkoutSettings.bank_accounts ?? checkoutSettings.bank_accounts_ye ?? checkoutSettings.bank_accounts_sa;
+    if (typeof value === "string") try { value = JSON.parse(value); } catch { return [] as BankAccount[]; }
+    if (Array.isArray(value)) return value.map((v: any) => ({ bank: String(v?.bank || ""), account: String(v?.account || ""), name: String(v?.name || "") })) as BankAccount[];
+    return [] as BankAccount[];
+  }, [checkoutSettings]);
+
+  const whatsappNumber = (checkoutSettings.whatsapp as string) || (checkoutSettings.whatsapp_ye as string) || (checkoutSettings.whatsapp_sa as string) || "967773335065";
 
   const { data: codRegions = [] } = useQuery({
     queryKey: ["cod-regions"],

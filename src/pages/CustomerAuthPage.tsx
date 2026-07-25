@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useStore, detectCountryFromPhone } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
@@ -21,19 +21,6 @@ const CustomerAuthPage = () => {
     phone: "",
     password: "",
   });
-
-  // Redirect if already logged in and region is available
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
-
-      if (data.session?.user) {
-        navigate("/home", { replace: true });
-      }
-    };
-
-    checkSession();
-  }, [navigate]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

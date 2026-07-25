@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -244,7 +244,7 @@ const ProductsPage = () => {
   const maxPriceParam = Number(searchParams.get("max") || 0);
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [toolbarShrunk, setToolbarShrunk] = useState(false);
-  const [page, setPage] = useState(1);
+  const page = Math.max(1, Number(searchParams.get("page") || 1));
   const [quickViewProd, setQuickViewProd] = useState<Product | null>(null);
   const PAGE_SIZE = 12;
   const [isMobileViewport, setIsMobileViewport] = useState(false);
@@ -254,8 +254,6 @@ const ProductsPage = () => {
     if (navType === "POP") return; // preserve scroll on back/forward
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [location.pathname, location.search, navType]);
-
-  useEffect(() => setPage(1), [categorySlug, searchQuery, brandFilter, colorFilter, sizeFilter, sortBy, saleOnly, inStockOnly, minPriceParam, maxPriceParam]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -285,19 +283,21 @@ const ProductsPage = () => {
   const subCategories = useMemo(() => categories.filter((c) => currentCategory && c.parent_id === currentCategory.id), [categories, currentCategory]);
   const isParent = subCategories.length > 0;
 
-  const leafSlugs = useMemo(() => {
-    if (!currentCategory) return null; if (isParent) return subCategories.map((c) => c.slug); return [currentCategory.slug];
+  const leafCategoryIds = useMemo(() => {
+    if (!currentCategory) return null;
+    return isParent ? subCategories.map((category) => category.id) : [currentCategory.id];
   }, [currentCategory, isParent, subCategories]);
 
-  const { data: fetchedProducts = [], isLoading } = useQuery({
-    queryKey: ["products-list", leafSlugs, searchQuery, brandFilter, sortBy, saleOnly, inStockOnly, minPriceParam, maxPriceParam, page],
-    queryFn: async () => {
+  const productQueries = useQueries({
+    queries: Array.from({ length: page }, (_, pageIndex) => ({
+      queryKey: ["products-list", leafCategoryIds?.join(",") || "all", searchQuery, brandFilter, sortBy, saleOnly, inStockOnly, minPriceParam, maxPriceParam, pageIndex + 1],
+      queryFn: async () => {
       let query = supabase
         .from("products")
         .select(PRODUCT_CARD_SELECT)
         .eq("is_active", true);
 
-      if (leafSlugs?.length) query = query.in("category", leafSlugs);
+      if (leafCategoryIds?.length) query = query.in("category_id", leafCategoryIds);
       if (searchQuery.trim()) {
         const term = searchQuery.trim();
         query = query.or(`name_ar.ilike.%${term}%,name.ilike.%${term}%,description_ar.ilike.%${term}%`);
@@ -314,19 +314,24 @@ const ProductsPage = () => {
       else if (sortBy === "featured") query = query.order("is_featured", { ascending: false }).order("created_at", { ascending: false });
       else query = query.order("created_at", { ascending: false });
 
-      const from = (page - 1) * PAGE_SIZE;
+      const from = pageIndex * PAGE_SIZE;
       const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
       if (error) throw error;
       return (data || []).map(mapProductCard);
-    },
+      },
+    })),
   });
 
-  const [products, setProducts] = useState<Product[]>([]);
-  useEffect(() => {
-    setProducts((current) => page === 1
-      ? fetchedProducts
-      : [...current, ...fetchedProducts.filter((product) => !current.some((item) => item.id === product.id))]);
-  }, [fetchedProducts, page]);
+  const products = useMemo(() => {
+    const seen = new Set<string>();
+    return productQueries.flatMap((query) => query.data || []).filter((product) => {
+      if (seen.has(product.id)) return false;
+      seen.add(product.id);
+      return true;
+    });
+  }, [productQueries]);
+  const isLoading = productQueries.some((query) => query.isLoading);
+  const fetchedProducts = productQueries[productQueries.length - 1]?.data || [];
 
   const { data: brandsAvailable = [] } = useQuery({
     queryKey: ["product-filter-brands"],
@@ -401,6 +406,8 @@ const ProductsPage = () => {
   const setParam = (k: string, v: string | null) => {
     const next = new URLSearchParams(searchParams);
     if (v === null || v === "" || v === "all") next.delete(k); else next.set(k, v);
+    // A changed filter defines a new result set; preserve `page` only for Load More itself.
+    if (k !== "page") next.delete("page");
     setSearchParams(next);
   };
 
@@ -523,7 +530,7 @@ const ProductsPage = () => {
 
           {hasMore && (
             <div className="flex items-center justify-center mt-10">
-              <button onClick={() => setPage((p) => p + 1)} className="px-8 py-3 rounded-xl bg-foreground text-background hover:opacity-90 transition-colors">{getSiteText(content, "products_page_load_more", "عرض المزيد")}</button>
+              <button onClick={() => setParam("page", String(page + 1))} className="px-8 py-3 rounded-xl bg-foreground text-background hover:opacity-90 transition-colors">{getSiteText(content, "products_page_load_more", "عرض المزيد")}</button>
             </div>
           )}
           </div>

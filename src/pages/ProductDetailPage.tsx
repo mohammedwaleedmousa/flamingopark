@@ -46,7 +46,7 @@ const ProductDetailPage = () => {
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', slug],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select('id,name,name_ar,slug,price,cost_price,original_price,discount,description,description_ar,images,category,brand,in_stock,stock_quantity,countries,is_featured,is_best_seller,accessories,has_sizes,sizes,features,color_variants,specs,return_policy,has_quality_variants,quality_variants').eq('slug', slug).eq('is_active', true).maybeSingle();
+      const { data, error } = await supabase.from('products').select('id,name,name_ar,slug,price,cost_price,original_price,discount,description,description_ar,images,category,category_id,brand,in_stock,stock_quantity,countries,is_featured,is_best_seller,accessories,has_sizes,sizes,features,color_variants,specs,return_policy,has_quality_variants,quality_variants').eq('slug', slug).eq('is_active', true).maybeSingle();
       if (error) throw error;
       if (!data) return null;
       const accessories = (data as any).accessories || [];
@@ -59,7 +59,7 @@ const ProductDetailPage = () => {
   data.images?.length > 0
     ? data.images
     : ((data as any).color_variants?.[0]?.images || []),
-        category: data.category, brand: data.brand, inStock: data.in_stock ?? true,
+        category: data.category, categoryId: (data as any).category_id || undefined, brand: data.brand, inStock: data.in_stock ?? true,
         stockQuantity: typeof (data as any).stock_quantity === "number" ? (data as any).stock_quantity : undefined,
         countries: (data.countries || ['GLOBAL']) as Product['countries'],
         isFeatured: data.is_featured, isBestSeller: data.is_best_seller,
@@ -98,9 +98,9 @@ const ProductDetailPage = () => {
   });
  
   const { data: relatedProducts = [] } = useQuery({
-    queryKey: ['related-products', product?.category, product?.id, country],
+    queryKey: ['related-products', (product as any)?.categoryId, product?.id, country],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select(PRODUCT_CARD_SELECT).eq('is_active', true).eq('category', product!.category).neq('id', product!.id).contains('countries', [country]).limit(4);
+      const { data, error } = await supabase.from('products').select(PRODUCT_CARD_SELECT).eq('is_active', true).eq('category_id', (product as any).categoryId).neq('id', product!.id).contains('countries', [country]).limit(4);
       if (error) throw error;
       return (data || []).map(mapProductCard);
     },

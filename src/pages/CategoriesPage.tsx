@@ -1,6 +1,6 @@
-import { Link, useSearchParams } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { Link, useLocation, useSearchParams } from "react-router-dom";
+import { useEffect, useMemo } from "react";
+import { useQueries, useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
@@ -10,6 +10,7 @@ import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import type { Product } from "@/store/useStore";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
+import { restoreCatalogScroll } from "@/lib/catalogScroll";
 
 interface Category {
   id: string;
@@ -32,9 +33,10 @@ const FALLBACK: Record<string, string> = {
 
 const CategoriesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const location = useLocation();
   const { data: content } = useSiteContent("categories_page_");
   const { data: categories = [] } = useQuery({
-    queryKey: ["categories-all-active"],
+    queryKey: ["categories-all-for-hierarchy"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("categories")
@@ -66,8 +68,7 @@ const CategoriesPage = () => {
       : null;
 
   const effectiveLeafSlug = effectiveLeafCategory?.slug || "";
-  const [page, setPage] = useState(1);
-  const [loadedProducts, setLoadedProducts] = useState<Product[]>([]);
+  const page = Math.max(1, Number(searchParams.get("page") || 1));
   const PAGE_SIZE = 24;
 
   const scopedCategoryIds = useMemo(() => {
@@ -76,41 +77,37 @@ const CategoriesPage = () => {
     const descendants = categories.filter((c) => c.parent_id === effectiveLeafCategory.id).map((c) => c.id);
     return [effectiveLeafCategory.id, ...descendants];
   }, [categories, effectiveLeafCategory, selectedSub]);
-
-
-  useEffect(() => {
-    setPage(1);
-    setLoadedProducts([]);
-  }, [effectiveLeafCategory?.id, brandFilter]);
-
-  const { data: leafPage = [], isLoading: productsLoading } = useQuery({
-    queryKey: ["categories-leaf-products", scopedCategoryIds.join(","), brandFilter, page],
-    enabled: scopedCategoryIds.length > 0,
-    queryFn: async () => {
-      const from = (page - 1) * PAGE_SIZE;
-      let query = supabase
-        .from("products")
-        .select(PRODUCT_CARD_SELECT)
-        .eq("is_active", true)
-        .in("category_id", scopedCategoryIds);
-      if (brandFilter !== "all") query = query.eq("brand", brandFilter);
-      const { data, error } = await query
-        .order("created_at", { ascending: false })
-        .range(from, from + PAGE_SIZE - 1);
-      if (error) throw error;
-      return (data || []).map(mapProductCard);
-    },
+  const productQueries = useQueries({
+    queries: Array.from({ length: page }, (_, pageIndex) => ({
+      queryKey: ["categories-leaf-products", scopedCategoryIds.join(","), brandFilter, pageIndex + 1],
+      enabled: scopedCategoryIds.length > 0,
+      queryFn: async () => {
+        const from = pageIndex * PAGE_SIZE;
+        let query = supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).in("category_id", scopedCategoryIds);
+        if (brandFilter !== "all") query = query.eq("brand", brandFilter);
+        const { data, error } = await query.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
+        if (error) throw error;
+        return (data || []).map(mapProductCard);
+      },
+    })),
   });
 
-  useEffect(() => {
-    if (!leafPage.length && page !== 1) return;
-    setLoadedProducts((current) => page === 1
-      ? leafPage
-      : [...current, ...leafPage.filter((product) => !current.some((currentProduct) => currentProduct.id === product.id))]);
-  }, [leafPage, page]);
-
+  const leafProducts = useMemo(() => {
+    const seen = new Set<string>();
+    return productQueries.flatMap((query) => query.data || []).filter((product) => {
+      if (seen.has(product.id)) return false;
+      seen.add(product.id);
+      return true;
+    });
+  }, [productQueries]);
+  const productsLoading = productQueries.some((query) => query.isLoading);
+  const leafPage = productQueries[productQueries.length - 1]?.data || [];
   const hasMore = leafPage.length === PAGE_SIZE;
-  const leafProducts = loadedProducts;
+
+  useEffect(() => {
+    if (!productsLoading && leafProducts.length > 0) restoreCatalogScroll(`${location.pathname}${location.search}`);
+  }, [productsLoading, leafProducts.length, location.pathname, location.search]);
+
 
   const brands = useMemo(() => {
     const set = new Set<string>();
@@ -157,6 +154,7 @@ const CategoriesPage = () => {
       if (!value) p.delete(key);
       else p.set(key, value);
     });
+    if (!("page" in next)) p.delete("page");
     setSearchParams(p);
   };
 
@@ -340,16 +338,18 @@ const CategoriesPage = () => {
             ) : visibleProducts.length === 0 ? (
               <div className="text-center py-12 text-muted-foreground">لا توجد منتجات لهذه الماركة داخل هذا القسم</div>
             ) : (
-              <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
-                {visibleProducts.map((product, index) => (
-                  <ProductCard key={product.id} product={product} index={index} />
-                ))}
-              </div>
-            )}
-            {hasMore && (
-              <div className="flex justify-center pt-3">
-                <Button variant="outline" onClick={() => setPage((current) => current + 1)}>عرض المزيد</Button>
-              </div>
+              <>
+                <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
+                  {visibleProducts.map((product, index) => (
+                    <ProductCard key={product.id} product={product} index={index} />
+                  ))}
+                </div>
+                {hasMore && (
+                  <div className="flex justify-center pt-3">
+                    <Button variant="outline" onClick={() => setStepParams({ page: String(page + 1) })}>عرض المزيد</Button>
+                  </div>
+                )}
+              </>
             )}
           </section>
         )}

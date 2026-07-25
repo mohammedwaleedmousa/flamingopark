@@ -129,6 +129,69 @@ const ProductDetailPage = () => {
   });
  
   useEffect(() => { if (product) addRecent(product as Product); /* eslint-disable-next-line */ }, [product?.id]);
+
+  useEffect(() => {
+    if (!product) return;
+
+    const siteUrl = 'https://flamingopark.store';
+    const productUrl = `${siteUrl}/product/${encodeURIComponent(product.slug)}`;
+    const title = `${product.nameAr || product.name} | Flamingo Park`;
+    const description = product.descriptionAr || product.description || `تسوّق ${product.nameAr || product.name} من Flamingo Park.`;
+    const image = product.images[0] || `${siteUrl}/icons/flamingo.jpeg`;
+    const previousTitle = document.title;
+    const setMeta = (selector: string, content: string) => {
+      const element = document.head.querySelector<HTMLMetaElement>(selector);
+      const previousContent = element?.content;
+      if (element) element.content = content;
+      return () => { if (element && previousContent !== undefined) element.content = previousContent; };
+    };
+    const canonical = document.head.querySelector<HTMLLinkElement>('link[rel="canonical"]');
+    const previousCanonical = canonical?.href;
+    if (canonical) canonical.href = productUrl;
+
+    document.title = title;
+    const restore = [
+      setMeta('meta[name="description"]', description),
+      setMeta('meta[property="og:title"]', title),
+      setMeta('meta[property="og:description"]', description),
+      setMeta('meta[property="og:url"]', productUrl),
+      setMeta('meta[property="og:image"]', image),
+      setMeta('meta[name="twitter:title"]', title),
+      setMeta('meta[name="twitter:description"]', description),
+      setMeta('meta[name="twitter:url"]', productUrl),
+      setMeta('meta[name="twitter:image"]', image),
+    ];
+
+    const structuredData = {
+      '@context': 'https://schema.org',
+      '@type': 'Product',
+      name: product.nameAr || product.name,
+      description,
+      image: product.images.length ? product.images : [image],
+      sku: product.id,
+      brand: product.brand ? { '@type': 'Brand', name: product.brand } : undefined,
+      offers: {
+        '@type': 'Offer',
+        url: productUrl,
+        priceCurrency: 'YER',
+        price: product.price,
+        availability: product.inStock ? 'https://schema.org/InStock' : 'https://schema.org/OutOfStock',
+        itemCondition: 'https://schema.org/NewCondition',
+      },
+    };
+    const script = document.createElement('script');
+    script.id = 'product-json-ld';
+    script.type = 'application/ld+json';
+    script.text = JSON.stringify(structuredData);
+    document.head.appendChild(script);
+
+    return () => {
+      document.title = previousTitle;
+      restore.forEach((fn) => fn());
+      if (canonical && previousCanonical) canonical.href = previousCanonical;
+      script.remove();
+    };
+  }, [product]);
  
   if (isLoading) return <ProductDetailSkeleton />;
   if (!product) return (

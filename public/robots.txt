@@ -17,4 +17,4 @@ Allow: /
 Sitemap: https://flamingopark.store/sitemap.xml
 
 # Host
-Host: https://ermgold.store
+Host: https://flamingopark.store

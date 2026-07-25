@@ -10,58 +10,9 @@ import ProductCard from "@/components/ProductCard";
 import PromoBannerGrid from "@/components/PromoBannerGrid";
 import BrandsStrip from "@/components/BrandsStrip";
 import { supabase } from "@/integrations/supabase/client";
+import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import type { Product } from "@/store/useStore";
 import { motion, AnimatePresence } from "framer-motion";
-
-interface DbProduct {
-  id: string;
-  name: string;
-  name_ar: string;
-  slug: string;
-  price: number;
-  original_price: number | null;
-  discount: number | null;
-  description: string;
-  description_ar: string;
-  images: string[];
-  category: string;
-  brand: string;
-  in_stock: boolean;
-  countries: string[];
-  is_featured: boolean;
-  is_best_seller: boolean;
-  color_variants?: {
-    hex: string;
-    name: string;
-    images: string[];
-  }[];
-}
-
-const toProduct = (p: DbProduct): Product => ({
-  id: p.id,
-  name: p.name,
-  nameAr: p.name_ar,
-  slug: p.slug,
-  price: Number(p.price),
-  originalPrice: p.original_price ? Number(p.original_price) : undefined,
-  discount: p.discount ?? undefined,
-  description: p.description,
-  descriptionAr: p.description_ar,
-
-  images:
-    p.images?.length > 0
-      ? p.images
-      : p.color_variants?.[0]?.images || [],
-
-  category: p.category,
-  brand: p.brand,
-  inStock: p.in_stock,
-  countries: (p.countries || ["GLOBAL"]) as Product["countries"],
-  isFeatured: p.is_featured,
-  isBestSeller: p.is_best_seller,
-
-  colorVariants: p.color_variants || [],
-});
 
 type FeaturedCategoryItem = {
   title: string;
@@ -388,12 +339,12 @@ const HomePage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
+        .select(PRODUCT_CARD_SELECT)
         .eq("is_active", true)
         .order("sort_order")
         .limit(20);
       if (error) throw error;
-      return (data || []).map(toProduct);
+      return (data || []).map(mapProductCard);
     },
   });
 
@@ -402,13 +353,13 @@ const HomePage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
+        .select(PRODUCT_CARD_SELECT)
         .eq("is_active", true)
         .eq("is_best_seller", true)
         .order("sort_order")
         .limit(8);
       if (error) throw error;
-      return (data as DbProduct[]).map(toProduct);
+      return (data || []).map(mapProductCard);
     },
   });
 
@@ -417,13 +368,13 @@ const HomePage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
+        .select(PRODUCT_CARD_SELECT)
         .eq("is_active", true)
         .eq("is_featured", true)
         .order("sort_order")
         .limit(8);
       if (error) throw error;
-      return (data as DbProduct[]).map(toProduct);
+      return (data || []).map(mapProductCard);
     },
   });
   return (

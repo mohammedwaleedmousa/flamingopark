@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Product, useStore } from "@/store/useStore";
@@ -6,6 +6,7 @@ import { toast } from "@/hooks/use-toast";
 import { useCurrency } from "@/lib/currency";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Heart, ShoppingBag } from "lucide-react";
+import { saveCatalogScroll } from "@/lib/catalogScroll";
 
 interface ProductCardProps {
   product: Product;
@@ -16,6 +17,7 @@ interface ProductCardProps {
 }
 
 const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCardProps) => {
+  const location = useLocation();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { addToCart, openCart } = useStore();
   const { format } = useCurrency();
@@ -70,7 +72,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
     return "/placeholder.svg";
   };
   return (
-    <Link to={`/product/${product.slug}`} className="group block" dir="rtl">
+    <Link to={`/product/${product.slug}`} onClick={() => saveCatalogScroll(`${location.pathname}${location.search}`)} className="group block" dir="rtl">
       <div
         className={`relative ${aspectClass}
           bg-white

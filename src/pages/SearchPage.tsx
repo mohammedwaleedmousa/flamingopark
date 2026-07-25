@@ -70,6 +70,16 @@ const SearchPage = () => {
     inStockOnly: false,
   });
 
+  const { data: categories = [] } = useQuery({
+    queryKey: ['categories-all-active'],
+    queryFn: async () => {
+      const { data, error } = await supabase.from('categories').select('id,name,name_ar').eq('is_active', true);
+      if (error) throw error;
+      return data || [];
+    },
+  });
+  const categoryLabel = (id: string) => categories.find((category) => category.id === id)?.name_ar || id;
+
   const [showFilters, setShowFilters] = useState(false);
   const [page, setPage] = useState(1);
   const itemsPerPage = 24;
@@ -90,7 +100,7 @@ const SearchPage = () => {
       if (filters.minPrice > 0) q = q.gte('price', filters.minPrice);
       if (filters.maxPrice < 10000) q = q.lte('price', filters.maxPrice);
       if (filters.inStockOnly) q = q.eq('in_stock', true);
-      if (filters.categories.length > 0) q = q.in('category', filters.categories);
+      if (filters.categories.length > 0) q = q.in('category_id', filters.categories);
       if (filters.brands.length > 0) q = q.in('brand', filters.brands);
 
       // Apply sorting
@@ -131,9 +141,9 @@ const SearchPage = () => {
       const [categoriesRes, brandsRes] = await Promise.all([
         supabase
           .from('products')
-          .select('category')
+          .select('category_id')
           .or(`name_ar.ilike.%${query}%,description_ar.ilike.%${query}%,name.ilike.%${query}%,description.ilike.%${query}%`)
-          .not('category', 'is', null)
+          .not('category_id', 'is', null)
           .eq('is_active', true),
         supabase
           .from('products')
@@ -143,7 +153,7 @@ const SearchPage = () => {
           .eq('is_active', true),
       ]);
 
-      const categories = [...new Set(categoriesRes.data?.map(p => p.category).filter(Boolean))];
+      const categories = [...new Set(categoriesRes.data?.map(p => p.category_id).filter(Boolean))];
       const brands = [...new Set(brandsRes.data?.map(p => p.brand).filter(Boolean))];
 
       return { categories, brands };
@@ -415,7 +425,7 @@ const SearchPage = () => {
                           onClick={() => setFilters({ ...filters, categories: filters.categories.filter(c => c !== cat) })}
                           className="flex items-center gap-1 px-3 py-1 rounded-full bg-green-500/20 border border-green-500/50 text-green-700 text-xs hover:bg-green-500/30 transition"
                         >
-                          {cat} <X className="w-3 h-3" />
+                          {categoryLabel(cat)} <X className="w-3 h-3" />
                         </motion.button>
                       ))}
                       

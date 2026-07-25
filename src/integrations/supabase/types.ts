@@ -1221,6 +1221,9 @@ export type Database = {
           exchange_rate_snapshot: number | null
           id: string
           invoice_url: string | null
+          owner_user_id: string | null
+          guest_access_token_hash: string | null
+          guest_access_token_issued_at: string | null
           items: Json
           order_number: string
           payment_method: string
@@ -1246,6 +1249,9 @@ export type Database = {
           exchange_rate_snapshot?: number | null
           id?: string
           invoice_url?: string | null
+          owner_user_id?: string | null
+          guest_access_token_hash?: string | null
+          guest_access_token_issued_at?: string | null
           items?: Json
           order_number: string
           payment_method: string
@@ -1271,6 +1277,9 @@ export type Database = {
           exchange_rate_snapshot?: number | null
           id?: string
           invoice_url?: string | null
+          owner_user_id?: string | null
+          guest_access_token_hash?: string | null
+          guest_access_token_issued_at?: string | null
           items?: Json
           order_number?: string
           payment_method?: string

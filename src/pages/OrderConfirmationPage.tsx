@@ -8,6 +8,7 @@ import { Button } from '@/components/ui/button';
 import { CheckCircle, MessageCircle, Home, Copy, Loader2 } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
+import { getGuestTrackingUrl } from '@/lib/orderAccess';
 import { track } from '@/lib/analytics';
 import {
   CURRENCY_RATES,
@@ -52,6 +53,7 @@ interface OrderData {
   currencyMode?: string;
   whatsappNumber: string;
   createdAt: string;
+  guestAccessToken: string;
 }
 
 const OrderConfirmationPage = () => {
@@ -164,11 +166,13 @@ const OrderConfirmationPage = () => {
       });
 
       // Open WhatsApp immediately
+      const trackingUrl = `${window.location.origin}${getGuestTrackingUrl(orderData.orderNumber, orderData.guestAccessToken)}`;
       const message = `طلب جديد ✨
 
 الاسم: ${orderData.customerName}
 الهاتف: ${orderData.customerPhone}
 رقم الفاتورة: ${orderData.orderNumber}
+رابط التتبع الآمن: ${trackingUrl}
 
 يرجى مراجعة الطلب من لوحة التحكم`;
       
@@ -186,11 +190,13 @@ const OrderConfirmationPage = () => {
         description: 'جاري فتح الواتساب...',
       });
       
+      const trackingUrl = `${window.location.origin}${getGuestTrackingUrl(orderData.orderNumber, orderData.guestAccessToken)}`;
       const message = `طلب جديد ✨
 
 الاسم: ${orderData.customerName}
 الهاتف: ${orderData.customerPhone}
 رقم الفاتورة: ${orderData.orderNumber}
+رابط التتبع الآمن: ${trackingUrl}
 
 يرجى مراجعة الطلب من لوحة التحكم`;
       

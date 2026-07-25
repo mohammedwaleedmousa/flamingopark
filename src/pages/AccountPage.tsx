@@ -94,18 +94,13 @@ const AccountPage = () => {
       if (!user?.id) return;
       setInvoicesLoading(true);
       try {
-        const userPhone = String(user?.user_metadata?.phone_number || "").trim();
         let query = supabase
           .from("orders")
           .select("id, order_number, total, status, created_at, invoice_url")
           .order("created_at", { ascending: false })
           .limit(20);
 
-        if (userPhone) {
-          query = query.or(`customer_id.eq.${user.id},customer_phone.eq.${userPhone}`);
-        } else {
-          query = query.eq("customer_id", user.id);
-        }
+        query = query.eq("owner_user_id", user.id);
 
         const { data, error } = await query;
         if (error) throw error;

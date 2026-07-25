@@ -20,7 +20,6 @@ const MyOrdersPage = () => {
   const navigate = useNavigate();
   const [authLoading, setAuthLoading] = useState(true);
   const [userId, setUserId] = useState("");
-  const [userPhone, setUserPhone] = useState("");
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(false);
 
@@ -31,7 +30,6 @@ const MyOrdersPage = () => {
         return;
       }
       setUserId(String(data.user.id));
-      setUserPhone(String(data.user.user_metadata?.phone_number || "").trim());
       setAuthLoading(false);
     });
   }, [navigate]);
@@ -47,8 +45,7 @@ const MyOrdersPage = () => {
           .order("created_at", { ascending: false })
           .limit(100);
 
-        if (userPhone) query = query.or(`customer_id.eq.${userId},customer_phone.eq.${userPhone}`);
-        else query = query.eq("customer_id", userId);
+        query = query.eq("owner_user_id", userId);
 
         const { data, error } = await query;
         if (error) throw error;
@@ -59,7 +56,7 @@ const MyOrdersPage = () => {
     };
 
     fetchOrders();
-  }, [userId, userPhone]);
+  }, [userId]);
 
   const resolveInvoiceUrl = (raw: string | null) => {
     if (!raw) return null;

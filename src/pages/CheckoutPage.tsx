@@ -271,6 +271,9 @@ const CheckoutPage = () => {
       const customerPhone = String(customer?.phone || formData.phone || "").trim();
       saveAddressToLocal();
 
+      const guestAccessToken = crypto.randomUUID() + crypto.randomUUID();
+      const tokenDigest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(guestAccessToken));
+      const guestAccessTokenHash = Array.from(new Uint8Array(tokenDigest), (byte) => byte.toString(16).padStart(2, "0")).join("");
       const orderPayload: Record<string, unknown> = {
         order_number: orderNumber, customer_name: customerName || "عميل",
         customer_phone: customerPhone, customer_address: formData.address || "-",
@@ -282,6 +285,8 @@ const CheckoutPage = () => {
         delivery_company_id: selectedDelivery, payment_method: paymentMethod,
         coupon_code: discountAmount > 0 ? couponCode.trim().toUpperCase() : null,
         discount_amount: discountAmount,
+        guest_access_token_hash: guestAccessTokenHash,
+        guest_access_token_issued_at: new Date().toISOString(),
       };
       if (customer?.id && customer.id !== "guest") orderPayload.customer_id = customer.id;
 
@@ -296,7 +301,9 @@ const CheckoutPage = () => {
         selectedRegion: paymentMethod === "cod" && regionData ? regionData.region_name_ar : null,
         currencyMode,
         whatsappNumber: whatsappNumber || "967123456789", createdAt: new Date().toISOString(),
+        guestAccessToken,
       };
+      sessionStorage.setItem(`flamingopark:guest-order:${orderNumber}`, guestAccessToken);
       clearCart();
       navigate("/order-confirmation", { state: { orderData } });
     } catch (error) {

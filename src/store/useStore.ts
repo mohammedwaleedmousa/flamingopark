@@ -28,6 +28,8 @@ export interface Product {
   images: string[];
   category: string;
   brand: string;
+  categoryId?: string;
+  brandId?: string;
   inStock: boolean;
   stockQuantity?: number;
   countries?: Country[];

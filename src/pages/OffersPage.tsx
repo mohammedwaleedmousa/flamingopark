@@ -189,8 +189,10 @@ const OffersPage = () => {
           p.images?.length > 0
             ? p.images
             : ((p as any).color_variants?.[0]?.images || []),
-        category: p.category,
-        brand: p.brand,
+        category: p.category || '',
+        brand: p.brand || '',
+        categoryId: p.category_id || undefined,
+        brandId: p.brand_id || undefined,
         inStock: p.in_stock ?? true,
         isFeatured: p.is_featured,
         isBestSeller: p.is_best_seller,

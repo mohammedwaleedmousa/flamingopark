@@ -46,6 +46,8 @@ const convertToProduct = (data: any): Product => ({
     : ((data as any).color_variants?.[0]?.images || []),
   category: data.category || '',
   brand: data.brand || '',
+  categoryId: data.category_id || undefined,
+  brandId: data.brand_id || undefined,
   inStock: data.in_stock || false,
   countries: data.countries,
   isBestSeller: data.is_best_seller,
@@ -89,8 +91,8 @@ const SearchPage = () => {
       if (filters.minPrice > 0) q = q.gte('price', filters.minPrice);
       if (filters.maxPrice < 10000) q = q.lte('price', filters.maxPrice);
       if (filters.inStockOnly) q = q.eq('in_stock', true);
-      if (filters.categories.length > 0) q = q.in('category', filters.categories);
-      if (filters.brands.length > 0) q = q.in('brand', filters.brands);
+      if (filters.categories.length > 0) q = q.in('category_id', filters.categories);
+      if (filters.brands.length > 0) q = q.in('brand_id', filters.brands);
 
       // Apply sorting
       switch (filters.sortBy) {
@@ -127,23 +129,23 @@ const SearchPage = () => {
     queryFn: async () => {
       if (!query.trim()) return {};
 
-      const [categoriesRes, brandsRes] = await Promise.all([
-        supabase
-          .from('products')
-          .select('category')
-          .or(`name_ar.ilike.%${query}%,description_ar.ilike.%${query}%,name.ilike.%${query}%,description.ilike.%${query}%`)
-          .not('category', 'is', null)
-          .eq('is_active', true),
-        supabase
-          .from('products')
-          .select('brand')
-          .or(`name_ar.ilike.%${query}%,description_ar.ilike.%${query}%,name.ilike.%${query}%,description.ilike.%${query}%`)
-          .not('brand', 'is', null)
-          .eq('is_active', true),
-      ]);
+      const { data, error } = await supabase
+        .from('products')
+        .select('category_id,brand_id')
+        .or(`name_ar.ilike.%${query}%,description_ar.ilike.%${query}%,name.ilike.%${query}%,description.ilike.%${query}%`)
+        .eq('is_active', true);
+      if (error) throw error;
 
-      const categories = [...new Set(categoriesRes.data?.map(p => p.category).filter(Boolean))];
-      const brands = [...new Set(brandsRes.data?.map(p => p.brand).filter(Boolean))];
+      const categoryIds = [...new Set((data || []).map((product) => product.category_id).filter(Boolean))] as string[];
+      const brandIds = [...new Set((data || []).map((product) => product.brand_id).filter(Boolean))] as string[];
+      const [categoriesRes, brandsRes] = await Promise.all([
+        categoryIds.length ? supabase.from('categories').select('id,name,name_ar').in('id', categoryIds) : Promise.resolve({ data: [], error: null }),
+        brandIds.length ? supabase.from('brands').select('id,name').in('id', brandIds) : Promise.resolve({ data: [], error: null }),
+      ]);
+      if (categoriesRes.error) throw categoriesRes.error;
+      if (brandsRes.error) throw brandsRes.error;
+      const categories = (categoriesRes.data || []).map((category) => ({ id: category.id, label: category.name_ar || category.name }));
+      const brands = (brandsRes.data || []).map((brand) => ({ id: brand.id, label: brand.name }));
 
       return { categories, brands };
     },
@@ -414,7 +416,7 @@ const SearchPage = () => {
                           onClick={() => setFilters({ ...filters, categories: filters.categories.filter(c => c !== cat) })}
                           className="flex items-center gap-1 px-3 py-1 rounded-full bg-green-500/20 border border-green-500/50 text-green-700 text-xs hover:bg-green-500/30 transition"
                         >
-                          {cat} <X className="w-3 h-3" />
+                          {facets.categories?.find((category) => category.id === cat)?.label || cat} <X className="w-3 h-3" />
                         </motion.button>
                       ))}
                       
@@ -426,7 +428,7 @@ const SearchPage = () => {
                           onClick={() => setFilters({ ...filters, brands: filters.brands.filter(b => b !== brand) })}
                           className="flex items-center gap-1 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/50 text-purple-700 text-xs hover:bg-purple-500/30 transition"
                         >
-                          {brand} <X className="w-3 h-3" />
+                          {facets.brands?.find((item) => item.id === brand)?.label || brand} <X className="w-3 h-3" />
                         </motion.button>
                       ))}
                       

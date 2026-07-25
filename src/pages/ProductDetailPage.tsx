@@ -58,7 +58,7 @@ const ProductDetailPage = () => {
   data.images?.length > 0
     ? data.images
     : ((data as any).color_variants?.[0]?.images || []),
-        category: data.category, brand: data.brand, inStock: data.in_stock ?? true,
+        category: data.category || '', brand: data.brand || '', categoryId: data.category_id || undefined, brandId: data.brand_id || undefined, inStock: data.in_stock ?? true,
         stockQuantity: typeof (data as any).stock_quantity === "number" ? (data as any).stock_quantity : undefined,
         countries: (data.countries || ['GLOBAL']) as Product['countries'],
         isFeatured: data.is_featured, isBestSeller: data.is_best_seller,
@@ -97,9 +97,9 @@ const ProductDetailPage = () => {
   });
  
   const { data: relatedProducts = [] } = useQuery({
-    queryKey: ['related-products', product?.category, product?.id, country],
+    queryKey: ['related-products', product?.categoryId, product?.id, country],
     queryFn: async () => {
-      const { data, error } = await supabase.from('products').select(`*,color_variants`).eq('is_active', true).eq('category', product!.category).neq('id', product!.id).contains('countries', [country]).limit(4);
+      const { data, error } = await supabase.from('products').select(`*,color_variants`).eq('is_active', true).eq('category_id', product!.categoryId!).neq('id', product!.id).contains('countries', [country]).limit(4);
       if (error) throw error;
       return data.map((p) => ({
         id: p.id,
@@ -117,15 +117,17 @@ const ProductDetailPage = () => {
             ? p.images
             : ((p as any).color_variants?.[0]?.images || []),
         colorVariants: (p as any).color_variants || [],
-        category: p.category,
-        brand: p.brand,
+        category: p.category || '',
+        brand: p.brand || '',
+        categoryId: p.category_id || undefined,
+        brandId: p.brand_id || undefined,
         inStock: p.in_stock ?? true,
         countries: (p.countries || ['GLOBAL']) as Product['countries'],
         isFeatured: p.is_featured,
         isBestSeller: p.is_best_seller,
       })) as Product[];
     },
-    enabled: !!product && !!country,
+    enabled: !!product?.categoryId && !!country,
   });
  
   useEffect(() => { if (product) addRecent(product as Product); /* eslint-disable-next-line */ }, [product?.id]);

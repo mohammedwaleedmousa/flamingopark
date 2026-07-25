@@ -1,5 +1,6 @@
 import { heicTo, isHeic } from "heic-to";
 import imageCompression from "browser-image-compression";
+import { supabase } from "@/integrations/supabase/client";
 
 async function bitmapToJpegFile(file: File): Promise<File> {
   const bitmap = await createImageBitmap(file);
@@ -99,4 +100,19 @@ export async function prepareImageUpload(
     type: "image/webp",
     lastModified: Date.now(),
   });
+}
+export async function uploadOptimizedImage(
+  file: File,
+  pathPrefix: string,
+  opts: { maxSizeMB?: number; maxWidthOrHeight?: number } = {},
+): Promise<string> {
+  const prepared = await prepareImageUpload(file, opts);
+  const path = `${pathPrefix}/${crypto.randomUUID()}.webp`;
+  const { error } = await supabase.storage.from("uploads").upload(path, prepared, {
+    cacheControl: "31536000",
+    upsert: false,
+    contentType: "image/webp",
+  });
+  if (error) throw error;
+  return supabase.storage.from("uploads").getPublicUrl(path).data.publicUrl;
 }

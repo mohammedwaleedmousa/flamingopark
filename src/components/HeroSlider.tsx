@@ -24,6 +24,7 @@ const slides = [
 
 export default function HeroSlider() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [loadedSlides, setLoadedSlides] = useState(() => new Set([0]));
   const swiperRef = useRef<any>(null);
 
   return (
@@ -38,6 +39,7 @@ export default function HeroSlider() {
         }}
         onSlideChange={(swiper) => {
           setActiveIndex(swiper.realIndex);
+          setLoadedSlides((loaded) => new Set(loaded).add(swiper.realIndex));
         }}
         autoplay={{
           delay: 5000,
@@ -56,10 +58,18 @@ export default function HeroSlider() {
       >
         {slides.map((slide, index) => (
           <SwiperSlide key={index}>
-            <div
-              className="relative h-full w-full bg-cover bg-center will-change-transform"
-              style={{ backgroundImage: `url(${slide.image})` }}
-            >
+            <div className="relative h-full w-full overflow-hidden bg-neutral-900">
+              {loadedSlides.has(index) && (
+                <img
+                  src={slide.image}
+                  alt=""
+                  aria-hidden="true"
+                  loading={index === 0 ? "eager" : "lazy"}
+                  decoding="async"
+                  fetchPriority={index === 0 ? "high" : "auto"}
+                  className="absolute inset-0 h-full w-full object-cover"
+                />
+              )}
               <div className="absolute inset-0 bg-gradient-to-l from-black/75 via-black/40 to-transparent" />
               <div className="absolute inset-0">
                 <div className="absolute right-0 top-1/2 -translate-y-1/2 px-6 pt-32 sm:px-10 md:px-20 max-w-lg text-right text-white">

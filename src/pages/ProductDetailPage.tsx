@@ -411,7 +411,7 @@ const ProductDetailPage = () => {
                   {displayImages.map((img, i) => (
                     <button key={i} onClick={() => goToImage(i)}
                       className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${selectedImage === i ? 'border-gold' : 'border-transparent hover:border-border'}`}>
-                      <img src={img} alt="" className="w-full h-full object-cover" />
+                      <img src={img} alt="" loading="lazy" decoding="async" width={128} height={128} className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
@@ -460,7 +460,7 @@ const ProductDetailPage = () => {
                           className={`flex items-center gap-3 p-3 rounded-xl border-2 text-right transition-all ${isActive ? 'border-gold bg-gold/5' : 'border-border hover:border-muted-foreground'}`}
                         >
                           {qv.images && qv.images[0] ? (
-                            <img src={qv.images[0]} alt={qv.name} className="w-14 h-14 rounded-lg object-cover shrink-0" />
+                            <img src={qv.images[0]} alt={qv.name} loading="lazy" decoding="async" width={112} height={112} className="w-14 h-14 rounded-lg object-cover shrink-0" />
                           ) : (
                             <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
                               <Package className="w-5 h-5 text-muted-foreground" />

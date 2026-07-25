@@ -35,7 +35,7 @@ const AccountPage = () => {
   const [invoices, setInvoices] = useState<Array<{ id: string; order_number: string; total: number; status: string; created_at: string; invoice_url: string | null }>>([]);
   const [invoicesLoading, setInvoicesLoading] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { favorites } = useFavorites();
+  const { favorites, syncWithDatabase } = useFavorites();
   const { logout } = useAuthActions();
   const latestOrderNumber = invoices[0]?.order_number || "";
 
@@ -58,9 +58,36 @@ const AccountPage = () => {
 
   useEffect(() => {
     if (!user?.id) return;
-    const list = migrateLegacyCheckoutInfo(user.id);
-    setSavedAddresses(list);
-  }, [user?.id]);
+    let active = true;
+    const syncAddresses = async () => {
+      const { data: existing, error } = await (supabase as any)
+        .from("customer_addresses").select("*").eq("user_id", user.id).order("updated_at", { ascending: false });
+      if (error) {
+        if (active) setSavedAddresses(migrateLegacyCheckoutInfo(user.id));
+        return;
+      }
+      const migrationKey = `flamingopark-addresses-db-synced:${user.id}`;
+      let rows = existing || [];
+      if (!localStorage.getItem(migrationKey) && rows.length === 0) {
+        const legacy = migrateLegacyCheckoutInfo(user.id);
+        if (legacy.length) {
+          const { data: inserted, error: insertError } = await (supabase as any).from("customer_addresses").insert(
+            legacy.map((a) => ({ id: a.id, user_id: user.id, label: a.label, recipient_name: a.name || "", phone: a.phone || "", city: a.city, address_line1: a.address, notes: a.notes || null, is_default: !!a.isDefault })),
+          ).select();
+          if (!insertError) {
+            rows = inserted || [];
+            localStorage.setItem(migrationKey, "1");
+          }
+        } else {
+          localStorage.setItem(migrationKey, "1");
+        }
+      }
+      if (active) setSavedAddresses(rows.map((a: any) => ({ id: a.id, label: a.label, name: a.recipient_name, phone: a.phone, city: a.city, address: a.address_line1, notes: a.notes || "", isDefault: a.is_default, updatedAt: a.updated_at })));
+    };
+    void syncAddresses();
+    void syncWithDatabase(user.id);
+    return () => { active = false; };
+  }, [user?.id, syncWithDatabase]);
 
   useEffect(() => {
     const fetchInvoices = async () => {
@@ -125,25 +152,22 @@ const AccountPage = () => {
     setEditingAddressId(null);
   };
 
-  const saveAddress = () => {
+  const saveAddress = async () => {
     if (!user?.id) return;
     if (!addressForm.city.trim() || !addressForm.address.trim()) {
-      setNotification({ type: "error", message: "المدينة والعنوان مطلوبان" });
-      return;
+      setNotification({ type: "error", message: "المدينة والعنوان مطلوبان" }); return;
     }
-    const next = upsertSavedAddress(user.id, {
-      id: editingAddressId || `addr-${Date.now()}`,
-      label: addressForm.label.trim() || `عنوان ${savedAddresses.length + 1}`,
-      name: user?.user_metadata?.full_name || "",
-      phone: user?.user_metadata?.phone_number || "",
-      city: addressForm.city.trim(),
-      address: addressForm.address.trim(),
-      notes: addressForm.notes.trim(),
-      isDefault: savedAddresses.length === 0 || editingAddressId !== null,
-    });
-    setSavedAddresses(next);
-    resetAddressForm();
-    setNotification({ type: "success", message: "تم حفظ العنوان" });
+    const id = editingAddressId || crypto.randomUUID();
+    const isDefault = savedAddresses.length === 0 || savedAddresses.find((a) => a.id === id)?.isDefault === true;
+    if (isDefault) await (supabase as any).from("customer_addresses").update({ is_default: false }).eq("user_id", user.id);
+    const { data, error } = await (supabase as any).from("customer_addresses").upsert({
+      id, user_id: user.id, label: addressForm.label.trim() || `عنوان ${savedAddresses.length + 1}`,
+      recipient_name: String(user.user_metadata?.full_name || ""), phone: String(user.user_metadata?.phone_number || ""),
+      city: addressForm.city.trim(), address_line1: addressForm.address.trim(), notes: addressForm.notes.trim() || null, is_default: isDefault,
+    }).select().single();
+    if (error) { setNotification({ type: "error", message: "فشل حفظ العنوان" }); return; }
+    const next = upsertSavedAddress(user.id, { id: data.id, label: data.label, name: data.recipient_name, phone: data.phone, city: data.city, address: data.address_line1, notes: data.notes || "", isDefault: data.is_default });
+    setSavedAddresses(next); resetAddressForm(); setNotification({ type: "success", message: "تم حفظ العنوان" });
   };
 
   const editAddress = (addr: SavedAddress) => {
@@ -156,17 +180,20 @@ const AccountPage = () => {
     });
   };
 
-  const deleteAddress = (id: string) => {
+  const deleteAddress = async (id: string) => {
     if (!user?.id) return;
-    const next = removeSavedAddress(user.id, id);
-    setSavedAddresses(next);
+    const { error } = await (supabase as any).from("customer_addresses").delete().eq("id", id).eq("user_id", user.id);
+    if (error) { setNotification({ type: "error", message: "فشل حذف العنوان" }); return; }
+    const next = removeSavedAddress(user.id, id); setSavedAddresses(next);
     if (editingAddressId === id) resetAddressForm();
   };
 
-  const setDefaultAddress = (addr: SavedAddress) => {
+  const setDefaultAddress = async (addr: SavedAddress) => {
     if (!user?.id) return;
-    const next = upsertSavedAddress(user.id, { ...addr, isDefault: true });
-    setSavedAddresses(next);
+    await (supabase as any).from("customer_addresses").update({ is_default: false }).eq("user_id", user.id);
+    const { error } = await (supabase as any).from("customer_addresses").update({ is_default: true }).eq("id", addr.id).eq("user_id", user.id);
+    if (error) { setNotification({ type: "error", message: "فشل تعيين العنوان الافتراضي" }); return; }
+    const next = upsertSavedAddress(user.id, { ...addr, isDefault: true }); setSavedAddresses(next);
   };
 
   const handleAvatarChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -220,6 +247,7 @@ const AccountPage = () => {
       if (error) {
         setNotification({ type: "error", message: "فشل تحديث البيانات: " + error.message });
       } else {
+        await (supabase as any).from("profiles").upsert({ id: user.id, full_name: fullName.trim(), phone: phoneNumber.trim() || null, avatar_url: avatarUrl || null });
         setNotification({ type: "success", message: "تم تحديث بياناتك بنجاح" });
         
         // Update local user state

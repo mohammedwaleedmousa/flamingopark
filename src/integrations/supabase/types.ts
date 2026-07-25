@@ -727,6 +727,18 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_addresses: {
+        Row: { id: string; user_id: string; customer_id: string | null; label: string; recipient_name: string; phone: string; city: string; address_line1: string; address_line2: string | null; notes: string | null; is_default: boolean; created_at: string; updated_at: string }
+        Insert: { id?: string; user_id: string; customer_id?: string | null; label: string; recipient_name: string; phone: string; city: string; address_line1: string; address_line2?: string | null; notes?: string | null; is_default?: boolean; created_at?: string; updated_at?: string }
+        Update: { id?: string; user_id?: string; customer_id?: string | null; label?: string; recipient_name?: string; phone?: string; city?: string; address_line1?: string; address_line2?: string | null; notes?: string | null; is_default?: boolean; created_at?: string; updated_at?: string }
+        Relationships: []
+      }
+      customer_favorites: {
+        Row: { id: string; user_id: string; customer_id: string | null; product_id: string; created_at: string }
+        Insert: { id?: string; user_id: string; customer_id?: string | null; product_id: string; created_at?: string }
+        Update: { id?: string; user_id?: string; customer_id?: string | null; product_id?: string; created_at?: string }
+        Relationships: []
+      }
       customer_notifications: {
         Row: {
           body: string
@@ -790,30 +802,9 @@ export type Database = {
         ]
       }
       customers: {
-        Row: {
-          country: string
-          created_at: string
-          id: string
-          name: string
-          phone: string
-          updated_at: string
-        }
-        Insert: {
-          country: string
-          created_at?: string
-          id?: string
-          name: string
-          phone: string
-          updated_at?: string
-        }
-        Update: {
-          country?: string
-          created_at?: string
-          id?: string
-          name?: string
-          phone?: string
-          updated_at?: string
-        }
+        Row: { country: string; created_at: string; id: string; name: string; phone: string; updated_at: string; user_id: string | null }
+        Insert: { country: string; created_at?: string; id?: string; name: string; phone: string; updated_at?: string; user_id?: string | null }
+        Update: { country?: string; created_at?: string; id?: string; name?: string; phone?: string; updated_at?: string; user_id?: string | null }
         Relationships: []
       }
       delivery_companies: {

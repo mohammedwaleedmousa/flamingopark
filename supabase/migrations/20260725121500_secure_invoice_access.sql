@@ -10,13 +10,16 @@ CREATE INDEX IF NOT EXISTS idx_orders_invoice_owner_user_id
   ON public.orders (invoice_owner_user_id)
   WHERE invoice_owner_user_id IS NOT NULL;
 
--- Backfill authenticated ownership where a historical order phone matches Auth metadata.
-UPDATE public.orders AS orders
-SET invoice_owner_user_id = users.id
-FROM auth.users AS users
-WHERE orders.invoice_owner_user_id IS NULL
-  AND nullif(trim(orders.customer_phone), '') IS NOT NULL
-  AND nullif(trim(users.raw_user_meta_data ->> 'phone_number'), '') = trim(orders.customer_phone);
+-- Preserve legacy invoice records without guessing customer ownership. Convert only
+-- recognizable public Storage URLs into private bucket paths; unmatched legacy rows
+-- remain accessible to admins but not customers.
+UPDATE public.orders
+SET invoice_url = regexp_replace(
+  invoice_url,
+  '^https?://[^/]+/storage/v1/object/public/invoices/',
+  ''
+)
+WHERE invoice_url ~ '^https?://[^/]+/storage/v1/object/public/invoices/';
 
 CREATE OR REPLACE FUNCTION public.set_invoice_owner_on_order_insert()
 RETURNS trigger

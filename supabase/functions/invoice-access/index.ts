@@ -46,12 +46,14 @@ Deno.serve(async (req) => {
     }
     const ownsOrder = Boolean(user && order.invoice_owner_user_id === user.id)
     const hasGuestToken = Boolean(guestToken && order.invoice_access_token_hash && await tokenHash(guestToken) === order.invoice_access_token_hash)
-    if (!isAdmin && !ownsOrder && !hasGuestToken) {
-      return new Response(JSON.stringify({ error: 'Unauthorized' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
-    }
 
     if (action === 'upload') {
-      if (!pdfBase64) return new Response(JSON.stringify({ error: 'Missing invoice document' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      // Uploads are intentionally limited to an admin or the freshly issued guest token.
+      // Authenticated customers can read their invoice but cannot replace it.
+      if (!isAdmin && !hasGuestToken) {
+        return new Response(JSON.stringify({ error: 'Invoice access denied' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      }
+      if (!pdfBase64) return new Response(JSON.stringify({ error: 'Invalid invoice request' }), { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
       const binary = Uint8Array.from(atob(pdfBase64), (char) => char.charCodeAt(0))
       const path = `invoice-${order.order_number}-${Date.now()}.pdf`
       const { error: uploadError } = await service.storage.from('invoices').upload(path, binary, {
@@ -65,14 +67,17 @@ Deno.serve(async (req) => {
       return new Response(JSON.stringify({ path }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
 
+    if (!isAdmin && !ownsOrder && !hasGuestToken) {
+      return new Response(JSON.stringify({ error: 'Invoice access denied' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    }
     const path = order.invoice_url
     if (!path || /^https?:\/\//i.test(path)) {
-      return new Response(JSON.stringify({ error: 'Invoice unavailable' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+      return new Response(JSON.stringify({ error: 'Invoice access denied' }), { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
     }
     const { data: signed, error: signedError } = await service.storage.from('invoices').createSignedUrl(path, 300)
     if (signedError || !signed?.signedUrl) throw signedError || new Error('Could not sign invoice')
     return new Response(JSON.stringify({ signedUrl: signed.signedUrl }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   } catch (error) {
-    return new Response(JSON.stringify({ error: error instanceof Error ? error.message : 'Invoice access failed' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
+    return new Response(JSON.stringify({ error: 'Invoice access failed' }), { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } })
   }
 })

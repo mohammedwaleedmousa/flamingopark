@@ -5,7 +5,7 @@ import CartDrawer from "@/components/CartDrawer";
 import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 import { supabase } from "@/integrations/supabase/client";
-import { Product } from "@/store/useStore";
+import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
 
 const NewArrivalsPage = () => {
@@ -15,25 +15,12 @@ const NewArrivalsPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("products")
-        .select("*")
+        .select(PRODUCT_CARD_SELECT)
         .eq("is_active", true)
         .order("created_at", { ascending: false })
         .limit(36);
       if (error) throw error;
-      return (data || []).map((p: any): Product => ({
-        id: p.id, name: p.name, nameAr: p.name_ar, slug: p.slug,
-        price: Number(p.price),
-        originalPrice: p.original_price ? Number(p.original_price) : undefined,
-        discount: p.discount || undefined,
-        description: p.description || "", descriptionAr: p.description_ar || "",
-        images:
-  p.images?.length > 0
-    ? p.images
-    : ((p as any).color_variants?.[0]?.images || []), category: p.category, brand: p.brand,
-        inStock: p.in_stock ?? true,
-        countries: (p.countries || ["GLOBAL"]) as Product["countries"],
-        isFeatured: p.is_featured, isBestSeller: p.is_best_seller,
-      }));
+      return (data || []).map(mapProductCard);
     },
   });
 

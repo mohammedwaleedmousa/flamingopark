@@ -8,6 +8,7 @@ import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import ProductCard from '@/components/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
+import { PRODUCT_CARD_SELECT } from '@/lib/productCardData';
 import { useSiteContent, getSiteText } from '@/hooks/useSiteContent';
 import { Product } from '@/store/useStore';
 import {
@@ -81,7 +82,7 @@ const SearchPage = () => {
 
       let q = supabase
         .from('products')
-        .select('*')
+        .select(PRODUCT_CARD_SELECT)
         .or(`name_ar.ilike.%${query}%,description_ar.ilike.%${query}%,name.ilike.%${query}%,description.ilike.%${query}%`)
         .eq('is_active', true);
 

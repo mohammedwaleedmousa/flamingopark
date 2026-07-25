@@ -9,6 +9,7 @@ import ProductCard from "@/components/ProductCard";
 import { Product } from "@/store/useStore";
 import { useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
+import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import { SlidersHorizontal, X, Heart } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useLocation, useNavigationType } from "react-router-dom";
@@ -275,7 +276,7 @@ const ProductsPage = () => {
   const { data: categories = [] } = useQuery({
     queryKey: ["categories-all"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("*").eq("is_active", true).order("sort_order");
+      const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order");
       if (error) throw error; return data as unknown as Category[];
     },
   });
@@ -288,52 +289,53 @@ const ProductsPage = () => {
     if (!currentCategory) return null; if (isParent) return subCategories.map((c) => c.slug); return [currentCategory.slug];
   }, [currentCategory, isParent, subCategories]);
 
-  const { data: products = [], isLoading } = useQuery({
-    queryKey: ["products-list", leafSlugs, searchQuery],
+  const { data: fetchedProducts = [], isLoading } = useQuery({
+    queryKey: ["products-list", leafSlugs, searchQuery, brandFilter, sortBy, saleOnly, inStockOnly, minPriceParam, maxPriceParam, page],
     queryFn: async () => {
-      let q = supabase.from("products").select("*").eq("is_active", true);
-      if (leafSlugs && leafSlugs.length) q = q.in("category", leafSlugs);
-      const { data, error } = await q.order("created_at", { ascending: false });
+      let query = supabase
+        .from("products")
+        .select(PRODUCT_CARD_SELECT)
+        .eq("is_active", true);
+
+      if (leafSlugs?.length) query = query.in("category", leafSlugs);
+      if (searchQuery.trim()) {
+        const term = searchQuery.trim();
+        query = query.or(`name_ar.ilike.%${term}%,name.ilike.%${term}%,description_ar.ilike.%${term}%`);
+      }
+      if (brandFilter !== "all") query = query.eq("brand", brandFilter);
+      if (saleOnly) query = query.gt("discount", 0);
+      if (inStockOnly) query = query.eq("in_stock", true);
+      if (minPriceParam > 0) query = query.gte("price", minPriceParam);
+      if (maxPriceParam > 0) query = query.lte("price", maxPriceParam);
+
+      if (sortBy === "price-asc") query = query.order("price", { ascending: true });
+      else if (sortBy === "price-desc") query = query.order("price", { ascending: false });
+      else if (sortBy === "best") query = query.order("is_best_seller", { ascending: false }).order("created_at", { ascending: false });
+      else if (sortBy === "featured") query = query.order("is_featured", { ascending: false }).order("created_at", { ascending: false });
+      else query = query.order("created_at", { ascending: false });
+
+      const from = (page - 1) * PAGE_SIZE;
+      const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
       if (error) throw error;
-      return (data || []).map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        nameAr: p.name_ar,
-        slug: p.slug,
-        price: Number(p.price),
-        originalPrice: p.original_price ? Number(p.original_price) : undefined,
-        discount: p.discount || undefined,
-        description: p.description || "",
-        descriptionAr: p.description_ar || "",
-        images: p.images?.length
-          ? p.images
-          : (p.color_variants?.[0]?.images || []),
-        category: p.category,
-        brand: p.brand,
-        inStock: p.in_stock ?? true,
-        countries:[],
-        isFeatured: p.is_featured,
-        isBestSeller: p.is_best_seller,
-        color_variants: (() => {
-        if (typeof p.color_variants === "string") {
-          try {
-            return JSON.parse(p.color_variants);
-          } catch {
-            return [];
-          }
-        }
-        return Array.isArray(p.color_variants)
-          ? p.color_variants
-          : [];
-      })(),
-        sizes: p.sizes || [],
-      })) as Product[];
+      return (data || []).map(mapProductCard);
     },
   });
 
-  const brandsAvailable = useMemo(() => {
-    const set = new Set<string>(); products.forEach((p) => p.brand && set.add(p.brand.trim())); return Array.from(set);
-  }, [products]);
+  const [products, setProducts] = useState<Product[]>([]);
+  useEffect(() => {
+    setProducts((current) => page === 1
+      ? fetchedProducts
+      : [...current, ...fetchedProducts.filter((product) => !current.some((item) => item.id === product.id))]);
+  }, [fetchedProducts, page]);
+
+  const { data: brandsAvailable = [] } = useQuery({
+    queryKey: ["product-filter-brands"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("brands").select("name").eq("is_active", true).order("name");
+      if (error) throw error;
+      return (data || []).map((brand) => brand.name).filter((name): name is string => Boolean(name));
+    },
+  });
 
   const getProductColors = (p: Product): string[] => {
     const fromVariants = ((p as any).color_variants || [])
@@ -377,9 +379,7 @@ const ProductsPage = () => {
   }, [effectiveMin, effectiveMax]);
 
   const visibleProducts = useMemo(() => {
-    const q = searchQuery.trim().toLowerCase();
     let arr = products.filter((p) => {
-      const okSearch = !q || p.nameAr.toLowerCase().includes(q) || p.name.toLowerCase().includes(q) || p.brand.toLowerCase().includes(q) || p.descriptionAr.toLowerCase().includes(q);
       const okBrand = brandFilter === "all" || p.brand?.trim() === brandFilter;
       const pColors = getProductColors(p);
       const okColor = colorFilter === "all" || pColors.some((c) => c.toLowerCase() === colorFilter.toLowerCase());
@@ -389,7 +389,7 @@ const ProductsPage = () => {
       const okPrice = finalPrice >= effectiveMin && finalPrice <= effectiveMax;
       const okSale = !saleOnly || !!p.discount;
       const okStock = !inStockOnly || p.inStock;
-      return okSearch && okBrand && okColor && okSize && okPrice && okSale && okStock;
+      return okBrand && okColor && okSize && okPrice && okSale && okStock;
     });
     if (sortBy === "price-asc") arr = [...arr].sort((a, b) => a.price - b.price);
     if (sortBy === "price-desc") arr = [...arr].sort((a, b) => b.price - a.price);
@@ -413,8 +413,8 @@ const ProductsPage = () => {
     (inStockOnly ? 1 : 0) +
     (minPriceParam || maxPriceParam ? 1 : 0);
 
-  const paginatedProducts = visibleProducts.slice(0, page * PAGE_SIZE);
-  const hasMore = paginatedProducts.length < visibleProducts.length;
+  const paginatedProducts = visibleProducts;
+  const hasMore = fetchedProducts.length === PAGE_SIZE;
 
   const clearAllFilters = () => {
     const next = new URLSearchParams();

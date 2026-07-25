@@ -37,7 +37,7 @@ const CategoriesPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("categories")
-        .select("*")
+        .select("id,slug,name,name_ar,parent_id,image_url,sort_order")
         .eq("is_active", true)
         .order("sort_order");
       if (error) throw error;

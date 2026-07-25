@@ -1,5 +1,5 @@
 import { Link, useSearchParams } from "react-router-dom";
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -9,6 +9,7 @@ import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
 import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import type { Product } from "@/store/useStore";
+import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 
 interface Category {
   id: string;
@@ -33,7 +34,7 @@ const CategoriesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: content } = useSiteContent("categories_page_");
   const { data: categories = [] } = useQuery({
-    queryKey: ["categories-all-for-hierarchy"],
+    queryKey: ["categories-all-active"],
     queryFn: async () => {
       const { data, error } = await supabase
         .from("categories")
@@ -65,6 +66,9 @@ const CategoriesPage = () => {
       : null;
 
   const effectiveLeafSlug = effectiveLeafCategory?.slug || "";
+  const [page, setPage] = useState(1);
+  const [loadedProducts, setLoadedProducts] = useState<Product[]>([]);
+  const PAGE_SIZE = 24;
 
   const scopedCategoryIds = useMemo(() => {
     if (!effectiveLeafCategory) return [] as string[];
@@ -72,59 +76,41 @@ const CategoriesPage = () => {
     const descendants = categories.filter((c) => c.parent_id === effectiveLeafCategory.id).map((c) => c.id);
     return [effectiveLeafCategory.id, ...descendants];
   }, [categories, effectiveLeafCategory, selectedSub]);
-  const scopedCategorySlugs = useMemo(() => {
-    if (!effectiveLeafCategory) return [] as string[];
-    if (selectedSub) return [selectedSub.slug];
-    const descendants = categories.filter((c) => c.parent_id === effectiveLeafCategory.id).map((c) => c.slug);
-    return [effectiveLeafCategory.slug, ...descendants];
-  }, [categories, effectiveLeafCategory, selectedSub]);
 
-  const { data: leafProducts = [], isLoading: productsLoading } = useQuery({
-    queryKey: ["categories-leaf-products", effectiveLeafSlug, scopedCategoryIds.join(","), scopedCategorySlugs.join(",")],
-    enabled: !!effectiveLeafSlug,
+
+  useEffect(() => {
+    setPage(1);
+    setLoadedProducts([]);
+  }, [effectiveLeafCategory?.id, brandFilter]);
+
+  const { data: leafPage = [], isLoading: productsLoading } = useQuery({
+    queryKey: ["categories-leaf-products", scopedCategoryIds.join(","), brandFilter, page],
+    enabled: scopedCategoryIds.length > 0,
     queryFn: async () => {
-      const slugList = scopedCategorySlugs.map((s) => `"${s}"`).join(",");
-      const idList = scopedCategoryIds.join(",");
-      const orFilter = [
-        slugList ? `category.in.(${slugList})` : null,
-        idList ? `category_id.in.(${idList})` : null,
-      ]
-        .filter(Boolean)
-        .join(",");
-      const { data, error } = await supabase
+      const from = (page - 1) * PAGE_SIZE;
+      let query = supabase
         .from("products")
-        .select("id,name,name_ar,slug,price,original_price,discount,description,description_ar,images,category,brand,in_stock,countries,is_featured,is_best_seller,variants,color_variants")
+        .select(PRODUCT_CARD_SELECT)
         .eq("is_active", true)
-        .or(orFilter)
-        .order("created_at", { ascending: false });
-
+        .in("category_id", scopedCategoryIds);
+      if (brandFilter !== "all") query = query.eq("brand", brandFilter);
+      const { data, error } = await query
+        .order("created_at", { ascending: false })
+        .range(from, from + PAGE_SIZE - 1);
       if (error) throw error;
-
-      return (data || []).map((p: any) => ({
-        id: p.id,
-        name: p.name,
-        nameAr: p.name_ar,
-        slug: p.slug,
-        price: Number(p.price),
-        originalPrice: p.original_price ? Number(p.original_price) : undefined,
-        discount: p.discount || undefined,
-        description: p.description || "",
-        descriptionAr: p.description_ar || "",
-        images:
-  p.images?.length > 0
-    ? p.images
-    : ((p as any).color_variants?.[0]?.images || []),
-        category: p.category,
-        brand: p.brand,
-        inStock: p.in_stock ?? true,
-        countries: (p.countries || ["GLOBAL"]) as Product["countries"],
-        isFeatured: p.is_featured,
-        isBestSeller: p.is_best_seller,
-        variants: p.variants || undefined,
-        ...(p.color_variants ? { color_variants: p.color_variants } : {}),
-      })) as Product[];
+      return (data || []).map(mapProductCard);
     },
   });
+
+  useEffect(() => {
+    if (!leafPage.length && page !== 1) return;
+    setLoadedProducts((current) => page === 1
+      ? leafPage
+      : [...current, ...leafPage.filter((product) => !current.some((currentProduct) => currentProduct.id === product.id))]);
+  }, [leafPage, page]);
+
+  const hasMore = leafPage.length === PAGE_SIZE;
+  const leafProducts = loadedProducts;
 
   const brands = useMemo(() => {
     const set = new Set<string>();
@@ -358,6 +344,11 @@ const CategoriesPage = () => {
                 {visibleProducts.map((product, index) => (
                   <ProductCard key={product.id} product={product} index={index} />
                 ))}
+              </div>
+            )}
+            {hasMore && (
+              <div className="flex justify-center pt-3">
+                <Button variant="outline" onClick={() => setPage((current) => current + 1)}>عرض المزيد</Button>
               </div>
             )}
           </section>

@@ -2,7 +2,7 @@ import type { Product } from "@/store/useStore";
 
 // Fields required by product cards, list filters, and Quick View. Detail-only payloads
 // (accessories, specs, policies, inventory metadata) stay on the product detail route.
-export const PRODUCT_CARD_SELECT = "id,name,name_ar,slug,price,original_price,discount,description,description_ar,images,category,brand,in_stock,countries,is_featured,is_best_seller,color_variants,sizes";
+export const PRODUCT_CARD_SELECT = "id,name,name_ar,slug,price,original_price,discount,description,description_ar,images,category,category_id,brand,brand_id,in_stock,countries,is_featured,is_best_seller,color_variants,sizes";
 
 type ProductCardRow = {
   id: string;
@@ -16,7 +16,9 @@ type ProductCardRow = {
   description_ar: string | null;
   images: string[] | null;
   category: string | null;
+  category_id: string | null;
   brand: string | null;
+  brand_id: string | null;
   in_stock: boolean | null;
   countries: string[] | null;
   is_featured: boolean | null;
@@ -39,7 +41,9 @@ export const mapProductCard = (row: ProductCardRow): Product => {
     descriptionAr: row.description_ar || "",
     images: row.images?.length ? row.images : ((colorVariants[0] as { images?: string[] } | undefined)?.images || []),
     category: row.category || "",
+    categoryId: row.category_id || undefined,
     brand: row.brand || "",
+    brandId: row.brand_id || undefined,
     inStock: row.in_stock ?? true,
     countries: (row.countries || ["GLOBAL"]) as Product["countries"],
     isFeatured: row.is_featured ?? undefined,

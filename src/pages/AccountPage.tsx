@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import { supabase } from "@/integrations/supabase/client";
+import { getInvoiceSignedUrl } from "@/lib/invoiceAccess";
 import { User, Heart, ShoppingBag, LogOut, Package, Mail, ChevronLeft, Settings, Truck, Upload, Check, X, AlertCircle, Camera, Receipt } from "lucide-react";
 import { useFavorites } from "@/hooks/useFavorites";
 import LoadingScreen from "@/components/LoadingScreen";
@@ -266,13 +267,13 @@ const AccountPage = () => {
     { to: "/my-orders", icon: Package, label: "طلباتي", desc: "سجل الطلبات والفواتير", color: "text-green-500" },
   ];
 
-  const resolveInvoiceUrl = (raw: string | null) => {
-    if (!raw) return null;
-    const value = String(raw).trim();
-    if (!value) return null;
-    if (/^https?:\/\//i.test(value)) return value;
-    const { data } = supabase.storage.from("invoices").getPublicUrl(value);
-    return data.publicUrl;
+  const openInvoice = async (orderId: string) => {
+    try {
+      const url = await getInvoiceSignedUrl(orderId);
+      window.open(url, "_blank", "noopener,noreferrer");
+    } catch {
+      setNotification({ type: "error", message: "تعذر فتح الفاتورة" });
+    }
   };
 
   const settingsItems = [
@@ -429,12 +430,8 @@ const AccountPage = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          const url = resolveInvoiceUrl(inv.invoice_url);
-                          if (!url) return;
-                          window.open(url, "_blank", "noopener,noreferrer");
-                        }}
-                        disabled={!resolveInvoiceUrl(inv.invoice_url)}
+                        onClick={() => void openInvoice(inv.id)}
+                        disabled={!inv.invoice_url}
                         className="mt-2 mr-2 text-xs px-2.5 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         عرض الفاتورة

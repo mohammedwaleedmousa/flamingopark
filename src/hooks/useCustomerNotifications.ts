@@ -80,7 +80,6 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
           const customer = JSON.parse(savedCustomer);
           setUserId(String(customer.id || ""));
           setUserPhone(String(customer.phone || ""));
-          console.log("CUSTOMER FROM STORAGE:", customer);
           return;
         } catch {}
       }
@@ -90,7 +89,6 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
       const phone = String(data.user?.user_metadata?.phone_number || "").trim();
       setUserId(uid);
       setUserPhone(phone);
-      console.log("AUTH CUSTOMER:", uid, phone);
     };
     loadCustomer();
     return () => {

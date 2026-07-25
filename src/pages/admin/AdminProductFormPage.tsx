@@ -811,7 +811,7 @@ const AdminProductFormPage = () => {
                         const path = `accessories/${Date.now()}-${prepared.name}`;
                         const { error } = await supabase.storage
                           .from('uploads')
-                          .upload(path, prepared, { contentType: 'image/webp', upsert: false });
+                          .upload(path, prepared, { contentType: 'image/webp', cacheControl: '31536000', upsert: false });
                         if (error) throw error;
                         const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(path);
                         setNewAccessory(prev => ({ ...prev, image_url: urlData.publicUrl }));
@@ -1070,7 +1070,7 @@ const AdminProductFormPage = () => {
                                   try {
                                     const prepared = await prepareImageUpload(f);
                                     const path = `products/quality-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
-                                    const { error } = await supabase.storage.from('uploads').upload(path, prepared, { contentType: 'image/webp', upsert: false });
+                                    const { error } = await supabase.storage.from('uploads').upload(path, prepared, { contentType: 'image/webp', cacheControl: '31536000', upsert: false });
                                     if (!error) {
                                       const { data } = supabase.storage.from('uploads').getPublicUrl(path);
                                       urls.push(data.publicUrl);

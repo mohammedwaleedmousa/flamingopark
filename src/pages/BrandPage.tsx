@@ -128,7 +128,11 @@ const { data: sectionProducts = [] } = useQuery({
                   src={brand.hero_image}
                   alt={brand.name}
                   loading="eager"
+                  decoding="async"
                   fetchPriority="high"
+                  width={1600}
+                  height={900}
+                  sizes="100vw"
                   className="absolute inset-0 w-full h-full object-cover"
                 />
               )}
@@ -138,6 +142,9 @@ const { data: sectionProducts = [] } = useQuery({
                   <img
                     src={brand.logo_url}
                     loading="lazy"
+                    decoding="async"
+                    width={320}
+                    height={120}
                     alt={`${brand.name} logo`}
                     className="h-16 md:h-20 object-contain mb-4 bg-white/95 rounded-lg px-6 py-2"
                   />
@@ -170,6 +177,10 @@ const { data: sectionProducts = [] } = useQuery({
                           src={s.image_url}
                           alt={s.name}
                           loading="lazy"
+                          decoding="async"
+                          width={800}
+                          height={1000}
+                          sizes="(max-width: 768px) 50vw, 33vw"
                           className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                         />
                       )}

@@ -60,11 +60,12 @@ const statusMessageMap: Record<string, string> = {
 const normalizeStatus = (raw: string | null | undefined) => String(raw || "pending").toLowerCase();
 
 interface UseCustomerNotificationsOptions {
+  enabled?: boolean;
   enableToasts?: boolean;
 }
 
 export const useCustomerNotifications = (options: UseCustomerNotificationsOptions = {}) => {
-  const { enableToasts = false } = options;
+  const { enabled = true, enableToasts = false } = options;
   const [userId, setUserId] = useState<string>("");
   const [userPhone, setUserPhone] = useState<string>("");
   const [customerId, setCustomerId] = useState<string>("");
@@ -81,7 +82,9 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
           setUserId(String(customer.id || ""));
           setUserPhone(String(customer.phone || ""));
           return;
-        } catch {}
+        } catch {
+          // Fall back to the authenticated Supabase session.
+        }
       }
       const { data } = await supabase.auth.getUser();
       if (!mounted) return;
@@ -98,10 +101,9 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
 
   const notificationsQuery = useQuery({
     queryKey: ["customer-notifications", userId, userPhone, customerId],
-    enabled: !!(customerId || userPhone),
-    refetchInterval: 10000,
-    refetchOnWindowFocus: true,
-    refetchOnMount: "always",
+    enabled: enabled && !!(customerId || userPhone),
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
     queryFn: async (): Promise<CustomerNotification[]> => {
       let query = supabase
         .from("orders")
@@ -157,24 +159,25 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
           filters.push(`customer_phone.eq.${userPhone}`);
         }
 
-        const { data: notifRows } = await (supabase as any)
+        type NotificationRow = { id: string; title: string; body: string; type: string; link: string | null; is_read: boolean; created_at: string; customer_id: string | null; customer_phone: string | null; broadcast: boolean };
+        const { data: notifRows } = await supabase
           .from("customer_notifications")
-          .select("id, title, message, body, type, link, is_read, created_at, customer_id, customer_phone, broadcast")
+          .select("id, title, body, type, link, is_read, created_at, customer_id, customer_phone, broadcast")
           .or(filters.join(","))
           .order("created_at", { ascending: false })
           .limit(50);
           
 
-        dbNotifs = (notifRows || [])
-          .filter((r: any) => !deletedIdsRef.current.has(String(r.id)))
-          .map((r: any) => ({
-            id: String(r.id),
-            type: (r.type === "order" ? "order" : "system") as NotificationType,
-            title: String(r.title || ""),
-            message: String(r.message || r.body || ""),
-            timestamp: String(r.created_at),
-            read: Boolean(r.is_read) || readIdsRef.current.has(String(r.id)),
-            actionUrl: r.link || undefined,
+        dbNotifs = ((notifRows || []) as NotificationRow[])
+          .filter((row) => !deletedIdsRef.current.has(String(row.id)))
+          .map((row) => ({
+            id: String(row.id),
+            type: (row.type === "order" ? "order" : "system") as NotificationType,
+            title: String(row.title || ""),
+            message: String(row.body || ""),
+            timestamp: String(row.created_at),
+            read: Boolean(row.is_read) || readIdsRef.current.has(String(row.id)),
+            actionUrl: row.link || undefined,
           }));
       } catch {
         dbNotifs = [];
@@ -185,7 +188,7 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
   });
 
   useEffect(() => {
-    if (!enableToasts || !(userId || userPhone)) return;
+    if (!enabled || !enableToasts || !(userId || userPhone)) return;
 
     const channel = supabase
       .channel(`customer-orders-live-${userId || "anon"}`)
@@ -211,7 +214,7 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [enableToasts, userId, userPhone, notificationsQuery]);
+  }, [enabled, enableToasts, userId, userPhone, notificationsQuery]);
 
   const notifications = useMemo(
     () => [...(notificationsQuery.data || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),

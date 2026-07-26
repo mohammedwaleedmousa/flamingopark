@@ -17,6 +17,7 @@ import {
   Package,
 } from "phosphor-react";
 import { Globe } from "phosphor-react";
+import type { Icon } from "phosphor-react";
 import { SignOut } from "phosphor-react";
 import { SignIn } from "phosphor-react";
 import { useEffect, useState } from "react";
@@ -50,6 +51,8 @@ const Section = ({ label, children }: { label: string; children: React.ReactNode
   </div>
 );
 
+type NavbarCategory = { id: string; slug: string; name: string; name_ar: string; parent_id: string | null; image_url: string | null; sort_order: number };
+
 const NavItem = ({
   to,
   icon: Icon,
@@ -57,7 +60,7 @@ const NavItem = ({
   badge,
 }: {
   to: string;
-  icon: any;
+  icon: Icon;
   label: string;
   badge?: number | string;
 }) => (
@@ -120,7 +123,7 @@ const Navbar = () => {
   const { openCart, getCartCount, customer, setCustomer } = useStore();
   const { favorites } = useFavorites();
   const cartCount = getCartCount();
-  const { unreadCount } = useCustomerNotifications({ enableToasts: true });
+  const { unreadCount } = useCustomerNotifications({ enabled: menuOpen, enableToasts: menuOpen });
   const navigate = useNavigate();
   const { logout } = useAuthActions();
   const { mode, setMode, short, label } = useCurrency();
@@ -148,7 +151,7 @@ const Navbar = () => {
     queryKey: ["categories-all-active"],
     queryFn: async () => {
       const { data } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order");
-      return (data || []) as any[];
+      return (data || []) as NavbarCategory[];
     },
   });
 

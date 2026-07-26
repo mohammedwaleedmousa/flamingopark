@@ -62,13 +62,8 @@ const CategoriesPage = () => {
     [categories, selectedParent],
   );
   const selectedSub = useMemo(() => subCategories.find((s) => s.slug === subSlug) || null, [subCategories, subSlug]);
-  const showAllForParent = searchParams.get("all") === "1";
-
-  const effectiveLeafCategory = selectedSub
-    ? selectedSub
-    : selectedParent && (subCategories.length === 0 || showAllForParent)
-      ? selectedParent
-      : null;
+  // Opening a parent category includes it and its subcategories in the product query.
+  const effectiveLeafCategory = selectedSub || selectedParent || null;
 
   const effectiveLeafSlug = effectiveLeafCategory?.slug || "";
   const page = Math.max(1, Number(searchParams.get("page") || 1));

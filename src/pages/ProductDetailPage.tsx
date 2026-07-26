@@ -25,7 +25,8 @@ import {
 const ProductDetailPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
-  const { country, addToCart } = useStore();
+  const { addToCart } = useStore();
+  const country = 'GLOBAL' as any;
   const { isFavorite, toggleFavorite } = useFavorites();
   const { items: recentItems, add: addRecent } = useRecentlyViewed();
   const [selectedImage, setSelectedImage] = useState(0);

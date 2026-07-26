@@ -38,6 +38,9 @@ export interface Product {
 }
 
 export interface VariantSize {
+  // extended below
+  _reserved?: never;
+}
   size: string;
   stock: number;
 }

@@ -58,13 +58,15 @@ const NavItem = ({
   icon: Icon,
   label,
   badge,
+  onNavigate,
 }: {
   to: string;
   icon: Icon;
   label: string;
   badge?: number | string;
+  onNavigate?: () => void;
 }) => (
-  <NavLink to={to} end={to === "/home"}>
+  <NavLink to={to} end={to === "/home"} onClick={onNavigate}>
     {({ isActive }) => (
       <div
         className={`
@@ -241,23 +243,23 @@ const Navbar = () => {
                     )}
                     {/* Shopping */}
                     <Section label="التسوق">
-                      <NavItem to="/notifications" icon={Bell} label="الإشعارات" badge={unreadCount || undefined} />
-                      <NavItem to="/home" icon={House} label="الرئيسية" />
-                      <NavItem to="/categories" icon={SquaresFour} label="جميع الأقسام" />
-                      <NavItem to="/products" icon={Package} label="جميع المنتجات" />
-                      <NavItem to="/seasonal-offers" icon={Tag} label="العروض الموسمية" />
-                      <NavItem to="/new-arrivals" icon={Package} label="وصل حديثاً" />
-                      <NavItem to="/best-sellers" icon={Crown} label="الأكثر مبيعاً" />
+                      <NavItem onNavigate={() => setMenuOpen(false)} to="/notifications" icon={Bell} label="الإشعارات" badge={unreadCount || undefined} />
+                      <NavItem onNavigate={() => setMenuOpen(false)} to="/home" icon={House} label="الرئيسية" />
+                      <NavItem onNavigate={() => setMenuOpen(false)} to="/categories" icon={SquaresFour} label="جميع الأقسام" />
+                      <NavItem onNavigate={() => setMenuOpen(false)} to="/products" icon={Package} label="جميع المنتجات" />
+                      <NavItem onNavigate={() => setMenuOpen(false)} to="/seasonal-offers" icon={Tag} label="العروض الموسمية" />
+                      <NavItem onNavigate={() => setMenuOpen(false)} to="/new-arrivals" icon={Package} label="وصل حديثاً" />
+                      <NavItem onNavigate={() => setMenuOpen(false)} to="/best-sellers" icon={Crown} label="الأكثر مبيعاً" />
                     </Section>
 
                     <Section label="الحساب">
-                      <NavItem to="/cart" icon={ShoppingCart} label="الحقيبة" badge={cartCount || undefined} />
-                      <NavItem to="/favorites" icon={Heart} label="المفضلة" badge={favorites.length || undefined} />
-                      <NavItem to="/account" icon={User} label="حسابي" />
+                      <NavItem onNavigate={() => setMenuOpen(false)} to="/cart" icon={ShoppingCart} label="الحقيبة" badge={cartCount || undefined} />
+                      <NavItem onNavigate={() => setMenuOpen(false)} to="/favorites" icon={Heart} label="المفضلة" badge={favorites.length || undefined} />
+                      <NavItem onNavigate={() => setMenuOpen(false)} to="/account" icon={User} label="حسابي" />
                     </Section>
 
                     <Section label="معلومات">
-                      <NavItem to="/store-info" icon={MapPin} label="معلومات المتجر" />
+                      <NavItem onNavigate={() => setMenuOpen(false)} to="/store-info" icon={MapPin} label="معلومات المتجر" />
                     </Section>
                   </nav>
                   <div className="border-t border-border px-6 py-5 bg-white">

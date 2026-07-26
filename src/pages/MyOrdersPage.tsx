@@ -41,16 +41,12 @@ const MyOrdersPage = () => {
     const fetchOrders = async () => {
       setLoading(true);
       try {
-        let query = supabase
+        const { data, error } = await supabase
           .from("orders")
           .select("id, order_number, total, status, created_at, invoice_url")
+          .eq("owner_user_id", userId)
           .order("created_at", { ascending: false })
           .limit(100);
-
-        if (userPhone) query = query.or(`customer_id.eq.${userId},customer_phone.eq.${userPhone}`);
-        else query = query.eq("customer_id", userId);
-
-        const { data, error } = await query;
         if (error) throw error;
         setOrders((data || []) as OrderRow[]);
       } finally {
@@ -61,13 +57,14 @@ const MyOrdersPage = () => {
     fetchOrders();
   }, [userId, userPhone]);
 
-  const resolveInvoiceUrl = (raw: string | null) => {
-    if (!raw) return null;
-    const value = String(raw).trim();
-    if (!value) return null;
-    if (/^https?:\/\//i.test(value)) return value;
-    const { data } = supabase.storage.from("invoices").getPublicUrl(value);
-    return data.publicUrl;
+  const openInvoice = async (orderId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("invoice-access", { body: { action: "signed_url", orderId } });
+      if (error || !data?.signedUrl) throw error || new Error("Invoice unavailable");
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    } catch {
+      // Invoice access is non-fatal to the order history UI.
+    }
   };
 
   const totalAmount = useMemo(() => orders.reduce((s, o) => s + Number(o.total || 0), 0), [orders]);
@@ -103,7 +100,6 @@ const MyOrdersPage = () => {
               {loading && <p className="p-4 text-sm text-muted-foreground">جاري تحميل الطلبات...</p>}
               {!loading && orders.length === 0 && <p className="p-4 text-sm text-muted-foreground">لا توجد طلبات بعد</p>}
               {!loading && orders.map((order) => {
-                const invoiceUrl = resolveInvoiceUrl(order.invoice_url);
                 return (
                   <div key={order.id} className="p-4 flex items-center justify-between gap-3">
                     <div>
@@ -118,8 +114,8 @@ const MyOrdersPage = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => invoiceUrl && window.open(invoiceUrl, "_blank", "noopener,noreferrer")}
-                        disabled={!invoiceUrl}
+                        onClick={() => void openInvoice(order.id)}
+                        disabled={!order.invoice_url}
                         className="mt-2 mr-2 text-xs px-2.5 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         عرض الفاتورة

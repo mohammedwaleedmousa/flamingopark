@@ -34,6 +34,7 @@ interface OrderItem {
 }
 
 interface OrderData {
+  orderId: string;
   orderNumber: string;
   trackingToken: string;
   customerName: string;
@@ -143,19 +144,21 @@ const OrderConfirmationPage = () => {
       // Try to upload to storage (non-blocking)
       try {
         const pdfBlob = pdf.output('blob');
-        const fileName = `invoice-${orderData.orderNumber}-${Date.now()}.pdf`;
-
-        const { error: uploadError } = await supabase.storage
-          .from('invoices')
-          .upload(fileName, pdfBlob, {
-            contentType: 'application/pdf',
-            cacheControl: '3600',
-          });
-
-        if (uploadError) {
-          console.warn('Upload warning:', uploadError);
-          // Continue anyway so the customer isn't blocked
-        }
+        const dataUrl = await new Promise<string>((resolve, reject) => {
+          const reader = new FileReader();
+          reader.onload = () => resolve(String(reader.result));
+          reader.onerror = () => reject(new Error('Could not encode invoice'));
+          reader.readAsDataURL(pdfBlob);
+        });
+        const { error: uploadError } = await supabase.functions.invoke('invoice-access', {
+          body: {
+            action: 'upload',
+            orderId: orderData.orderId,
+            trackingToken: orderData.trackingToken,
+            pdfBase64: dataUrl.split(',')[1],
+          },
+        });
+        if (uploadError) console.warn('Upload warning:', uploadError);
       } catch (uploadErr) {
         console.warn('Upload failed:', uploadErr);
         // Continue anyway

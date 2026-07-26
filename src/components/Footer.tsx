@@ -1,7 +1,6 @@
 import { Link } from "react-router-dom";
 import { FaInstagram, FaWhatsapp, FaFacebookF, FaSnapchatGhost } from "react-icons/fa";
 import { ArrowUp } from "lucide-react";
-import NewsletterSubscription from "./NewsletterSubscription";
 
 const cols: { title: string; links: { label: string; href: string }[] }[] = [
   {

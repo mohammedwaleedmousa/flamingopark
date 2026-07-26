@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { Swiper, SwiperSlide } from "swiper/react";
+import type { Swiper as SwiperInstance } from "swiper";
 import { Autoplay } from "swiper/modules";
 import "swiper/css";
 
@@ -25,7 +26,7 @@ const slides = [
 export default function HeroSlider() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [loadedSlides, setLoadedSlides] = useState(() => new Set([0]));
-  const swiperRef = useRef<any>(null);
+  const swiperRef = useRef<SwiperInstance | null>(null);
 
   return (
     <section

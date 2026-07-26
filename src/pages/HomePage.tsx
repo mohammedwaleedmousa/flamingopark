@@ -477,8 +477,8 @@ const HomePage = () => {
                   decoding="async"
                   className="
                     w-full h-full object-cover
-                    scale-105 hover:scale-110
-                    transition duration-700
+                    md:scale-105 md:hover:scale-110
+                    md:transition md:duration-700
                   "
                 />
 

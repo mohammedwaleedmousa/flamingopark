@@ -7,6 +7,7 @@ import { useCurrency } from "@/lib/currency";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Heart, ShoppingBag } from "lucide-react";
 import { saveCatalogScroll } from "@/lib/catalogScroll";
+import { thumbnailUrl } from "@/lib/imageUrl";
 
 type ColorVariant = { name?: string; hex?: string; images?: string[] };
 type DisplayProduct = Product & { colorVariants?: ColorVariant[]; color_variants?: ColorVariant[]; rating?: number };
@@ -74,6 +75,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
     }
     return "/placeholder.svg";
   };
+  const imageUrl = getProductImage();
   return (
     <Link to={`/product/${product.slug}`} onClick={() => saveCatalogScroll(`${location.pathname}${location.search}`)} className="group block" dir="rtl">
       <div
@@ -83,15 +85,18 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
           rounded-[20px]
           overflow-hidden
           flex flex-col
-          transition-all duration-700 ease-[cubic-bezier(0.22_1_0.36_1)]
-          hover:-translate-y-1 hover:shadow-2xl
+          transition-all md:duration-700 ease-[cubic-bezier(0.22_1_0.36_1)]
+          md:hover:-translate-y-1 md:hover:shadow-2xl
         `}
       >
 
       {/* IMAGE FULL AREA */}
       <div className="relative flex-1 overflow-hidden bg-neutral-100 ">
         <img
-          src={getProductImage()}
+          src={thumbnailUrl(imageUrl, 480)}
+          onError={(event) => {
+            if (event.currentTarget.src !== imageUrl) event.currentTarget.src = imageUrl;
+          }}
           alt={product.nameAr}
           loading="lazy"
           decoding="async"
@@ -100,8 +105,8 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           className="
             w-full h-full object-cover
-            transition duration-700 ease-out
-            group-hover:scale-105
+            transition md:duration-700 ease-out
+            md:group-hover:scale-105
           "
         />
         {/* quick-action buttons */}

@@ -411,6 +411,53 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
             />
           </label>
         </div>
+
+        {/* أحجام هذا اللون */}
+        <div className="mt-4 pt-4 border-t border-border/60">
+          <label className="block text-xs text-muted-foreground mb-2">
+            الأحجام المتاحة لهذا اللون (اختياري)
+          </label>
+          <div className="flex flex-wrap gap-2 mb-2">
+            {(c.sizes || []).map((sz, si) => (
+              <span key={si} className="inline-flex items-center gap-1 px-3 py-1.5 bg-muted rounded-lg text-sm">
+                {sz}
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = [...value];
+                    next[ci].sizes = (next[ci].sizes || []).filter((_, i) => i !== si);
+                    onChange(next);
+                  }}
+                  className="text-destructive hover:text-destructive/80"
+                >
+                  <X className="w-3 h-3" />
+                </button>
+              </span>
+            ))}
+          </div>
+          <div className="flex gap-2">
+            <Input
+              placeholder="مثال: 36, 37, 38"
+              dir="rtl"
+              className="h-9 rounded-xl"
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  e.preventDefault();
+                  const raw = (e.target as HTMLInputElement).value.trim();
+                  if (!raw) return;
+                  const parts = raw.split(/[,\s]+/).filter(Boolean);
+                  const next = [...value];
+                  const existing = new Set(next[ci].sizes || []);
+                  parts.forEach((p) => existing.add(p));
+                  next[ci].sizes = Array.from(existing);
+                  onChange(next);
+                  (e.target as HTMLInputElement).value = '';
+                }
+              }}
+            />
+            <span className="text-[11px] text-muted-foreground self-center">اضغط Enter للإضافة</span>
+          </div>
+        </div>
       </div>
     ))}
   </div>

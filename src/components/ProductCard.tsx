@@ -8,12 +8,15 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { Heart, ShoppingBag } from "lucide-react";
 import { saveCatalogScroll } from "@/lib/catalogScroll";
 
+type ColorVariant = { name?: string; hex?: string; images?: string[] };
+type DisplayProduct = Product & { colorVariants?: ColorVariant[]; color_variants?: ColorVariant[]; rating?: number };
+
 interface ProductCardProps {
-  product: Product;
+  product: DisplayProduct;
   index?: number;
   badge?: "NEW IN" | "LIMITED" | "BEST SELLER" | "HOT" | null;
   size?: "large" | "medium" | "small";
-  onQuickView?: (p: Product) => void;
+  onQuickView?: (p: DisplayProduct) => void;
 }
 
 const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCardProps) => {
@@ -44,7 +47,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
     e.preventDefault();
     e.stopPropagation();
     // If product has variants, open quick view to choose color/size
-    const variants = (product as any).variants as any[] | undefined;
+    const variants = product.variants;
     if (variants && variants.length > 0) {
       onQuickView?.(product);
       return;
@@ -59,7 +62,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
   const aspectClass = size === 'large' ? 'aspect-[4/5] sm:aspect-[3/4]' : size === 'medium' ? 'aspect-[3/5] sm:aspect-[3/4]' : 'aspect-[4/8] sm:aspect-[3/4]';
   const getProductImage = () => {
     // عرض صورة أول لون مضاف للمنتج
-    const variants = (product as any).colorVariants || (product as any).color_variants;
+    const variants = product.colorVariants || product.color_variants;
     if (Array.isArray(variants) && variants.length > 0) {
       const firstColorImage = variants[0]?.images?.[0];
       if (firstColorImage) {
@@ -130,7 +133,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
           </p>
           <span className="text-[11px] text-neutral-500 flex items-center gap-1">
             <span className="text-pink-400">★</span>
-            {(product as any).rating ? Number((product as any).rating).toFixed(1) : "4.5"}
+            {product.rating ? Number(product.rating).toFixed(1) : "4.5"}
           </span>
         </div>
         <h3 className="text-sm font-medium text-neutral-900 line-clamp-2">
@@ -140,7 +143,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
         <div className="flex items-center justify-between">
           <div className="text-sm font-semibold text-black">
             {(() => {
-              const variants = (product as any).variants as any[] | undefined;
+              const variants = product.variants;
               if (!variants || variants.length === 0) return format(finalPrice);
               const prices = variants.map((v) => {
                 const p = v.price ?? product.price; const d = v.discount ?? product.discount ?? 0; return p * (1 - d / 100);
@@ -152,12 +155,12 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
         </div>
 
         {/* swatches */}
-        {(product as any).colorVariants &&
-          (product as any).colorVariants.length > 0 && (
+        {product.colorVariants &&
+          product.colorVariants.length > 0 && (
             <div className="mt-2 flex items-center gap-2">
-              {((product as any).colorVariants as any[])
+              {product.colorVariants
                 .slice(0, 4)
-                .map((v: any, index: number) => (
+                .map((v, index: number) => (
                   <div
                     key={index}
                     title={v.name}

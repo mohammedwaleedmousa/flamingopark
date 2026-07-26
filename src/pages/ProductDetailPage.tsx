@@ -190,7 +190,9 @@ const ProductDetailPage = () => {
     ? product.qualityVariants?.[selectedQualityIdx] : null;
   const effectivePrice = activeQuality ? Number(activeQuality.price) : product.price;
   const effectiveDescription = activeQuality?.description || product.descriptionAr;
-  const discountedPrice = product.discount ? effectivePrice * (1 - product.discount / 100) : effectivePrice;
+  // السعر المعروض هو السعر المُدخل مباشرة؛ لا نُطبّق نسبة الخصم رياضياً هنا
+  // لتفادي تخفيض السعر بدون قصد. `discount` يعرض كشارة فقط.
+  const discountedPrice = effectivePrice;
   const totalPrice = discountedPrice + accessoriesTotal;
   const currency = currencySymbol;
   const activeColorVariant = selectedColorIdx !== null ? product.colorVariants?.[selectedColorIdx] : null;
@@ -198,7 +200,9 @@ const ProductDetailPage = () => {
   const displayImages = qualityImages
     ? qualityImages
     : (activeColorVariant && activeColorVariant.images.length > 0 ? activeColorVariant.images : product.images);
-  const sizesToShow = product.sizes || [];
+  // الأحجام حسب اللون المختار: إن وُجدت للّون تُستخدم، وإلا نعرض الأحجام العامة
+  const colorSizes = (activeColorVariant as any)?.sizes as string[] | undefined;
+  const sizesToShow = colorSizes && colorSizes.length > 0 ? colorSizes : (product.sizes || []);
   const effectiveReturnPolicy = product.returnPolicy || defaultReturnPolicy;
  
   const updateAccessoryQuantity = (key: string, delta: number) => {

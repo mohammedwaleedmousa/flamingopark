@@ -14,7 +14,7 @@ import { SlidersHorizontal, X, Heart } from "lucide-react";
 import { Slider } from "@/components/ui/slider";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
-import { clearCatalogScroll, restoreCatalogScroll, saveCatalogScroll } from "@/lib/catalogScroll";
+import { clearCatalogScroll, restoreCatalogScroll } from "@/lib/catalogScroll";
 if ("scrollRestoration" in window.history) {
   // Let the browser restore scroll on back/forward so we return to the same product row.
   window.history.scrollRestoration = "auto";
@@ -540,7 +540,7 @@ const ProductsPage = () => {
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
               {paginatedProducts.map((p, i) => (
                 <motion.div key={p.id} custom={i} initial="hidden" animate="show" variants={shimmerVariants}>
-                  <ProductCard product={p} priority={i < 4} onQuickView={(prod) => setQuickViewProd(prod)} />
+                  <ProductCard product={p} onQuickView={(prod) => setQuickViewProd(prod)} />
                 </motion.div>
               ))}
             </div>
@@ -548,7 +548,7 @@ const ProductsPage = () => {
 
           {hasMore && (
             <div className="flex items-center justify-center mt-10">
-              <button onClick={() => { saveCatalogScroll(`${location.pathname}${location.search}`); setParam("page", String(page + 1)); }} className="px-8 py-3 rounded-xl bg-foreground text-background hover:opacity-90 transition-colors">{getSiteText(content, "products_page_load_more", "عرض المزيد")}</button>
+              <button onClick={() => { setParam("page", String(page + 1)); }} className="px-8 py-3 rounded-xl bg-foreground text-background hover:opacity-90 transition-colors">{getSiteText(content, "products_page_load_more", "عرض المزيد")}</button>
             </div>
           )}
           </div>

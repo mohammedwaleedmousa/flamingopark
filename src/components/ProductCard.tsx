@@ -17,10 +17,9 @@ interface ProductCardProps {
   badge?: "NEW IN" | "LIMITED" | "BEST SELLER" | "HOT" | null;
   size?: "large" | "medium" | "small";
   onQuickView?: (p: DisplayProduct) => void;
-  priority?: boolean;
 }
 
-const ProductCard = ({ product, badge, size = 'small', onQuickView, priority = false }: ProductCardProps) => {
+const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCardProps) => {
   const location = useLocation();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { addToCart, openCart } = useStore();
@@ -94,8 +93,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView, priority = f
         <img
           src={getProductImage()}
           alt={product.nameAr}
-          loading={priority ? "eager" : "lazy"}
-          fetchPriority={priority ? "high" : "auto"}
+          loading="lazy"
           decoding="async"
           width={600}
           height={800}

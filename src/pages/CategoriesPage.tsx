@@ -10,7 +10,7 @@ import ProductCard from "@/components/ProductCard";
 import { Button } from "@/components/ui/button";
 import type { Product } from "@/store/useStore";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
-import { clearCatalogScroll, restoreCatalogScroll, saveCatalogScroll } from "@/lib/catalogScroll";
+import { clearCatalogScroll, restoreCatalogScroll } from "@/lib/catalogScroll";
 
 interface BrandCategoryLink { brand_id: string; }
 interface BrandNameRow { name: string | null; }
@@ -334,12 +334,12 @@ const CategoriesPage = () => {
               <>
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4">
                   {visibleProducts.map((product, index) => (
-                    <ProductCard key={product.id} product={product} index={index} priority={index < 4} />
+                    <ProductCard key={product.id} product={product} index={index} />
                   ))}
                 </div>
                 {hasMore && (
                   <div className="flex justify-center pt-3">
-                    <Button variant="outline" onClick={() => { saveCatalogScroll(`${location.pathname}${location.search}`); setStepParams({ page: String(page + 1) }); }}>عرض المزيد</Button>
+                    <Button variant="outline" onClick={() => { setStepParams({ page: String(page + 1) }); }}>عرض المزيد</Button>
                   </div>
                 )}
               </>

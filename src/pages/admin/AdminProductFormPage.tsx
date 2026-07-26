@@ -413,6 +413,7 @@ const AdminProductFormPage = () => {
                 type="number"
                 value={formData.price}
                 onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                onWheel={(e) => e.currentTarget.blur()}
                 placeholder="0.00"
                 className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
               />
@@ -424,6 +425,7 @@ const AdminProductFormPage = () => {
                 type="number"
                 value={formData.cost_price}
                 onChange={(e) => setFormData({ ...formData, cost_price: e.target.value })}
+                onWheel={(e) => e.currentTarget.blur()}
                 placeholder="0.00"
                 className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
               />
@@ -438,6 +440,7 @@ const AdminProductFormPage = () => {
                 type="number"
                 value={formData.original_price}
                 onChange={(e) => setFormData({ ...formData, original_price: e.target.value })}
+                onWheel={(e) => e.currentTarget.blur()}
                 placeholder="0.00"
                 className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
               />
@@ -449,6 +452,7 @@ const AdminProductFormPage = () => {
                 type="number"
                 value={formData.discount}
                 onChange={(e) => setFormData({ ...formData, discount: e.target.value })}
+                onWheel={(e) => e.currentTarget.blur()}
                 placeholder="0"
                 className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
               />

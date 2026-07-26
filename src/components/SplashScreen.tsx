@@ -14,8 +14,8 @@ const SplashScreen = ({ onDone }: { onDone: () => void }) => {
   }, []);
 
   useEffect(() => {
-    const leaveAt = reduceMotion ? 900 : 2000;
-    const doneAt = reduceMotion ? 1300 : 2600;
+    const leaveAt = reduceMotion ? 150 : 450;
+    const doneAt = reduceMotion ? 250 : 650;
     const t1 = setTimeout(() => setLeaving(true), leaveAt);
     const t2 = setTimeout(() => onDone(), doneAt);
     return () => {

@@ -180,7 +180,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
           absolute bottom-0 left-0 right-0
           translate-y-full group-hover:translate-y-0
           transition-all duration-700 ease-[cubic-bezier(0.22_1_0.36_1)]
-          bg-white/80 backdrop-blur-xl
+          bg-white/90 md:bg-white/80 md:backdrop-blur-xl
           border-t border-pink-100/30
           flex items-center justify-between
           px-4 py-3

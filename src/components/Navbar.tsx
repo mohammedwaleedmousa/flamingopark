@@ -27,7 +27,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuthActions } from "@/hooks/useAuthActions";
-import { useCurrency, getActiveCurrencies, hydrateCurrencies } from "@/lib/currency";
+import { useCurrency, getActiveCurrencies } from "@/lib/currency";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import { useCustomerNotifications } from "@/hooks/useCustomerNotifications";
@@ -133,9 +133,6 @@ const Navbar = () => {
   const [scrolled, setScrolled] = useState(false);
   const [currencyList, setCurrencyList] = useState(getActiveCurrencies());
 
-  useEffect(() => {
-    hydrateCurrencies().then(() => setCurrencyList(getActiveCurrencies()));
-  }, []);
 
   // Restore old-style labels for the known 3 currencies; fall back to DB label for any custom currency the admin adds.
   const staticLabels: Record<string, { label: string; flag: string }> = {
@@ -151,6 +148,7 @@ const Navbar = () => {
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories-all-active"],
+    enabled: menuOpen,
     queryFn: async () => {
       const { data } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order");
       return (data || []) as NavbarCategory[];
@@ -190,7 +188,7 @@ const Navbar = () => {
 
   return (
     <header
-      className="fixed top-0 inset-x-0 z-50 bg-white backdrop-blur-xl border-b border-black/5 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.2)]"
+      className="fixed top-0 inset-x-0 z-50 bg-white backdrop-blur-none md:backdrop-blur-xl border-b border-black/5 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.2)]"
       dir="rtl"
     >
       <div className="container mx-auto px-4 md:px-8">
@@ -215,7 +213,7 @@ const Navbar = () => {
                 side="right"
                 className="
                 w-[80vw] sm:w-[360px] p-0
-                bg-white backdrop-blur-xl
+                bg-white backdrop-blur-none md:backdrop-blur-xl
                 border-l border-black/5
                 shadow-[20px_0_60px_-30px_rgba(0,0,0,0.25)]
                 [&>button]:left-3
@@ -430,7 +428,7 @@ const Navbar = () => {
       </div>
 
       {isSearchOpen && (
-        <div className="border-b bg-white/90 backdrop-blur-xl animate-in fade-in duration-200">
+        <div className="border-b bg-white/90 backdrop-blur-none md:backdrop-blur-xl animate-in fade-in duration-200">
           <form onSubmit={submit} className="container mx-auto px-4 py-4">
             <div className="relative">
               <MagnifyingGlass

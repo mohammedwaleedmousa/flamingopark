@@ -21,11 +21,9 @@ import type { Icon } from "phosphor-react";
 import { SignOut } from "phosphor-react";
 import { SignIn } from "phosphor-react";
 import { useEffect, useState } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { useStore } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
-import { supabase } from "@/integrations/supabase/client";
 import { useAuthActions } from "@/hooks/useAuthActions";
 import { useCurrency, getActiveCurrencies } from "@/lib/currency";
 import { Link, NavLink, useNavigate } from "react-router-dom";
@@ -50,8 +48,6 @@ const Section = ({ label, children }: { label: string; children: React.ReactNode
     <div>{children}</div>
   </div>
 );
-
-type NavbarCategory = { id: string; slug: string; name: string; name_ar: string; parent_id: string | null; image_url: string | null; sort_order: number };
 
 const NavItem = ({
   to,
@@ -146,19 +142,7 @@ const Navbar = () => {
     flag: staticLabels[c.code]?.flag ?? "💱",
   }));
 
-  const { data: categories = [] } = useQuery({
-    queryKey: ["categories-all-active"],
-    enabled: menuOpen,
-    queryFn: async () => {
-      const { data } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order");
-      return (data || []) as NavbarCategory[];
-    },
-  });
 
-  const parents = categories.filter((c) => !c.parent_id);
-  const subsOf = (id: string) => categories.filter((c) => c.parent_id === id);
-
-  const topLinks = parents.slice(0, 6).map((c) => ({ href: `/products?category=${c.slug}`, label: c.name_ar }));
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();

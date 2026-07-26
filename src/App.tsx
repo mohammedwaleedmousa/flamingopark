@@ -1,11 +1,10 @@
-import { useEffect, useState, lazy, Suspense } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigationType } from "react-router-dom";
 import { useStore } from "@/store/useStore";
-import SplashScreen from "@/components/SplashScreen";
 import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
 import { DateRangeProvider } from "@/lib/analytics/dateRange";
@@ -125,10 +124,6 @@ const ScrollToTop = () => {
 };
 
 const App = () => {
-  const [showSplash, setShowSplash] = useState(() => {
-    if (typeof window === "undefined") return false;
-    return !sessionStorage.getItem("flamingo-splash-seen");
-  });
 
   // هنا يتم تجهيز العملات عند تشغيل الموقع
   useEffect(() => {
@@ -140,9 +135,6 @@ const App = () => {
     <TooltipProvider>
       <Toaster />
       <Sonner />
-      {showSplash && (
-        <SplashScreen onDone={() => { sessionStorage.setItem("flamingo-splash-seen", "1"); setShowSplash(false); }} />
-      )}
       <DateRangeProvider>
         <BrowserRouter>
           <ScrollToTop />

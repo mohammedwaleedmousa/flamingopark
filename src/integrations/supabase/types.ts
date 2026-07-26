@@ -1235,7 +1235,9 @@ export type Database = {
           invoice_url: string | null
           items: Json
           order_number: string
+          owner_user_id: string | null
           payment_method: string
+          tracking_token_hash: string | null
           status: string
           subtotal: number
           total: number
@@ -1260,7 +1262,9 @@ export type Database = {
           invoice_url?: string | null
           items?: Json
           order_number: string
+          owner_user_id?: string | null
           payment_method: string
+          tracking_token_hash?: string | null
           status?: string
           subtotal: number
           total: number
@@ -1285,7 +1289,9 @@ export type Database = {
           invoice_url?: string | null
           items?: Json
           order_number?: string
+          owner_user_id?: string | null
           payment_method?: string
+          tracking_token_hash?: string | null
           status?: string
           subtotal?: number
           total?: number

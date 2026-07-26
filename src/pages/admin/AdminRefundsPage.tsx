@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import type { Database } from '@/integrations/supabase/types';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -47,7 +48,7 @@ export default function AdminRefundsPage() {
     fetch();
   }
   async function updateStatus(id: string, status: string) {
-    const upd: Record<string, unknown> = { status };
+    const upd: Database['public']['Tables']['refunds']['Update'] = { status };
     if (status === 'processed') upd.processed_at = new Date().toISOString();
     const { error } = await supabase.from('refunds').update(upd).eq('id', id);
     if (error) return toast({ title: 'خطأ', variant: 'destructive' });

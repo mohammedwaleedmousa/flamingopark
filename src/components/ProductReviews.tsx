@@ -74,8 +74,9 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
     for (const file of list) {
       try {
         uploaded.push(await uploadOptimizedImage(file, `reviews/${productId}`, { maxSizeMB: 0.6, maxWidthOrHeight: 1200 }));
-      } catch (error: any) {
-        toast({ title: 'تعذر رفع الصورة', description: error.message, variant: 'destructive' });
+      } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : 'تعذر رفع الصورة';
+        toast({ title: 'تعذر رفع الصورة', description: message, variant: 'destructive' });
       }
     }
     setImages((prev) => [...prev, ...uploaded]);
@@ -88,7 +89,7 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('product_reviews')
-        .select('*')
+        .select('id,customer_name,rating,comment,created_at,images')
         .eq('product_id', productId)
         .eq('is_approved', true)
         .order('created_at', { ascending: false });
@@ -116,7 +117,7 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
         comment: comment.trim() || null,
         is_approved: false,
         images,
-      } as any);
+      } as unknown as never);
 
       if (error) throw error;
     },

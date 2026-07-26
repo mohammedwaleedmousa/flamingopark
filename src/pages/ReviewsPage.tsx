@@ -37,7 +37,7 @@ const ReviewsPage = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('reviews')
-        .select('*')
+        .select('id,customer_name,message,message_ar,rating,country,created_at')
         .eq('is_approved', true)
         .order('created_at', { ascending: false });
       if (error) throw error;

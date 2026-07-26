@@ -12,6 +12,9 @@ import type { Product } from "@/store/useStore";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import { clearCatalogScroll, restoreCatalogScroll } from "@/lib/catalogScroll";
 
+interface BrandCategoryLink { brand_id: string; }
+interface BrandNameRow { name: string | null; }
+
 interface Category {
   id: string;
   slug: string;
@@ -115,13 +118,13 @@ const CategoriesPage = () => {
     queryKey: ["categories-mapped-brands", effectiveLeafCategory?.id],
     enabled: !!effectiveLeafCategory,
     queryFn: async () => {
-      const { data: links, error: linkError } = await (supabase as any)
+      const { data: links, error: linkError } = await supabase
         .from("brand_categories")
         .select("brand_id")
         .eq("category_id", effectiveLeafCategory!.id);
       if (linkError) throw linkError;
 
-      const brandIds = (links || []).map((row: any) => row.brand_id).filter(Boolean);
+      const brandIds = (links || []).map((row) => (row as BrandCategoryLink).brand_id).filter(Boolean);
       if (brandIds.length === 0) return [] as string[];
 
       const { data: rows, error: brandsError } = await supabase
@@ -131,7 +134,7 @@ const CategoriesPage = () => {
         .in("id", brandIds as string[]);
       if (brandsError) throw brandsError;
 
-      return Array.from(new Set((rows || []).map((r: any) => (r.name || "").trim()).filter(Boolean)));
+      return Array.from(new Set((rows || []).map((row) => ((row as BrandNameRow).name || "").trim()).filter(Boolean)));
     },
   });
 

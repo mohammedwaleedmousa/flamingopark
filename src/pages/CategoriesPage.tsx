@@ -26,12 +26,12 @@ interface Category {
 }
 
 const FALLBACK: Record<string, string> = {
-  women: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=900&q=85",
-  men: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=900&q=85",
-  kids: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=900&q=85",
-  bags: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=900&q=85",
-  shoes: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=900&q=85",
-  beauty: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=900&q=85",
+  women: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=640&q=65",
+  men: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=640&q=65",
+  kids: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=640&q=65",
+  bags: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=640&q=65",
+  shoes: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=640&q=65",
+  beauty: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=640&q=65",
 };
 
 const CategoriesPage = () => {

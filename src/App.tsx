@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense } from "react";
+import { useEffect, lazy, Suspense, useState } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -10,6 +10,7 @@ import AnalyticsTracker from "@/components/AnalyticsTracker";
 import { DateRangeProvider } from "@/lib/analytics/dateRange";
 import { hydrateCurrencies } from "@/lib/currency";
 import { SpeedInsights } from "@vercel/speed-insights/react";
+import { MotionConfig } from "framer-motion";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
@@ -124,6 +125,15 @@ const ScrollToTop = () => {
 };
 
 const App = () => {
+  const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches);
+
+  useEffect(() => {
+    const media = window.matchMedia("(max-width: 767px)");
+    const update = () => setIsMobile(media.matches);
+    update();
+    media.addEventListener("change", update);
+    return () => media.removeEventListener("change", update);
+  }, []);
 
   // هنا يتم تجهيز العملات عند تشغيل الموقع
   useEffect(() => {
@@ -132,6 +142,7 @@ const App = () => {
 
   return (
   <QueryClientProvider client={queryClient}>
+    <MotionConfig reducedMotion={isMobile ? "always" : "user"}>
     <TooltipProvider>
       <Toaster />
       <Sonner />
@@ -235,6 +246,7 @@ const App = () => {
         </BrowserRouter>
       </DateRangeProvider>
     </TooltipProvider>
+    </MotionConfig>
   </QueryClientProvider>
 );
 };

@@ -13,6 +13,7 @@ export interface ColorVariant {
   hex: string;
   hex2?: string;
   images: string[];
+  sizes?: string[];
 }
 
 interface Props {

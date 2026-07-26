@@ -94,20 +94,12 @@ const AccountPage = () => {
       if (!user?.id) return;
       setInvoicesLoading(true);
       try {
-        const userPhone = String(user?.user_metadata?.phone_number || "").trim();
-        let query = supabase
+        const { data, error } = await supabase
           .from("orders")
           .select("id, order_number, total, status, created_at, invoice_url")
+          .eq("owner_user_id", user.id)
           .order("created_at", { ascending: false })
           .limit(20);
-
-        if (userPhone) {
-          query = query.or(`customer_id.eq.${user.id},customer_phone.eq.${userPhone}`);
-        } else {
-          query = query.eq("customer_id", user.id);
-        }
-
-        const { data, error } = await query;
         if (error) throw error;
         setInvoices((data || []) as Array<{ id: string; order_number: string; total: number; status: string; created_at: string; invoice_url: string | null }>);
       } catch {
@@ -294,13 +286,14 @@ const AccountPage = () => {
     { to: "/my-orders", icon: Package, label: "طلباتي", desc: "سجل الطلبات والفواتير", color: "text-green-500" },
   ];
 
-  const resolveInvoiceUrl = (raw: string | null) => {
-    if (!raw) return null;
-    const value = String(raw).trim();
-    if (!value) return null;
-    if (/^https?:\/\//i.test(value)) return value;
-    const { data } = supabase.storage.from("invoices").getPublicUrl(value);
-    return data.publicUrl;
+  const openInvoice = async (orderId: string) => {
+    try {
+      const { data, error } = await supabase.functions.invoke("invoice-access", { body: { action: "signed_url", orderId } });
+      if (error || !data?.signedUrl) throw error || new Error("Invoice unavailable");
+      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
+    } catch {
+      setNotification({ type: "error", message: "تعذر فتح الفاتورة" });
+    }
   };
 
   const settingsItems = [
@@ -457,12 +450,8 @@ const AccountPage = () => {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          const url = resolveInvoiceUrl(inv.invoice_url);
-                          if (!url) return;
-                          window.open(url, "_blank", "noopener,noreferrer");
-                        }}
-                        disabled={!resolveInvoiceUrl(inv.invoice_url)}
+                        onClick={() => void openInvoice(inv.id)}
+                        disabled={!inv.invoice_url}
                         className="mt-2 mr-2 text-xs px-2.5 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                       >
                         عرض الفاتورة

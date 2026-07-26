@@ -193,6 +193,7 @@ const CheckoutPage = () => {
     });
     if (error) throw error;
     return data as {
+      order_id: string;
       order_number: string;
       tracking_token: string;
       items: typeof items;
@@ -274,7 +275,7 @@ const CheckoutPage = () => {
       const createdOrder = await createSecureOrder(validation.data);
       const regionData = codRegions.find((r) => r.id === selectedRegion);
       const orderData = {
-        orderNumber: createdOrder.order_number, trackingToken: createdOrder.tracking_token,
+        orderId: createdOrder.order_id, orderNumber: createdOrder.order_number, trackingToken: createdOrder.tracking_token,
         customerName: customerName || "عميل", customerPhone,
         customerAddress: formData.address || "-", customerCity: formData.city || "",
         customerNotes: formData.notes || "", items: createdOrder.items as typeof validation.data,

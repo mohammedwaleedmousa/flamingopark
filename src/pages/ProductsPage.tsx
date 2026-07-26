@@ -539,7 +539,7 @@ const ProductsPage = () => {
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
               {paginatedProducts.map((p, i) => (
-                <motion.div key={p.id} custom={i} initial="hidden" animate="show" variants={shimmerVariants}>
+                <motion.div key={p.id} custom={i} initial={isMobileViewport ? false : "hidden"} animate={isMobileViewport ? false : "show"} variants={shimmerVariants}>
                   <ProductCard product={p} onQuickView={(prod) => setQuickViewProd(prod)} />
                 </motion.div>
               ))}

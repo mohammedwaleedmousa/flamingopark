@@ -480,6 +480,7 @@ const ProductDetailPage = () => {
                         key={i}
                         onClick={() => {
                           setSelectedColorIdx(selectedColorIdx === i ? null : i);
+                          setSelectedSize(null);
                           goToImage(0);
                         }}
                         className={`relative w-10 h-10 rounded-full border-2 transition-all ${

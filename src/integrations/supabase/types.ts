@@ -688,18 +688,6 @@ export type Database = {
         }
         Relationships: []
       }
-      customer_addresses: {
-        Row: { id: string; user_id: string; customer_id: string | null; label: string; recipient_name: string; phone: string; city: string; address_line1: string; address_line2: string | null; notes: string | null; is_default: boolean; created_at: string; updated_at: string }
-        Insert: { id?: string; user_id: string; customer_id?: string | null; label: string; recipient_name: string; phone: string; city: string; address_line1: string; address_line2?: string | null; notes?: string | null; is_default?: boolean; created_at?: string; updated_at?: string }
-        Update: { id?: string; user_id?: string; customer_id?: string | null; label?: string; recipient_name?: string; phone?: string; city?: string; address_line1?: string; address_line2?: string | null; notes?: string | null; is_default?: boolean; created_at?: string; updated_at?: string }
-        Relationships: []
-      }
-      customer_favorites: {
-        Row: { id: string; user_id: string; customer_id: string | null; product_id: string; created_at: string }
-        Insert: { id?: string; user_id: string; customer_id?: string | null; product_id: string; created_at?: string }
-        Update: { id?: string; user_id?: string; customer_id?: string | null; product_id?: string; created_at?: string }
-        Relationships: []
-      }
       customer_notifications: {
         Row: {
           body: string
@@ -757,9 +745,33 @@ export type Database = {
         ]
       }
       customers: {
-        Row: { country: string; created_at: string; id: string; name: string; phone: string; updated_at: string; user_id: string | null }
-        Insert: { country: string; created_at?: string; id?: string; name: string; phone: string; updated_at?: string; user_id?: string | null }
-        Update: { country?: string; created_at?: string; id?: string; name?: string; phone?: string; updated_at?: string; user_id?: string | null }
+        Row: {
+          country: string
+          created_at: string
+          id: string
+          name: string
+          password_hash: string | null
+          phone: string
+          updated_at: string
+        }
+        Insert: {
+          country: string
+          created_at?: string
+          id?: string
+          name: string
+          password_hash?: string | null
+          phone: string
+          updated_at?: string
+        }
+        Update: {
+          country?: string
+          created_at?: string
+          id?: string
+          name?: string
+          password_hash?: string | null
+          phone?: string
+          updated_at?: string
+        }
         Relationships: []
       }
       delivery_companies: {
@@ -1479,6 +1491,68 @@ export type Database = {
           },
         ]
       }
+      payment_transactions: {
+        Row: {
+          amount: number
+          created_at: string
+          currency: string
+          customer_id: string | null
+          customer_number: string | null
+          error_code: string | null
+          error_message: string | null
+          id: string
+          meta: Json | null
+          order_id: string | null
+          otp_status: string | null
+          payment_provider: string
+          payment_status: string
+          transaction_id: string | null
+          updated_at: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          currency?: string
+          customer_id?: string | null
+          customer_number?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          meta?: Json | null
+          order_id?: string | null
+          otp_status?: string | null
+          payment_provider?: string
+          payment_status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          currency?: string
+          customer_id?: string | null
+          customer_number?: string | null
+          error_code?: string | null
+          error_message?: string | null
+          id?: string
+          meta?: Json | null
+          order_id?: string | null
+          otp_status?: string | null
+          payment_provider?: string
+          payment_status?: string
+          transaction_id?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payment_transactions_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       product_reviews: {
         Row: {
           comment: string | null
@@ -1910,6 +1984,29 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      customer_login: {
+        Args: { _password: string; _phone: string }
+        Returns: {
+          country: string
+          id: string
+          name: string
+          phone: string
+        }[]
+      }
+      customer_register: {
+        Args: {
+          _country: string
+          _name: string
+          _password: string
+          _phone: string
+        }
+        Returns: {
+          country: string
+          id: string
+          name: string
+          phone: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]

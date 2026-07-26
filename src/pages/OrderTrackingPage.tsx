@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { Package, CheckCircle2, Truck, Clock, MessageCircle, XCircle } from 'lucide-react';
+import { Package, CheckCircle2, Truck, Clock, MessageCircle, XCircle, MapPin } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';

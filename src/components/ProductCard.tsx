@@ -36,9 +36,9 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
     });
   };
 
-  const finalPrice = product.discount
-    ? product.price * (1 - product.discount / 100)
-    : product.price;
+  // السعر المعروض هو السعر المُدخل مباشرة. `discount` يستخدم كشارة فقط
+  // ولا يُطبَّق كخصم حسابي هنا لتفادي انخفاض السعر بدون قصد.
+  const finalPrice = product.price;
 
   const handleAdd = (e: React.MouseEvent) => {
     e.preventDefault();

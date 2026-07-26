@@ -35,6 +35,11 @@ export interface Product {
   isBestSeller?: boolean;
   // Optional modern variant model
   variants?: Variant[];
+  color_variants?: any[];
+  colorVariants?: any[];
+  sizes?: string[];
+  categoryId?: string;
+  brandId?: string;
 }
 
 export interface VariantSize {

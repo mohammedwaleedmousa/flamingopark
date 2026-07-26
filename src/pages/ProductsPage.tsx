@@ -6,7 +6,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import ProductCard from "@/components/ProductCard";
-import { Product } from "@/store/useStore";
+import { Product, VariantSize } from "@/store/useStore";
 import { useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
@@ -19,6 +19,9 @@ if ("scrollRestoration" in window.history) {
   // Let the browser restore scroll on back/forward so we return to the same product row.
   window.history.scrollRestoration = "auto";
 }
+
+type ColorVariant = { id?: string; name?: string; colorName?: string; images?: string[]; price?: number; discount?: number; sizes?: VariantSize[] };
+type CatalogProduct = Product & { color_variants?: ColorVariant[] | string };
 
 interface Category {
   id: string;
@@ -44,7 +47,7 @@ const shimmerVariants = {
   show: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.04, duration: 0.45 } }),
 };
 
-const QuickView = ({ product, onClose, isMobile }: { product: Product | null; onClose: () => void; isMobile: boolean }) => {
+const QuickView = ({ product, onClose, isMobile }: { product: CatalogProduct | null; onClose: () => void; isMobile: boolean }) => {
   const { data: content } = useSiteContent("products_page_");
   const store = useStore();
   const { addToCart } = store;
@@ -81,7 +84,7 @@ const QuickView = ({ product, onClose, isMobile }: { product: Product | null; on
   if (!product) return null;
 
   const variants = (() => {
-    let data = (product as any)?.color_variants;
+    let data = product.color_variants;
     if (typeof data === "string") {
       try {
         data = JSON.parse(data);
@@ -108,8 +111,11 @@ const QuickView = ({ product, onClose, isMobile }: { product: Product | null; on
   const discountSource = activeVariant?.discount ?? product.discount;
   const displayPrice = discountSource ? priceSource * (1 - discountSource / 100) : priceSource;
 
-  const sizesForActiveVariant =
-    activeVariant?.sizes || (product as any).sizes || [];
+  const productSizes: VariantSize[] = (product.sizes || []).map((size) => ({
+    size,
+    stock: product.inStock ? 999 : 0,
+  }));
+  const sizesForActiveVariant = activeVariant?.sizes || productSizes;
   const stockForSize = (size?: string) => {
     if (!size) return product.inStock ? 999 : 0;
     const s = sizesForActiveVariant.find((x) => x.size === size);
@@ -246,7 +252,7 @@ const ProductsPage = () => {
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [toolbarShrunk, setToolbarShrunk] = useState(false);
   const page = Math.max(1, Number(searchParams.get("page") || 1));
-  const [quickViewProd, setQuickViewProd] = useState<Product | null>(null);
+  const [quickViewProd, setQuickViewProd] = useState<CatalogProduct | null>(null);
   const PAGE_SIZE = 12;
   const [isMobileViewport, setIsMobileViewport] = useState(false);
 
@@ -331,7 +337,7 @@ const ProductsPage = () => {
 
   const products = useMemo(() => {
     const seen = new Set<string>();
-    return productQueries.flatMap((query) => query.data || []).filter((product) => {
+    return productQueries.flatMap((query) => (query.data || []) as CatalogProduct[]).filter((product) => {
       if (seen.has(product.id)) return false;
       seen.add(product.id);
       return true;
@@ -353,9 +359,9 @@ const ProductsPage = () => {
     },
   });
 
-  const getProductColors = (p: Product): string[] => {
-    const fromVariants = ((p as any).color_variants || [])
-      .map((v: any) => (v.name || "").trim())
+  const getProductColors = (p: CatalogProduct): string[] => {
+    const fromVariants = (Array.isArray(p.color_variants) ? p.color_variants : [])
+      .map((variant) => (variant.name || "").trim())
       .filter(Boolean);
       return Array.from(new Set(fromVariants));
   };
@@ -366,10 +372,10 @@ const ProductsPage = () => {
     return Array.from(set);
   }, [products]);
 
-  const getProductSizes = (p: Product): string[] => {
-    const sizes = ((p as any).color_variants || [])
-      .flatMap((v: any) =>
-        (v.sizes || []).map((s: any) => (s?.size || "").trim())
+  const getProductSizes = (p: CatalogProduct): string[] => {
+    const sizes = (Array.isArray(p.color_variants) ? p.color_variants : [])
+      .flatMap((variant) =>
+        (variant.sizes || []).map((size) => (size?.size || "").trim())
       );
     return Array.from(new Set(sizes.filter(Boolean)));
   };
@@ -412,7 +418,7 @@ const ProductsPage = () => {
     if (sortBy === "best") arr = [...arr].sort((a, b) => Number(!!b.isBestSeller) - Number(!!a.isBestSeller));
     if (sortBy === "featured") arr = [...arr].sort((a, b) => Number(!!b.isFeatured) - Number(!!a.isFeatured));
     return arr;
-  }, [products, searchQuery, brandFilter, colorFilter, sizeFilter, sortBy, saleOnly, inStockOnly, effectiveMin, effectiveMax]);
+  }, [products, brandFilter, colorFilter, sizeFilter, sortBy, saleOnly, inStockOnly, effectiveMin, effectiveMax]);
 
   const setParam = (k: string, v: string | null) => {
     if (k !== "page") clearCatalogScroll(`${location.pathname}${location.search}`);

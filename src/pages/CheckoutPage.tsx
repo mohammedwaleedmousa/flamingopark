@@ -141,7 +141,7 @@ const CheckoutPage = () => {
   const { data: deliveryCompanies = [] } = useQuery({
     queryKey: ["delivery-companies"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("delivery_companies").select("*").eq("is_active", true).order("name");
+      const { data, error } = await supabase.from("delivery_companies").select("id,name,base_fee,delivery_days,is_active").eq("is_active", true).order("name");
       if (error) throw error;
       return data as DeliveryCompany[];
     },

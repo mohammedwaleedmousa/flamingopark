@@ -24,7 +24,7 @@ const ReviewsSection = () => {
     queryFn: async () => {
       const { data, error } = await supabase
         .from('reviews')
-        .select('*')
+        .select('id,customer_name,message,message_ar,rating,country')
         .eq('is_approved', true)
         .order('created_at', { ascending: false })
         .limit(6);
@@ -41,7 +41,7 @@ const ReviewsSection = () => {
     queryFn: async () => {
       const { count, error } = await supabase
         .from('reviews')
-        .select('*', { count: 'exact', head: true })
+        .select('id', { count: 'exact', head: true })
         .eq('is_approved', true);
       if (error) throw error;
 

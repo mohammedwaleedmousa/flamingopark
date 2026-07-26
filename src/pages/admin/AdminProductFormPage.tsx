@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { lazy, Suspense, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
@@ -10,9 +10,9 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { ArrowRight, Loader2, Upload, X, LayoutGrid, Plus, Trash2, Truck, Shield, RotateCcw, GripVertical, ZoomIn, Move } from 'lucide-react';
-import ColorVariantsEditor, { ColorVariant } from '@/components/admin/ColorVariantsEditor';
-import imageCompression from "browser-image-compression";
-import { prepareImageUpload } from "@/lib/prepareImageUpload";
+import type { ColorVariant } from '@/components/admin/ColorVariantsEditor';
+
+const ColorVariantsEditor = lazy(() => import('@/components/admin/ColorVariantsEditor'));
 
 interface HomepageSection {
   id: string;
@@ -49,6 +49,11 @@ interface ProductFeature {
   title: string;
   desc: string;
 }
+
+const prepareImage = async (file: File) => {
+  const { prepareImageUpload } = await import('@/lib/prepareImageUpload');
+  return prepareImageUpload(file);
+};
 
 const AdminProductFormPage = () => {
   const SINGLE_COUNTRY = 'GLOBAL';
@@ -811,7 +816,7 @@ const AdminProductFormPage = () => {
                       if (!file) return;
                       setUploadingAccessoryImage(true);
                       try {
-                        const prepared = await prepareImageUpload(file);
+                        const prepared = await prepareImage(file);
                         const path = `accessories/${Date.now()}-${prepared.name}`;
                         const { error } = await supabase.storage
                           .from('uploads')
@@ -897,10 +902,12 @@ const AdminProductFormPage = () => {
 
         
         {/* Color Variants */}
-        <ColorVariantsEditor
-          value={formData.color_variants}
-          onChange={(v) => setFormData((prev) => ({ ...prev, color_variants: v }))}
-        />
+        <Suspense fallback={<div className="h-48 rounded-xl border border-border bg-muted/30 animate-pulse" />}>
+          <ColorVariantsEditor
+            value={formData.color_variants}
+            onChange={(v) => setFormData((prev) => ({ ...prev, color_variants: v }))}
+          />
+        </Suspense>
 
         {/* Specifications */}
         <div className="bg-card border border-border rounded-xl p-6 space-y-4">
@@ -1072,7 +1079,7 @@ const AdminProductFormPage = () => {
                                 const urls: string[] = [];
                                 for (const f of files) {
                                   try {
-                                    const prepared = await prepareImageUpload(f);
+                                    const prepared = await prepareImage(f);
                                     const path = `products/quality-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
                                     const { error } = await supabase.storage.from('uploads').upload(path, prepared, { contentType: 'image/webp', cacheControl: '31536000', upsert: false });
                                     if (!error) {

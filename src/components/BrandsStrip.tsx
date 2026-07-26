@@ -39,7 +39,7 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
     enabled,
 
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("brands")
         .select("id,name,logo_url,countries,is_active,sort_order,slug")
         .eq("is_active", true)

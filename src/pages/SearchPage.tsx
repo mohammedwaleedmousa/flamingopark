@@ -30,21 +30,27 @@ interface SearchFilters {
   inStockOnly: boolean;
 }
 
-// Convert Supabase data to Product type
-const convertToProduct = (data: any): Product => ({
+type SearchProductRow = {
+  id: string; name: string | null; name_ar: string | null; slug: string; price: number | string;
+  cost_price?: number | string | null; discount: number | null; description: string | null; description_ar: string | null;
+  images: string[] | null; color_variants: { images?: string[] }[] | null; category: string | null; brand: string | null;
+  in_stock: boolean | null; countries: string[] | null; is_best_seller: boolean | null; is_featured: boolean | null;
+};
+
+const convertToProduct = (data: SearchProductRow): Product => ({
   id: data.id,
   name: data.name || '',
   nameAr: data.name_ar || '',
   slug: data.slug || '',
-  price: data.price || 0,
-  costPrice: data.cost_price,
+  price: Number(data.price) || 0,
+  costPrice: data.cost_price === null || data.cost_price === undefined ? undefined : Number(data.cost_price),
   discount: data.discount,
   description: data.description || '',
   descriptionAr: data.description_ar || '',
   images:
   data.images?.length > 0
     ? data.images
-    : ((data as any).color_variants?.[0]?.images || []),
+    : (data.color_variants?.[0]?.images || []),
   category: data.category || '',
   brand: data.brand || '',
   inStock: data.in_stock || false,
@@ -127,7 +133,7 @@ const SearchPage = () => {
 
       const { data, error } = await q;
       if (error) throw error;
-      return (data || []).map(convertToProduct);
+      return (data || []).map((row) => convertToProduct(row as unknown as SearchProductRow));
     },
     enabled: query.trim().length > 0,
   });

@@ -70,8 +70,8 @@ const CartDrawer = () => {
                 <div className="space-y-6">
                   {cart.map((item, cartIndex) => {
                     // Variant-aware price
-                    const variant = item.variantId && (item.product as any).variants
-                      ? (item.product as any).variants.find((v: any) => v.id === item.variantId)
+                    const variant = item.variantId
+                      ? item.product.variants?.find((candidate) => candidate.id === item.variantId)
                       : undefined;
 
                     const basePrice = variant && variant.price !== undefined ? variant.price : item.product.price;
@@ -141,7 +141,7 @@ const CartDrawer = () => {
                             <span className="font-body text-sm w-8 text-center">{item.quantity}</span>
                             <button
                               onClick={() => {
-                                const stock = (item.product as any).stockQuantity;
+                                const stock = item.product.stockQuantity;
                                 if (typeof stock === "number" && item.quantity >= stock) return;
                                 updateQuantity(item.product.id, item.quantity + 1, item.variantId);
                               }}

@@ -1,11 +1,9 @@
 import { useState } from 'react';
-import imageCompression from 'browser-image-compression';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Plus, Trash2, Upload, X } from 'lucide-react';
-import { heicTo, isHeic } from "heic-to";
 import { prepareImageUpload } from "@/lib/prepareImageUpload";
 
 export interface ColorVariant {
@@ -103,8 +101,8 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
   let finalFile: File;
   try {
     finalFile = await prepareImageUpload(file, {
-      maxSizeMB: 1,
-      maxWidthOrHeight: 1200,
+      maxSizeMB: 0.3,
+      maxWidthOrHeight: 800,
     });
   } catch (error: any) {
     console.error('IMAGE PREP ERROR:', file.name, error);

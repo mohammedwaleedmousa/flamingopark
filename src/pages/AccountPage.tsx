@@ -97,7 +97,7 @@ const AccountPage = () => {
         const { data, error } = await supabase
           .from("orders")
           .select("id, order_number, total, status, created_at, invoice_url")
-          .eq("owner_user_id", user.id)
+          //.eq("customer_id", user.id)
           .order("created_at", { ascending: false })
           .limit(20);
         if (error) throw error;

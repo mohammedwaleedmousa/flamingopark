@@ -110,6 +110,11 @@ const CartDrawerContent = () => {
                           {item.selectedSize && (
                             <p className="text-xs text-muted-foreground mb-1">
                               الحجم: {item.selectedSize}
+                              </p>
+                          )}
+                          {item.selectedColor && (
+                            <p className="text-xs text-muted-foreground mb-1">
+                              اللون: {item.selectedColor}
                             </p>
                           )}
 

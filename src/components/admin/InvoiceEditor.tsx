@@ -24,6 +24,7 @@ interface OrderItem {
   quantity: number;
   price: number;
   selected_size?: string | null;
+  selected_color?: string | null;
   selected_accessories?: SelectedAccessory[];
 }
 
@@ -395,6 +396,11 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                             {item.selected_size && (
                               <p className="text-sm text-gray-600 mt-1">
                                 <span className="font-medium">الحجم:</span> {item.selected_size}
+                              </p>
+                            )}
+                            {item.selected_color && (
+                              <p className="text-sm text-gray-600 mt-1">
+                                <span className="font-medium">اللون:</span> {item.selected_color}
                               </p>
                             )}
                             <p className="text-sm text-gray-500">

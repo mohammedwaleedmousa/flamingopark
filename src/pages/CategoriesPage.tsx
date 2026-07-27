@@ -1,5 +1,5 @@
 import { Link, useLocation, useSearchParams } from "react-router-dom";
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -11,9 +11,7 @@ import { Button } from "@/components/ui/button";
 import type { Product } from "@/store/useStore";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import { clearCatalogScroll, restoreCatalogScroll } from "@/lib/catalogScroll";
-
-interface BrandCategoryLink { brand_id: string; }
-interface BrandNameRow { name: string | null; }
+import { ChevronDown } from "lucide-react";
 
 interface Category {
   id: string;
@@ -54,6 +52,7 @@ const CategoriesPage = () => {
   const parentSlug = searchParams.get("parent") || "";
   const subSlug = searchParams.get("sub") || "";
   const brandFilter = searchParams.get("brand") || "all";
+  const [brandOpen, setBrandOpen] = useState(false);
 
   const parents = useMemo(() => categories.filter((c) => !c.parent_id), [categories]);
   const selectedParent = useMemo(() => parents.find((p) => p.slug === parentSlug) || null, [parents, parentSlug]);
@@ -63,18 +62,20 @@ const CategoriesPage = () => {
   );
   const selectedSub = useMemo(() => subCategories.find((s) => s.slug === subSlug) || null, [subCategories, subSlug]);
   // Opening a parent category includes it and its subcategories in the product query.
-  const effectiveLeafCategory = selectedSub || selectedParent || null;
+  const effectiveLeafCategory = selectedSub || null;
 
   const effectiveLeafSlug = effectiveLeafCategory?.slug || "";
   const page = Math.max(1, Number(searchParams.get("page") || 1));
   const PAGE_SIZE = 24;
 
   const scopedCategoryIds = useMemo(() => {
-    if (!effectiveLeafCategory) return [] as string[];
-    if (selectedSub) return [selectedSub.id];
-    const descendants = categories.filter((category) => category.parent_id === effectiveLeafCategory.id).map((category) => category.id);
-    return [effectiveLeafCategory.id, ...descendants];
-  }, [categories, effectiveLeafCategory, selectedSub]);
+    if (!selectedSub) return [] as string[];
+    // Include products assigned to the sub-category OR its parent, so items
+    // linked only at the parent level still appear inside the sub view.
+    const ids = [selectedSub.id];
+    if (selectedParent) ids.push(selectedParent.id);
+    return ids;
+  }, [selectedSub, selectedParent]);
 
   const productQueries = useQueries({
     queries: Array.from({ length: page }, (_, pageIndex) => ({
@@ -109,137 +110,241 @@ const CategoriesPage = () => {
 
   const brands = useMemo(() => Array.from(new Set(leafProducts.map((product) => product.brand?.trim()).filter(Boolean))) as string[], [leafProducts]);
 
-  const { data: mappedBrands = [] } = useQuery({
-    queryKey: ["categories-mapped-brands", effectiveLeafCategory?.id],
-    enabled: !!effectiveLeafCategory,
-    queryFn: async () => {
-      const { data: links, error: linkError } = await supabase
-        .from("brand_categories")
-        .select("brand_id")
-        .eq("category_id", effectiveLeafCategory!.id);
-      if (linkError) throw linkError;
+    const availableBrands = brands;
 
-      const brandIds = (links || []).map((row) => (row as BrandCategoryLink).brand_id).filter(Boolean);
-      if (brandIds.length === 0) return [] as string[];
-
-      const { data: rows, error: brandsError } = await supabase
-        .from("brands")
-        .select("name")
-        .eq("is_active", true)
-        .in("id", brandIds as string[]);
-      if (brandsError) throw brandsError;
-
-      return Array.from(new Set((rows || []).map((row) => ((row as BrandNameRow).name || "").trim()).filter(Boolean)));
-    },
-  });
-
-  const availableBrands = mappedBrands.length > 0 ? mappedBrands : brands;
 
   const visibleProducts = useMemo(() => {
     if (brandFilter === "all") return leafProducts;
     return leafProducts.filter((p) => p.brand?.trim() === brandFilter);
   }, [leafProducts, brandFilter]);
-
+  useEffect(() => {
+      window.scrollTo({
+        top: 0,
+        behavior: "instant",
+      });
+    }, [subSlug, parentSlug]);
+    useEffect(() => {
+      setBrandOpen(false);
+    }, [parentSlug, subSlug]);
   const setStepParams = (next: Record<string, string | null>) => {
-    if (!("page" in next)) clearCatalogScroll(`${location.pathname}${location.search}`);
-    const p = new URLSearchParams(searchParams);
-    Object.entries(next).forEach(([key, value]) => {
-      if (!value) p.delete(key);
-      else p.set(key, value);
-    });
-    if (!("page" in next)) p.delete("page");
-    setSearchParams(p);
-  };
+  const currentScroll = window.scrollY;
 
+  const p = new URLSearchParams(searchParams);
+
+  Object.entries(next).forEach(([key, value]) => {
+    if (!value) p.delete(key);
+    else p.set(key, value);
+  });
+
+  if (!("page" in next)) {
+    p.delete("page");
+  }
+
+
+  setSearchParams(p);
+  if (!("page" in next)) {
+    requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }));
+  }
+};
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <Navbar />
       <CartDrawer />
       <main className="pt-24 pb-20">
-        <section className="container mx-auto px-6 mb-10 text-center">
-          <p className="text-[10px] tracking-[0.08em] uppercase text-muted-foreground mb-3">{getSiteText(content, "categories_page_eyebrow", " ")}</p>
-          <h1 className="font-heading text-4xl md:text-6xl">{getSiteText(content, "categories_page_title", "الأقسام")}</h1>
-          <p className="text-sm text-muted-foreground mt-3">{getSiteText(content, "categories_page_subtitle", "اختاري القسم ثم الماركة واستعرضي المنتجات")}</p>
-
-          {(selectedParent || selectedSub) && (
-            <div className="
-            mt-8
-            flex
-            items-center
-            justify-center
-            gap-3
-            text-xs
-            tracking-[0.15em]
-            uppercase
-          ">
-            <button
-              onClick={() =>
-                setStepParams({
-                  parent:null,
-                  sub:null,
-                  brand:null
-                })
-              }
-              className="
-                text-muted-foreground
-                hover:text-foreground
-                transition-colors
-                duration-300
-              "
-            >
-              الأقسام
-            </button>
-            {selectedParent && (
-              <>
-                <span className="text-muted-foreground/40">
-                  /
-                </span>
+        <section
+          className={`container mx-auto px-6 ${selectedSub ? "mb-4" : "mb-10"} text-center`}>
+          {!selectedSub && (
+            <>
+              <p className="text-[10px] tracking-[0.08em] uppercase text-muted-foreground mb-3">
+                {getSiteText(content, "categories_page_eyebrow", " ")}
+              </p>
+              <h1 className="font-heading text-4xl md:text-6xl">
+                {getSiteText(content, "categories_page_title", "الأقسام")}
+              </h1>
+              <p className="text-sm text-muted-foreground mt-3">
+                {getSiteText(content, "categories_page_subtitle", "اختاري القسم ثم الماركة واستعرضي المنتجات")}
+              </p>
+            </>
+          )}
+          <section className="container mx-auto px-6 mb-10">
+            {selectedSub && (
+              <div
+                dir="rtl"
+                className="
+                  flex
+                  items-center
+                  justify-between
+                  gap-4
+                  text-xs
+                  text-muted-foreground
+                "
+              >
+              {/* المسار */}
+              <div className="flex items-center gap-3">
                 <button
                   onClick={() =>
                     setStepParams({
+                      parent:null,
                       sub:null,
                       brand:null
                     })
                   }
-                  className="
-                    text-foreground
-                    hover:opacity-60
-                    transition-opacity
-                    duration-300
-                  "
+                  className="hover:text-black transition"
                 >
-                  {selectedParent.name_ar}
+                  الأقسام
                 </button>
-              </>
+                {selectedParent && (
+                  <>
+                    <span className="opacity-30">/</span>
+                    <button
+                      onClick={() =>
+                        setStepParams({
+                          sub:null,
+                          brand:null
+                        })
+                      }
+                      className="text-black hover:opacity-60"
+                    >
+                      {selectedParent.name_ar}
+                    </button>
+                  </>
+                )}
+                {selectedSub && (
+                  <>
+                    <span className="opacity-30">/</span>
+                    <button
+                      onClick={() =>
+                        setStepParams({
+                          brand:null
+                        })
+                      }
+                      className="text-black font-medium hover:opacity-60"
+                    >
+                      {selectedSub.name_ar}
+                    </button>
+                  </>
+                )}
+              </div>
+              {/* Dropdown الماركات */}
+              {selectedSub && availableBrands.length > 0 && (
+                <div className="relative">
+                  <button
+                    onClick={() => setBrandOpen(!brandOpen)}
+                    className="
+                      group
+                      flex
+                      items-center
+                      gap-2
+                      px-5
+                      py-2.5
+                      rounded-full
+                      border
+                      border-pink-200
+                      bg-white
+                      text-black
+                      text-xs
+                      font-medium
+                      shadow-sm
+                      hover:border-pink-400
+                      hover:shadow-md
+                      transition-all
+                      duration-300
+                    "
+                  >
+                    <span
+                      className="
+                        relative
+                        before:absolute
+                        before:-bottom-1
+                        before:right-0
+                        before:h-[1px]
+                        before:w-0
+                        before:bg-pink-500
+                        before:transition-all
+                        group-hover:before:w-full
+                      "
+                    >
+                      الماركات
+                    </span>
+                    <ChevronDown
+                      className={`
+                        w-4
+                        h-4
+                        text-pink-500
+                        transition-transform
+                        duration-300
+                        ${brandOpen ? "rotate-180" : ""}
+                      `}
+                    />
+                  </button>
+                  {brandOpen && (
+                    <div
+                      className="
+                      absolute
+                      left-0
+                      top-12
+                      z-50
+                      w-52
+                      max-h-72
+                      overflow-y-auto
+                      touch-pan-y
+                      bg-background
+                      border
+                      border-border
+                      shadow-xl
+                      rounded-xl
+                      p-3
+                      "
+                      >
+                      <button
+                        onClick={() => {
+                          setStepParams({brand:null});
+                          setBrandOpen(false);
+                        }}
+                        className="
+                          w-full
+                          text-right
+                          px-3
+                          py-2
+                          text-sm
+                          rounded-lg
+                          hover:bg-muted
+                        "
+                      >
+                        كل الماركات
+                      </button>
+                      {availableBrands.map((brand)=>(
+                        <button
+                          key={brand}
+                          onClick={()=>{
+                            setStepParams({brand});
+                            setBrandOpen(false);
+                          }}
+                          className={`
+                            w-full
+                            text-right
+                            px-3
+                            py-2
+                            text-sm
+                            rounded-lg
+                            transition
+                            ${
+                              brandFilter === brand
+                              ? "bg-black text-white"
+                              : "hover:bg-muted"
+                            }
+                          `}
+                        >
+                          {brand}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+              </div>
             )}
-
-
-            {selectedSub && (
-              <>
-                <span className="text-muted-foreground/40">
-                  /
-                </span>
-
-                <button
-                  onClick={() =>
-                    setStepParams({
-                      brand:null
-                    })
-                  }
-                  className="
-                    text-muted-foreground
-                    hover:text-foreground
-                    transition-colors
-                    duration-300
-                  "
-                >
-                  {selectedSub.name_ar}
-                </button>
-              </>
-            )}
-
-          </div>
-          )}
+          </section>
         </section>
 
         {!selectedParent && (
@@ -276,7 +381,13 @@ const CategoriesPage = () => {
                   key={c.id}
                   to={`/categories?parent=${selectedParent.slug}&sub=${c.slug}`}
                   className="group relative aspect-[4/5] overflow-hidden bg-muted"
-                >
+                  onClick={() => {
+                    window.scrollTo({
+                      top: 0,
+                      behavior: "instant",
+                    });
+                  }}
+                  >
                   <img
                     src={c.image_url || FALLBACK[c.slug] || FALLBACK.women}
                     alt={c.name_ar}
@@ -293,39 +404,11 @@ const CategoriesPage = () => {
           </section>
         )}
 
-        {!!effectiveLeafSlug && (
-          <section className="container mx-auto px-4 md:px-6 space-y-5">
-            <div className="text-center">
-              <h2 className="font-heading text-2xl">{selectedSub?.name_ar || selectedParent?.name_ar}</h2>
-              <p className="text-sm text-muted-foreground mt-1">اختاري الماركة ثم شاهدي المنتجات</p>
-            </div>
-
-            {availableBrands.length > 0 && (
-              <div className="-mx-4 md:-mx-6 px-4 md:px-6 overflow-x-auto scrollbar-none">
-                <div className="flex items-center gap-2 min-w-max py-1">
-                  <Button
-                    variant={brandFilter === "all" ? "default" : "outline"}
-                    size="sm"
-                    className="rounded-full whitespace-nowrap"
-                    onClick={() => setStepParams({ brand: null })}
-                  >
-                    كل الماركات
-                  </Button>
-                  {availableBrands.map((brand) => (
-                    <Button
-                      key={brand}
-                      variant={brandFilter === brand ? "default" : "outline"}
-                      size="sm"
-                      className="rounded-full whitespace-nowrap"
-                      onClick={() => setStepParams({ brand })}
-                    >
-                      {brand}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-
+        {!!selectedSub && (
+          <section
+            className="container mx-auto px-4 md:px-6 space-y-5"
+          >
+          
             {productsLoading ? (
               <div className="text-center py-12 text-muted-foreground">جاري تحميل المنتجات...</div>
             ) : visibleProducts.length === 0 ? (

@@ -72,6 +72,7 @@ export interface CartItem {
   selectedAccessories?: SelectedAccessory[];
   variantId?: string;
   variantColor?: string;
+  selectedColor?: string;
 }
 
 interface StoreState {
@@ -92,7 +93,8 @@ interface StoreState {
     selectedSize?: string,
     selectedAccessories?: SelectedAccessory[],
     variantId?: string,
-    variantColor?: string
+    variantColor?: string,
+    selectedColor?: string
   ) => void;
 
   removeFromCart: (productId: string, variantId?: string) => void;
@@ -123,7 +125,7 @@ export const useStore = create<StoreState>()(
 
       setCustomer: (customer) => set({ customer }),
 
-      addToCart: (product, quantity = 1, selectedSize, selectedAccessories, variantId, variantColor) => {
+      addToCart: (product, quantity = 1, selectedSize, selectedAccessories, variantId, variantColor, selectedColor) => {
         const cart = get().cart;
 
         // Enforce stock quantity if provided on product
@@ -178,7 +180,7 @@ export const useStore = create<StoreState>()(
               .join("|")
           : "";
 
-        const itemKey = `${product.id}-${variantId || ""}-${selectedSize || ""}-${accessoriesKey}`;
+        const itemKey = `${product.id}-${variantId || ""}-${selectedColor || ""}-${selectedSize || ""}-${accessoriesKey}`;
 
         const existingIndex = cart.findIndex((item) => {
           const existingAccKey = item.selectedAccessories
@@ -189,7 +191,7 @@ export const useStore = create<StoreState>()(
             : "";
 
           return (
-            `${item.product.id}-${item.variantId || ""}-${item.selectedSize || ""}-${existingAccKey}` === itemKey
+            `${item.product.id}-${item.variantId || ""}-${item.selectedColor || ""}-${item.selectedSize || ""}-${existingAccKey}` === itemKey
           );
         });
 
@@ -203,7 +205,7 @@ export const useStore = create<StoreState>()(
           });
         } else {
           set({
-            cart: [...cart, { product, quantity, selectedSize, selectedAccessories, variantId, variantColor }],
+            cart: [...cart, { product, quantity, selectedSize, selectedAccessories, variantId, variantColor, selectedColor }],
           });
         }
       },

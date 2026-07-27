@@ -57,7 +57,7 @@ const ProductDetailPage = () => {
         originalPrice: data.original_price ? Number(data.original_price) : undefined,
         discount: data.discount || undefined, description: data.description || '',
         descriptionAr: data.description_ar || '', images:
-  data.images?.length > 0
+        data.images?.length > 0
     ? data.images
     : ((data as any).color_variants?.[0]?.images || []),
         category: data.category, categoryId: (data as any).category_id || undefined, brand: data.brand, inStock: data.in_stock ?? true,
@@ -67,7 +67,7 @@ const ProductDetailPage = () => {
         hasSizes: (data as any).has_sizes ?? false, sizes: (data as any).sizes || [],
         accessories: accessories as { name: string; name_ar: string; price: number; image_url?: string; description?: string; description_ar?: string }[],
         features: ((data as any).features || []) as { icon: string; title: string; desc: string }[],
-        colorVariants: ((data as any).color_variants || []) as { name: string; hex: string; hex2?: string; images: string[] }[],
+        colorVariants: ((data as any).color_variants || []) as { name: string; hex: string; hex2?: string; images: string[];sizes?: string[]; }[],
         specs: ((data as any).specs || []) as { label: string; value: string }[],
         returnPolicy: (data as any).return_policy as string | null,
         hasQualityVariants: (data as any).has_quality_variants ?? false,
@@ -75,8 +75,10 @@ const ProductDetailPage = () => {
       };
     },
     enabled: !!slug,
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 10,
   });
- 
+
     useEffect(() => {
       if (
         product?.colorVariants &&
@@ -86,7 +88,18 @@ const ProductDetailPage = () => {
         setSelectedColorIdx(0);
       }
     }, [product, selectedColorIdx]);
- 
+    // تحميل صور جميع الألوان مسبقاً حتى يكون التبديل سريع
+    useEffect(() => {
+      if (!product?.colorVariants) return;
+
+      product.colorVariants.forEach((color) => {
+        color.images?.forEach((src) => {
+          const img = new Image();
+          img.src = src;
+        });
+      });
+    }, [product]);
+
   // Default return policy from site settings
   const { data: defaultReturnPolicy } = useQuery({
     queryKey: ['default-return-policy'],
@@ -201,21 +214,27 @@ const ProductDetailPage = () => {
     ? qualityImages
     : (activeColorVariant && activeColorVariant.images.length > 0 ? activeColorVariant.images : product.images);
   // الأحجام حسب اللون المختار: إن وُجدت للّون تُستخدم، وإلا نعرض الأحجام العامة
-  const colorSizes = (activeColorVariant as any)?.sizes as string[] | undefined;
-  const sizesToShow = colorSizes && colorSizes.length > 0 ? colorSizes : (product.sizes || []);
+  const sizesToShow =
+  activeColorVariant?.sizes && activeColorVariant.sizes.length > 0
+    ? activeColorVariant.sizes
+    : product.sizes || [];
+    console.log("PRODUCT SIZES:", product.sizes);
+console.log("COLOR VARIANT:", activeColorVariant);
+console.log("SIZES TO SHOW:", sizesToShow); // هنا الخطأ
   const effectiveReturnPolicy = product.returnPolicy || defaultReturnPolicy;
- 
+
   const updateAccessoryQuantity = (key: string, delta: number) => {
     setAccessoryQuantities((prev) => ({ ...prev, [key]: Math.max(0, (prev[key] || 0) + delta) }));
   };
- 
+
   const handleAddToCart = () => {
-    if (product.hasSizes && sizesToShow.length > 0 && !selectedSize) {
+    if (sizesToShow.length > 0 && !selectedSize) {
       toast({ title: 'اختر المقاس أولاً', variant: 'destructive' }); return;
     }
     const selectedAccs = product.accessories?.map((acc, idx) => ({ acc, qty: accessoryQuantities[`${idx}-${acc.name_ar}`] || 0 }))
       .filter(({ qty }) => qty > 0).map(({ acc, qty }) => ({ name: acc.name, name_ar: acc.name_ar, price: acc.price, quantity: qty, image_url: acc.image_url })) || [];
-    addToCart(product, quantity, selectedSize || undefined, selectedAccs.length ? selectedAccs : undefined);
+    const colorName = activeColorVariant?.name;
+    addToCart(product, quantity, selectedSize || undefined, selectedAccs.length ? selectedAccs : undefined, undefined, undefined, colorName);
     setJustAdded(true);
     setTimeout(() => setJustAdded(false), 3500);
     toast({ title: '✓ تمت الإضافة إلى السلة', description: `${product.nameAr} × ${quantity}` });
@@ -310,7 +329,7 @@ const ProductDetailPage = () => {
               >
                 <AnimatePresence mode="wait" custom={direction}>
                   <motion.img
-                    key={selectedImage}
+                    key={`${activeColorVariant?.name || 'default'}-${selectedImage}`}
                     custom={direction}
                     variants={imageVariants}
                     initial="enter"
@@ -320,14 +339,17 @@ const ProductDetailPage = () => {
                       duration: 0.3,
                       ease: "easeOut"
                     }}
-                    src={displayImages[selectedImage] || '/placeholder.svg'}
+                    src={displayImages?.[selectedImage] || '/placeholder.svg'}
                     alt={product.nameAr}
                     style={{
                       transformOrigin: zoomOrigin,
                       scale: isZoomed ? 2.2 : 1,
                       touchAction: isZoomed ? 'none' : 'pan-y',
                     }}
-                    className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
+                    onLoad={(e) => {
+                      e.currentTarget.style.opacity = "1";
+                    }}
+                    className="w-full h-full object-cover cursor-grab active:cursor-grabbing opacity-0 transition-opacity duration-300"
                     draggable={false}
                     drag={isZoomed ? true : "x"}
                     dragConstraints={isZoomed ? { left: -150, right: 150, top: -150, bottom: 150 } : { left: 0, right: 0 }}
@@ -479,9 +501,11 @@ const ProductDetailPage = () => {
                       <button
                         key={i}
                         onClick={() => {
-                          setSelectedColorIdx(selectedColorIdx === i ? null : i);
+                          setSelectedColorIdx(i);
+                          setSelectedImage(0);
+                          setDirection(0);
+                          setIsZoomed(false);
                           setSelectedSize(null);
-                          goToImage(0);
                         }}
                         className={`relative w-10 h-10 rounded-full border-2 transition-all ${
                           selectedColorIdx === i
@@ -509,7 +533,7 @@ const ProductDetailPage = () => {
               )}
  
               {/* Size */}
-              {product.hasSizes && sizesToShow.length > 0 && (
+              {sizesToShow.length > 0 && (
                 <div className="space-y-3">
                   <span className="text-sm font-medium">المقاس</span>
                   <div className="flex flex-wrap gap-2">

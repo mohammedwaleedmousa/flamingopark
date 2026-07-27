@@ -30,6 +30,7 @@ interface OrderItem {
   quantity: number;
   price: number;
   selected_size?: string | null;
+  selected_color?: string | null;
   selected_accessories?: SelectedAccessory[];
 }
 
@@ -316,7 +317,7 @@ const OrderConfirmationPage = () => {
             <div className="mb-6">
               <h3 className="text-sm font-heading text-gray-500 mb-4">المنتجات</h3>
               <div className="space-y-3">
-                {orderData.items.map((item, index) => (
+                {(orderData.items || []).map((item, index) => (
                   <div key={index} className="p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-start gap-4">
                       <img
@@ -333,7 +334,11 @@ const OrderConfirmationPage = () => {
                             <span className="font-medium">الحجم:</span> {item.selected_size}
                           </p>
                         )}
-                        
+                        {item.selected_color && (
+                          <p className="text-sm text-gray-600 mt-1">
+                            <span className="font-medium">اللون:</span> {item.selected_color}
+                          </p>
+                        )}
                         <p className="text-sm text-gray-500">
                           {item.quantity} × {fmt(item.price)} {currency}
                         </p>

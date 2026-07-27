@@ -140,18 +140,20 @@ const BrandSectionPage = () => {
           </div>
         ) : (
           <>
-            <section className="relative w-full h-[36vh] md:h-[50vh] bg-neutral-100 overflow-hidden">
+            <section className="relative w-full h-[45vh] md:h-[60vh] bg-neutral-100 overflow-hidden">
               {section.image_url && (
                 <img loading="lazy" src={section.image_url} alt={section.name} className="absolute inset-0 w-full h-full object-cover" />
               )}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/25 to-transparent" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-black/10" />
               <div className="relative z-10 h-full max-w-6xl mx-auto px-4 flex flex-col items-center justify-end pb-10 text-center text-white">
                 <p className="text-xs tracking-widest opacity-80 mb-2">
                   <Link to={`/brands/${slug}`} className="hover:text-gold">{brand?.name}</Link>
                 </p>
-                <h1 className="font-heading text-3xl md:text-5xl tracking-[0.25em] uppercase">{section.name}</h1>
+                <h1 className="font-heading text-4xl md:text-6xl font-semibold tracking-[0.3em] uppercase drop-shadow-lg">
+                  {section.name}
+                </h1>
                 {section.description && (
-                  <p className="mt-4 max-w-2xl text-sm md:text-base text-white/85">{section.description}</p>
+                  <p className="mt-5 max-w-xl text-sm md:text-lg leading-relaxed text-white/90">{section.description}</p>
                 )}
                 <p className="mt-3 text-xs text-white/70 tracking-widest">{products.length} منتج</p>
               </div>
@@ -163,8 +165,8 @@ const BrandSectionPage = () => {
                   <ChevronRight className="w-4 h-4" /> العودة إلى {brand?.name}
                 </Link>
               </div>
-              {(brandFilters.length > 0 || products.length > 0) && (
-                <div className="mb-6 flex flex-wrap gap-3 items-center justify-center">
+              {(brandFilters.length > 0 || products.length > 0) && (<div className="mb-12 p-4 md:p-5 rounded-3xl bg-neutral-50 border border-neutral-200 flex flex-wrap md:flex-nowrap overflow-x-auto gap-3 items-center justify-center shadow-sm">
+                
                   <div className="flex gap-1">
                     <Button size="sm" variant={priceSort === "none" ? "default" : "outline"} onClick={() => setPriceSort("none")}>الترتيب الافتراضي</Button>
                     <Button size="sm" variant={priceSort === "asc" ? "default" : "outline"} onClick={() => setPriceSort("asc")}>السعر ↑</Button>
@@ -205,7 +207,7 @@ const BrandSectionPage = () => {
               ) : visibleProducts.length === 0 ? (
                 <div className="py-16 text-center text-muted-foreground">لا توجد منتجات في هذا القسم بعد</div>
               ) : (
-                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-8 md:gap-x-6">
                   {visibleProducts.map((p, i) => (<ProductCard key={p.id} product={p} index={i} />))}
                 </div>
               )}

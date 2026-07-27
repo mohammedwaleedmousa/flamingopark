@@ -33,6 +33,7 @@ const orderItemSchema = z.object({
   quantity: z.number().int().min(1).max(100),
   price: z.number().nonnegative().max(10000000),
   selected_size: z.string().max(100).nullable(),
+  selected_color: z.string().max(100).nullable().optional(),
   selected_accessories: z.array(orderAccessorySchema).max(50),
 });
 const orderItemsSchema = z.array(orderItemSchema).min(1).max(100);
@@ -178,34 +179,53 @@ const CheckoutPage = () => {
   const total = subtotal + deliveryFee - discountAmount;
 
   const createSecureOrder = async (items: unknown[]) => {
-    const { data, error } = await (supabase as any).rpc("create_secure_order", {
-      p_customer_name: String(customer?.name || formData.name || "").trim(),
-      p_customer_phone: String(customer?.phone || formData.phone || "").trim(),
-      p_customer_address: formData.address.trim(),
-      p_customer_city: formData.city.trim(),
-      p_customer_notes: formData.notes.trim() || null,
-      p_country: "GLOBAL",
-      p_currency_mode: currencyMode,
-      p_payment_method: paymentMethod,
-      p_delivery_company_id: selectedDelivery,
-      p_coupon_code: couponCode.trim() || null,
-      p_items: items,
-    });
-    if (error) throw error;
-    return data as {
-      order_id: string;
-      order_number: string;
-      tracking_token: string;
-      items: typeof items;
-      subtotal: number;
-      delivery_fee: number;
-      discount_amount: number;
-      total: number;
-      currency_mode: string;
-      delivery_company: string;
-      created_at: string;
-    };
-  };
+  const { data, error } = await (supabase as any).rpc("create_secure_order", {
+    p_customer_id: customer?.id === "guest" ? null : customer?.id || null,
+
+    p_customer_name: String(customer?.name || formData.name || "").trim(),
+
+    p_customer_phone: String(customer?.phone || formData.phone || "").trim(),
+
+    p_customer_address: formData.address.trim(),
+
+    p_customer_city: formData.city.trim(),
+
+    p_customer_notes: formData.notes.trim() || null,
+
+    p_country: "YE",
+
+    p_items: items,
+
+    p_subtotal: subtotal,
+
+    p_delivery_fee: deliveryFee,
+
+    p_total: total,
+
+    p_payment_method: paymentMethod,
+
+    p_currency_mode: currencyMode,
+
+    p_currency_code: currencyMode,
+
+    p_exchange_rate_snapshot: 1,
+
+    p_total_base: total,
+
+    p_coupon_code: couponCode.trim() || null,
+
+    p_discount_amount: discountAmount,
+  });
+
+  if (error) {
+    console.error("RPC ERROR FULL:", error);
+    throw error;
+  }
+
+  console.log("CREATED ORDER:", data);
+
+  return data;
+};
 
   const validateStep = (step: number): boolean => {
     if (step === 0) {
@@ -252,12 +272,26 @@ const CheckoutPage = () => {
       const basePrice = item.product.discount ? item.product.price * (1 - item.product.discount / 100) : item.product.price;
       const accessoriesTotal = item.selectedAccessories?.reduce((sum, acc) => sum + acc.price * acc.quantity, 0) || 0;
       return {
-        product_id: item.product.id, product_name: item.product.nameAr,
-        product_image: item.product.images?.[0] || "", quantity: item.quantity,
-        price: basePrice + accessoriesTotal, selected_size: item.selectedSize || null,
+        product_id: item.product.id,
+        product_name: item.product.nameAr,
+        product_image: item.product.images?.[0] || "",
+        quantity: item.quantity,
+        price: basePrice + accessoriesTotal,
+
+        // المقاس
+        selected_size: item.selectedSize || null,
+
+        // اللون من أي مصدر
+        selected_color:
+          item.selectedColor ||
+          item.variantColor ||
+          null,
+
         selected_accessories: (item.selectedAccessories || []).map((acc) => ({
-          name: String((acc as any).name || ""), name_ar: String((acc as any).name_ar || (acc as any).name || ""),
-          price: Number((acc as any).price) || 0, quantity: Number((acc as any).quantity) || 1,
+          name: String((acc as any).name || ""),
+          name_ar: String((acc as any).name_ar || (acc as any).name || ""),
+          price: Number((acc as any).price) || 0,
+          quantity: Number((acc as any).quantity) || 1,
           image_url: String((acc as any).image_url || ""),
         })),
       };
@@ -278,7 +312,7 @@ const CheckoutPage = () => {
         orderId: createdOrder.order_id, orderNumber: createdOrder.order_number, trackingToken: createdOrder.tracking_token,
         customerName: customerName || "عميل", customerPhone,
         customerAddress: formData.address || "-", customerCity: formData.city || "",
-        customerNotes: formData.notes || "", items: createdOrder.items as typeof validation.data,
+        customerNotes: formData.notes || "", items: validation.data,
         subtotal: Number(createdOrder.subtotal), deliveryFee: Number(createdOrder.delivery_fee),
         discountAmount: Number(createdOrder.discount_amount),
         couponCode: Number(createdOrder.discount_amount) > 0 ? couponCode.trim().toUpperCase() : null,
@@ -525,7 +559,18 @@ const CheckoutPage = () => {
                             return (
                               <div key={i} className="flex gap-3 items-center">
                                 <img loading="lazy" src={item.product.images?.[0] || "/placeholder.svg"} alt="" className="w-12 h-12 object-cover rounded border" />
-                                <div className="flex-1 min-w-0"><p className="text-sm truncate">{item.product.nameAr}</p><p className="text-xs text-muted-foreground">{item.quantity} × {price.toFixed(0)}</p></div>
+                                <div className="flex-1 min-w-0"><p className="text-sm truncate">{item.product.nameAr}</p><p className="text-xs text-muted-foreground">
+                                  {item.quantity} × {price.toFixed(0)}
+
+                                  {item.selectedSize && (
+                                    <> • المقاس: {item.selectedSize}</>
+                                  )}
+
+                                  {(item.selectedColor || item.variantColor) && (
+                                    <> • اللون: {item.selectedColor || item.variantColor}</>
+                                  )}
+                                </p>
+                                </div>
                                 <span className="text-sm text-gold font-medium">{((price + accTotal) * item.quantity).toFixed(0)}</span>
                               </div>
                             );

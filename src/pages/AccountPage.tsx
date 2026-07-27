@@ -23,9 +23,11 @@ const AccountPage = () => {
   const [user, setUser] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
+  const [customer, setCustomer] = useState<any>(null);
   const [formLoading, setFormLoading] = useState(false);
   const [fullName, setFullName] = useState("");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [region, setRegion] = useState("");
   const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
   const [addressForm, setAddressForm] = useState({ label: "", city: "", address: "", notes: "" });
   const [editingAddressId, setEditingAddressId] = useState<string | null>(null);
@@ -40,22 +42,85 @@ const AccountPage = () => {
   const latestOrderNumber = invoices[0]?.order_number || "";
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) navigate("/auth", { replace: true });
-      else setUser(data.user);
-      setLoading(false);
-    });
-  }, [navigate]);
+  const loadCustomer = async () => {
+    const savedCustomer = localStorage.getItem("customer");
+
+    if (!savedCustomer) {
+      navigate("/auth", { replace: true });
+      return;
+    }
+
+    try {
+      const customerData = JSON.parse(savedCustomer);
+
+      setCustomer(customerData);
+
+      setUser({
+        id: customerData.id,
+        user_metadata: {
+          full_name: customerData.name,
+          phone_number: customerData.phone,
+          region: customerData.region,
+        },
+        created_at: customerData.created_at || new Date().toISOString(),
+      });
+
+      // جلب البيانات الجديدة من Supabase
+      if (customerData.phone) {
+        const { data, error } = await supabase
+          .from("customers")
+          .select("*")
+          .eq("phone", customerData.phone)
+          .single();
+
+        if (!error && data) {
+          setCustomer(data);
+
+          localStorage.setItem(
+            "customer",
+            JSON.stringify(data)
+          );
+        } else {
+          console.log("Customer fetch error:", error);
+        }
+      }
+
+    } catch (error) {
+      console.error(error);
+      localStorage.removeItem("customer");
+      navigate("/auth");
+    }
+
+    setLoading(false);
+  };
+
+  loadCustomer();
+
+}, [navigate]);
+
+  const fetchCustomer = async () => {
+    const phone =
+      localStorage.getItem("customer_phone") ||
+      user?.user_metadata?.phone_number;
+    if (!phone) return;
+    const { data, error } = await supabase
+      .from("customers")
+      .select("*")
+      .eq("phone", phone)
+      .single();
+    if (!error && data) {
+      setCustomer(data);
+    }
+  };
 
   // Initialize form fields when user data loads or edit mode is enabled
   useEffect(() => {
-    if (user && editMode) {
-      setFullName(user?.user_metadata?.full_name || "");
-      setPhoneNumber(user?.user_metadata?.phone_number || "");
-      setAvatarPreview(user?.user_metadata?.avatar_url || "");
+    if (customer) {
+      setFullName(customer.name || "");
+      setPhoneNumber(customer.phone || "");
+      setRegion(customer.region || "");
     }
-  }, [editMode, user]);
-
+  }, [customer]);
   useEffect(() => {
     if (!user?.id) return;
     let active = true;
@@ -97,37 +162,35 @@ const AccountPage = () => {
         const { data, error } = await supabase
           .from("orders")
           .select("id, order_number, total, status, created_at, invoice_url")
-          //.eq("customer_id", user.id)
+          .eq("customer_id", customer.id)
           .order("created_at", { ascending: false })
           .limit(20);
         if (error) throw error;
-        setInvoices((data || []) as Array<{ id: string; order_number: string; total: number; status: string; created_at: string; invoice_url: string | null }>);
+        setInvoices(data || []);
       } catch {
         setInvoices([]);
       } finally {
         setInvoicesLoading(false);
       }
     };
-
     fetchInvoices();
-
     const intervalId = window.setInterval(fetchInvoices, 15000);
     const onFocus = () => {
       fetchInvoices();
     };
     const onVisibility = () => {
-      if (document.visibilityState === "visible") fetchInvoices();
+      if (document.visibilityState === "visible") {
+        fetchInvoices();
+      }
     };
-
     window.addEventListener("focus", onFocus);
     document.addEventListener("visibilitychange", onVisibility);
-
     return () => {
       window.clearInterval(intervalId);
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [user?.id, user?.user_metadata?.phone_number]);
+  }, [customer?.id, customer?.phone]);
 
   useEffect(() => {
     if (location.hash !== "#orders") return;
@@ -228,25 +291,37 @@ const AccountPage = () => {
         avatarUrl = avatarPreview;
       }
 
-      const { error } = await supabase.auth.updateUser({
-        data: {
-          full_name: fullName.trim(),
-          phone_number: phoneNumber.trim(),
-          avatar_url: avatarUrl || null,
-        },
-      });
+      const { error } = await (supabase as any)
+      .from("customers")
+      .update({
+        name: fullName.trim(),
+        phone: phoneNumber.trim(),
+        region: region.trim(),
+        avatar_url: avatarUrl || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", customer.id);
 
       if (error) {
         setNotification({ type: "error", message: "فشل تحديث البيانات: " + error.message });
       } else {
-        await (supabase as any).from("profiles").upsert({ id: user.id, full_name: fullName.trim(), phone: phoneNumber.trim() || null, avatar_url: avatarUrl || null });
         setNotification({ type: "success", message: "تم تحديث بياناتك بنجاح" });
         
         // Update local user state
-        const { data } = await supabase.auth.getUser();
-        if (data.user) {
-          setUser(data.user);
-        }
+        const updatedCustomer = {
+          ...customer,
+          name: fullName.trim(),
+          phone: phoneNumber.trim(),
+          region: region.trim(),
+          avatar_url: avatarUrl || customer.avatar_url || null,
+        };
+
+        setCustomer(updatedCustomer);
+
+        localStorage.setItem(
+          "customer",
+          JSON.stringify(updatedCustomer)
+        );
         
         // Close form after 1.5 seconds
         setTimeout(() => {
@@ -270,6 +345,8 @@ const AccountPage = () => {
   };
 
   const handleLogout = async () => {
+    localStorage.removeItem("customer");
+    localStorage.removeItem("customer_phone");
     await logout({ redirectTo: "/home" });
   };
 
@@ -298,13 +375,6 @@ const AccountPage = () => {
 
   const settingsItems = [
     { to: "/account", icon: Settings, label: "الإعدادات", desc: "تحديث بياناتك الشخصية", color: "text-amber-500" },
-    {
-      to: "/my-shipments",
-      icon: Truck,
-      label: "شحناتي",
-      desc: latestOrderNumber ? "تتبع الشحنات الحالية" : "عرض سجل الشحنات",
-      color: "text-orange-500",
-    },
   ];
 
   const containerVariants = {
@@ -389,7 +459,15 @@ const AccountPage = () => {
                 transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
                 className="w-20 h-20 mx-auto bg-gradient-to-br from-primary to-primary/70 text-background rounded-full flex items-center justify-center mb-4 shadow-lg shadow-primary/30"
               >
-                <User className="w-10 h-10" />
+                {customer?.avatar_url ? (
+                  <img
+                    src={customer.avatar_url}
+                    alt="Avatar"
+                    className="w-full h-full object-cover rounded-full"
+                  />
+                ) : (
+                  <User className="w-10 h-10" />
+                )}
               </motion.div>
               
               <motion.div
@@ -397,11 +475,22 @@ const AccountPage = () => {
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.3 }}
               >
-                <h1 className="font-heading text-3xl md:text-4xl">{user?.user_metadata?.full_name || "أهلاً بك"}</h1>
+                <h1 className="font-heading text-3xl md:text-4xl">
+                  {customer?.name || "أهلاً بك"}
+                </h1>
+
                 <p className="text-muted-foreground mt-2 flex items-center justify-center gap-2 flex-wrap">
-                  <Mail className="w-4 h-4" /> {user?.email}
+                  <Mail className="w-4 h-4" />
+                  {customer?.phone}
                 </p>
-                <p className="text-xs text-muted-foreground mt-3">عضو منذ {new Date(user?.created_at).toLocaleDateString('ar-EG')}</p>
+
+                <p className="text-sm text-muted-foreground mt-2">
+                  📍 {customer?.region}
+                </p>
+
+                <p className="text-xs text-muted-foreground mt-3">
+                  عضو منذ {new Date(user?.created_at).toLocaleDateString('ar-EG')}
+                </p>
               </motion.div>
             </div>
           </motion.div>
@@ -853,6 +942,39 @@ const AccountPage = () => {
                         >
                           إلغاء
                         </button>
+                      </div>
+                      {/* Region Input */}
+                      <div className="space-y-3">
+                        <label className="block text-sm font-medium">المحافظة</label>
+
+                        <select
+                          value={region}
+                          onChange={(e) => setRegion(e.target.value)}
+                          disabled={formLoading}
+                          className="w-full px-4 py-2.5 bg-muted/50 border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/50"
+                        >
+                          <option value="">اختر المحافظة</option>
+                          <option value="عدن">عدن</option>
+                          <option value="صنعاء">صنعاء</option>
+                          <option value="تعز">تعز</option>
+                          <option value="حضرموت">حضرموت</option>
+                          <option value="إب">إب</option>
+                          <option value="الحديدة">الحديدة</option>
+                          <option value="ذمار">ذمار</option>
+                          <option value="لحج">لحج</option>
+                          <option value="أبين">أبين</option>
+                          <option value="شبوة">شبوة</option>
+                          <option value="المهرة">المهرة</option>
+                          <option value="مأرب">مأرب</option>
+                          <option value="البيضاء">البيضاء</option>
+                          <option value="الجوف">الجوف</option>
+                          <option value="صعدة">صعدة</option>
+                          <option value="ريمة">ريمة</option>
+                          <option value="الضالع">الضالع</option>
+                          <option value="حجة">حجة</option>
+                          <option value="عمران">عمران</option>
+                          <option value="المحويت">المحويت</option>
+                        </select>
                       </div>
                     </form>
                   </div>

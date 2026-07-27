@@ -20,11 +20,17 @@ const CustomerAuthPage = () => {
     name: "",
     phone: "",
     password: "",
+    region: "",
   });
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.phone.trim() || !formData.password.trim() || (mode === "register" && !formData.name.trim())) {
+    if (
+      !formData.phone.trim() ||
+      !formData.password.trim() ||
+      (mode === "register" && !formData.name.trim()) ||
+      (mode === "register" && !formData.region.trim())
+    ) {
       toast({ title: "خطأ", description: "يرجى ملء جميع الحقول", variant: "destructive" });
       return;
     }
@@ -32,27 +38,90 @@ const CustomerAuthPage = () => {
     try {
       const phone = formData.phone.trim();
       if (mode === "register") {
-        const { data, error } = await supabase.auth.signUp({
-          phone, password: formData.password,
-          options: { data: { full_name: formData.name.trim(), phone_number: phone, country: detectCountryFromPhone(phone) } },
-        });
-        if (error) throw error;
-        if (!data.session) {
-          toast({ title: "تحقق من رقم الهاتف", description: "أكمل تأكيد رقم الهاتف ثم سجّل الدخول." });
-          return;
-        }
-      } else {
-        const { error } = await supabase.auth.signInWithPassword({ phone, password: formData.password });
-        if (error) throw error;
-      }
-      const { data: userData } = await supabase.auth.getUser();
-      if (!userData.user) throw new Error("لم يتم إنشاء جلسة مصادقة");
-      const { data: customer, error: linkError } = await (supabase as any).rpc('link_authenticated_customer', { p_claim_existing: mode === 'login' && claimExisting });
-      if (linkError) throw linkError;
-      setCustomer({ id: customer.id, name: customer.name, phone: customer.phone, region: customer.country });
-      setRegion(customer.country);
-      toast({ title: "مرحباً بك", description: `أهلاً ${customer.name}` });
-      navigate("/home");
+  const { data: registerData, error } = await (supabase as any)
+    .rpc("customer_register", {
+      _name: formData.name.trim(),
+      _phone: phone,
+      _region: formData.region,
+      _password: formData.password,
+    });
+
+  if (error) throw error;
+
+  if (!registerData || registerData.length === 0) {
+    throw new Error("تعذر إنشاء الحساب");
+  }
+
+  const customerData = registerData[0];
+
+  setCustomer({
+    id: customerData.id,
+    name: customerData.name,
+    phone: customerData.phone,
+    region: customerData.region,
+  });
+
+  setRegion(customerData.region);
+
+  localStorage.setItem(
+    "customer",
+    JSON.stringify(customerData)
+  );
+
+  localStorage.setItem(
+    "customer_phone",
+    customerData.phone
+  );
+
+  toast({
+    title: "تم إنشاء الحساب",
+    description: `أهلاً ${customerData.name}`,
+  });
+
+  navigate("/home");
+  return;
+} else {
+  const { data: loginData, error } = await (supabase as any)
+    .rpc("customer_login", {
+      _phone: phone,
+      _password: formData.password,
+    });
+
+  if (error) throw error;
+
+  if (!loginData || loginData.length === 0) {
+    throw new Error("رقم الهاتف أو كلمة المرور غير صحيحة");
+  }
+
+  const customerData = loginData[0];
+
+  setCustomer({
+    id: customerData.id,
+    name: customerData.name,
+    phone: customerData.phone,
+    region: customerData.region,
+  });
+
+  setRegion(customerData.region);
+
+  // حفظ بيانات العميل لاستخدام صفحة حسابي
+  localStorage.setItem(
+    "customer",
+    JSON.stringify(customerData)
+  );
+
+  localStorage.setItem(
+    "customer_phone",
+    customerData.phone
+  );
+
+  toast({
+    title: "مرحباً بك",
+    description: `أهلاً ${customerData.name}`,
+  });
+
+  navigate("/home");
+}
     } catch (error: any) {
       toast({ title: "خطأ", description: error?.message || "تعذر إتمام المصادقة", variant: "destructive" });
     } finally { setIsLoading(false); }
@@ -177,7 +246,48 @@ const CustomerAuthPage = () => {
           </div>
         )}
 
-
+        {mode === "register" && (
+        <select
+          value={formData.region}
+          onChange={(e) =>
+            setFormData({
+              ...formData,
+              region: e.target.value,
+            })
+          }
+          className="
+            w-full
+            h-14
+            bg-transparent
+            border-b
+            border-border
+            text-center
+            text-base
+            focus:outline-none
+            focus:border-primary
+          "
+        >
+          <option value="">اختر المحافظة</option>
+          <option value="عدن">عدن</option>
+          <option value="صنعاء">صنعاء</option>
+          <option value="تعز">تعز</option>
+          <option value="حضرموت">حضرموت</option>
+          <option value="إب">إب</option>
+          <option value="الحديدة">الحديدة</option>
+          <option value="لحج">لحج</option>
+          <option value="أبين">أبين</option>
+          <option value="شبوة">شبوة</option>
+          <option value="مأرب">مأرب</option>
+          <option value="ذمار">ذمار</option>
+          <option value="البيضاء">البيضاء</option>
+          <option value="الضالع">الضالع</option>
+          <option value="صعدة">صعدة</option>
+          <option value="عمران">عمران</option>
+          <option value="ريمة">ريمة</option>
+          <option value="المحويت">المحويت</option>
+          <option value="الجوف">الجوف</option>
+        </select>
+      )}
 
         <Input
           value={formData.phone}

@@ -59,7 +59,7 @@ const CheckoutPage = () => {
   const [currentStep, setCurrentStep] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "bank">("cod");
   const [selectedDelivery, setSelectedDelivery] = useState("");
-  const [selectedRegion, setSelectedRegion] = useState("");
+  const [selectedRegion, setSelectedRegion] = useState(customer?.region || "");
   const [formData, setFormData] = useState({
     name: customer?.name || "",
     phone: customer?.phone || "",
@@ -68,6 +68,11 @@ const CheckoutPage = () => {
     city: "",
     notes: "",
   });
+  useEffect(() => {
+    if (customer?.region) {
+      setSelectedRegion(customer.region);
+    }
+  }, [customer?.region]);
   const [couponCode, setCouponCode] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
@@ -181,39 +186,23 @@ const CheckoutPage = () => {
   const createSecureOrder = async (items: unknown[]) => {
   const { data, error } = await (supabase as any).rpc("create_secure_order", {
     p_customer_id: customer?.id === "guest" ? null : customer?.id || null,
-
     p_customer_name: String(customer?.name || formData.name || "").trim(),
-
     p_customer_phone: String(customer?.phone || formData.phone || "").trim(),
-
     p_customer_address: formData.address.trim(),
-
     p_customer_city: formData.city.trim(),
-
+    p_customer_region: customer?.region || selectedRegion || null,
     p_customer_notes: formData.notes.trim() || null,
-
     p_country: "YE",
-
     p_items: items,
-
     p_subtotal: subtotal,
-
     p_delivery_fee: deliveryFee,
-
     p_total: total,
-
     p_payment_method: paymentMethod,
-
     p_currency_mode: currencyMode,
-
     p_currency_code: currencyMode,
-
     p_exchange_rate_snapshot: 1,
-
     p_total_base: total,
-
     p_coupon_code: couponCode.trim() || null,
-
     p_discount_amount: discountAmount,
   });
 
@@ -265,6 +254,9 @@ const CheckoutPage = () => {
   };
 
   const handleSubmit = async () => {
+    const savedCustomer = JSON.parse(
+      localStorage.getItem("customer") || "null"
+    );
     if (isSubmitting) return;
     if (!validateStep(0) || !validateStep(1) || !validateStep(2)) return;
     setIsSubmitting(true);
@@ -479,7 +471,7 @@ const CheckoutPage = () => {
                         </div>
                       </div>
 
-                      {paymentMethod === "cod" && codRegions.length > 0 && (
+                      {paymentMethod === "cod" && codRegions.length > 0 && !customer?.region && (
                         <div className="bg-muted rounded-lg p-4 space-y-3">
                           <p className="text-sm font-medium flex items-center gap-2"><MapPin className="w-4 h-4 text-gold" /> منطقة الاستلام *</p>
                           <div className="grid grid-cols-2 md:grid-cols-3 gap-2">

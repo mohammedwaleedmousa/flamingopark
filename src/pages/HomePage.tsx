@@ -445,14 +445,12 @@ const HomePage = () => {
         </div>
 
         {/* Editorial split — image left, text right (alternating) */}
-
         {editorial.map((e, i) => (
           <section
             key={e.title}
             className="
               bg-background
               py-1 md:py-28
-
               opacity-0
               translate-y-6
               animate-[fadeUp_0.8s_ease_forwards]
@@ -461,9 +459,7 @@ const HomePage = () => {
               animationDelay: `${i * 100}ms`,
             }}
           >
-
             <div className="grid md:grid-cols-2 items-center">
-
               {/* IMAGE */}
               <div
                 className={`relative aspect-[4/5] md:h-[680px] overflow-hidden ${
@@ -481,21 +477,17 @@ const HomePage = () => {
                     transition duration-700
                   "
                 />
-
                 <div className="
                   absolute inset-0
                   bg-gradient-to-t from-black/40 via-transparent to-pink-500/5
                 " />
               </div>
-
               {/* CONTENT */}
               <div className={`
                 flex items-center justify-center px-8 md:px-24 py-12 md:py-0
                 ${e.reverse ? "md:order-1" : ""}
               `}>
-
                 <div className="max-w-md text-center md:text-right space-y-6">
-
                   <p className="
                     text-[10px]
                     tracking-[0.6em]
@@ -504,28 +496,22 @@ const HomePage = () => {
                   ">
                     {e.eyebrow}
                   </p>
-
                   <h3 className="text-3xl md:text-5xl font-medium leading-tight">
                     {e.title}
                   </h3>
-
                   <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">
                     {e.body}
                   </p>
-
                   <Link
                     to={e.href}
                     className="
                       inline-flex items-center gap-3
-
                       text-[11px]
                       tracking-[0.08em]
                       uppercase
-
                       text-pink-500
                       border-b border-pink-300/40
                       pb-2
-
                       hover:opacity-60
                       transition
                     "
@@ -533,39 +519,16 @@ const HomePage = () => {
                     {e.cta}
                     <ArrowLeft className="w-3 h-3" />
                   </Link>
-
                 </div>
-
               </div>
-
             </div>
-
           </section>
         ))}
-        
-        {/* Best Sellers */}
-        <div ref={bestSellersViewport.ref} style={{ minHeight: 640 }}>
-        {bestSellers.length > 0 && (
-          <section className="py-20 md:py-28 bg-muted">
-            <div className="container mx-auto px-6">
-              <div className="text-center mb-14">
-                <p className="text-[10px] tracking-[0.02em] uppercase text-muted-foreground mb-3">الأكثر طلباً</p>
-                <h2 className="font-heading text-3xl md:text-5xl text-foreground">الأكثر مبيعاً</h2>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
-                {bestSellers.slice(0, 8).map((p) => (
-                  <ProductCard key={p.id} product={p} badge="BEST SELLER" />
-                ))}
-              </div>
-            </div>
-          </section>
-        )}
-        </div>
 
         {/* New Arrivals */}
         <div ref={newArrivalsViewport.ref} style={{ minHeight: 640 }}>
         {newArrivals.length > 0 && (
-          <section className="py-20 md:py-28">
+          <section className="py-10 md:py-28">
             <div className="container mx-auto px-6">
               <div className="flex items-end justify-between mb-12">
                 <div>

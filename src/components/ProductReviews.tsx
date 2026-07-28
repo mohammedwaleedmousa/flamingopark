@@ -24,6 +24,7 @@ interface ProductReview {
   comment: string | null;
   created_at: string;
   images?: string[] | null;
+  country?: string;
 }
 
 const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
@@ -88,13 +89,13 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
     queryKey: ['product-reviews', productId],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from('product_reviews')
-        .select('id,customer_name,rating,comment,created_at,images')
-        .eq('product_id', productId)
-        .eq('is_approved', true)
-        .order('created_at', { ascending: false });
+        .from("product_reviews")
+        .select("*")
+        .eq("product_id", productId)
+        .eq("is_approved", true)
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      return data as ProductReview[];
+      return (data || []) as ProductReview[];
     },
   });
 
@@ -117,7 +118,8 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
         comment: comment.trim() || null,
         is_approved: false,
         images,
-      } as unknown as never);
+        country: "YE",
+      });
 
       if (error) throw error;
     },

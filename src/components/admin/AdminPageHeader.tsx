@@ -12,7 +12,7 @@ interface AdminPageHeaderProps {
     icon: LucideIcon;
     href?: string;
     onClick?: () => void;
-    variant?: 'primary' | 'secondary' | 'outline';
+    variant?: 'primary' | 'secondary' | 'outline' | 'destructive';
   }>;
 }
 
@@ -74,6 +74,8 @@ const AdminPageHeader: React.FC<AdminPageHeaderProps> = ({
                   ? "bg-gradient-to-r from-pink-500 to-rose-500 text-white shadow-pink-500/20 hover:shadow-lg"
                   : action.variant === "secondary"
                   ? "bg-gradient-to-r from-emerald-500 to-green-500 text-white"
+                  : action.variant === "destructive"
+                  ? "bg-red-500 text-white hover:bg-red-600"
                   : "bg-background border border-border hover:border-pink-300 hover:text-pink-600"
               }
             `;

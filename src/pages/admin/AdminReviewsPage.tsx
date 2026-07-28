@@ -19,33 +19,33 @@ import { ar } from "date-fns/locale";
 interface Review {
   id: string;
   customer_name: string;
-  message: string;
-  message_ar: string | null;
+  product_id: string;
+  comment: string | null;
   rating: number;
   country: string;
   is_approved: boolean | null;
   created_at: string;
+  images?: string[] | null;
 }
 
 const AdminReviewsPage = () => {
-  const SINGLE_COUNTRY = "GLOBAL";
   const queryClient = useQueryClient();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingReview, setEditingReview] = useState<Review | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("pending");
   const [formData, setFormData] = useState({
+    product_id: "",
     customer_name: "",
-    message: "",
-    message_ar: "",
+    comment: "",
     rating: 5,
-    country: SINGLE_COUNTRY,
+    country: "YE",
     is_approved: false,
   });
 
   const { data: reviews, isLoading } = useQuery({
     queryKey: ["admin-reviews"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("reviews").select("*").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("product_reviews").select("*").order("created_at", { ascending: false });
       if (error) throw error;
       return data as Review[];
     },
@@ -55,24 +55,24 @@ const AdminReviewsPage = () => {
     mutationFn: async (data: typeof formData & { id?: string }) => {
       if (data.id) {
         const { error } = await supabase
-          .from("reviews")
+          .from("product_reviews")
           .update({
+            product_id: data.product_id,
             customer_name: data.customer_name,
-            message: data.message,
-            message_ar: data.message_ar || null,
+            comment: data.comment || null,
             rating: data.rating,
-            country: SINGLE_COUNTRY,
+            country: "YE",
             is_approved: data.is_approved,
           })
           .eq("id", data.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("reviews").insert({
+        const { error } = await supabase.from("product_reviews").insert({
+          product_id: data.product_id,
           customer_name: data.customer_name,
-          message: data.message,
-          message_ar: data.message_ar || null,
+          comment: data.comment || null,
           rating: data.rating,
-          country: SINGLE_COUNTRY,
+          country: "YE",
           is_approved: data.is_approved,
         });
         if (error) throw error;
@@ -90,7 +90,7 @@ const AdminReviewsPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("reviews").delete().eq("id", id);
+      const { error } = await supabase.from("product_reviews").delete().eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -101,7 +101,7 @@ const AdminReviewsPage = () => {
 
   const toggleApprovalMutation = useMutation({
     mutationFn: async ({ id, is_approved }: { id: string; is_approved: boolean }) => {
-      const { error } = await supabase.from("reviews").update({ is_approved }).eq("id", id);
+      const { error } = await supabase.from("product_reviews").update({ is_approved }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
@@ -112,11 +112,11 @@ const AdminReviewsPage = () => {
 
   const resetForm = () => {
     setFormData({
+      product_id: "",
       customer_name: "",
-      message: "",
-      message_ar: "",
+      comment: "",
       rating: 5,
-      country: SINGLE_COUNTRY,
+      country: "YE",
       is_approved: false,
     });
     setEditingReview(null);
@@ -126,9 +126,9 @@ const AdminReviewsPage = () => {
   const handleEdit = (review: Review) => {
     setEditingReview(review);
     setFormData({
+      product_id: review.product_id,
       customer_name: review.customer_name,
-      message: review.message,
-      message_ar: review.message_ar || "",
+      comment: review.comment || "",
       rating: review.rating,
       country: review.country,
       is_approved: review.is_approved ?? false,
@@ -172,7 +172,7 @@ const AdminReviewsPage = () => {
       <AdminPageHeader
         category="المحتوى"
         title="التقييمات"
-        description={`إدارة ${reviews.length} تقييم`}
+        description={`إدارة ${reviews?.length || 0} تقييم`}
         actions={[]}
       />
 
@@ -212,18 +212,21 @@ const AdminReviewsPage = () => {
                 <div>
                   <Label>التقييم (الإنجليزي)</Label>
                   <Textarea
-                    value={formData.message}
-                    onChange={(e) => setFormData({ ...formData, message: e.target.value })}
+                    value={formData.comment}
+                    onChange={(e) => setFormData({ ...formData, comment: e.target.value })}
                     required
                   />
                 </div>
 
                 <div>
-                  <Label>التقييم (العربي)</Label>
+                  <Label>التقييم</Label>
                   <Textarea
-                    value={formData.message_ar}
-                    onChange={(e) => setFormData({ ...formData, message_ar: e.target.value })}
+                    value={formData.comment}
+                    onChange={(e) =>
+                      setFormData({ ...formData, comment: e.target.value })
+                    }
                     dir="rtl"
+                    required
                   />
                 </div>
 
@@ -287,7 +290,7 @@ const AdminReviewsPage = () => {
           {filteredReviews?.map((review) => (
             <TableRow key={review.id}>
               <TableCell className="font-medium">{review.customer_name}</TableCell>
-              <TableCell className="max-w-xs truncate">{review.message_ar || review.message}</TableCell>
+              <TableCell className="max-w-xs truncate">{review.comment}</TableCell>
               <TableCell>{renderStars(review.rating)}</TableCell>
               <TableCell>{format(new Date(review.created_at), "dd MMM yyyy", { locale: ar })}</TableCell>
               <TableCell>

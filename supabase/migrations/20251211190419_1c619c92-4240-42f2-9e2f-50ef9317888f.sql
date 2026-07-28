@@ -243,12 +243,10 @@ CREATE TRIGGER update_site_settings_updated_at BEFORE UPDATE ON public.site_sett
 
 -- Insert default settings
 INSERT INTO public.site_settings (key, value) VALUES
-  ('store_info', '{"name": "ERMgold", "email": "info@ermgold.com", "phone_sa": "+966123456789", "phone_ye": "+967123456789"}'),
-  ('bank_accounts_sa', '[{"bank": "الراجحي", "account": "SA1234567890123456789012", "name": "ERMgold"}]'),
+  ('store_info', '{"phone_ye": "+967778579777"}'),
   ('bank_accounts_ye', '[{"bank": "بنك اليمن", "account": "YE1234567890123456", "name": "ERMgold"}]'),
   ('certification_pdf_url', '""'),
-  ('whatsapp_sa', '"+966123456789"'),
-  ('whatsapp_ye', '"+967123456789"');
+  ('whatsapp_ye', '"+967778579777"');
 
 -- Create storage bucket for uploads
 INSERT INTO storage.buckets (id, name, public) VALUES ('uploads', 'uploads', true);

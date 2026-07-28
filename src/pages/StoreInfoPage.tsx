@@ -41,8 +41,8 @@ const StoreInfoPage = () => {
       icon: Phone,
       title: 'رقم الهاتف',
       content: [
-        { label: 'الهاتف الرئيسي', value: storeInfo?.phone_ye || storeInfo?.phone_sa || '+967123456789' },
-        { label: 'هاتف إضافي', value: storeInfo?.phone_sa || storeInfo?.phone_ye || '+966123456789' }
+        { label: 'الهاتف الرئيسي', value: storeInfo?.phone_ye || storeInfo?.phone_sa || '+967778579777' },
+        { label: 'هاتف إضافي', value: storeInfo?.phone_sa || storeInfo?.phone_ye || '+967778579777' }
       ]
     },
     {

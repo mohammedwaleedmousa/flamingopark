@@ -312,7 +312,7 @@ const CheckoutPage = () => {
         deliveryCompany: createdOrder.delivery_company || selectedCompany?.name || "",
         selectedRegion: paymentMethod === "cod" && regionData ? regionData.region_name_ar : null,
         country: "GLOBAL", currencyMode: createdOrder.currency_mode || currencyMode,
-        whatsappNumber: whatsappNumber || "967778579777", createdAt: createdOrder.created_at || new Date().toISOString(),
+        createdAt: createdOrder.created_at || new Date().toISOString(),
       };
       clearCart();
       navigate("/order-confirmation", { state: { orderData } });

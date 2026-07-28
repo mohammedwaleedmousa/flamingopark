@@ -14,7 +14,7 @@ import {
   convertPrice,
   hydrateCurrencies
 } from '@/lib/currency';
-
+const STORE_WHATSAPP = "967778579777";
 interface SelectedAccessory {
   name: string;
   name_ar: string;
@@ -53,7 +53,6 @@ interface OrderData {
   selectedRegion?: string | null;
   country: string;
   currencyMode?: string;
-  whatsappNumber: string;
   createdAt: string;
 }
 
@@ -64,7 +63,7 @@ const OrderConfirmationPage = () => {
   const [isConfirming, setIsConfirming] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
   const invoiceRef = useRef<HTMLDivElement>(null);
-  const flamingoLogo = '/icons/flamingo.jpeg';
+  const flamingoLogo = '/icons/flamingo.jpeg'; 
 
   // Currency snapshot: prices from checkout are in SAR (base). Convert & display in order's currency.
   const currencyMode = orderData?.currencyMode || "SAR";
@@ -181,7 +180,7 @@ const OrderConfirmationPage = () => {
 
 يرجى مراجعة الطلب من لوحة التحكم`;
       
-      const whatsappUrl = `https://wa.me/${orderData.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
+      const whatsappUrl = `https://wa.me/${STORE_WHATSAPP}?text=${encodeURIComponent(message)}`;
       window.location.href = whatsappUrl;
       
     } catch (error) {
@@ -203,7 +202,7 @@ const OrderConfirmationPage = () => {
 
 يرجى مراجعة الطلب من لوحة التحكم`;
       
-      const whatsappUrl = `https://wa.me/${orderData.whatsappNumber.replace(/[^0-9]/g, '')}?text=${encodeURIComponent(message)}`;
+      const whatsappUrl = `https://wa.me/${STORE_WHATSAPP}?text=${encodeURIComponent(message)}`;
       window.location.href = whatsappUrl;
     } finally {
       setIsConfirming(false);

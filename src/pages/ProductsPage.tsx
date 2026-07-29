@@ -21,6 +21,7 @@ if ("scrollRestoration" in window.history) {
 }
 
 type ColorVariant = { id?: string; name?: string; colorName?: string; images?: string[]; price?: number; discount?: number; sizes?: VariantSize[] };
+type ColorSwatch = { name: string; hex: string };
 type CatalogProduct = Product & { color_variants?: ColorVariant[] | string };
 
 interface Category {
@@ -366,10 +367,38 @@ const ProductsPage = () => {
       return Array.from(new Set(fromVariants));
   };
 
+  const getProductColorSwatches = (p: CatalogProduct): ColorSwatch[] => {
+    return (Array.isArray(p.color_variants) ? p.color_variants : [])
+      .map((v) => ({ name: (v.name || "").trim(), hex: ((v as { hex?: string }).hex || "").trim() }))
+      .filter((c) => c.name);
+  };
+
+  const NAMED_COLOR_HEX: Record<string, string> = {
+    "أسود": "#111", "black": "#111",
+    "أبيض": "#fff", "white": "#fff",
+    "أحمر": "#d33", "red": "#d33",
+    "أزرق": "#2563eb", "blue": "#2563eb",
+    "أخضر": "#16a34a", "green": "#16a34a",
+    "أصفر": "#eab308", "yellow": "#eab308",
+    "وردي": "#ec4899", "pink": "#ec4899",
+    "بني": "#78350f", "brown": "#78350f",
+    "رمادي": "#6b7280", "gray": "#6b7280", "grey": "#6b7280",
+    "بيج": "#e6d3b3", "beige": "#e6d3b3",
+    "ذهبي": "#c9a962", "gold": "#c9a962",
+    "فضي": "#c0c0c0", "silver": "#c0c0c0",
+    "بنفسجي": "#7c3aed", "purple": "#7c3aed",
+    "برتقالي": "#f97316", "orange": "#f97316",
+  };
+
   const colorsAvailable = useMemo(() => {
-    const set = new Set<string>();
-    products.forEach((p) => getProductColors(p).forEach((c) => set.add(c)));
-    return Array.from(set);
+    const map = new Map<string, string>();
+    products.forEach((p) => getProductColorSwatches(p).forEach((c) => {
+      const key = c.name.toLowerCase();
+      if (!map.has(key)) {
+        map.set(key, c.hex || NAMED_COLOR_HEX[c.name] || NAMED_COLOR_HEX[key] || "#e5e5e5");
+      }
+    }));
+    return Array.from(map.entries()).map(([name, hex]) => ({ name, hex }));
   }, [products]);
 
   const getProductSizes = (p: CatalogProduct): string[] => {
@@ -518,7 +547,7 @@ const ProductsPage = () => {
                 <div className="mr-auto text-sm text-muted-foreground">{visibleProducts.length} {getSiteText(content, "products_page_count_label", "منتج")}</div>
               </div>
 
-          {isLoading ? (
+          {isLoading && products.length === 0 ? (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
               {Array.from({length:8}).map((_,i)=> (
                 <motion.div key={i} custom={i} initial="hidden" animate="show" variants={shimmerVariants} className="rounded-2xl bg-gradient-to-r from-muted/50 via-muted to-muted/50 h-64" />
@@ -537,18 +566,23 @@ const ProductsPage = () => {
               </div>
             </div>
           ) : (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-              {paginatedProducts.map((p, i) => (
-                <motion.div key={p.id} custom={i} initial={isMobileViewport ? false : "hidden"} animate={isMobileViewport ? false : "show"} variants={shimmerVariants}>
-                  <ProductCard product={p} onQuickView={(prod) => setQuickViewProd(prod)} />
-                </motion.div>
-              ))}
-            </div>
+            <>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+                {paginatedProducts.map((p, i) => (
+                  <motion.div key={p.id} custom={i} initial={isMobileViewport ? false : "hidden"} animate={isMobileViewport ? false : "show"} variants={shimmerVariants}>
+                    <ProductCard product={p} onQuickView={(prod) => setQuickViewProd(prod)} />
+                  </motion.div>
+                ))}
+                {isLoading && products.length > 0 && Array.from({ length: 4 }).map((_, i) => (
+                  <div key={`sk-${i}`} className="rounded-2xl bg-gradient-to-r from-muted/50 via-muted to-muted/50 h-64 animate-pulse" />
+                ))}
+              </div>
+            </>
           )}
 
-          {hasMore && (
+          {hasMore && !isLoading && (
             <div className="flex items-center justify-center mt-10">
-              <button onClick={() => { setParam("page", String(page + 1)); }} className="px-8 py-3 rounded-xl bg-foreground text-background hover:opacity-90 transition-colors">{getSiteText(content, "products_page_load_more", "عرض المزيد")}</button>
+              <button onClick={() => setParam("page", String(page + 1))} className="btn-unified px-8 py-3">{getSiteText(content, "products_page_load_more", "عرض المزيد")}</button>
             </div>
           )}
           </div>
@@ -588,11 +622,28 @@ const ProductsPage = () => {
                     </div>
                     <div>
                       <p className="text-[10px] tracking-[0.35em] uppercase text-muted-foreground mb-3">{getSiteText(content, "products_page_filter_color", "اللون")}</p>
-                      <div className="flex flex-wrap gap-3">
-                        <button onClick={() => setParam('color', null)} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${colorFilter === 'all' ? 'bg-foreground text-background' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>كل الألوان</button>
-                        {colorsAvailable.map((c) => (
-                          <button key={c} onClick={() => setParam('color', c)} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${colorFilter === c ? 'bg-foreground text-background' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>{c}</button>
-                        ))}
+                      <div className="flex flex-wrap items-center gap-3">
+                        <button
+                          onClick={() => setParam('color', null)}
+                          title="كل الألوان"
+                          className={`relative w-9 h-9 rounded-full border-2 flex items-center justify-center text-[10px] font-medium transition-all ${colorFilter === 'all' ? 'border-foreground ring-2 ring-foreground/20' : 'border-border hover:border-foreground/50'}`}
+                          style={{ background: 'conic-gradient(#ec4899,#eab308,#16a34a,#2563eb,#7c3aed,#ec4899)' }}
+                        >
+                          <span className="absolute inset-1 rounded-full bg-background flex items-center justify-center text-foreground">كل</span>
+                        </button>
+                        {colorsAvailable.map((c) => {
+                          const active = colorFilter.toLowerCase() === c.name.toLowerCase();
+                          return (
+                            <button
+                              key={c.name}
+                              onClick={() => setParam('color', active ? null : c.name)}
+                              title={c.name}
+                              aria-label={c.name}
+                              className={`w-9 h-9 rounded-full border-2 transition-all ${active ? 'border-foreground ring-2 ring-foreground/20 scale-110' : 'border-border hover:border-foreground/50'}`}
+                              style={{ background: c.hex }}
+                            />
+                          );
+                        })}
                       </div>
                     </div>
                     <div>

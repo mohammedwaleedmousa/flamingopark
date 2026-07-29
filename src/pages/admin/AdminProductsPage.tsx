@@ -35,7 +35,9 @@ interface DbProduct {
   description_ar: string;
   images: string[];
   category: string;
+  category_id: string | null;
   brand: string;
+  brand_id: string | null;
   in_stock: boolean;
   countries: string[];
   is_active: boolean;
@@ -44,6 +46,9 @@ interface DbProduct {
   color_variants?: any[];
   sort_order: number | null;
 }
+
+interface FilterCategory { id: string; name_ar: string; parent_id: string | null }
+interface FilterBrand { id: string; name: string }
 
 const PAGE_SIZE = 25;
 
@@ -63,6 +68,11 @@ const AdminProductsPage = () => {
 
   const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
   const [stock, setStock] = useState<"all" | "in" | "out">("all");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
+  const [brandFilter, setBrandFilter] = useState<string>("all");
+
+  const [categories, setCategories] = useState<FilterCategory[]>([]);
+  const [brands, setBrands] = useState<FilterBrand[]>([]);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -70,13 +80,30 @@ const AdminProductsPage = () => {
 
   useEffect(() => {
     setPage(1);
-  }, [search, status, stock]);
+  }, [search, status, stock, categoryFilter, brandFilter]);
+
+  useEffect(() => {
+    (async () => {
+      const [{ data: cats }, { data: brs }] = await Promise.all([
+        supabase.from("categories").select("id,name_ar,parent_id").eq("is_active", true).order("sort_order"),
+        supabase.from("brands").select("id,name").eq("is_active", true).order("name"),
+      ]);
+      setCategories((cats || []) as FilterCategory[]);
+      setBrands((brs || []) as FilterBrand[]);
+    })();
+  }, []);
+
+  // When a parent category is picked, filter brands to those actually used in that category.
+  const brandsForSelectedCategory = useMemo(() => brands, [brands]);
+
+  const parentCategories = useMemo(() => categories.filter((c) => !c.parent_id), [categories]);
+  const subCategoriesFor = (parentId: string) => categories.filter((c) => c.parent_id === parentId);
 
   useEffect(() => {
     fetchProducts();
     fetchProductStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, status, stock, page]);
+  }, [search, status, stock, page, categoryFilter, brandFilter]);
 
   const fetchProducts = async () => {
     setIsLoading(true);
@@ -85,7 +112,7 @@ const AdminProductsPage = () => {
     let q = supabase
       .from("products")
       .select(
-        "id,name,name_ar,slug,price,cost_price,discount,category,brand,in_stock,is_active,countries,images,sort_order",
+        "id,name,name_ar,slug,price,cost_price,discount,category,category_id,brand,brand_id,in_stock,is_active,countries,images,sort_order",
         { count: "exact" }
       );
 
@@ -95,6 +122,12 @@ const AdminProductsPage = () => {
     }
     if (status !== "all") q = q.eq("is_active", status === "active");
     if (stock !== "all") q = q.eq("in_stock", stock === "in");
+    if (categoryFilter !== "all") {
+      // Include subcategories of a selected parent.
+      const subs = subCategoriesFor(categoryFilter).map((c) => c.id);
+      q = q.in("category_id", [categoryFilter, ...subs]);
+    }
+    if (brandFilter !== "all") q = q.eq("brand_id", brandFilter);
 
     const from = (page - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
@@ -293,6 +326,69 @@ const AdminProductsPage = () => {
 
       {/* Filters bar */}
       <div className="sticky top-5 z-20 rounded-3xl border border-border/60 bg-background/80 backdrop-blur-xl shadow-sm p-5 space-y-4">
+        {/* Category chips */}
+        {parentCategories.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1">
+            <button
+              onClick={() => { setCategoryFilter("all"); setBrandFilter("all"); }}
+              className={cn(
+                "shrink-0 px-4 py-2 rounded-full text-xs font-medium border transition-colors",
+                categoryFilter === "all"
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-background text-foreground border-border hover:bg-muted"
+              )}
+            >
+              كل المنتجات
+            </button>
+            {parentCategories.map((c) => (
+              <button
+                key={c.id}
+                onClick={() => { setCategoryFilter(c.id); setBrandFilter("all"); }}
+                className={cn(
+                  "shrink-0 px-4 py-2 rounded-full text-xs font-medium border transition-colors",
+                  categoryFilter === c.id
+                    ? "bg-foreground text-background border-foreground"
+                    : "bg-background text-foreground border-border hover:bg-muted"
+                )}
+              >
+                {c.name_ar}
+              </button>
+            ))}
+          </div>
+        )}
+
+        {/* Brand chips — appear once a category is chosen */}
+        {categoryFilter !== "all" && brandsForSelectedCategory.length > 0 && (
+          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pt-1 border-t border-border/40">
+            <span className="shrink-0 text-[11px] text-muted-foreground pl-2">الماركات:</span>
+            <button
+              onClick={() => setBrandFilter("all")}
+              className={cn(
+                "shrink-0 px-3 py-1.5 rounded-full text-[11px] border transition-colors",
+                brandFilter === "all"
+                  ? "bg-foreground text-background border-foreground"
+                  : "bg-background text-foreground border-border hover:bg-muted"
+              )}
+            >
+              الكل
+            </button>
+            {brandsForSelectedCategory.map((b) => (
+              <button
+                key={b.id}
+                onClick={() => setBrandFilter(b.id)}
+                className={cn(
+                  "shrink-0 px-3 py-1.5 rounded-full text-[11px] border transition-colors",
+                  brandFilter === b.id
+                    ? "bg-foreground text-background border-foreground"
+                    : "bg-background text-foreground border-border hover:bg-muted"
+                )}
+              >
+                {b.name}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="flex flex-col md:flex-row gap-3">
           <div className="relative flex-1">
             <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />

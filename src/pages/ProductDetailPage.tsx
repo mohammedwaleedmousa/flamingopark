@@ -21,7 +21,10 @@ import {
   ShoppingBag, Share2, ChevronLeft, ChevronRight, Minus, Plus, Check, Heart,
   Truck, Shield, RotateCcw, Star, Package, ChevronDown, ZoomIn, ZoomOut,
 } from 'lucide-react';
- 
+import { FaWhatsapp } from "react-icons/fa";
+const handleWhatsApp = () => {
+  window.open("https://wa.me/967778579777", "_blank");
+};
 const ProductDetailPage = () => {
   const { slug } = useParams();
   const navigate = useNavigate();
@@ -582,7 +585,6 @@ console.log("SIZES TO SHOW:", sizesToShow); // هنا الخطأ
                   </div>
                 </div>
               )}
- 
               {/* CTA buttons */}
               <div className="space-y-3 pt-4">
                 {justAdded && (
@@ -597,18 +599,22 @@ console.log("SIZES TO SHOW:", sizesToShow); // هنا الخطأ
                   </div>
                 )}
                 <Button onClick={handleAddToCart} disabled={!product.inStock}
-                  className="w-full h-14 rounded-2xl bg-gold hover:bg-gold/90 text-white font-heading text-base gap-3">
+                  className="w-full h-14 bg-gold hover:bg-gold/90 text-white font-heading text-base gap-3">
                   <ShoppingBag className="w-5 h-5" /> إضافة للسلة
                 </Button>
-                <Button onClick={handleShare} variant="outline" className="w-full h-12 rounded-2xl gap-2">
-                  <Share2 className="w-4 h-4" /> مشاركة
-                </Button>
-              </div>
- 
-              
+                <div className="grid grid-cols-2 gap-3">
+                  <Button onClick={handleShare} variant="outline" className="w-full h-12 gap-2">
+                    <Share2 className="w-4 h-4" /> مشاركة
+                  </Button>
+                  <Button asChild className="w-full h-12 gap-2 bg-[#25D366] hover:bg-[#1EBE5B] text-black">
+                    <a href="https://wa.me/967778579777" target="_blank" rel="noopener noreferrer">
+                      <FaWhatsapp className="w-5 h-5" /> استفسار
+                    </a>
+                  </Button>
+                </div>
+              </div>             
             </motion.div>
           </div>
- 
           {/* Specifications + Return Policy — collapsible */}
           {((product.specs && product.specs.length > 0) || effectiveReturnPolicy) && (
             <section className="mt-16 max-w-3xl mx-auto space-y-3">

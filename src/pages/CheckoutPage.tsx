@@ -344,7 +344,7 @@ const CheckoutPage = () => {
 
           {/* Stepper */}
           <div className="mb-10">
-            <div className="flex items-center justify-between max-w-2xl mx-auto">
+            <div className="flex items-center justify-between max-w-2xl mx-auto pr-5">
               {STEPS.map((step, i) => {
                 const Icon = step.icon;
                 const done = i < currentStep;

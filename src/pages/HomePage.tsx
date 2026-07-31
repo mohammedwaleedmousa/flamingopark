@@ -13,6 +13,11 @@ import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import type { Product } from "@/store/useStore";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNearViewport } from "@/hooks/useNearViewport";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { FreeMode } from "swiper/modules";
+
+import "swiper/css";
+import "swiper/css/free-mode";
 
 type FeaturedCategoryItem = {
   title: string;
@@ -127,32 +132,169 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
   const [active, setActive] = useState(items[0]);
 
   return (
-    <section className="py-14 bg-background">
+    <section className="categories-strip" dir="rtl" aria-label="الأقسام">
+      <style>{`
+        .categories-strip{
+          --accent:#E8547C;
+          --text:#1F1F1F;
+          --muted:#777;
+          --border:#ECECEC;
+          --cream:#FCFAF8;
+
+          background:#fff;
+          padding:14px 0 18px;
+        }
+
+        .categories-strip .header{
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          margin-bottom:20px;
+        }
+
+        .categories-strip .title{
+          font-family:"Noto Kufi Arabic",sans-serif;
+          font-size:18px;
+          font-weight:700;
+          color:var(--text);
+          margin:0;
+        }
+
+        /* نفس تصميم قسم الماركات */
+
+        .categories-strip .view-all{
+          display:inline-flex;
+          align-items:center;
+          gap:6px;
+          color:var(--muted);
+          text-decoration:none;
+          font-size:13px;
+          font-weight:600;
+          transition:all .25s ease;
+        }
+
+        .categories-strip .view-all svg{
+          width:14px;
+          height:14px;
+          transition:transform .25s ease;
+        }
+
+        .categories-strip .view-all:hover{
+          color:var(--accent);
+        }
+
+        .categories-strip .view-all:hover svg{
+          transform:translateX(-3px);
+        }
+
+        .categories-strip .swiper{
+          overflow:visible;
+          padding:6px 0;
+        }
+
+        .categories-strip .swiper-slide{
+          width:150px;
+        }
+
+        .categories-strip .card{
+          display:block;
+          text-decoration:none;
+          border-radius:22px;
+          overflow:hidden;
+          background:var(--cream);
+          border:1px solid var(--border);
+          transition:all .28s ease;
+        }
+
+        .categories-strip .image{
+          aspect-ratio:1/1;
+          overflow:hidden;
+          background:#fff;
+        }
+
+        .categories-strip .image img{
+          width:100%;
+          height:100%;
+          object-fit:cover;
+          transition:transform .45s ease;
+        }
+
+        .categories-strip .content{
+          padding:14px;
+          text-align:center;
+        }
+
+        .categories-strip .name{
+          font-size:14px;
+          font-weight:600;
+          color:var(--text);
+          transition:.25s;
+        }
+
+        .categories-strip .card:hover{
+          border-color:var(--accent);
+        }
+
+        .categories-strip .card:hover img{
+          transform:scale(1.06);
+        }
+
+        .categories-strip .card:hover .name{
+          color:var(--accent);
+        }
+      `}</style>
+
       <div className="container mx-auto px-4">
-        {/* Categories */}
-        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-4">
-          {items.map((item) => (
-            <Link
-              key={item.title}
-              to={item.link}
-              className="group"
+
+        <div className="header">
+          <h2 className="title">الأقسام</h2>
+
+          <Link to="/categories" className="view-all">
+            عرض جميع الأقسام
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
             >
-              <div className="overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-pink-500 hover:shadow-lg">
-                <div className="aspect-square overflow-hidden bg-muted">
+              <path d="M9 18l6-6-6-6" />
+            </svg>
+          </Link>
+        </div>
+
+        <Swiper
+          modules={[FreeMode]}
+          slidesPerView="auto"
+          spaceBetween={18}
+          freeMode={{ enabled: true, momentum: true }}
+          grabCursor
+        >
+          {items.map((item) => (
+            <SwiperSlide key={item.title}>
+              <Link
+                to={item.link}
+                className="card"
+              >
+                <div className="image">
                   <img
                     src={item.image}
                     alt={item.title}
                     loading="lazy"
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                   />
                 </div>
-              </div>
-              <h3 className="mt-3 text-center text-sm font-semibold transition-colors group-hover:text-pink-600">
-                {item.title}
-              </h3>
-            </Link>
+
+                <div className="content">
+                  <div className="name">
+                    {item.title}
+                  </div>
+                </div>
+              </Link>
+            </SwiperSlide>
           ))}
-        </div>
+        </Swiper>
+
       </div>
     </section>
   );
@@ -312,6 +454,9 @@ const HomePage = () => {
 
         {/* Categories — replaced with horizontal CategoryCarousel for improved UX */}
         <CategoryCarousel items={featuredCategories} />
+
+
+
         <div ref={featuredViewport.ref} style={{ minHeight: 640 }}>
         {products.length > 0 && (
           <section className="py-16 md:py-24 bg-background">

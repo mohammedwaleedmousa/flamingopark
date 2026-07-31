@@ -53,45 +53,165 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
   );
 
   return (
-    <section className="py-12 bg-white" dir="rtl" aria-label="الماركات">
+    <section className="brands-luxury" dir="rtl" aria-label="الماركات">
+      <style>
+      {`
+      .brands-luxury{
+        --text:#1F1F1F;
+        --muted:#777;
+        --border:#ECECEC;
+        --accent:#E8547C;
+        --accent-soft:#FFF6F9;
+        background:#fff;
+        padding:18px 0 16px;
+        border-top:1px solid var(--border);
+      }
+      .brands-luxury .header{
+        display:flex;
+        justify-content:space-between;
+        align-items:center;
+        margin-bottom:22px;
+      }
+      .brands-luxury .title{
+        font-family:"Noto Kufi Arabic",sans-serif;
+        font-size:17px;
+        font-weight:700;
+        color:var(--text);
+        margin:0;
+        letter-spacing:-0.2px;
+      }
+      .brands-luxury .view-all{
+        display:inline-flex;
+        align-items:center;
+        gap:6px;
+        color:var(--muted);
+        text-decoration:none;
+        font-size:13px;
+        font-weight:600;
+        transition:all .25s ease;
+      }
+      .brands-luxury .view-all svg{
+        width:14px;
+        height:14px;
+        transition:transform .25s ease;
+      }
+      .brands-luxury .view-all:hover{
+        color:var(--accent);
+      }
+      .brands-luxury .view-all:hover svg{
+        transform:translateX(-3px);
+      }
+      .brands-luxury .swiper{
+        overflow:visible;
+        padding:6px 0;
+      }
+      .brands-luxury .swiper-slide{
+        width:94px;
+      }
+      .brands-luxury .brand{
+        display:flex;
+        flex-direction:column;
+        align-items:center;
+        text-decoration:none;
+      }
+      .brands-luxury .logo-box{
+        width:82px;
+        height:82px;
+        background:#fff;
+        border:1px solid var(--border);
+        border-radius:50%;
+        display:flex;
+        align-items:center;
+        justify-content:center;
+        overflow:hidden;
+        transition:
+          border-color .28s ease,
+          background .28s ease,
+          box-shadow .28s ease,
+          transform .28s ease;
+      }
+      .brands-luxury .logo-box img{
+        max-width:56%;
+        max-height:56%;
+        object-fit:contain;
+        transition:transform .28s ease;
+        filter:grayscale(.08);
+      }
+      .brands-luxury .name{
+        margin-top:11px;
+        font-size:12px;
+        font-weight:500;
+        color:var(--text);
+        text-align:center;
+        line-height:1.35;
+        transition:color .28s ease;
+      }
+      /* Hover */
+      .brands-luxury .brand:hover .logo-box{
+        border-color:#E8547C;
+      }
+      .brands-luxury .brand:hover .logo-box img{
+        transform:scale(1.08);
+        filter:none;
+      }
+      .brands-luxury .brand:hover .name{
+        color:var(--accent);
+      }
+      .brands-luxury .brand:active .logo-box{
+        transform:scale(.97);
+      }
+    `}
+    </style>
       <div className="container mx-auto px-4">
-        <div className="text-center mb-3">
-          <p className="mt-0 text-sm text-muted-foreground">اختر ماركتك المفضلة.</p>
+        <div className="header">
+          <h2 className="title">الماركات</h2>
+          <Link to="/brands" className="view-all">
+            عرض جميع الماركات
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M9 18l6-6-6-6"/>
+            </svg>
+          </Link>
         </div>
-
         <Swiper
           modules={[FreeMode]}
           slidesPerView="auto"
-          spaceBetween={14}
-          freeMode={{ enabled: true, momentum: true }}
+          spaceBetween={22}
+          freeMode={{ enabled:true, momentum:true }}
           grabCursor
-          className="w-full"
         >
-          {renderBrands.map((brand) => (
-            <SwiperSlide key={brand.id} className="!w-[90px] md:!w-[105px]">
-
-              <Link to={`/brands/${brand.slug}`} className="group flex flex-col items-center">
-
-                <div className="w-20 h-20 md:w-24 md:h-24 rounded-full border border-gray-200 bg-white flex items-center justify-center shadow-sm transition-all duration-300 group-hover:border-pink-500 group-hover:shadow-lg group-hover:-translate-y-1">
-
+          {renderBrands.map((brand)=>(
+            <SwiperSlide key={brand.id}>
+              <Link
+                to={`/brands/${brand.slug}`}
+                className="brand"
+              >
+                <div className="logo-box">
                   {brand.logo_url ? (
-                    <img src={brand.logo_url} alt={brand.name} loading="lazy" className="max-w-[58%] max-h-[58%] object-contain transition-transform duration-300 group-hover:scale-110" />
+                    <img
+                      src={brand.logo_url}
+                      alt={brand.name}
+                      loading="lazy"
+                    />
                   ) : (
-                    <span className="text-[11px] font-medium text-center px-2">{brand.name}</span>
+                    <span className="text-[11px] text-center px-2">
+                      {brand.name}
+                    </span>
                   )}
-
                 </div>
-
-                <span className="mt-3 text-[12px] font-medium text-center text-gray-700 line-clamp-1 transition-colors duration-300 group-hover:text-pink-600">
+                <span className="name line-clamp-1">
                   {brand.name}
                 </span>
-
               </Link>
-
             </SwiperSlide>
           ))}
         </Swiper>
-
       </div>
     </section>
   );

@@ -65,23 +65,17 @@ const AccountPage = () => {
         created_at: customerData.created_at || new Date().toISOString(),
       });
 
-      // جلب البيانات الجديدة من Supabase
-      if (customerData.phone) {
-        const { data, error } = await supabase
-          .from("customers")
-          .select("*")
-          .eq("phone", customerData.phone)
-          .single();
+      // جلب البيانات الجديدة من قاعدة البيانات عبر دالة الحساب الشخصي
+      if (customerData.phone && customerData.id) {
+        const { data, error } = await (supabase as any).rpc("customer_self", {
+          _id: customerData.id,
+          _phone: customerData.phone,
+        });
 
-        if (!error && data) {
-          setCustomer(data);
-
-          localStorage.setItem(
-            "customer",
-            JSON.stringify(data)
-          );
-        } else {
-          console.log("Customer fetch error:", error);
+        if (!error && data && data.length) {
+          const fresh = { ...data[0], region: data[0].region || data[0].country };
+          setCustomer(fresh);
+          localStorage.setItem("customer", JSON.stringify(fresh));
         }
       }
 
@@ -102,14 +96,13 @@ const AccountPage = () => {
     const phone =
       localStorage.getItem("customer_phone") ||
       user?.user_metadata?.phone_number;
-    if (!phone) return;
-    const { data, error } = await supabase
-      .from("customers")
-      .select("*")
-      .eq("phone", phone)
-      .single();
-    if (!error && data) {
-      setCustomer(data);
+    if (!phone || !customer?.id) return;
+    const { data, error } = await (supabase as any).rpc("customer_self", {
+      _id: customer.id,
+      _phone: phone,
+    });
+    if (!error && data && data.length) {
+      setCustomer({ ...data[0], region: data[0].region || data[0].country });
     }
   };
 
@@ -291,16 +284,13 @@ const AccountPage = () => {
         avatarUrl = avatarPreview;
       }
 
-      const { error } = await (supabase as any)
-      .from("customers")
-      .update({
-        name: fullName.trim(),
-        phone: phoneNumber.trim(),
-        region: region.trim(),
-        avatar_url: avatarUrl || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", customer.id);
+      const { error } = await (supabase as any).rpc("customer_update_self", {
+        _id: customer.id,
+        _phone: customer.phone,
+        _name: fullName.trim(),
+        _region: region.trim(),
+        _avatar_url: avatarUrl || "",
+      });
 
       if (error) {
         setNotification({ type: "error", message: "فشل تحديث البيانات: " + error.message });

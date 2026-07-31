@@ -21,7 +21,7 @@ if ("scrollRestoration" in window.history) {
 }
 
 type ColorVariant = { id?: string; name?: string; colorName?: string; images?: string[]; price?: number; discount?: number; sizes?: VariantSize[] };
-type ColorSwatch = { name: string; hex: string };
+type ColorSwatch = { name: string; hex: string; hex2?: string };
 type CatalogProduct = Product & { color_variants?: ColorVariant[] | string };
 
 interface Category {
@@ -369,7 +369,11 @@ const ProductsPage = () => {
 
   const getProductColorSwatches = (p: CatalogProduct): ColorSwatch[] => {
     return (Array.isArray(p.color_variants) ? p.color_variants : [])
-      .map((v) => ({ name: (v.name || "").trim(), hex: ((v as { hex?: string }).hex || "").trim() }))
+      .map((v) => ({
+        name: (v.name || "").trim(),
+        hex: ((v as { hex?: string }).hex || "").trim(),
+        hex2: ((v as { hex2?: string }).hex2 || "").trim() || undefined,
+      }))
       .filter((c) => c.name);
   };
 
@@ -391,14 +395,18 @@ const ProductsPage = () => {
   };
 
   const colorsAvailable = useMemo(() => {
-    const map = new Map<string, string>();
+    const map = new Map<string, ColorSwatch>();
     products.forEach((p) => getProductColorSwatches(p).forEach((c) => {
       const key = c.name.toLowerCase();
       if (!map.has(key)) {
-        map.set(key, c.hex || NAMED_COLOR_HEX[c.name] || NAMED_COLOR_HEX[key] || "#e5e5e5");
+        map.set(key, {
+          name: c.name,
+          hex: c.hex || NAMED_COLOR_HEX[c.name] || NAMED_COLOR_HEX[key] || "#e5e5e5",
+          hex2: c.hex2,
+        });
       }
     }));
-    return Array.from(map.entries()).map(([name, hex]) => ({ name, hex }));
+    return Array.from(map.values());
   }, [products]);
 
   const getProductSizes = (p: CatalogProduct): string[] => {
@@ -640,7 +648,11 @@ const ProductsPage = () => {
                               title={c.name}
                               aria-label={c.name}
                               className={`w-9 h-9 rounded-full border-2 transition-all ${active ? 'border-foreground ring-2 ring-foreground/20 scale-110' : 'border-border hover:border-foreground/50'}`}
-                              style={{ background: c.hex }}
+                              style={{
+                                background: c.hex2
+                                  ? `linear-gradient(135deg, ${c.hex} 50%, ${c.hex2} 50%)`
+                                  : c.hex,
+                              }}
                             />
                           );
                         })}

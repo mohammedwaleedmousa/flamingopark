@@ -127,119 +127,31 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
   const [active, setActive] = useState(items[0]);
 
   return (
-    <section className="py-10 md:py-14 bg-background">
-      <div className="container mx-auto px-6">
-        {/* Header */}
-        <div className="mb-10 text-center md:text-right">
-          <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
-            فلامنجو
-          </p>
-          <h2 className="mt-2 text-3xl md:text-4xl font-semibold tracking-tight">
-            عوالم فلامنجو
-          </h2>
-          <div className="mt-4 h-[1px] w-16 bg-[#E91E63] mx-auto md:mx-0" />
-          <p className="mt-4 text-sm text-muted-foreground max-w-md">
-            اكتشف تشكيلات مختارة بعناية تجمع بين الأناقة العصرية والهوية الفاخرة
-          </p>
-        </div>
-        {/* Layout */}
-        <div className="grid md:grid-cols-12 gap-8 items-start">
-          {/* LEFT: Navigation */}
-          <div className="md:col-span-7">
-            <div className="flex flex-wrap gap-x-6 gap-y-3 border-b border-gray-200 pb-4">
-              {items.map((item) => {
-                const isActive = active.title === item.title;
-                return (
-                  <button
-                    key={item.title}
-                    onClick={() => setActive(item)}
-                    className={`
-                      relative text-sm md:text-[15px]
-                      transition-colors duration-200
-                      ${isActive ? "text-black" : "text-muted-foreground hover:text-black"}
-                    `}
-                  >
-                    {item.title}
-
-                    <span
-                      className={`
-                        absolute left-0 -bottom-2 h-[2px] bg-black transition-all duration-300
-                        ${isActive ? "w-full" : "w-0"}
-                      `}
-                    />
-                  </button>
-                );
-              })}
-
-            </div>
-
-            {/* description */}
-            <div className="mt-6 max-w-md">
-              <p className="text-sm text-muted-foreground leading-relaxed">
-                اكتشف تشكيلات فلامنجو المختارة بعناية لتجربة تسوق فاخرة تجمع بين الأناقة والبساطة والهوية العصرية.
-              </p>
-            </div>
-
-          </div>
-
-          {/* RIGHT: Preview */}
-          <div className="md:col-span-5">
-
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={active.title}
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.25 }}
-              >
-
-                <div className="rounded-2xl overflow-hidden border bg-white shadow-sm">
-
-                  {/* image */}
-                  <div className="h-[280px] overflow-hidden">
-                    <img
-                      src={active.image}
-                      loading="lazy"
-                      className="w-full h-full object-cover hover:scale-105 transition duration-500"
-                    />
-                  </div>
-
-                  {/* content */}
-                  <div className="p-4 text-right">
-
-                    <p className="text-[10px] tracking-[0.35em] uppercase text-[#E91E63]">
-                      فلامنجو
-                    </p>
-
-                    <h3 className="text-lg font-medium mt-1">
-                      {active.title}
-                    </h3>
-
-                    <p className="text-sm text-muted-foreground mt-2">
-                      {active.subtitle}
-                    </p>
-
-                    <Link
-                      to={active.link}
-                      className="
-                        inline-flex mt-4 text-sm
-                        text-black border-b border-black pb-1
-                        hover:opacity-60 transition
-                      "
-                    >
-                      تسوّق الآن
-                    </Link>
-
-                  </div>
-
+    <section className="py-14 bg-background">
+      <div className="container mx-auto px-4">
+        {/* Categories */}
+        <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-4">
+          {items.map((item) => (
+            <Link
+              key={item.title}
+              to={item.link}
+              className="group"
+            >
+              <div className="overflow-hidden rounded-2xl border border-border bg-card transition-all duration-300 hover:-translate-y-1 hover:border-pink-500 hover:shadow-lg">
+                <div className="aspect-square overflow-hidden bg-muted">
+                  <img
+                    src={item.image}
+                    alt={item.title}
+                    loading="lazy"
+                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
+                  />
                 </div>
-
-              </motion.div>
-            </AnimatePresence>
-
-          </div>
-
+              </div>
+              <h3 className="mt-3 text-center text-sm font-semibold transition-colors group-hover:text-pink-600">
+                {item.title}
+              </h3>
+            </Link>
+          ))}
         </div>
       </div>
     </section>

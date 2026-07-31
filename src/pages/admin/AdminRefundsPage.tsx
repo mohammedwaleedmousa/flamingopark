@@ -223,7 +223,6 @@ export default function AdminRefundsPage() {
       const { error } = await supabase.from('refunds').insert({
         order_id: form.order_id || null,
         order_number: form.order_number || null,
-        customer_id: form.customer_id || null,
         customer_name: form.customer_name || null,
         amount: Number(form.amount),
         reason: form.reason,

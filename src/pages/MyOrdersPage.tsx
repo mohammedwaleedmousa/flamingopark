@@ -6,6 +6,7 @@ import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import LoadingScreen from "@/components/LoadingScreen";
 import { supabase } from "@/integrations/supabase/client";
+import { getCustomerSession } from "@/lib/customerSession";
 
 type OrderRow = {
   id: string;
@@ -19,43 +20,42 @@ type OrderRow = {
 const MyOrdersPage = () => {
   const navigate = useNavigate();
   const [authLoading, setAuthLoading] = useState(true);
-  const [userId, setUserId] = useState("");
-  const [userPhone, setUserPhone] = useState("");
+  const [customerId, setCustomerId] = useState("");
+  const [customerPhone, setCustomerPhone] = useState("");
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    supabase.auth.getUser().then(({ data }) => {
-      if (!data.user) {
-        navigate("/auth", { replace: true });
-        return;
-      }
-      setUserId(String(data.user.id));
-      setUserPhone(String(data.user.user_metadata?.phone_number || "").trim());
-      setAuthLoading(false);
-    });
+    const session = getCustomerSession();
+    if (!session) {
+      navigate("/auth", { replace: true });
+      return;
+    }
+    setCustomerId(String(session.id));
+    setCustomerPhone(String(session.phone || "").trim());
+    setAuthLoading(false);
   }, [navigate]);
 
   useEffect(() => {
-    if (!userId) return;
+    if (!customerId) return;
     const fetchOrders = async () => {
       setLoading(true);
       try {
-        const { data, error } = await supabase
+        let query = supabase
           .from("orders")
           .select("id, order_number, total, status, created_at, invoice_url")
-          .eq("owner_user_id", userId)
           .order("created_at", { ascending: false })
           .limit(100);
-        if (error) throw error;
-        setOrders((data || []) as OrderRow[]);
+        if (customerPhone) query = query.or(`customer_id.eq.${customerId},customer_phone.eq.${customerPhone}`);
+        else query = query.eq("customer_id", customerId);
+        const { data, error } = await query;
       } finally {
         setLoading(false);
       }
     };
 
     fetchOrders();
-  }, [userId, userPhone]);
+  }, [customerId, customerPhone]); 
 
   const openInvoice = async (orderId: string) => {
     try {

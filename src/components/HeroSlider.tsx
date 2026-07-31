@@ -31,7 +31,7 @@ export default function HeroSlider() {
   return (
     <section
       dir="rtl"
-      className="relative h-[50svh] min-h-[400px] overflow-hidden"
+      className="relative h-[40svh] min-h-[300px] overflow-hidden"
     >
       <Swiper
         modules={[Autoplay]}

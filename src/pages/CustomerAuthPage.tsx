@@ -42,6 +42,7 @@ const CustomerAuthPage = () => {
     .rpc("customer_register", {
       _name: formData.name.trim(),
       _phone: phone,
+      _country: formData.region,
       _region: formData.region,
       _password: formData.password,
     });
@@ -52,7 +53,8 @@ const CustomerAuthPage = () => {
     throw new Error("تعذر إنشاء الحساب");
   }
 
-  const customerData = registerData[0];
+  const raw = registerData[0];
+  const customerData = { ...raw, region: raw.region || raw.country };
 
   setCustomer({
     id: customerData.id,
@@ -93,7 +95,8 @@ const CustomerAuthPage = () => {
     throw new Error("رقم الهاتف أو كلمة المرور غير صحيحة");
   }
 
-  const customerData = loginData[0];
+  const raw = loginData[0];
+  const customerData = { ...raw, region: raw.region || raw.country };
 
   setCustomer({
     id: customerData.id,

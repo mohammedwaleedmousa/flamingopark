@@ -188,8 +188,9 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
         }
 
         .categories-strip .swiper{
-          overflow:visible;
+          overflow:hidden;
           padding:6px 0;
+          touch-action:pan-y;
         }
 
         .categories-strip .swiper-slide{

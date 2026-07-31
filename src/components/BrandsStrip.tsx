@@ -102,8 +102,12 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
         transform:translateX(-3px);
       }
       .brands-luxury .swiper{
-        overflow:visible;
+        overflow:hidden;
         padding:6px 0;
+        touch-action:pan-y;
+      }
+      .brands-luxury .swiper-wrapper{
+        touch-action:pan-y;
       }
       .brands-luxury .swiper-slide{
         width:94px;
@@ -184,6 +188,10 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
           slidesPerView="auto"
           spaceBetween={22}
           freeMode={{ enabled:true, momentum:true }}
+          touchStartPreventDefault={false}
+          touchReleaseOnEdges
+          resistanceRatio={0}
+          threshold={4}
           grabCursor
         >
           {renderBrands.map((brand)=>(

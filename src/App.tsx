@@ -18,6 +18,7 @@ const HomePage = lazy(() => import("./pages/HomePage"));
 const ProductsPage = lazy(() => import("./pages/ProductsPage"));
 const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
 const BrandPage = lazy(() => import("./pages/BrandPage"));
+const AllBrandsPage = lazy(() => import("./pages/AllBrandsPage"));
 const BrandSectionPage = lazy(() => import("./pages/BrandSectionPage"));
 const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
 const OrderConfirmationPage = lazy(() => import("./pages/OrderConfirmationPage"));
@@ -173,6 +174,7 @@ const App = () => {
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/product/:slug" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
             <Route path="/brand/:slug" element={ <ProtectedRoute><BrandPage /></ProtectedRoute> } />
+            <Route path="/brands" element={ <ProtectedRoute><AllBrandsPage /></ProtectedRoute> } />
             <Route path="/brands/:slug" element={ <ProtectedRoute><BrandPage /></ProtectedRoute> } />
             <Route path="/brands/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />
             <Route path="/brand/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />

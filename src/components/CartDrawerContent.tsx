@@ -3,6 +3,7 @@ import { X, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { thumbnailUrl } from '@/lib/imageUrl';
 
 const CartDrawerContent = () => {
   const { cart, isCartOpen, closeCart, removeFromCart, updateQuantity, getCartTotal, clearCart } = useStore();
@@ -95,7 +96,7 @@ const CartDrawerContent = () => {
                         className="flex gap-4 p-4 bg-muted/50 rounded-lg"
                       >
                         <img
-                          src={(variant && variant.images && variant.images[0]) || item.product.images[0]}
+                          src={thumbnailUrl((variant && variant.images && variant.images[0]) || item.product.images[0] || '/placeholder.svg', 160)}
                           alt={item.product.nameAr}
                           loading="lazy"
                           decoding="async"

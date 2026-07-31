@@ -458,37 +458,21 @@ const HomePage = () => {
 
         {/* banner */}
         <section className="py-16 md:py-24 bg-background">
-  <div className="container mx-auto px-6">
-    <motion.div
-      initial={{ opacity: 0, y: 30 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: false, amount: 0.25 }}
-      transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-      className="max-w-5xl mx-auto text-center"
-    >
-
-      <h2 className="text-3xl md:text-6xl font-light leading-[1.25] tracking-tight text-foreground">
-        الأناقة ليست ما ترتديه...
-        <br />
-        بل ما يبقى في الذاكرة بعد رحيلك.
-      </h2>
-
-      <motion.div
-        initial={{ scaleX: 0 }}
-        whileInView={{ scaleX: 1 }}
-        viewport={{ once: false, amount: 0.25 }}
-        transition={{ duration: 0.7 }}
-        className="w-20 h-px bg-zinc-300 mx-auto my-10"
-      />
-
-      <p className="max-w-xl mx-auto text-pink-500 leading-8 text-sm md:text-base">
-        مختارات استثنائية صُممت لمن يقدّر التفاصيل،
-        ويبحث عن الجودة قبل كل شيء.
-      </p>
-
-    </motion.div>
-  </div>
-</section>
+          <motion.div initial={{ opacity: 0, y: 35, filter: "blur(8px)" }} whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }} viewport={{ once: false, amount: 0.25 }} transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }} className="container mx-auto px-6">
+            <div className="max-w-5xl mx-auto text-center">
+              <motion.h2 initial={{ opacity: 0, y: 25 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.4 }} transition={{ duration: 1, delay: 0.15, ease: [0.22, 1, 0.36, 1] }} className="text-3xl md:text-6xl font-light leading-[1.25] tracking-tight text-foreground">
+                الأناقة ليست ما ترتديه...
+                <br />
+                بل ما يبقى في الذاكرة بعد رحيلك.
+              </motion.h2>
+              <motion.div initial={{ width: 0, opacity: 0 }} whileInView={{ width: 80, opacity: 1 }} viewport={{ once: false, amount: 0.4 }} transition={{ duration: 0.9, delay: 0.45, ease: "easeOut" }} className="h-px bg-zinc-300 mx-auto my-10" />
+              <motion.p initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.4 }} transition={{ duration: 1, delay: 0.6, ease: [0.22, 1, 0.36, 1] }} className="max-w-xl mx-auto text-pink-500 leading-8 text-sm md:text-base">
+                مختارات استثنائية صُممت لمن يقدّر التفاصيل،
+                ويبحث عن الجودة قبل كل شيء.
+              </motion.p>
+            </div>
+          </motion.div>
+        </section>
 
         {/* Featured products */}
         <div ref={featuredViewport.ref} style={{ minHeight: 640 }}>

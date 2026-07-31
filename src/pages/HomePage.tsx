@@ -475,7 +475,7 @@ const HomePage = () => {
         </section>
 
         {/* Featured products */}
-        <div ref={featuredViewport.ref} style={{ minHeight: 640 }}>
+        <div ref={featuredViewport.ref}>
         {products.length > 0 && (
           <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-6">

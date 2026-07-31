@@ -456,28 +456,40 @@ const HomePage = () => {
         {/* Categories — replaced with horizontal CategoryCarousel for improved UX */}
         <CategoryCarousel items={featuredCategories} />
 
+        {/* banner */}
+        <section className="py-16 md:py-24 bg-background">
+          <motion.div initial={{ opacity: 0, y: 35, filter: "blur(8px)" }} whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }} viewport={{ once: false, amount: 0.25 }} transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }} className="container mx-auto px-6">
+            <div className="max-w-5xl mx-auto text-center">
+              <motion.h2 initial={{ opacity: 0, y: 25 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.4 }} transition={{ duration: 1, delay: 0.15, ease: [0.22, 1, 0.36, 1] }} className="text-3xl md:text-6xl font-light leading-[1.25] tracking-tight text-foreground">
+                الأناقة ليست ما ترتديه...
+                <br />
+                بل ما يبقى في الذاكرة بعد رحيلك.
+              </motion.h2>
+              <motion.div initial={{ width: 0, opacity: 0 }} whileInView={{ width: 80, opacity: 1 }} viewport={{ once: false, amount: 0.4 }} transition={{ duration: 0.9, delay: 0.45, ease: "easeOut" }} className="h-px bg-zinc-300 mx-auto my-10" />
+              <motion.p initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.4 }} transition={{ duration: 1, delay: 0.6, ease: [0.22, 1, 0.36, 1] }} className="max-w-xl mx-auto text-pink-500 leading-8 text-sm md:text-base">
+                مختارات استثنائية صُممت لمن يقدّر التفاصيل،
+                ويبحث عن الجودة قبل كل شيء.
+              </motion.p>
+            </div>
+          </motion.div>
+        </section>
 
-
+        {/* Featured products */}
         <div ref={featuredViewport.ref} style={{ minHeight: 640 }}>
         {products.length > 0 && (
           <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-6">
-
               {/* Title */}
-              <div className="text-center mb-12">
-                <p className="text-[10px] tracking-[0.4em] uppercase text-muted-foreground">
-                  مختارات فلامنجو
-                </p>
-
-                <h2 className="text-3xl md:text-4xl font-semibold mt-2">
-                  قطع مختارة بعناية
-                </h2>
-
-                <div className="mt-4 h-[2px] w-16 bg-[#E91E63] mx-auto" />
-
-                <p className="text-sm text-muted-foreground mt-4 max-w-md mx-auto">
-                  مجموعة من أفضل القطع المختارة لتجربة تسوق فاخرة
-                </p>
+              <div className="flex items-end justify-between mb-12">
+                <div>
+                  <h2 className="font-heading text-2xl md:text-5xl text-foreground">منتجات مختارة بعناية</h2>
+                </div>
+                <Link
+                  to="/products?filter=featured"
+                  className="text-[11px] tracking-[0.02em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
+                >
+                  عرض الكل <ArrowLeft className="w-3 h-3" />
+                </Link>
               </div>
 
               {/* Products */}

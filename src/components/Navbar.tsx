@@ -239,6 +239,10 @@ const Navbar = () => {
                       <NavItem onNavigate={() => setMenuOpen(false)} to="/favorites" icon={Heart} label="المفضلة" badge={favorites.length || undefined} />
                       <NavItem onNavigate={() => setMenuOpen(false)} to="/account" icon={User} label="حسابي" />
                     </Section>
+
+                    <Section label="معلومات">
+                      <NavItem onNavigate={() => setMenuOpen(false)} to="/store-info" icon={MapPin} label="معلومات المتجر" />
+                    </Section>
                   </nav>
                   <div className="border-t border-border px-6 py-5 bg-white">
                     {customer ? (

@@ -73,7 +73,7 @@ const fallbackFeaturedCategories: FeaturedCategoryItem[] = [
   {
     title: "أحذية",
     subtitle: "Shoes",
-    image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=640&q=65",
+    image: "c:\Users\Soo\Pictures\nike.jpg",
     link: "/categories?parent=shoes",
   },
   {

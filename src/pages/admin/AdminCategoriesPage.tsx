@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import imageCompression from "browser-image-compression";
+import heic2any from "heic2any";
 
 interface Category {
   id: string;
@@ -129,67 +130,120 @@ const AdminCategoriesPage = () => {
   });
 
   const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-  const file = e.target.files?.[0];
+    const file = e.target.files?.[0];
+    if (!file) return;
 
-  if (!file) return;
+    try {
+      setUploading(true);
 
-  try {
-    setUploading(true);
+      let uploadFile: File = file;
+      const ext = file.name.split(".").pop()?.toLowerCase();
 
-    const compressedFile = await imageCompression(file, {
-      maxSizeMB: 0.5,
-      maxWidthOrHeight: 1200,
-      useWebWorker: true,
-      fileType: "image/webp",
-    });
+      const isHeic =
+        ext === "heic" ||
+        ext === "heif" ||
+        file.type === "image/heic" ||
+        file.type === "image/heif";
 
+      console.log("نوع الصورة:", file.type);
+      console.log("امتداد الصورة:", ext);
 
-    const fileName = `categories/${Date.now()}.webp`;
+      if (isHeic) {
+        try {
+          const converted = await heic2any({
+            blob: file,
+            toType: "image/jpeg",
+            quality: 0.9,
+          });
 
+          const blob = Array.isArray(converted)
+            ? converted[0]
+            : converted;
 
-    const { error: uploadError } = await supabase.storage
-      .from("uploads")
-      .upload(fileName, compressedFile, {
-        contentType: "image/webp",
+          uploadFile = new File(
+            [blob],
+            file.name.replace(/\.(heic|heif)$/i, ".jpg"),
+            {
+              type: "image/jpeg",
+            }
+          );
+        } catch (err: any) {
+          if (
+            err?.message?.includes("already browser readable")
+          ) {
+            // المتصفح فك HEIC بنفسه
+            uploadFile = new File(
+              [file],
+              file.name.replace(/\.(heic|heif)$/i, ".jpg"),
+              {
+                type: "image/jpeg",
+              }
+            );
+          } else {
+            throw err;
+          }
+        }
+      } else {
+        uploadFile = file;
+      }
+      console.log("بعد التحويل:", uploadFile.type, uploadFile.name);
+      // ضغط الصورة
+      const compressedFile = await imageCompression(uploadFile, {
+        maxSizeMB: 0.5,
+        maxWidthOrHeight: 1200,
+        useWebWorker: true,
+        fileType: "image/webp",
       });
 
+      const fileName = `categories/${Date.now()}.webp`;
 
-    if (uploadError) {
-      throw uploadError;
+      const result = await supabase.storage
+        .from("uploads")
+        .upload(fileName, compressedFile, {
+          contentType: "image/webp",
+          upsert: true,
+        });
+
+        if (result.error) {
+          alert(result.error.message);
+          console.error(result.error);
+          throw result.error;
+        }
+
+      console.log("RESULT DATA:", result.data);
+      console.log("RESULT ERROR:", result.error);
+      console.log("RESULT:", JSON.stringify(result, null, 2));
+
+      if (result.error) {
+        console.error(result.error);
+        throw result.error;
+      }
+
+      const { data } = supabase.storage
+        .from("uploads")
+        .getPublicUrl(fileName);
+
+      setFormData((prev) => ({
+        ...prev,
+        image_url: data.publicUrl,
+      }));
+
+      toast({
+        title: "تم رفع الصورة بنجاح",
+      });
+    } catch (error: any) {
+      console.error(error);
+
+      toast({
+        title: "فشل رفع الصورة",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      e.target.value = "";
     }
-
-
-    const { data } = supabase.storage
-      .from("uploads")
-      .getPublicUrl(fileName);
-
-
-    setFormData((prev) => ({
-      ...prev,
-      image_url: data.publicUrl,
-    }));
-
-
-    toast({
-      title: "تم رفع الصورة بنجاح",
-    });
-
-
-  } catch (error) {
-
-    console.error(error);
-
-    toast({
-      title: "فشل رفع الصورة",
-      variant: "destructive",
-    });
-
-  } finally {
-
-    setUploading(false);
-
-  }
-};
+  };
 
   const resetForm = () => {
     setFormData({

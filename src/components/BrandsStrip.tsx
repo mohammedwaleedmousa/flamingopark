@@ -186,7 +186,7 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
         <Swiper
           modules={[FreeMode]}
           slidesPerView="auto"
-          spaceBetween={22}
+          spaceBetween={2}
           freeMode={{ enabled:true, momentum:true }}
           touchStartPreventDefault={false}
           touchReleaseOnEdges

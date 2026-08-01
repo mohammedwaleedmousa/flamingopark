@@ -303,7 +303,10 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
 
 
 const HomePage = () => {
-  const { data: categories = [] } = useQuery({
+  const {
+  data: categories = [],
+  isLoading: categoriesLoading
+  } = useQuery({
     queryKey: ["categories-all-active"],
     queryFn: async () => {
       const { data, error } = await supabase
@@ -332,14 +335,22 @@ const HomePage = () => {
   });
 
   const featuredCategories = useMemo<FeaturedCategoryItem[]>(() => {
+    if (categoriesLoading) return [];
+
     if (!categories.length) return fallbackFeaturedCategories;
-    return categories.filter((category: any) => !category.parent_id).map((c: any) => ({
-      title: c.name_ar || c.name || c.slug,
-      subtitle: c.name || c.name_ar || c.slug,
-      image: c.image_url || fallbackCategoryImages[c.slug] || fallbackFeaturedCategories[0].image,
-      link: `/categories?parent=${c.slug}`,
-    }));
-  }, [categories]);
+
+    return categories
+      .filter((category: any) => !category.parent_id)
+      .map((c: any) => ({
+        title: c.name_ar || c.name || c.slug,
+        subtitle: c.name || c.name_ar || c.slug,
+        image:
+          c.image_url ||
+          fallbackCategoryImages[c.slug] ||
+          fallbackFeaturedCategories[0].image,
+        link: `/categories?parent=${c.slug}`,
+      }));
+  }, [categories, categoriesLoading]);
 
   const getHomeContent = (key: string, fallback: string) => homeContent[key] || fallback;
 

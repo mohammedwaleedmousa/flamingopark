@@ -300,29 +300,6 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
     </section>
   );
 };
-const fallbackEditorial: EditorialItem[] = [
-  {
-    eyebrow: "Featured Collection",
-    title: "أناقة تتجاوز الزمن",
-    body: "قطع مختارة بعناية تجمع بين الرقي، الحرفية، والتصميم العصري لتمنحك حضوراً استثنائياً.",
-    cta: "اكتشف المجموعة",
-    href: "/products?filter=featured",
-    image:
-      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=960&q=70",
-    reverse: false,
-  },
-
-  {
-    eyebrow: "Flamingo Collection",
-    title: "لغة خاصة من الأناقة",
-    body: "تجربة تسوق فاخرة تقدم لك تصاميم مختارة بعناية لعشاق التفاصيل والجمال.",
-    cta: "استكشف المتجر",
-    href: "/store-info",
-    image:
-      "https://images.unsplash.com/photo-1496217590455-aa63a8350eea?w=960&q=70",
-    reverse: true,
-  },
-];
 
 const HomePage = () => {
   const { data: categories = [] } = useQuery({
@@ -363,30 +340,6 @@ const HomePage = () => {
     }));
   }, [categories]);
 
-  const getHomeContent = (key: string, fallback: string) => homeContent[key] || fallback;
-
-  const editorial = useMemo<EditorialItem[]>(() => {
-    return [
-      {
-        eyebrow: getHomeContent("home_editorial_1_eyebrow", fallbackEditorial[0].eyebrow),
-        title: getHomeContent("home_editorial_1_title", fallbackEditorial[0].title),
-        body: getHomeContent("home_editorial_1_body", fallbackEditorial[0].body),
-        cta: getHomeContent("home_editorial_1_cta", fallbackEditorial[0].cta),
-        href: getHomeContent("home_editorial_1_href", fallbackEditorial[0].href),
-        image: getHomeContent("home_editorial_1_image", fallbackEditorial[0].image),
-        reverse: false,
-      },
-      {
-        eyebrow: getHomeContent("home_editorial_2_eyebrow", fallbackEditorial[1].eyebrow),
-        title: getHomeContent("home_editorial_2_title", fallbackEditorial[1].title),
-        body: getHomeContent("home_editorial_2_body", fallbackEditorial[1].body),
-        cta: getHomeContent("home_editorial_2_cta", fallbackEditorial[1].cta),
-        href: getHomeContent("home_editorial_2_href", fallbackEditorial[1].href),
-        image: getHomeContent("home_editorial_2_image", fallbackEditorial[1].image),
-        reverse: true,
-      },
-    ];
-  }, [homeContent]);
 
   const featuredViewport = useNearViewport<HTMLDivElement>();
   const bestSellersViewport = useNearViewport<HTMLDivElement>();
@@ -513,87 +466,6 @@ const HomePage = () => {
           </section>
         )}
         </div>
-
-        {/* Editorial split — image left, text right (alternating) */}
-        {editorial.map((e, i) => (
-          <section
-            key={e.title}
-            className="
-              bg-background
-              py-1 md:py-28
-              opacity-0
-              translate-y-6
-              animate-[fadeUp_0.8s_ease_forwards]
-            "
-            style={{
-              animationDelay: `${i * 100}ms`,
-            }}
-          >
-            <div className="grid md:grid-cols-2 items-center">
-              {/* IMAGE */}
-              <div
-                className={`relative aspect-[4/5] md:h-[680px] overflow-hidden ${
-                  e.reverse ? "md:order-2" : ""
-                }`}
-              >
-                <img
-                  src={e.image}
-                  alt={e.title}
-                  loading="lazy"
-                  decoding="async"
-                  className="
-                    w-full h-full object-cover
-                    scale-105 hover:scale-110
-                    transition duration-700
-                  "
-                />
-                <div className="
-                  absolute inset-0
-                  bg-gradient-to-t from-black/40 via-transparent to-pink-500/5
-                " />
-              </div>
-              {/* CONTENT */}
-              <div className={`
-                flex items-center justify-center px-8 md:px-24 py-12 md:py-0
-                ${e.reverse ? "md:order-1" : ""}
-              `}>
-                <div className="max-w-md text-center md:text-right space-y-6">
-                  <p className="
-                    text-[10px]
-                    tracking-[0.6em]
-                    uppercase
-                    text-pink-400
-                  ">
-                    {e.eyebrow}
-                  </p>
-                  <h3 className="text-3xl md:text-5xl font-medium leading-tight">
-                    {e.title}
-                  </h3>
-                  <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">
-                    {e.body}
-                  </p>
-                  <Link
-                    to={e.href}
-                    className="
-                      inline-flex items-center gap-3
-                      text-[11px]
-                      tracking-[0.08em]
-                      uppercase
-                      text-pink-500
-                      border-b border-pink-300/40
-                      pb-2
-                      hover:opacity-60
-                      transition
-                    "
-                  >
-                    {e.cta}
-                    <ArrowLeft className="w-3 h-3" />
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </section>
-        ))}
 
         {/* New Arrivals */}
         <div ref={newArrivalsViewport.ref} style={{ minHeight: 640 }}>

@@ -16,6 +16,7 @@ import { useNearViewport } from "@/hooks/useNearViewport";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import FlamingoServices from "@/components/FlamingoServices";
+import FlamingoCollections from "@/components/FlamingoCollections";
 
 import "swiper/css";
 import "swiper/css/free-mode";
@@ -422,7 +423,6 @@ const HomePage = () => {
 
         {/* Categories — replaced with horizontal CategoryCarousel for improved UX */}
         <CategoryCarousel items={featuredCategories} />
-
         {/* banner */}
         <section className="py-16 md:py-24 bg-background">
           <motion.div initial={{ opacity: 0, y: 35, filter: "blur(8px)" }} whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }} viewport={{ once: false, amount: 0.25 }} transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }} className="container mx-auto px-6">
@@ -480,6 +480,8 @@ const HomePage = () => {
           </section>
         )}
         </div>
+
+        <FlamingoCollections />
 
         {/* New Arrivals */}
         <div ref={newArrivalsViewport.ref} style={{ minHeight: 640 }}>

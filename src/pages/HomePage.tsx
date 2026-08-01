@@ -50,37 +50,37 @@ const fallbackFeaturedCategories: FeaturedCategoryItem[] = [
     title: "نسائي",
     subtitle: "Women",
     image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=640&q=65",
-    link: "/products?category=women",
+    link: "/categories?parent=women",
   },
   {
     title: "رجالي",
     subtitle: "Men",
     image: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=640&q=65",
-    link: "/products?category=men",
+    link: "/categories?parent=men",
   },
   {
     title: "أطفال",
     subtitle: "Kids",
     image: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=640&q=65",
-    link: "/products?category=kids",
+    link: "/categories?parent=kids",
   },
   {
     title: "حقائب",
     subtitle: "Bags",
     image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=640&q=65",
-    link: "/products?category=bags",
+    link: "/categories?parent=bags",
   },
   {
     title: "أحذية",
     subtitle: "Shoes",
     image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=640&q=65",
-    link: "/products?category=shoes",
+    link: "/categories?parent=shoes",
   },
   {
     title: "تجميل",
     subtitle: "Beauty",
     image: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=640&q=65",
-    link: "/products?category=beauty",
+    link: "/categories?parent=beauty",
   },
 ];
 
@@ -300,6 +300,29 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
     </section>
   );
 };
+const fallbackEditorial: EditorialItem[] = [
+  {
+    eyebrow: "Featured Collection",
+    title: "أناقة تتجاوز الزمن",
+    body: "قطع مختارة بعناية تجمع بين الرقي، الحرفية، والتصميم العصري لتمنحك حضوراً استثنائياً.",
+    cta: "اكتشف المجموعة",
+    href: "/products?filter=featured",
+    image:
+      "https://images.unsplash.com/photo-1529139574466-a303027c1d8b?w=960&q=70",
+    reverse: false,
+  },
+
+  {
+    eyebrow: "Flamingo Collection",
+    title: "لغة خاصة من الأناقة",
+    body: "تجربة تسوق فاخرة تقدم لك تصاميم مختارة بعناية لعشاق التفاصيل والجمال.",
+    cta: "استكشف المتجر",
+    href: "/store-info",
+    image:
+      "https://images.unsplash.com/photo-1496217590455-aa63a8350eea?w=960&q=70",
+    reverse: true,
+  },
+];
 
 const HomePage = () => {
   const { data: categories = [] } = useQuery({
@@ -336,10 +359,34 @@ const HomePage = () => {
       title: c.name_ar || c.name || c.slug,
       subtitle: c.name || c.name_ar || c.slug,
       image: c.image_url || fallbackCategoryImages[c.slug] || fallbackFeaturedCategories[0].image,
-      link: `/products?category=${c.slug}`,
+      link: `/categories?parent=${c.slug}`,
     }));
   }, [categories]);
 
+  const getHomeContent = (key: string, fallback: string) => homeContent[key] || fallback;
+
+  const editorial = useMemo<EditorialItem[]>(() => {
+    return [
+      {
+        eyebrow: getHomeContent("home_editorial_1_eyebrow", fallbackEditorial[0].eyebrow),
+        title: getHomeContent("home_editorial_1_title", fallbackEditorial[0].title),
+        body: getHomeContent("home_editorial_1_body", fallbackEditorial[0].body),
+        cta: getHomeContent("home_editorial_1_cta", fallbackEditorial[0].cta),
+        href: getHomeContent("home_editorial_1_href", fallbackEditorial[0].href),
+        image: getHomeContent("home_editorial_1_image", fallbackEditorial[0].image),
+        reverse: false,
+      },
+      {
+        eyebrow: getHomeContent("home_editorial_2_eyebrow", fallbackEditorial[1].eyebrow),
+        title: getHomeContent("home_editorial_2_title", fallbackEditorial[1].title),
+        body: getHomeContent("home_editorial_2_body", fallbackEditorial[1].body),
+        cta: getHomeContent("home_editorial_2_cta", fallbackEditorial[1].cta),
+        href: getHomeContent("home_editorial_2_href", fallbackEditorial[1].href),
+        image: getHomeContent("home_editorial_2_image", fallbackEditorial[1].image),
+        reverse: true,
+      },
+    ];
+  }, [homeContent]);
 
   const featuredViewport = useNearViewport<HTMLDivElement>();
   const bestSellersViewport = useNearViewport<HTMLDivElement>();
@@ -369,7 +416,7 @@ const HomePage = () => {
         .from("products")
         .select(PRODUCT_CARD_SELECT)
         .eq("is_active", true)
-        .eq("is_best_seller", true)
+        .or("is_best_seller.eq.true,home_collections.cs.{best_sellers}")
         .order("sort_order")
         .limit(8);
       if (error) throw error;
@@ -385,7 +432,7 @@ const HomePage = () => {
         .from("products")
         .select(PRODUCT_CARD_SELECT)
         .eq("is_active", true)
-        .eq("is_featured", true)
+        .or("is_featured.eq.true,home_collections.cs.{new_season}")
         .order("sort_order")
         .limit(8);
       if (error) throw error;
@@ -438,7 +485,7 @@ const HomePage = () => {
                   <h2 className="font-heading text-2xl md:text-5xl text-foreground">منتجات مختارة بعناية</h2>
                 </div>
                 <Link
-                  to="/products?filter=featured"
+                  to="/curated"
                   className="text-[11px] tracking-[0.02em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
                 >
                   عرض الكل <ArrowLeft className="w-3 h-3" />
@@ -455,10 +502,10 @@ const HomePage = () => {
               {/* CTA */}
               <div className="text-center mt-12">
                 <Link
-                  to="/products"
+                  to="/curated"
                   className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-pink-500 pb-1 hover:opacity-60 transition text-pink-500"
                 >
-                  عرض جميع المنتجات <ArrowLeft className="w-3 h-3" />
+                  عرض المزيد <ArrowLeft className="w-3 h-3" />
                 </Link>
               </div>
 
@@ -466,6 +513,87 @@ const HomePage = () => {
           </section>
         )}
         </div>
+
+        {/* Editorial split — image left, text right (alternating) */}
+        {editorial.map((e, i) => (
+          <section
+            key={e.title}
+            className="
+              bg-background
+              py-1 md:py-28
+              opacity-0
+              translate-y-6
+              animate-[fadeUp_0.8s_ease_forwards]
+            "
+            style={{
+              animationDelay: `${i * 100}ms`,
+            }}
+          >
+            <div className="grid md:grid-cols-2 items-center">
+              {/* IMAGE */}
+              <div
+                className={`relative aspect-[4/5] md:h-[680px] overflow-hidden ${
+                  e.reverse ? "md:order-2" : ""
+                }`}
+              >
+                <img
+                  src={e.image}
+                  alt={e.title}
+                  loading="lazy"
+                  decoding="async"
+                  className="
+                    w-full h-full object-cover
+                    scale-105 hover:scale-110
+                    transition duration-700
+                  "
+                />
+                <div className="
+                  absolute inset-0
+                  bg-gradient-to-t from-black/40 via-transparent to-pink-500/5
+                " />
+              </div>
+              {/* CONTENT */}
+              <div className={`
+                flex items-center justify-center px-8 md:px-24 py-12 md:py-0
+                ${e.reverse ? "md:order-1" : ""}
+              `}>
+                <div className="max-w-md text-center md:text-right space-y-6">
+                  <p className="
+                    text-[10px]
+                    tracking-[0.6em]
+                    uppercase
+                    text-pink-400
+                  ">
+                    {e.eyebrow}
+                  </p>
+                  <h3 className="text-3xl md:text-5xl font-medium leading-tight">
+                    {e.title}
+                  </h3>
+                  <p className="text-sm md:text-[15px] text-muted-foreground leading-relaxed">
+                    {e.body}
+                  </p>
+                  <Link
+                    to={e.href}
+                    className="
+                      inline-flex items-center gap-3
+                      text-[11px]
+                      tracking-[0.08em]
+                      uppercase
+                      text-pink-500
+                      border-b border-pink-300/40
+                      pb-2
+                      hover:opacity-60
+                      transition
+                    "
+                  >
+                    {e.cta}
+                    <ArrowLeft className="w-3 h-3" />
+                  </Link>
+                </div>
+              </div>
+            </div>
+          </section>
+        ))}
 
         {/* New Arrivals */}
         <div ref={newArrivalsViewport.ref} style={{ minHeight: 640 }}>
@@ -478,7 +606,7 @@ const HomePage = () => {
                   <h2 className="font-heading text-3xl md:text-5xl text-foreground">جديد الموسم</h2>
                 </div>
                 <Link
-                  to="/products?filter=featured"
+                  to="/new-season"
                   className="text-[11px] tracking-[0.02em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
                 >
                   عرض الكل <ArrowLeft className="w-3 h-3" />
@@ -488,6 +616,49 @@ const HomePage = () => {
                 {newArrivals.slice(0, 8).map((p) => (
                   <ProductCard key={p.id} product={p} badge="NEW IN" />
                 ))}
+              </div>
+              <div className="text-center mt-12">
+                <Link
+                  to="/new-season"
+                  className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-pink-500 pb-1 hover:opacity-60 transition text-pink-500"
+                >
+                  عرض المزيد <ArrowLeft className="w-3 h-3" />
+                </Link>
+              </div>
+            </div>
+          </section>
+        )}
+        </div>
+
+        {/* Best sellers */}
+        <div ref={bestSellersViewport.ref}>
+        {bestSellers.length > 0 && (
+          <section className="py-10 md:py-28 bg-background">
+            <div className="container mx-auto px-6">
+              <div className="flex items-end justify-between mb-12">
+                <div>
+                  <p className="text-[10px] tracking-[0.02em] uppercase text-muted-foreground mb-3">Best Sellers</p>
+                  <h2 className="font-heading text-3xl md:text-5xl text-foreground">الأكثر مبيعاً</h2>
+                </div>
+                <Link
+                  to="/top-selling"
+                  className="text-[11px] tracking-[0.02em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
+                >
+                  عرض الكل <ArrowLeft className="w-3 h-3" />
+                </Link>
+              </div>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
+                {bestSellers.slice(0, 8).map((p) => (
+                  <ProductCard key={p.id} product={p} badge="BEST SELLER" />
+                ))}
+              </div>
+              <div className="text-center mt-12">
+                <Link
+                  to="/top-selling"
+                  className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-pink-500 pb-1 hover:opacity-60 transition text-pink-500"
+                >
+                  عرض المزيد <ArrowLeft className="w-3 h-3" />
+                </Link>
               </div>
             </div>
           </section>

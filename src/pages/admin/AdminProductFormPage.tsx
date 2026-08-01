@@ -81,6 +81,7 @@ const AdminProductFormPage = () => {
     is_active: true,
     countries: [SINGLE_COUNTRY] as string[],
     section_ids: [] as string[],
+    home_collections: [] as string[],
     has_sizes: false,
     sizes: [] as string[],
     accessories: [] as Accessory[],
@@ -233,6 +234,7 @@ const AdminProductFormPage = () => {
         is_active: data.is_active ?? true,
         countries: data.countries || [SINGLE_COUNTRY],
         section_ids: (data as any).section_ids || [],
+        home_collections: (data as any).home_collections || [],
         has_sizes: (data as any).has_sizes ?? false,
         sizes: (data as any).sizes || [],
         accessories: ((data as any).accessories || []) as Accessory[],
@@ -303,6 +305,7 @@ const AdminProductFormPage = () => {
       is_active: formData.is_active,
       countries: formData.countries,
       section_ids: formData.section_ids,
+      home_collections: formData.home_collections,
       has_sizes: formData.has_sizes,
       sizes: formData.sizes,
       accessories: formData.accessories as unknown as any,
@@ -647,6 +650,45 @@ const AdminProductFormPage = () => {
           </div>
 
           {/* Sections */}
+          <div>
+            <label className="flex items-center gap-2 text-sm font-body text-muted-foreground mb-3">
+              <LayoutGrid className="w-4 h-4" />
+              صفحات المجموعات
+            </label>
+            <div className="flex flex-wrap gap-3">
+              {[
+                { key: "curated", label: "منتجات مختارة بعناية" },
+                { key: "new_season", label: "جديد الموسم" },
+                { key: "best_sellers", label: "الأكثر مبيعاً" },
+              ].map((collection) => (
+                <label
+                  key={collection.key}
+                  className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-all ${
+                    formData.home_collections.includes(collection.key)
+                      ? 'border-primary bg-primary/10 text-primary'
+                      : 'border-border hover:border-primary/50'
+                  }`}
+                >
+                  <Checkbox
+                    checked={formData.home_collections.includes(collection.key)}
+                    onCheckedChange={() =>
+                      setFormData((prev) => ({
+                        ...prev,
+                        home_collections: prev.home_collections.includes(collection.key)
+                          ? prev.home_collections.filter((c) => c !== collection.key)
+                          : [...prev.home_collections, collection.key],
+                      }))
+                    }
+                  />
+                  <span className="text-sm">{collection.label}</span>
+                </label>
+              ))}
+            </div>
+            <p className="text-xs text-muted-foreground mt-2">
+              اختياري — يحدد ظهور المنتج في صفحات: /curated و /new-season و /top-selling
+            </p>
+          </div>
+
           {sections.length > 0 && (
             <div>
               <label className="flex items-center gap-2 text-sm font-body text-muted-foreground mb-3">

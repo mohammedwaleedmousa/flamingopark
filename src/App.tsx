@@ -29,6 +29,9 @@ const QRCodePage = lazy(() => import("./pages/QRCodePage"));
 const CategoriesPage = lazy(() => import("./pages/CategoriesPage"));
 const BestSellersPage = lazy(() => import("./pages/BestSellersPage"));
 const NewArrivalsPage = lazy(() => import("./pages/NewArrivalsPage"));
+const CuratedPage = lazy(() => import("./pages/CuratedPage"));
+const NewSeasonPage = lazy(() => import("./pages/NewSeasonPage"));
+const TopSellingPage = lazy(() => import("./pages/TopSellingPage"));
 const SearchPage = lazy(() => import("./pages/SearchPage"));
 const SeasonalOffersPage = lazy(() => import("./pages/SeasonalOffersPage"));
 const CartPage = lazy(() => import("./pages/CartPage"));
@@ -167,6 +170,9 @@ const App = () => {
             <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
             <Route path="/best-sellers" element={<ProtectedRoute><BestSellersPage /></ProtectedRoute>} />
             <Route path="/new-arrivals" element={<ProtectedRoute><NewArrivalsPage /></ProtectedRoute>} />
+            <Route path="/curated" element={<ProtectedRoute><CuratedPage /></ProtectedRoute>} />
+            <Route path="/new-season" element={<ProtectedRoute><NewSeasonPage /></ProtectedRoute>} />
+            <Route path="/top-selling" element={<ProtectedRoute><TopSellingPage /></ProtectedRoute>} />
             <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
             <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
             <Route path="/my-orders" element={<ProtectedRoute><MyOrdersPage /></ProtectedRoute>} />

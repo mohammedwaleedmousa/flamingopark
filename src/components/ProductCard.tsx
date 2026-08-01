@@ -14,7 +14,7 @@ type DisplayProduct = Product & { colorVariants?: ColorVariant[]; color_variants
 interface ProductCardProps {
   product: DisplayProduct;
   index?: number;
-  badge?: "NEW IN" | "LIMITED" | "BEST SELLER" | "HOT" | null;
+  badge?: string;
   size?: "large" | "medium" | "small";
   onQuickView?: (p: DisplayProduct) => void;
 }

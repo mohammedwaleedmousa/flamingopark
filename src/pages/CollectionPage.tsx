@@ -6,6 +6,8 @@ import ProductCard from "@/components/ProductCard";
 import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
+import { Link } from "react-router-dom";
+import { ArrowRight } from "lucide-react";
 
 export type HomeCollectionKey = "curated" | "new_season" | "best_sellers";
 
@@ -46,6 +48,12 @@ const CollectionPage = ({ collection, eyebrow, title, description, badge }: Coll
       <Navbar />
       <CartDrawer />
       <main className="pt-24 pb-20">
+        <div className="container mx-auto px-6 mb-6">
+          <Link to="/" className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-pink-500 transition">
+            <ArrowRight className="w-4 h-4" />
+            العودة للرئيسية
+          </Link>
+        </div>
         <section className="container mx-auto px-6 mb-10 text-center">
           <p className="text-[10px] tracking-[0.08em] uppercase text-muted-foreground mb-3">{eyebrow}</p>
           <h1 className="font-heading text-4xl md:text-6xl">{title}</h1>

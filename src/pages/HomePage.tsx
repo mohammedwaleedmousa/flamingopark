@@ -15,6 +15,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useNearViewport } from "@/hooks/useNearViewport";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
+import FlamingoServices from "@/components/FlamingoServices";
 
 import "swiper/css";
 import "swiper/css/free-mode";
@@ -550,8 +551,9 @@ const HomePage = () => {
         )}
         </div>
 
-      </main>
+        <FlamingoServices />
 
+      </main>
       <Footer />
     </div>
   );

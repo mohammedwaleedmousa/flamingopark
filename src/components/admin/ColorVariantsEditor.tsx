@@ -12,11 +12,13 @@ export interface ColorVariant {
   hex2?: string;
   images: string[];
   sizes?: string[];
+  stock?: number;
 }
 
 interface Props {
   value: ColorVariant[];
   onChange: (v: ColorVariant[]) => void;
+  
 }
 
 const ColorVariantsEditor = ({ value, onChange }: Props) => {
@@ -45,6 +47,7 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
         hex: newColor.hex,
         hex2: newColor.dual && newColor.hex2 ? newColor.hex2 : undefined,
         images: [],
+        stock: 0,
       },
     ]);
 
@@ -101,8 +104,8 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
   let finalFile: File;
   try {
     finalFile = await prepareImageUpload(file, {
-      maxSizeMB: 0.3,
-      maxWidthOrHeight: 800,
+      maxSizeMB: 0.18,
+      maxWidthOrHeight: 1000,
     });
   } catch (error: any) {
     console.error('IMAGE PREP ERROR:', file.name, error);
@@ -408,6 +411,27 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
               }}
             />
           </label>
+          </div>
+
+        {/* مخزون هذا اللون */}
+        <div className="mt-4 pt-4 border-t border-border/60 flex items-center gap-3">
+          <label className="text-xs text-muted-foreground whitespace-nowrap">
+            الكمية المتوفرة لهذا اللون
+          </label>
+          <Input
+            type="number"
+            min={0}
+            value={c.stock ?? 0}
+            onChange={(e) => {
+              const next = [...value];
+              next[ci].stock = Math.max(0, parseInt(e.target.value || '0') || 0);
+              onChange(next);
+            }}
+            className="h-9 w-28 rounded-xl"
+          />
+          <span className="text-[11px] text-muted-foreground">
+            مخزون مستقل لكل لون — لا يمكن للعميل طلب أكثر منه
+          </span>
         </div>
 
         {/* أحجام هذا اللون */}

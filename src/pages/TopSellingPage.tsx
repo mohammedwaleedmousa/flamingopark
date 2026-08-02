@@ -6,7 +6,7 @@ const TopSellingPage = () => (
     eyebrow="Best Sellers"
     title="الأكثر مبيعاً"
     description="القطع الأكثر طلباً من عملائنا."
-    badge="BEST"
+    badge="BEST SELLER"
   />
 );
 

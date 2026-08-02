@@ -22,6 +22,7 @@ import {
   Truck, Shield, RotateCcw, Star, Package, ChevronDown, ZoomIn, ZoomOut,
 } from 'lucide-react';
 import { FaWhatsapp } from "react-icons/fa";
+import { optimizeImage } from "@/lib/imageUrl";
 const handleWhatsApp = () => {
   window.open("https://wa.me/967778579777", "_blank");
 };
@@ -70,7 +71,7 @@ const ProductDetailPage = () => {
         hasSizes: (data as any).has_sizes ?? false, sizes: (data as any).sizes || [],
         accessories: accessories as { name: string; name_ar: string; price: number; image_url?: string; description?: string; description_ar?: string }[],
         features: ((data as any).features || []) as { icon: string; title: string; desc: string }[],
-        colorVariants: ((data as any).color_variants || []) as { name: string; hex: string; hex2?: string; images: string[];sizes?: string[]; }[],
+        colorVariants: ((data as any).color_variants || []) as { name: string; hex: string; hex2?: string; images: string[];sizes?: string[]; stock?: number }[],
         specs: ((data as any).specs || []) as { label: string; value: string }[],
         returnPolicy: (data as any).return_policy as string | null,
         hasQualityVariants: (data as any).has_quality_variants ?? false,
@@ -342,8 +343,10 @@ console.log("SIZES TO SHOW:", sizesToShow); // هنا الخطأ
                       duration: 0.3,
                       ease: "easeOut"
                     }}
-                    src={displayImages?.[selectedImage] || '/placeholder.svg'}
+                    src={optimizeImage(displayImages?.[selectedImage], 1000, 75)}
                     alt={product.nameAr}
+                    fetchPriority="high"
+                    decoding="async"
                     style={{
                       transformOrigin: zoomOrigin,
                       scale: isZoomed ? 2.2 : 1,
@@ -420,7 +423,7 @@ console.log("SIZES TO SHOW:", sizesToShow); // هنا الخطأ
                   {displayImages.map((img, i) => (
                     <button key={i} onClick={() => goToImage(i)}
                       className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${selectedImage === i ? 'border-gold' : 'border-transparent hover:border-border'}`}>
-                      <img src={img} alt="" loading="lazy" decoding="async" width={128} height={128} className="w-full h-full object-cover" />
+                      <img src={optimizeImage(img, 160)} alt="" loading="lazy" decoding="async" width={128} height={128} className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
@@ -444,11 +447,23 @@ console.log("SIZES TO SHOW:", sizesToShow); // هنا الخطأ
                 )}
               </div>
  
-              {/* Stock pill */}
-              <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${product.inStock ? 'bg-emerald-500/10 text-emerald-700' : 'bg-destructive/10 text-destructive'}`}>
-                <span className={`w-2 h-2 rounded-full ${product.inStock ? 'bg-emerald-500' : 'bg-destructive'}`} />
-                {product.inStock ? 'متوفر الآن' : 'غير متوفر'}
-              </div>
+              {/* Stock pill — per-color stock when a color is selected */}
+              {(() => {
+                const colorStock = selectedColorIdx !== null
+                  ? product.colorVariants?.[selectedColorIdx]?.stock
+                  : undefined;
+                const available = typeof colorStock === 'number'
+                  ? colorStock > 0
+                  : product.inStock;
+                return (
+                  <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${available ? 'bg-emerald-500/10 text-emerald-700' : 'bg-destructive/10 text-destructive'}`}>
+                    <span className={`w-2 h-2 rounded-full ${available ? 'bg-emerald-500' : 'bg-destructive'}`} />
+                    {available
+                      ? (typeof colorStock === 'number' ? `متوفر — ${colorStock} قطعة من هذا اللون` : 'متوفر الآن')
+                      : 'غير متوفر'}
+                  </div>
+                );
+              })()}
  
               {/* Quality / Material variants — swaps images, description, price */}
               {product.hasQualityVariants && product.qualityVariants && product.qualityVariants.length > 0 && (
@@ -558,7 +573,10 @@ console.log("SIZES TO SHOW:", sizesToShow); // هنا الخطأ
                   <span className="w-12 text-center font-medium">{quantity}</span>
                   <button
                     onClick={() => {
-                      const stock = (product as any)?.stockQuantity;
+                      const colorStock = selectedColorIdx !== null
+                        ? product.colorVariants?.[selectedColorIdx]?.stock
+                        : undefined;
+                      const stock = typeof colorStock === 'number' ? colorStock : (product as any)?.stockQuantity;
                       if (typeof stock === "number" && quantity >= stock) {
                         toast({ title: "الكمية غير متوفرة", description: `المتاح: ${stock} فقط`, variant: "destructive" });
                         return;
@@ -598,7 +616,12 @@ console.log("SIZES TO SHOW:", sizesToShow); // هنا الخطأ
                     </Button>
                   </div>
                 )}
-                <Button onClick={handleAddToCart} disabled={!product.inStock}
+                <Button
+                  onClick={handleAddToCart}
+                  disabled={
+                    !product.inStock ||
+                    (selectedColorIdx !== null && product.colorVariants?.[selectedColorIdx]?.stock === 0)
+                  }
                   className="w-full h-14 bg-gold hover:bg-gold/90 text-white font-heading text-base gap-3">
                   <ShoppingBag className="w-5 h-5" /> إضافة للسلة
                 </Button>

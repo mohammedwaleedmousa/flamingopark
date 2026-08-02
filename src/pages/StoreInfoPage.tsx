@@ -1,11 +1,10 @@
-import { motion } from 'framer-motion';
-import { Phone, Mail, MapPin, Clock, Heart, Shield, Truck, MessageCircle } from 'lucide-react';
+import { Phone, Mail, Clock, MapPin, Shield, Truck, Sparkles, MessageCircle, ArrowLeft } from 'lucide-react';
+import { Link } from 'react-router-dom';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
-import { Button } from '@/components/ui/button';
 
 const StoreInfoPage = () => {
   const { data: storeInfo } = useQuery({
@@ -15,216 +14,114 @@ const StoreInfoPage = () => {
         .from('site_settings')
         .select('key, value')
         .in('key', ['store_info', 'whatsapp', 'whatsapp_ye', 'whatsapp_sa']);
-      
+
       let storeData: any = {};
-      data?.forEach(item => {
+      data?.forEach((item) => {
         if (item.key === 'store_info' && typeof item.value === 'string') {
           try {
             storeData = JSON.parse(item.value);
           } catch {
             storeData = { name: 'Flamingo Park' };
           }
-        } else if (item.key === 'whatsapp') {
-          storeData.whatsapp = item.value;
-        } else if (item.key === 'whatsapp_ye') {
-          storeData.whatsapp_ye = item.value;
-        } else if (item.key === 'whatsapp_sa') {
-          storeData.whatsapp_sa = item.value;
+        } else {
+          storeData[item.key] = item.value;
         }
       });
       return storeData;
-    }
+    },
   });
 
-  const contactInfo = [
-    {
-      icon: Phone,
-      title: 'رقم الهاتف',
-      content: [
-        { label: 'الهاتف الرئيسي', value: storeInfo?.phone_ye || storeInfo?.phone_sa || '+967778579777' },
-        { label: 'هاتف إضافي', value: storeInfo?.phone_sa || storeInfo?.phone_ye || '+967778579777' }
-      ]
-    },
-    {
-      icon: Mail,
-      title: 'البريد الإلكتروني',
-      content: [{ label: '', value: storeInfo?.email || 'info@flamingopark.com' }]
-    },
-    {
-      icon: Clock,
-      title: 'ساعات العمل',
-      content: [
-        { label: 'السبت - الخميس', value: '10:00 - 22:00' },
-        { label: 'الجمعة', value: '14:00 - 22:00' }
-      ]
-    }
-  ];
-
-  const features = [
-    {
-      icon: Shield,
-      title: 'منتجات أصلية',
-      description: 'جميع منتجاتنا مضمونة 100% أصلية ومفحوصة'
-    },
-    {
-      icon: Truck,
-      title: 'توصيل سريع',
-      description: 'توصيل آمن وسريع إلى جميع المناطق'
-    },
-    {
-      icon: Heart,
-      title: 'خدمة العملاء',
-      description: 'فريق دعم متخصص متوفر على مدار الساعة'
-    }
-  ];
-
-  const handleWhatsApp = (number: string) => {
-    window.open(`https://wa.me/${number}?text=مرحباً بك في فلامينجو بارك`, '_blank');
-  };
-
   const whatsappNumber = storeInfo?.whatsapp || storeInfo?.whatsapp_ye || storeInfo?.whatsapp_sa;
+  const phone = storeInfo?.phone_sa || storeInfo?.phone_ye || '+967778579777';
+  const email = storeInfo?.email || 'info@flamingopark.com';
+
+  const pillars = [
+    { icon: Sparkles, title: 'انتقاء عالمي', desc: 'قطع مختارة من دور أزياء ومصادر موثوقة حول العالم.' },
+    { icon: Shield, title: 'أصالة مضمونة', desc: 'كل منتج يمرّ بفحص جودة قبل أن يصل إليك.' },
+    { icon: Truck, title: 'شحن دولي', desc: 'توصيل سريع ومتتبَّع إلى أغلب الدول التي نخدمها.' },
+  ];
+
+  const facts = [
+    { label: 'الهاتف', value: phone, icon: Phone },
+    { label: 'البريد الإلكتروني', value: email, icon: Mail },
+    { label: 'ساعات العمل', value: 'السبت – الخميس · 10:00 – 22:00', icon: Clock },
+    { label: 'الشحن', value: 'خدمة توصيل دولية', icon: MapPin },
+  ];
 
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <Navbar />
       <CartDrawer />
-      
-      <main className="pt-20 pb-16">
-        {/* Hero Section */}
-        <motion.section 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="relative bg-gradient-to-b from-gold/5 via-muted/30 to-background border-b border-border/50 overflow-hidden"
-        >
-          <div className="absolute inset-0 opacity-30">
-            <div className="absolute top-0 right-0 w-96 h-96 bg-gold/5 rounded-full blur-3xl" />
-            <div className="absolute bottom-0 left-0 w-64 h-64 bg-pink/5 rounded-full blur-3xl" />
+
+      <main className="pt-24 pb-24">
+        {/* Editorial hero */}
+        <section className="container mx-auto px-6">
+          <div className="max-w-3xl">
+            <p className="text-[10px] tracking-[0.35em] uppercase text-muted-foreground mb-6">Flamingo Park · Maison</p>
+            <h1 className="font-heading text-4xl md:text-7xl leading-[1.1] text-foreground">
+              متجر يصنع الأناقة
+              <br />
+              بلغة عالمية.
+            </h1>
+            <div className="h-px w-20 bg-border my-10" />
+            <p className="text-sm md:text-base text-muted-foreground leading-8 max-w-xl">
+              فلامنجو بارك وجهة للأزياء والإكسسوارات المنتقاة بعناية. نؤمن أن التفصيل الصغير هو ما يصنع الفرق،
+              ولذلك نختار كل قطعة كما لو كانت لنا.
+            </p>
           </div>
+        </section>
 
-          <div className="container mx-auto px-4 py-16 text-center relative z-10">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="space-y-4"
-            >
-              <h1 className="font-heading text-4xl md:text-5xl text-foreground">
-                معلومات <span className="text-gold">المتجر</span>
-              </h1>
-              <p className="text-muted-foreground max-w-lg mx-auto text-lg">
-                تعرف على فلامينجو بارك وكيفية التواصل معنا
-              </p>
-            </motion.div>
+        {/* Pillars */}
+        <section className="container mx-auto px-6 mt-20">
+          <div className="grid grid-cols-1 md:grid-cols-3 border-t border-border">
+            {pillars.map((p) => (
+              <div key={p.title} className="py-10 md:px-8 border-b md:border-b-0 md:border-l last:md:border-l-0 border-border">
+                <p.icon className="w-5 h-5 text-muted-foreground mb-6" strokeWidth={1.2} />
+                <h2 className="font-heading text-xl text-foreground mb-3">{p.title}</h2>
+                <p className="text-sm text-muted-foreground leading-7">{p.desc}</p>
+              </div>
+            ))}
           </div>
-        </motion.section>
+        </section>
 
-        <div className="container mx-auto px-4 py-16">
-          {/* Contact Information */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mb-16"
-          >
-            <h2 className="font-heading text-3xl text-foreground mb-8 text-center">
-              تواصل معنا
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {contactInfo.map((info, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, y: 20 }}
-                  whileInView={{ opacity: 1, y: 0 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-card border border-border rounded-xl p-6 text-center hover:border-gold/50 transition-colors"
-                >
-                  <div className="flex justify-center mb-4">
-                    <div className="w-12 h-12 rounded-full bg-gold/10 flex items-center justify-center">
-                      <info.icon className="w-6 h-6 text-gold" />
-                    </div>
-                  </div>
-                  <h3 className="font-heading text-lg text-foreground mb-4">{info.title}</h3>
-                  <div className="space-y-2">
-                    {info.content.map((item, i) => (
-                      <div key={i}>
-                        {item.label && (
-                          <p className="text-sm text-muted-foreground font-body">{item.label}</p>
-                        )}
-                        <p className="text-foreground font-medium font-body">{item.value}</p>
-                      </div>
-                    ))}
-                  </div>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
+        {/* Facts table */}
+        <section className="container mx-auto px-6 mt-24">
+          <p className="text-[10px] tracking-[0.35em] uppercase text-muted-foreground mb-8">Contact</p>
+          <dl className="border-t border-border">
+            {facts.map((f) => (
+              <div key={f.label} className="flex items-center gap-6 py-6 border-b border-border">
+                <f.icon className="w-4 h-4 text-muted-foreground shrink-0" strokeWidth={1.2} />
+                <dt className="w-32 md:w-48 text-xs tracking-[0.15em] uppercase text-muted-foreground">{f.label}</dt>
+                <dd className="text-sm md:text-base text-foreground">{f.value}</dd>
+              </div>
+            ))}
+          </dl>
+        </section>
 
-          {/* Features */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="mb-16"
-          >
-            <h2 className="font-heading text-3xl text-foreground mb-8 text-center">
-              لماذا تختار <span className="text-gold">فلامينجو بارك</span>؟
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              {features.map((feature, index) => (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, scale: 0.9 }}
-                  whileInView={{ opacity: 1, scale: 1 }}
-                  viewport={{ once: true }}
-                  transition={{ delay: index * 0.1 }}
-                  className="bg-gradient-to-b from-gold/5 to-background border border-border rounded-xl p-8 text-center hover:-translate-y-2 transition-transform"
-                >
-                  <div className="flex justify-center mb-4">
-                    <feature.icon className="w-12 h-12 text-gold" />
-                  </div>
-                  <h3 className="font-heading text-xl text-foreground mb-3">{feature.title}</h3>
-                  <p className="text-muted-foreground font-body">{feature.description}</p>
-                </motion.div>
-              ))}
-            </div>
-          </motion.div>
-
-          {/* WhatsApp CTA */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            className="bg-gradient-to-r from-gold/10 to-pink/10 border border-gold/20 rounded-xl p-8 text-center"
-          >
-            <h2 className="font-heading text-2xl text-foreground mb-4">
-              هل لديك أي استفسار؟
-            </h2>
-            <p className="text-muted-foreground mb-6 max-w-lg mx-auto">
-              تواصل معنا عبر WhatsApp للإجابة السريعة على جميع أسئلتك
+        {/* CTA */}
+        <section className="container mx-auto px-6 mt-24">
+          <div className="border border-border p-10 md:p-16 text-center">
+            <h2 className="font-heading text-2xl md:text-4xl text-foreground mb-4">هل تحتاج مساعدة في الاختيار؟</h2>
+            <p className="text-sm text-muted-foreground max-w-lg mx-auto leading-7 mb-8">
+              فريق خدمة العملاء متاح للإجابة على استفساراتك حول المقاسات، التوفر، أو الشحن.
             </p>
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               {whatsappNumber && (
-                <>
-                  <Button
-                    onClick={() => handleWhatsApp(whatsappNumber)}
-                    className="btn-gold px-8 py-3 rounded-lg"
-                  >
-                    تواصل عبر WhatsApp
-                  </Button>
-                  <Button
-                    onClick={() => handleWhatsApp(whatsappNumber)}
-                    variant="outline"
-                    className="px-8 py-3 rounded-lg border-green-500/40 text-green-700 hover:bg-green-50"
-                  >
-                    <MessageCircle className="w-4 h-4 ml-2" />
-                    فتح الواتساب الرسمي
-                  </Button>
-                </>
+                <a
+                  href={`https://wa.me/${String(whatsappNumber).replace(/^0+/, '')}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-unified inline-flex items-center justify-center gap-2"
+                >
+                  <MessageCircle className="w-4 h-4" /> تواصل عبر واتساب
+                </a>
               )}
+              <Link to="/products" className="btn-unified inline-flex items-center justify-center gap-2">
+                تصفح المجموعة <ArrowLeft className="w-4 h-4" />
+              </Link>
             </div>
-          </motion.div>
-        </div>
+          </div>
+        </section>
       </main>
 
       <Footer />

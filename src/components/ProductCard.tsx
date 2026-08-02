@@ -7,6 +7,7 @@ import { useCurrency } from "@/lib/currency";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Heart, ShoppingBag } from "lucide-react";
 import { saveCatalogScroll } from "@/lib/catalogScroll";
+import { optimizeImage } from "@/lib/imageUrl";
 
 type ColorVariant = { name?: string; hex?: string; images?: string[] };
 type DisplayProduct = Product & { colorVariants?: ColorVariant[]; color_variants?: ColorVariant[]; rating?: number };
@@ -91,7 +92,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
       {/* IMAGE FULL AREA */}
       <div className="relative flex-1 overflow-hidden bg-neutral-100 ">
         <img
-          src={getProductImage()}
+          src={optimizeImage(getProductImage(), 600)}
           alt={product.nameAr}
           loading="lazy"
           decoding="async"

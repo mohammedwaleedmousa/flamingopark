@@ -5,6 +5,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigationType } from "react-router-dom";
 import { useStore } from "@/store/useStore";
+import { useCustomerExperience } from "@/hooks/useCustomerExperience";
 import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
 import { DateRangeProvider } from "@/lib/analytics/dateRange";
@@ -84,6 +85,7 @@ const AdminCustomerDetailPage = lazy(() => import("./pages/admin/AdminCustomerDe
 const AdminNotificationDeliveriesPage = lazy(() => import("./pages/admin/AdminNotificationDeliveriesPage"));
 const AdminCurrenciesPage = lazy(() => import("./pages/admin/AdminCurrenciesPage"));
 const AdminCountriesPage = lazy(() => import("./pages/admin/AdminCountriesPage"));
+const AdminCustomerExperiencePage = lazy(() => import("./pages/admin/AdminCustomerExperiencePage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -101,8 +103,31 @@ const queryClient = new QueryClient({
 
 const RouteFallback = () => <LoadingScreen />;
 
+const customerPageForPath = (pathname: string) => {
+  if (pathname.startsWith("/product/")) return "products";
+  if (pathname.startsWith("/brand")) return "brands";
+  if (pathname === "/order-confirmation") return "checkout";
+  if (pathname === "/order-tracking") return "my-orders";
+  if (pathname === "/seasonal-offers") return "offers";
+  return pathname.slice(1);
+};
+
+const CustomerPageUnavailable = () => (
+  <main className="grid min-h-screen place-items-center bg-background px-6 text-center" dir="rtl">
+    <div className="max-w-md space-y-4">
+      <h1 className="font-heading text-3xl text-foreground">هذه الصفحة غير متاحة حالياً</h1>
+      <p className="text-muted-foreground">تم إخفاء هذه الواجهة مؤقتاً من إدارة المتجر.</p>
+      <a href="/home" className="inline-flex bg-primary px-5 py-3 text-primary-foreground">العودة للرئيسية</a>
+    </div>
+  </main>
+);
+
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
-  // Unified single-platform: no country/customer gate for browsing.
+  const { pathname } = useLocation();
+  const { data: customerExperience } = useCustomerExperience();
+  const pageId = customerPageForPath(pathname);
+
+  if (customerExperience?.pages[pageId] === false) return <CustomerPageUnavailable />;
   return <>{children}</>;
 };
 
@@ -245,6 +270,7 @@ const App = () => {
               <Route path="customers/:id" element={<AdminCustomerDetailPage />} />
               <Route path="currencies" element={<AdminCurrenciesPage />} />
               <Route path="countries" element={<AdminCountriesPage />} />
+              <Route path="customer-experience" element={<AdminCustomerExperiencePage />} />
               <Route path="brand-sections/:id/products" element={<AdminBrandSectionProductsPage />} />
             </Route>
 

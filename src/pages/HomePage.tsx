@@ -17,6 +17,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import FlamingoServices from "@/components/FlamingoServices";
 import FlamingoCollections from "@/components/FlamingoCollections";
+import { useCustomerExperience } from "@/hooks/useCustomerExperience";
 
 import "swiper/css";
 import "swiper/css/free-mode";
@@ -305,6 +306,8 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
 
 
 const HomePage = () => {
+  const { data: customerExperience } = useCustomerExperience();
+  const showHomeSection = (section: string) => customerExperience?.homeSections[section] !== false;
   const {
   data: categories = [],
   isLoading: categoriesLoading
@@ -433,17 +436,19 @@ const HomePage = () => {
 
       <main>
         {/* Hero — sits behind the navbar */}
-        <HeroSlider />
+        {showHomeSection("hero") && <HeroSlider />}
 
         {/* Brands strip */}
-        <div ref={brandsViewport.ref} style={{ minHeight: 96 }}>
-          <BrandsStrip enabled={brandsViewport.isNearViewport} />
-        </div>
+        {showHomeSection("brands") && (
+          <div ref={brandsViewport.ref} style={{ minHeight: 96 }}>
+            <BrandsStrip enabled={brandsViewport.isNearViewport} />
+          </div>
+        )}
 
         {/* Categories — replaced with horizontal CategoryCarousel for improved UX */}
-        <CategoryCarousel items={featuredCategories} />
+        {showHomeSection("categories") && <CategoryCarousel items={featuredCategories} />}
         {/* banner */}
-        <section className="py-16 md:py-24 bg-background">
+        {showHomeSection("editorial") && <section className="py-16 md:py-24 bg-background">
           <motion.div initial={{ opacity: 0, y: 35, filter: "blur(8px)" }} whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }} viewport={{ once: false, amount: 0.25 }} transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }} className="container mx-auto px-6">
             <div className="max-w-5xl mx-auto text-center">
               <motion.h2 initial={{ opacity: 0, y: 25 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.4 }} transition={{ duration: 1, delay: 0.15, ease: [0.22, 1, 0.36, 1] }} className="text-3xl md:text-6xl font-light leading-[1.25] tracking-tight text-foreground">
@@ -458,10 +463,10 @@ const HomePage = () => {
               </motion.p>
             </div>
           </motion.div>
-        </section>
+        </section>}
 
         {/* Featured products */}
-        <div ref={featuredViewport.ref}>
+        {showHomeSection("featuredProducts") && <div ref={featuredViewport.ref}>
         {products.length > 0 && (
           <section className="py-16 md:py-24 bg-background">
             <div className="container mx-auto px-6">
@@ -498,12 +503,12 @@ const HomePage = () => {
             </div>
           </section>
         )}
-        </div>
+        </div>}
 
-        <FlamingoCollections />
+        {showHomeSection("collections") && <FlamingoCollections />}
 
         {/* New Arrivals */}
-        <div ref={newArrivalsViewport.ref} style={{ minHeight: 640 }}>
+        {showHomeSection("newArrivals") && <div ref={newArrivalsViewport.ref} style={{ minHeight: 640 }}>
         {newArrivals.length > 0 && (
           <section className="py-10 md:py-28">
             <div className="container mx-auto px-6">
@@ -535,10 +540,10 @@ const HomePage = () => {
             </div>
           </section>
         )}
-        </div>
+        </div>}
 
         {/* Best sellers */}
-        <div ref={bestSellersViewport.ref}>
+        {showHomeSection("bestSellers") && <div ref={bestSellersViewport.ref}>
         {bestSellers.length > 0 && (
           <section className="py-10 md:py-28 bg-background">
             <div className="container mx-auto px-6">
@@ -570,9 +575,9 @@ const HomePage = () => {
             </div>
           </section>
         )}
-        </div>
+        </div>}
 
-        <FlamingoServices />
+        {showHomeSection("services") && <FlamingoServices />}
 
       </main>
       <Footer />

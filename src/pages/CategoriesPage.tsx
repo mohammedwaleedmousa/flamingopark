@@ -12,6 +12,7 @@ import type { Product } from "@/store/useStore";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import { clearCatalogScroll, restoreCatalogScroll } from "@/lib/catalogScroll";
 import { ChevronDown } from "lucide-react";
+import ProductListFilters, { type ProductListFilterValues } from "@/components/ProductListFilters";
 
 interface Category {
   id: string;
@@ -52,6 +53,11 @@ const CategoriesPage = () => {
   const parentSlug = searchParams.get("parent") || "";
   const subSlug = searchParams.get("sub") || "";
   const brandFilter = searchParams.get("brand") || "all";
+  const productQuery = searchParams.get("q") || "";
+  const productSort = (searchParams.get("sort") || "new") as ProductListFilterValues["sort"];
+  const inStockOnly = searchParams.get("stock") === "1";
+  const minPrice = searchParams.get("min") || "";
+  const maxPrice = searchParams.get("max") || "";
   const [brandOpen, setBrandOpen] = useState(false);
 
   const parents = useMemo(() => categories.filter((c) => !c.parent_id), [categories]);
@@ -84,13 +90,21 @@ const CategoriesPage = () => {
 
   const productQueries = useQueries({
     queries: Array.from({ length: page }, (_, pageIndex) => ({
-      queryKey: ["categories-leaf-products", scopedCategoryIds.join(","), brandFilter, pageIndex + 1],
+      queryKey: ["categories-leaf-products", scopedCategoryIds.join(","), brandFilter, productQuery, productSort, inStockOnly, minPrice, maxPrice, pageIndex + 1],
       enabled: scopedCategoryIds.length > 0,
       queryFn: async () => {
         const from = pageIndex * PAGE_SIZE;
         let query = supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).in("category_id", scopedCategoryIds);
         if (brandFilter !== "all") query = query.eq("brand", brandFilter);
-        const { data, error } = await query.order("created_at", { ascending: false }).range(from, from + PAGE_SIZE - 1);
+        if (productQuery.trim()) query = query.or(`name_ar.ilike.%${productQuery.trim()}%,name.ilike.%${productQuery.trim()}%,description_ar.ilike.%${productQuery.trim()}%`);
+        if (inStockOnly) query = query.eq("in_stock", true);
+        if (Number(minPrice) > 0) query = query.gte("price", Number(minPrice));
+        if (Number(maxPrice) > 0) query = query.lte("price", Number(maxPrice));
+        if (productSort === "price-asc") query = query.order("price", { ascending: true });
+        else if (productSort === "price-desc") query = query.order("price", { ascending: false });
+        else if (productSort === "name") query = query.order("name_ar", { ascending: true });
+        else query = query.order("created_at", { ascending: false });
+        const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
         if (error) throw error;
         return (data || []).map(mapProductCard);
       },
@@ -151,6 +165,16 @@ const CategoriesPage = () => {
     requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }));
   }
 };
+  const updateProductFilters = (values: ProductListFilterValues) => {
+    setStepParams({
+      brand: values.brand === "all" ? null : values.brand,
+      q: values.query || null,
+      sort: values.sort === "new" ? null : values.sort,
+      stock: values.inStockOnly ? "1" : null,
+      min: values.minPrice || null,
+      max: values.maxPrice || null,
+    });
+  };
   return (
     <div className="min-h-screen bg-background" dir="rtl">
       <Navbar />
@@ -415,6 +439,12 @@ const CategoriesPage = () => {
           <section
             className="container mx-auto px-4 md:px-6 space-y-5"
           >
+            <ProductListFilters
+              values={{ query: productQuery, brand: brandFilter, sort: productSort, inStockOnly, minPrice, maxPrice }}
+              brands={availableBrands}
+              resultCount={visibleProducts.length}
+              onChange={updateProductFilters}
+            />
           
             {productsLoading ? (
               <div className="text-center py-12 text-muted-foreground">جاري تحميل المنتجات...</div>

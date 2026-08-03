@@ -17,6 +17,7 @@ export interface ColorVariant {
   hex2?: string;
   images: string[];
   sizes?: Array<VariantSize | string>;
+  stock?: number;
 }
 
 interface Props {
@@ -52,6 +53,7 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
         hex2: newColor.dual && newColor.hex2 ? newColor.hex2 : undefined,
         images: [],
         sizes: [],
+        stock: 0,
       },
     ]);
 
@@ -77,6 +79,7 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
     }
 
     setUploading(colorIdx);
+    let previewUrls: string[] = [];
 
     try {
       const fileArray = Array.from(files);
@@ -93,6 +96,14 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
 
       
 
+      previewUrls = fileArray.map((file) => URL.createObjectURL(file));
+      const optimistic = [...value];
+      optimistic[colorIdx] = {
+        ...optimistic[colorIdx],
+        images: [...(optimistic[colorIdx].images || []), ...previewUrls],
+      };
+      onChange(optimistic);
+
       const uploadPromises = fileArray.map(async (file) => {
   const extension = file.name.split('.').pop()?.toLowerCase();
   const allowed = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
@@ -108,8 +119,8 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
   let finalFile: File;
   try {
     finalFile = await prepareImageUpload(file, {
-      maxSizeMB: 0.18,
-      maxWidthOrHeight: 1000,
+      maxSizeMB: 0.25,
+      maxWidthOrHeight: 800,
     });
   } catch (error: any) {
     console.error('IMAGE PREP ERROR:', file.name, error);
@@ -134,10 +145,11 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
 
       const urls = await Promise.all(uploadPromises);
 
+      previewUrls.forEach(URL.revokeObjectURL);
       const next = [...value];
       next[colorIdx] = {
         ...next[colorIdx],
-        images: [...(next[colorIdx].images || []), ...urls],
+        images: [...(next[colorIdx].images || []).filter((image) => !previewUrls.includes(image)), ...urls],
       };
 
       onChange(next);
@@ -146,6 +158,13 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
         title: `تم رفع ${urls.length} صور`,
       });
     } catch (error: any) {
+      previewUrls.forEach(URL.revokeObjectURL);
+      const next = [...value];
+      next[colorIdx] = {
+        ...next[colorIdx],
+        images: (next[colorIdx].images || []).filter((image) => !previewUrls.includes(image)),
+      };
+      onChange(next);
       console.error('COLOR UPLOAD ERROR:', error);
       toast({
         title: 'فشل رفع الصور',
@@ -470,6 +489,23 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
               );
             })}
           </div>
+          {(c.sizes || []).length === 0 && (
+            <div className="flex items-center gap-3 mb-3">
+              <label className="text-xs text-muted-foreground whitespace-nowrap">كمية هذا اللون</label>
+              <Input
+                type="number"
+                min={0}
+                value={c.stock ?? 0}
+                onChange={(e) => {
+                  const next = [...value];
+                  next[ci].stock = Math.max(0, parseInt(e.target.value || '0') || 0);
+                  onChange(next);
+                }}
+                className="h-9 w-28 rounded-xl"
+              />
+              <span className="text-[11px] text-muted-foreground">استخدمها للحقائب والساعات والمنتجات بلا مقاسات</span>
+            </div>
+          )}
           <div className="flex gap-2">
             <Input
               placeholder="أضف مقاساً"

@@ -57,10 +57,12 @@ export async function prepareImageUpload(
     name.endsWith(".heif");
 
   let looksLikeHeicByContent = false;
-  try {
-    looksLikeHeicByContent = await isHeic(file);
-  } catch {
-    // تجاهل: إن فشل الفحص سنعتمد على الامتداد/النوع فقط
+  if (looksLikeHeicByNameOrType) {
+    try {
+      looksLikeHeicByContent = await isHeic(file);
+    } catch {
+      // تجاهل: إن فشل الفحص سنعتمد على الامتداد/النوع فقط
+    }
   }
 
   // نعتبره HEIC لو أي من الفحصين أثبت ذلك (وليس فقط عند فشل isHeic)

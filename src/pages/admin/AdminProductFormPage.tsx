@@ -55,6 +55,14 @@ const prepareImage = async (file: File) => {
   return prepareImageUpload(file);
 };
 
+const parseLocalizedNumber = (value: string) => Number(
+  value
+    .trim()
+    .replace(/[٠-٩]/g, (digit) => String('٠١٢٣٤٥٦٧٨٩'.indexOf(digit)))
+    .replace(/[۰-۹]/g, (digit) => String('۰۱۲۳۴۵۶۷۸۹'.indexOf(digit)))
+    .replace(/[,،]/g, '.'),
+);
+
 const AdminProductFormPage = () => {
   const SINGLE_COUNTRY = 'GLOBAL';
   const { id } = useParams();
@@ -85,6 +93,7 @@ const AdminProductFormPage = () => {
     accessories: [] as Accessory[],
     features: [] as ProductFeature[],
     color_variants: [] as ColorVariant[],
+    stock_quantity: '0',
     return_policy: '',
     specs: [] as { label: string; value: string }[],
     has_quality_variants: false,
@@ -98,6 +107,7 @@ const AdminProductFormPage = () => {
   const [uploadingQualityIdx, setUploadingQualityIdx] = useState<number | null>(null);
   const [uploadingAccessoryImage, setUploadingAccessoryImage] = useState(false);
   const [selectedParentSlug, setSelectedParentSlug] = useState('');
+  const [selectedSubcategorySlug, setSelectedSubcategorySlug] = useState('');
 
   // Fetch all homepage sections
   const { data: sections = [] } = useQuery({
@@ -174,19 +184,12 @@ const AdminProductFormPage = () => {
     if (category.parent_id) {
       const parent = categories.find((c) => c.id === category.parent_id);
       setSelectedParentSlug(parent?.slug || '');
+      setSelectedSubcategorySlug(category.slug);
     } else {
       setSelectedParentSlug(category.slug);
+      setSelectedSubcategorySlug('');
     }
   }, [categories, formData.category]);
-
-  useEffect(() => {
-    if (!formData.brand) return;
-    if (filteredBrands.length === 0) return;
-    const exists = filteredBrands.some((b: any) => b.name?.trim() === formData.brand);
-    if (!exists) {
-      setFormData((prev) => ({ ...prev, brand: filteredBrands[0].name?.trim() || '' }));
-    }
-  }, [filteredBrands, formData.brand]);
 
   const parentCategories = useMemo(() => categories.filter((c) => !c.parent_id), [categories]);
 
@@ -212,6 +215,15 @@ const AdminProductFormPage = () => {
       toast({ title: 'خطأ', description: 'فشل في تحميل المنتج', variant: 'destructive' });
       navigate('/admin/products');
     } else {
+      let brandName = data.brand?.trim() || '';
+      if (!brandName && data.brand_id) {
+        const { data: registeredBrand } = await supabase
+          .from('brands')
+          .select('name')
+          .eq('id', data.brand_id)
+          .maybeSingle();
+        brandName = registeredBrand?.name?.trim() || '';
+      }
       setFormData({
         name: data.name || '',
         name_ar: data.name_ar || '',
@@ -223,7 +235,7 @@ const AdminProductFormPage = () => {
         description: data.description || '',
         description_ar: data.description_ar || '',
         category: data.category || '',
-        brand: data.brand || '',
+        brand: brandName,
         in_stock: data.in_stock ?? true,
         is_featured: data.is_featured ?? false,
         is_best_seller: data.is_best_seller ?? false,
@@ -234,6 +246,7 @@ const AdminProductFormPage = () => {
         accessories: ((data as any).accessories || []) as Accessory[],
         features: ((data as any).features || []) as ProductFeature[],
         color_variants: ((data as any).color_variants || []) as ColorVariant[],
+        stock_quantity: (data as any).stock_quantity?.toString() || '0',
         return_policy: (data as any).return_policy || '',
         specs: ((data as any).specs || []) as { label: string; value: string }[],
         has_quality_variants: (data as any).has_quality_variants ?? false,
@@ -244,7 +257,13 @@ const AdminProductFormPage = () => {
   };
 
   const generateSlug = (name: string) => {
-    return name.toLowerCase().replace(/\s+/g, '-').replace(/[^\w-]/g, '');
+    return name
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\u0600-\u06ff\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-+|-+$/g, '');
   };
 
   const handleNameChange = (value: string) => {
@@ -267,30 +286,53 @@ const AdminProductFormPage = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.name_ar || !formData.price) {
-      toast({ title: 'خطأ', description: 'يرجى ملء الحقول المطلوبة (الاسم، السعر)', variant: 'destructive' });
+    const resolvedName = formData.name.trim() || formData.name_ar.trim();
+    const resolvedSlug = formData.slug.trim() || generateSlug(resolvedName);
+    const resolvedCategory = formData.category || selectedParentSlug;
+    const price = parseLocalizedNumber(formData.price);
+    const missingFields = [
+      !resolvedName && 'الاسم',
+      !formData.name_ar.trim() && 'الاسم العربي',
+      !Number.isFinite(price) && 'سعر البيع',
+      price < 0 && 'سعر البيع',
+      !resolvedCategory && 'القسم الرئيسي',
+    ].filter(Boolean);
+
+    if (missingFields.length > 0) {
+      toast({ title: 'حقول مطلوبة', description: `أكمل: ${missingFields.join('، ')}`, variant: 'destructive' });
+      return;
+    }
+
+    if (!resolvedSlug) {
+      toast({ title: 'خطأ', description: 'أدخل رابطاً صالحاً للمنتج', variant: 'destructive' });
       return;
     }
 
     setIsSaving(true);
 
-    const stockQty = formData.color_variants.reduce((total, color) =>
-      total + (color.sizes || []).reduce((colorTotal, entry) =>
-        colorTotal + (typeof entry === 'string' ? 0 : entry.stock || 0), 0), 0);
-    const selectedCat = categories.find((c) => c.slug === formData.category) || null;
-    const selectedBrand = (brands as any[]).find((b: any) => b.name?.trim() === formData.brand?.trim()) || null;
+    const stockQty = formData.color_variants.length > 0
+      ? formData.color_variants.reduce((total, color) => {
+          const sizes = color.sizes || [];
+          return total + (sizes.length > 0
+            ? sizes.reduce((colorTotal, entry) => colorTotal + (typeof entry === 'string' ? 0 : entry.stock || 0), 0)
+            : color.stock || 0);
+        }, 0)
+      : Math.max(0, parseInt(formData.stock_quantity || '0') || 0);
+    const selectedCat = categories.find((c) => c.slug === resolvedCategory) || null;
+    const brandName = formData.brand.trim();
+    const selectedBrand = (brands as any[]).find((b: any) => b.name?.trim() === brandName) || null;
     const productData = {
-      name: formData.name,
+      name: resolvedName,
       name_ar: formData.name_ar,
-      slug: formData.slug || generateSlug(formData.name),
-      price: parseFloat(formData.price),
-      cost_price: formData.cost_price ? parseFloat(formData.cost_price) : 0,
-      original_price: formData.original_price ? parseFloat(formData.original_price) : null,
-      discount: parseInt(formData.discount) || 0,
+      slug: resolvedSlug,
+      price,
+      cost_price: formData.cost_price ? parseLocalizedNumber(formData.cost_price) || 0 : 0,
+      original_price: formData.original_price ? parseLocalizedNumber(formData.original_price) || null : null,
+      discount: parseLocalizedNumber(formData.discount) || 0,
       description: formData.description,
       description_ar: formData.description_ar,
-      category: formData.category || null,
-      brand: formData.brand || null,
+      category: resolvedCategory || null,
+      brand: brandName || null,
       category_id: selectedCat?.id ?? null,
       brand_id: selectedBrand?.id ?? null,
       in_stock: stockQty > 0 ? formData.in_stock : false,
@@ -495,11 +537,10 @@ const AdminProductFormPage = () => {
                 value={selectedParentSlug}
                 onValueChange={(value) => {
                   setSelectedParentSlug(value);
-                  const nextParent = parentCategories.find((c) => c.slug === value);
-                  const children = nextParent ? categories.filter((c) => c.parent_id === nextParent.id) : [];
+                  setSelectedSubcategorySlug('');
                   setFormData({
                     ...formData,
-                    category: children.length ? children[0].slug : value,
+                    category: value,
                   });
                 }}
               >
@@ -519,8 +560,11 @@ const AdminProductFormPage = () => {
             <div>
               <label className="block text-sm font-body text-muted-foreground mb-2">القسم الفرعي</label>
               <Select
-                value={formData.category}
-                onValueChange={(value) => setFormData({ ...formData, category: value })}
+                value={selectedSubcategorySlug}
+                onValueChange={(value) => {
+                  setSelectedSubcategorySlug(value);
+                  setFormData({ ...formData, category: value });
+                }}
                 disabled={subCategoriesForSelectedParent.length === 0}
               >
                 <SelectTrigger>
@@ -541,26 +585,18 @@ const AdminProductFormPage = () => {
 
             <div>
               <label className="block text-sm font-body text-muted-foreground mb-2">الماركة (اختياري)</label>
-              <Select
-                value={formData.brand || "__none__"}
-                onValueChange={(value) => setFormData({ ...formData, brand: value === "__none__" ? "" : value })}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="بدون ماركة" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="__none__">بدون ماركة</SelectItem>
-                  {filteredBrands.map((brand: any) => (
-                    <SelectItem key={brand.id} value={brand.name.trim()}>
-                      {brand.name.trim()}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <Input
+                value={formData.brand}
+                onChange={(e) => setFormData((prev) => ({ ...prev, brand: e.target.value }))}
+                placeholder="اكتب اسم الماركة أو اختر من الاقتراحات"
+                list="registered-brands"
+                className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
+              />
+              <datalist id="registered-brands">
+                {filteredBrands.map((brand: any) => <option key={brand.id} value={brand.name.trim()} />)}
+              </datalist>
               <p className="text-xs text-muted-foreground mt-1">
-                {mappedBrandIds.size > 0
-                  ? 'يتم عرض الماركات المربوطة بهذا القسم فقط.'
-                  : 'لا يوجد ربط محدد للقسم، لذلك تظهر كل الماركات.'}
+                يمكنك كتابة ماركة حرة؛ تُربط بصفحة ماركة فقط عند مطابقة اسم ماركة مسجلة.
               </p>
             </div>
           </div>
@@ -845,6 +881,20 @@ const AdminProductFormPage = () => {
 
         
         {/* Color Variants */}
+        {formData.color_variants.length === 0 && (
+          <div className="bg-background border border-border/60 rounded-3xl p-7 space-y-3 shadow-sm">
+            <h2 className="font-heading text-xl font-bold">مخزون المنتج</h2>
+            <p className="text-sm text-muted-foreground">للساعات والحقائب أو أي منتج بلا لون أو مقاس.</p>
+            <Input
+              type="number"
+              min={0}
+              value={formData.stock_quantity}
+              onChange={(e) => setFormData({ ...formData, stock_quantity: e.target.value })}
+              className="h-12 max-w-xs rounded-2xl bg-muted/30 border-border/60"
+              placeholder="الكمية المتاحة"
+            />
+          </div>
+        )}
         <Suspense fallback={<div className="h-48 rounded-xl border border-border bg-muted/30 animate-pulse" />}>
           <ColorVariantsEditor
             value={formData.color_variants}

@@ -21,6 +21,7 @@ import { cn } from "@/lib/utils";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useDebounce } from "@/hooks/useDebounce";
+import { optimizeImage } from "@/lib/imageUrl";
 
 interface DbProduct {
   id: string;
@@ -47,9 +48,7 @@ interface DbProduct {
   sort_order: number | null;
 }
 
-interface FilterCategory { id: string; name_ar: string; parent_id: string | null }
-interface FilterBrand { id: string; name: string }
-
+interface FilterCategory { id: string; name: string; name_ar: string; slug: string; parent_id: string | null }
 const PAGE_SIZE = 25;
 
 const AdminProductsPage = () => {
@@ -66,13 +65,14 @@ const AdminProductsPage = () => {
   const [searchInput, setSearchInput] = useState("");
   const search = useDebounce(searchInput, 350);
 
-  const [status, setStatus] = useState<"all" | "active" | "inactive">("all");
-  const [stock, setStock] = useState<"all" | "in" | "out">("all");
-  const [categoryFilter, setCategoryFilter] = useState<string>("all");
-  const [brandFilter, setBrandFilter] = useState<string>("all");
+  const [status, setStatus] = useState<"all" | "active" | "inactive">(() => sessionStorage.getItem("admin-products-status") as "all" | "active" | "inactive" || "all");
+  const [stock, setStock] = useState<"all" | "in" | "out">(() => sessionStorage.getItem("admin-products-stock") as "all" | "in" | "out" || "all");
+  const [categoryFilter, setCategoryFilter] = useState<string>(() => sessionStorage.getItem("admin-products-category") || "all");
+  const [brandFilter, setBrandFilter] = useState<string>(() => sessionStorage.getItem("admin-products-brand") || "all");
+  const [bulkCategoryId, setBulkCategoryId] = useState<string>("");
 
   const [categories, setCategories] = useState<FilterCategory[]>([]);
-  const [brands, setBrands] = useState<FilterBrand[]>([]);
+  const [availableBrandNames, setAvailableBrandNames] = useState<string[]>([]);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -83,36 +83,99 @@ const AdminProductsPage = () => {
   }, [search, status, stock, categoryFilter, brandFilter]);
 
   useEffect(() => {
+    sessionStorage.setItem("admin-products-status", status);
+    sessionStorage.setItem("admin-products-stock", stock);
+    sessionStorage.setItem("admin-products-category", categoryFilter);
+    sessionStorage.setItem("admin-products-brand", brandFilter);
+  }, [status, stock, categoryFilter, brandFilter]);
+
+  useEffect(() => {
     (async () => {
-      const [{ data: cats }, { data: brs }] = await Promise.all([
-        supabase.from("categories").select("id,name_ar,parent_id").eq("is_active", true).order("sort_order"),
-        supabase.from("brands").select("id,name").eq("is_active", true).order("name"),
-      ]);
+      const { data: cats } = await supabase
+        .from("categories")
+        .select("id,name,name_ar,slug,parent_id")
+        .eq("is_active", true)
+        .order("sort_order");
       setCategories((cats || []) as FilterCategory[]);
-      setBrands((brs || []) as FilterBrand[]);
     })();
   }, []);
 
-  // When a parent category is picked, filter brands to those actually used in that category.
-  const brandsForSelectedCategory = useMemo(() => brands, [brands]);
-
   const parentCategories = useMemo(() => categories.filter((c) => !c.parent_id), [categories]);
   const subCategoriesFor = (parentId: string) => categories.filter((c) => c.parent_id === parentId);
+  const categoryScope = useMemo(() => {
+    if (categoryFilter === "__uncategorized__") return [] as FilterCategory[];
+    if (categoryFilter === "all") return [] as FilterCategory[];
+    const scopedIds = new Set<string>([categoryFilter]);
+    let changed = true;
+    while (changed) {
+      changed = false;
+      categories.forEach((category) => {
+        if (category.parent_id && scopedIds.has(category.parent_id) && !scopedIds.has(category.id)) {
+          scopedIds.add(category.id);
+          changed = true;
+        }
+      });
+    }
+    return categories.filter((category) => scopedIds.has(category.id));
+  }, [categories, categoryFilter]);
+
+  useEffect(() => {
+    const fetchBrandNames = async () => {
+      let query = supabase.from("products").select("brand").eq("is_active", true);
+      if (categoryFilter === "__uncategorized__") {
+        query = query.is("category_id", null);
+      }
+      if (categoryFilter !== "all") {
+        if (categoryFilter === "__uncategorized__") {
+          const { data } = await query;
+          setAvailableBrandNames(Array.from(new Set(
+            (data || []).map((product) => product.brand?.trim()).filter(Boolean),
+          )).sort((a, b) => a.localeCompare(b, "ar")));
+          return;
+        }
+        if (categoryScope.length === 0) return;
+        const categoryIds = categoryScope.map((category) => category.id);
+        const categoryValues = categoryScope
+          .flatMap((category) => [category.slug, category.name, category.name_ar])
+          .filter(Boolean)
+          .map((value) => `"${value.replaceAll('"', '\\"')}"`);
+        query = query.or(`category_id.in.(${categoryIds.join(",")}),category.in.(${categoryValues.join(",")})`);
+      }
+      const { data } = await query;
+      setAvailableBrandNames(Array.from(new Set(
+        (data || []).map((product) => product.brand?.trim()).filter(Boolean),
+      )).sort((a, b) => a.localeCompare(b, "ar")));
+    };
+    fetchBrandNames();
+  }, [categoryFilter, categoryScope]);
+
+  useEffect(() => {
+    if (brandFilter !== "all" && availableBrandNames.length > 0 && !availableBrandNames.includes(brandFilter)) {
+      setBrandFilter("all");
+    }
+  }, [availableBrandNames, brandFilter]);
 
   useEffect(() => {
     fetchProducts();
     fetchProductStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, status, stock, page, categoryFilter, brandFilter]);
+  }, [search, status, stock, page, categoryFilter, brandFilter, categoryScope]);
 
   const fetchProducts = async () => {
     setIsLoading(true);
     setSelected(new Set());
 
+    if (categoryFilter !== "all" && categoryFilter !== "__uncategorized__" && categoryScope.length === 0) {
+      setProducts([]);
+      setTotal(0);
+      setIsLoading(false);
+      return;
+    }
+
     let q = supabase
       .from("products")
       .select(
-        "id,name,name_ar,slug,price,cost_price,discount,category,category_id,brand,brand_id,in_stock,is_active,countries,images,sort_order",
+        "id,name,name_ar,slug,price,cost_price,discount,category,category_id,brand,brand_id,in_stock,is_active,countries,images,color_variants,sort_order",
         { count: "exact" }
       );
 
@@ -122,12 +185,17 @@ const AdminProductsPage = () => {
     }
     if (status !== "all") q = q.eq("is_active", status === "active");
     if (stock !== "all") q = q.eq("in_stock", stock === "in");
-    if (categoryFilter !== "all") {
-      // Include subcategories of a selected parent.
-      const subs = subCategoriesFor(categoryFilter).map((c) => c.id);
-      q = q.in("category_id", [categoryFilter, ...subs]);
+    if (categoryFilter === "__uncategorized__") {
+      q = q.is("category_id", null);
+    } else if (categoryFilter !== "all") {
+      const categoryIds = categoryScope.map((category) => category.id);
+      const categoryValues = categoryScope
+        .flatMap((category) => [category.slug, category.name, category.name_ar])
+        .filter(Boolean)
+        .map((value) => `"${value.replaceAll('"', '\\"')}"`);
+      q = q.or(`category_id.in.(${categoryIds.join(",")}),category.in.(${categoryValues.join(",")})`);
     }
-    if (brandFilter !== "all") q = q.eq("brand_id", brandFilter);
+    if (brandFilter !== "all") q = q.eq("brand", brandFilter);
 
     const from = (page - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
@@ -220,6 +288,26 @@ const AdminProductsPage = () => {
       toast({ title: "تم", description: `تم حذف ${ids.length} منتج` });
       fetchProducts();
     }
+  };
+
+  const bulkAssignCategory = async () => {
+    if (selected.size === 0 || !bulkCategoryId) return;
+    const category = categories.find((item) => item.id === bulkCategoryId);
+    if (!category) return;
+    setBulkBusy(true);
+    const { error } = await supabase
+      .from("products")
+      .update({ category: category.slug, category_id: category.id })
+      .in("id", Array.from(selected));
+    setBulkBusy(false);
+    if (error) {
+      toast({ title: "خطأ", description: "فشل تعيين القسم للمنتجات", variant: "destructive" });
+      return;
+    }
+    toast({ title: "تم", description: `تم تعيين قسم ${category.name_ar} لـ ${selected.size} منتج` });
+    setSelected(new Set());
+    setBulkCategoryId("");
+    fetchProducts();
   };
 
   const allSelected = useMemo(
@@ -340,6 +428,17 @@ const AdminProductsPage = () => {
             >
               كل المنتجات
             </button>
+            <button
+              onClick={() => { setCategoryFilter("__uncategorized__"); setBrandFilter("all"); }}
+              className={cn(
+                "shrink-0 px-4 py-2 rounded-full text-xs font-medium border transition-colors",
+                categoryFilter === "__uncategorized__"
+                  ? "bg-amber-600 text-white border-amber-600"
+                  : "bg-background text-foreground border-border hover:bg-muted"
+              )}
+            >
+              غير مصنفة
+            </button>
             {parentCategories.map((c) => (
               <button
                 key={c.id}
@@ -358,7 +457,7 @@ const AdminProductsPage = () => {
         )}
 
         {/* Brand chips — appear once a category is chosen */}
-        {categoryFilter !== "all" && brandsForSelectedCategory.length > 0 && (
+        {categoryFilter !== "all" && availableBrandNames.length > 0 && (
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar -mx-1 px-1 pt-1 border-t border-border/40">
             <span className="shrink-0 text-[11px] text-muted-foreground pl-2">الماركات:</span>
             <button
@@ -372,18 +471,18 @@ const AdminProductsPage = () => {
             >
               الكل
             </button>
-            {brandsForSelectedCategory.map((b) => (
+            {availableBrandNames.map((brandName) => (
               <button
-                key={b.id}
-                onClick={() => setBrandFilter(b.id)}
+                key={brandName}
+                onClick={() => setBrandFilter(brandName)}
                 className={cn(
                   "shrink-0 px-3 py-1.5 rounded-full text-[11px] border transition-colors",
-                  brandFilter === b.id
+                  brandFilter === brandName
                     ? "bg-foreground text-background border-foreground"
                     : "bg-background text-foreground border-border hover:bg-muted"
                 )}
               >
-                {b.name}
+                {brandName}
               </button>
             ))}
           </div>
@@ -436,6 +535,19 @@ const AdminProductsPage = () => {
               تم تحديد <span className="font-bold text-primary">{selected.size}</span> منتج
             </p>
             <div className="flex gap-2 flex-wrap">
+              <Select value={bulkCategoryId} onValueChange={setBulkCategoryId}>
+                <SelectTrigger className="h-9 w-48 rounded-xl bg-background">
+                  <SelectValue placeholder="تعيين قسم" />
+                </SelectTrigger>
+                <SelectContent>
+                  {categories.map((category) => (
+                    <SelectItem key={category.id} value={category.id}>{category.name_ar}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <Button size="sm" variant="outline" disabled={bulkBusy || !bulkCategoryId} onClick={bulkAssignCategory}>
+                تعيين القسم
+              </Button>
               <Button size="sm" variant="outline" disabled={bulkBusy} onClick={() => bulkSetActive(true)}>
                 <Eye className="w-4 h-4 ml-1" /> تفعيل
               </Button>
@@ -471,7 +583,7 @@ const AdminProductsPage = () => {
                   onCheckedChange={() => toggleSelect(p.id)}
                   className="mt-1"
                 />
-                <img loading="lazy" src={getProductImage(p)} alt={p.name_ar} className="w-20 h-20 rounded-2xl border border-border object-cover shadow-sm" />
+                <img loading="lazy" decoding="async" src={optimizeImage(getProductImage(p), 160)} alt={p.name_ar} onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }} className="w-20 h-20 rounded-2xl border border-border object-cover shadow-sm" />
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="font-heading text-sm truncate">{p.name_ar}</h3>
@@ -479,7 +591,8 @@ const AdminProductsPage = () => {
                       {p.is_active ? "نشط" : "معطل"}
                     </Badge>
                   </div>
-                  <p className="text-xs text-muted-foreground mt-0.5">{p.category}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{p.category || 'بدون قسم'}</p>
+                  {p.brand && <p className="text-xs text-muted-foreground mt-0.5">{p.brand}</p>}
                   <div className="flex items-center gap-2 mt-1">
                     <span className="font-heading text-primary text-sm">{formatPrice(p)}</span>
                     {(p.discount ?? 0) > 0 && (
@@ -542,14 +655,17 @@ const AdminProductsPage = () => {
                     <td className="p-3"><Checkbox checked={selected.has(p.id)} onCheckedChange={() => toggleSelect(p.id)} /></td>
                     <td className="p-3">
                       <div className="flex items-center gap-3">
-                        <img loading="lazy" src={getProductImage(p)} alt={p.name_ar} className="w-16 h-16 rounded-2xl border border-border object-cover shadow-sm shrink-0" />
+                        <img loading="lazy" decoding="async" src={optimizeImage(getProductImage(p), 128)} alt={p.name_ar} onError={(e) => { e.currentTarget.src = "/placeholder.svg"; }} className="w-16 h-16 rounded-2xl border border-border object-cover shadow-sm shrink-0" />
                         <div className="min-w-0">
                           <p className="font-semibold text-[15px] truncate max-w-[260px]">{p.name_ar}</p>
                           <p className="mt-1 text-[11px] text-muted-foreground truncate max-w-[260px]">{p.slug}</p>
                         </div>
                       </div>
                     </td>
-                    <td className="p-3 text-sm">{p.category || "-"}</td>
+                    <td className="p-3 text-sm">
+                      <p>{p.category || "-"}</p>
+                      {p.brand && <p className="mt-1 text-xs text-muted-foreground">{p.brand}</p>}
+                    </td>
                     <td className="p-3">
                       <span className="font-heading text-primary text-sm">{formatPrice(p)}</span>
                       {(p.discount ?? 0) > 0 && (

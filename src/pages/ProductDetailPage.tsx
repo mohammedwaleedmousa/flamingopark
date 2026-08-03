@@ -1,5 +1,5 @@
 import { useParams, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useState, useEffect, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Navbar from '@/components/Navbar';
@@ -34,8 +34,6 @@ const ProductDetailPage = () => {
   const { isFavorite, toggleFavorite } = useFavorites();
   const { items: recentItems, add: addRecent } = useRecentlyViewed();
   const [selectedImage, setSelectedImage] = useState(0);
-  // اتجاه التنقل بين الصور: 1 = للأمام (تالي)، -1 = للخلف (سابق)
-  const [direction, setDirection] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [selectedSize, setSelectedSize] = useState<string | null>(null);
   const [selectedColorIdx, setSelectedColorIdx] = useState<number | null>(null);
@@ -71,7 +69,7 @@ const ProductDetailPage = () => {
         hasSizes: (data as any).has_sizes ?? false, sizes: (data as any).sizes || [],
         accessories: accessories as { name: string; name_ar: string; price: number; image_url?: string; description?: string; description_ar?: string }[],
         features: ((data as any).features || []) as { icon: string; title: string; desc: string }[],
-        colorVariants: ((data as any).color_variants || []) as { name: string; hex: string; hex2?: string; images: string[];sizes?: string[]; stock?: number }[],
+        colorVariants: ((data as any).color_variants || []) as { name: string; hex: string; hex2?: string; images: string[];sizes?: Array<string | { size: string; stock: number }>; stock?: number }[],
         specs: ((data as any).specs || []) as { label: string; value: string }[],
         returnPolicy: (data as any).return_policy as string | null,
         hasQualityVariants: (data as any).has_quality_variants ?? false,
@@ -92,14 +90,14 @@ const ProductDetailPage = () => {
         setSelectedColorIdx(0);
       }
     }, [product, selectedColorIdx]);
-    // تحميل صور جميع الألوان مسبقاً حتى يكون التبديل سريع
+    // تحميل نسخ العرض مسبقاً حتى يكون التبديل بين الصور والألوان سريعاً.
     useEffect(() => {
       if (!product?.colorVariants) return;
 
       product.colorVariants.forEach((color) => {
         color.images?.forEach((src) => {
           const img = new Image();
-          img.src = src;
+          img.src = optimizeImage(src, 1000, 75);
         });
       });
     }, [product]);
@@ -221,6 +219,14 @@ const ProductDetailPage = () => {
   const sizesToShow = (activeColorVariant?.sizes && activeColorVariant.sizes.length > 0
     ? activeColorVariant.sizes
     : product.sizes || []).map((entry) => typeof entry === 'string' ? entry : entry.size);
+  const selectedSizeStock = activeColorVariant?.sizes?.find((entry) =>
+    typeof entry !== 'string' && entry.size === selectedSize,
+  );
+  const activeStock = typeof selectedSizeStock === 'object'
+    ? selectedSizeStock.stock
+    : activeColorVariant?.sizes?.length
+      ? undefined
+      : activeColorVariant?.stock ?? product.stockQuantity;
   const effectiveReturnPolicy = product.returnPolicy || defaultReturnPolicy;
 
   const updateAccessoryQuantity = (key: string, delta: number) => {
@@ -247,23 +253,19 @@ const ProductDetailPage = () => {
  
   const isLiked = isFavorite(product.id);
  
-  // التنقل بين الصور مع تحديد الاتجاه الصحيح للحركة (يمين/يسار)
   const nextImage = () => {
-    setDirection(1);
     setIsZoomed(false);
     setSelectedImage((i) =>
       i === displayImages.length - 1 ? 0 : i + 1
     );
   };
   const prevImage = () => {
-    setDirection(-1);
     setIsZoomed(false);
     setSelectedImage((i) =>
       i === 0 ? displayImages.length - 1 : i - 1
     );
   };
   const goToImage = (i: number) => {
-    setDirection(i > selectedImage ? 1 : i < selectedImage ? -1 : 0);
     setIsZoomed(false);
     setSelectedImage(i);
   };
@@ -288,12 +290,6 @@ const ProductDetailPage = () => {
       setIsZoomed((z) => !z);
     }
     lastTapRef.current = now;
-  };
- 
-  const imageVariants = {
-    enter: (dir: number) => ({ opacity: 0, x: dir >= 0 ? 80 : -80 }),
-    center: { opacity: 1, x: 0 },
-    exit: (dir: number) => ({ opacity: 0, x: dir >= 0 ? -80 : 80 }),
   };
  
   const defaultFeatures = [
@@ -322,53 +318,34 @@ const ProductDetailPage = () => {
  
         <div className="container mx-auto px-4 pt-8 lg:pt-12">
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
-            {/* Gallery — dominant, Apple-style */}
+            {/* معرض المنتج */}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="lg:col-span-7 lg:sticky lg:top-24 lg:self-start">
               <div
-                className="relative bg-muted/30 rounded-3xl overflow-hidden aspect-[4/5] group touch-pan-y"
+                className="relative bg-[#f6f5f2] rounded-2xl md:rounded-3xl overflow-hidden aspect-[4/5] md:aspect-[5/6] group touch-pan-y"
               >
-                <AnimatePresence mode="wait" custom={direction}>
-                  <motion.img
-                    key={`${activeColorVariant?.name || 'default'}-${selectedImage}`}
-                    custom={direction}
-                    variants={imageVariants}
-                    initial="enter"
-                    animate="center"
-                    exit="exit"
-                    transition={{
-                      duration: 0.3,
-                      ease: "easeOut"
-                    }}
-                    src={optimizeImage(displayImages?.[selectedImage], 1000, 75)}
-                    alt={product.nameAr}
-                    fetchPriority="high"
-                    decoding="async"
-                    style={{
-                      transformOrigin: zoomOrigin,
-                      scale: isZoomed ? 2.2 : 1,
-                      touchAction: isZoomed ? 'none' : 'pan-y',
-                    }}
-                    onLoad={(e) => {
-                      e.currentTarget.style.opacity = "1";
-                    }}
-                    className="w-full h-full object-cover cursor-grab active:cursor-grabbing opacity-0 transition-opacity duration-300"
-                    draggable={false}
-                    drag={isZoomed ? true : "x"}
-                    dragConstraints={isZoomed ? { left: -150, right: 150, top: -150, bottom: 150 } : { left: 0, right: 0 }}
-                    dragElastic={isZoomed ? 0.05 : 0.2}
-                    onDoubleClick={handleImageDoubleClick}
-                    onTouchEnd={handleImageTouchEnd}
-                    onDragEnd={(e, info) => {
-                      if (isZoomed) return;
-                      if (info.offset.x < -50) {
-                        nextImage();
-                      }
-                      if (info.offset.x > 50) {
-                        prevImage();
-                      }
-                    }}
-                  />
-                </AnimatePresence>
+                <motion.img
+                  key={`${activeColorVariant?.name || 'default'}-${selectedImage}`}
+                  initial={{ opacity: 0, scale: 0.985 }}
+                  animate={{ opacity: 1, scale: isZoomed ? 2.2 : 1 }}
+                  transition={{ duration: 0.18, ease: 'easeOut' }}
+                  src={optimizeImage(displayImages?.[selectedImage], 1000, 75)}
+                  alt={product.nameAr}
+                  fetchPriority="high"
+                  decoding="async"
+                  style={{ transformOrigin: zoomOrigin, touchAction: isZoomed ? 'none' : 'pan-y' }}
+                  className="w-full h-full object-contain p-2 md:p-4 cursor-grab active:cursor-grabbing"
+                  draggable={false}
+                  drag={isZoomed ? true : "x"}
+                  dragConstraints={isZoomed ? { left: -150, right: 150, top: -150, bottom: 150 } : { left: 0, right: 0 }}
+                  dragElastic={isZoomed ? 0.05 : 0.2}
+                  onDoubleClick={handleImageDoubleClick}
+                  onTouchEnd={handleImageTouchEnd}
+                  onDragEnd={(e, info) => {
+                    if (isZoomed) return;
+                    if (info.offset.x < -50) nextImage();
+                    if (info.offset.x > 50) prevImage();
+                  }}
+                />
  
                 {/* Nav arrows — subtle */}
                 {displayImages.length > 1 && !isZoomed && (
@@ -445,17 +422,14 @@ const ProductDetailPage = () => {
  
               {/* Stock pill — per-color stock when a color is selected */}
               {(() => {
-                const colorStock = selectedColorIdx !== null
-                  ? product.colorVariants?.[selectedColorIdx]?.stock
-                  : undefined;
-                const available = typeof colorStock === 'number'
-                  ? colorStock > 0
+                const available = typeof activeStock === 'number'
+                  ? activeStock > 0
                   : product.inStock;
                 return (
                   <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-sm ${available ? 'bg-emerald-500/10 text-emerald-700' : 'bg-destructive/10 text-destructive'}`}>
                     <span className={`w-2 h-2 rounded-full ${available ? 'bg-emerald-500' : 'bg-destructive'}`} />
                     {available
-                      ? (typeof colorStock === 'number' ? `متوفر — ${colorStock} قطعة من هذا اللون` : 'متوفر الآن')
+                      ? (typeof activeStock === 'number' ? `متوفر — ${activeStock} قطعة` : 'متوفر الآن')
                       : 'غير متوفر'}
                   </div>
                 );
@@ -517,7 +491,6 @@ const ProductDetailPage = () => {
                         onClick={() => {
                           setSelectedColorIdx(i);
                           setSelectedImage(0);
-                          setDirection(0);
                           setIsZoomed(false);
                           setSelectedSize(null);
                         }}
@@ -569,10 +542,7 @@ const ProductDetailPage = () => {
                   <span className="w-12 text-center font-medium">{quantity}</span>
                   <button
                     onClick={() => {
-                      const colorStock = selectedColorIdx !== null
-                        ? product.colorVariants?.[selectedColorIdx]?.stock
-                        : undefined;
-                      const stock = typeof colorStock === 'number' ? colorStock : (product as any)?.stockQuantity;
+                      const stock = activeStock;
                       if (typeof stock === "number" && quantity >= stock) {
                         toast({ title: "الكمية غير متوفرة", description: `المتاح: ${stock} فقط`, variant: "destructive" });
                         return;
@@ -616,7 +586,7 @@ const ProductDetailPage = () => {
                   onClick={handleAddToCart}
                   disabled={
                     !product.inStock ||
-                    (selectedColorIdx !== null && product.colorVariants?.[selectedColorIdx]?.stock === 0)
+                    (typeof activeStock === 'number' && activeStock === 0)
                   }
                   className="w-full h-14 bg-gold hover:bg-gold/90 text-white font-heading text-base gap-3">
                   <ShoppingBag className="w-5 h-5" /> إضافة للسلة

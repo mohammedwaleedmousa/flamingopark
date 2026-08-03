@@ -79,19 +79,20 @@ const CustomerAssistant = () => {
     event.preventDefault();
     const question = input.trim();
     if (!question || isReplying) return;
-    setMessages((current) => [...current, { id: nextMessageId.current++, role: "user", text: question }]);
+    await submitQuestion(question);
     setInput("");
+  };
+
+  const submitQuestion = async (question: string) => {
+    if (isReplying) return;
+    setMessages((current) => [...current, { id: nextMessageId.current++, role: "user", text: question }]);
     setIsReplying(true);
     await answer(question);
     setIsReplying(false);
   };
 
   const askQuickQuestion = (question: string) => {
-    setInput(question);
-    requestAnimationFrame(() => {
-      const form = document.getElementById("customer-assistant-form") as HTMLFormElement | null;
-      form?.requestSubmit();
-    });
+    void submitQuestion(question);
   };
 
   return (
@@ -126,7 +127,7 @@ const CustomerAssistant = () => {
           </div>
           <div className="border-t border-border bg-background p-4">
             <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="mb-3 block text-center text-xs font-medium text-primary hover:underline">التواصل المباشر مع فريق الدعم عبر واتساب</a>
-            <form id="customer-assistant-form" onSubmit={handleSubmit} className="flex items-center gap-2 border border-input bg-muted/30 p-1.5 focus-within:ring-2 focus-within:ring-ring"><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="اكتب استفسارك..." className="h-9 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none" /><button type="submit" disabled={isReplying} className="grid h-9 w-9 place-items-center bg-primary text-primary-foreground disabled:opacity-50" aria-label="إرسال"><Send className="h-4 w-4" /></button></form>
+            <form onSubmit={handleSubmit} className="flex items-center gap-2 border border-input bg-muted/30 p-1.5 focus-within:ring-2 focus-within:ring-ring"><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="اكتب استفسارك..." className="h-9 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none" /><button type="submit" disabled={isReplying} className="grid h-9 w-9 place-items-center bg-primary text-primary-foreground disabled:opacity-50" aria-label="إرسال"><Send className="h-4 w-4" /></button></form>
           </div>
         </section>
       )}

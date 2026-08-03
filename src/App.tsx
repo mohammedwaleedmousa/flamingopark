@@ -148,7 +148,7 @@ const ScrollToTop = () => {
   useEffect(() => {
     // On POP (back/forward) let the browser restore the previous scroll position.
     if (navType === "POP") return;
-    window.scrollTo(0, 0);
+    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
   }, [pathname, navType]);
 
   return null;

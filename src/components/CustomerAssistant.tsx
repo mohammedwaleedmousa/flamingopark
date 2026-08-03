@@ -27,6 +27,7 @@ const CustomerAssistant = () => {
   const nextMessageId = useRef(2);
   const messageListRef = useRef<HTMLDivElement>(null);
   const lastSuggestedProducts = useRef<ProductResult[]>([]);
+  const aiAvailable = useRef(true);
 
   useEffect(() => {
     if (!open) return;
@@ -48,9 +49,13 @@ const CustomerAssistant = () => {
   };
 
   const requestAiReply = async (question: string) => {
+    if (!aiAvailable.current) return null;
     const history = messages.slice(-6).map(({ role, text }) => ({ role, text }));
     const { data, error } = await supabase.functions.invoke("customer-assistant", { body: { message: question, history } });
-    if (error || !data?.reply) return null;
+    if (error || !data?.reply) {
+      aiAvailable.current = false;
+      return null;
+    }
     return String(data.reply);
   };
 
@@ -75,6 +80,14 @@ const CustomerAssistant = () => {
     }
     if (/واتساب|تواصل|مساعدة|موظف|دعم/.test(term)) {
       addAssistantMessage("يمكنك التواصل مع فريقنا مباشرة عبر واتساب من الزر أدناه.");
+      return;
+    }
+    if (/دفع|ادفع|بطاقة|تحويل|كاش|نقد/.test(term)) {
+      addAssistantMessage("ستظهر لك وسائل الدفع المتاحة وخيارات التحويل عند إتمام الطلب. إذا واجهت أي مشكلة في الدفع، راسلنا عبر واتساب وسنساعدك فورًا.");
+      return;
+    }
+    if (/مقاس|قياس|حجم/.test(term)) {
+      addAssistantMessage("ستجد المقاسات المتاحة داخل صفحة كل منتج. اختر اللون أولًا عند وجود ألوان متعددة، ثم اختر المقاس المناسب قبل الإضافة للسلة.");
       return;
     }
 
@@ -139,20 +152,20 @@ const CustomerAssistant = () => {
   };
 
   return (
-    <div className="fixed bottom-5 left-4 z-[60]" dir="rtl">
+    <div className="fixed bottom-5 left-4 z-[60] max-sm:bottom-3 max-sm:left-3" dir="rtl">
       {open && (
-        <section className="absolute bottom-16 left-0 flex h-[min(580px,calc(100vh-6rem))] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden border border-border bg-background shadow-2xl">
-          <header className="flex items-center justify-between border-b border-primary/20 bg-primary px-5 py-4 text-primary-foreground">
-            <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center bg-white/15"><Bot className="h-5 w-5" /></span><div><p className="text-sm font-semibold">دليل فلامنجو</p><p className="mt-0.5 flex items-center gap-1 text-[11px] opacity-90"><span className="h-1.5 w-1.5 bg-emerald-300" /> مساعد افتراضي متاح الآن</p></div></div>
-            <button type="button" onClick={() => setOpen(false)} className="grid h-8 w-8 place-items-center border border-white/20 hover:bg-white/10" aria-label="إغلاق المحادثة"><X className="h-4 w-4" /></button>
+        <section className="absolute bottom-16 left-0 flex h-[min(600px,calc(100vh-5.5rem))] w-[min(410px,calc(100vw-1.5rem))] flex-col overflow-hidden rounded-lg border border-border/80 bg-background shadow-[0_24px_70px_-30px_rgba(35,21,26,0.45)]">
+          <header className="flex items-center justify-between border-b border-primary/15 bg-[#fff8fa] px-5 py-4">
+            <div className="flex items-center gap-3"><span className="grid h-10 w-10 place-items-center rounded-lg bg-primary text-primary-foreground shadow-sm"><Bot className="h-5 w-5" /></span><div><p className="text-sm font-semibold text-foreground">دليل فلامنجو</p><p className="mt-0.5 flex items-center gap-1 text-[11px] text-muted-foreground"><span className="h-1.5 w-1.5 rounded-full bg-emerald-500" /> مساعد افتراضي متاح الآن</p></div></div>
+            <button type="button" onClick={() => setOpen(false)} className="grid h-8 w-8 place-items-center rounded-md border border-border bg-background text-muted-foreground hover:text-foreground" aria-label="إغلاق المحادثة"><X className="h-4 w-4" /></button>
           </header>
-          <div ref={messageListRef} className="flex-1 space-y-4 overflow-y-auto bg-muted/30 p-4">
+          <div ref={messageListRef} className="flex-1 space-y-4 overflow-y-auto bg-[#fffdfd] p-4">
             {messages.map((message) => (
               <div key={message.id} className={message.role === "user" ? "mr-auto max-w-[85%]" : "max-w-[85%]"}>
-                <p className={`px-3.5 py-2.5 text-sm leading-6 shadow-sm ${message.role === "user" ? "bg-primary text-primary-foreground" : "border border-border bg-background text-foreground"}`}>{message.text}</p>
+                <p className={`rounded-lg px-3.5 py-2.5 text-sm leading-6 shadow-sm ${message.role === "user" ? "bg-primary text-primary-foreground" : "border border-border bg-background text-foreground"}`}>{message.text}</p>
                 {message.products?.map((product) => (
-                  <Link key={product.id} to={`/product/${product.slug}`} onClick={() => setOpen(false)} className="mt-2 flex items-center gap-3 border border-border bg-background p-2.5 transition-colors hover:bg-muted">
-                    <img src={optimizeImage(product.images[0], 160, 90)} alt="" className="h-14 w-12 object-cover" />
+                  <Link key={product.id} to={`/product/${product.slug}`} onClick={() => setOpen(false)} className="mt-2 flex items-center gap-3 rounded-md border border-border bg-background p-2.5 transition-colors hover:border-primary/40 hover:bg-muted/40">
+                    <img src={optimizeImage(product.images[0], 160, 90)} alt="" className="h-14 w-12 rounded-sm object-cover" />
                     <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{product.nameAr}</span><span className="mt-1 block text-xs text-primary">{product.price.toLocaleString("ar-EG")} ر.ي</span></span>
                   </Link>
                 ))}
@@ -162,7 +175,7 @@ const CustomerAssistant = () => {
               <div className="space-y-2 pt-1">
                 <p className="text-xs text-muted-foreground">أسئلة سريعة</p>
                 <div className="flex flex-wrap gap-2">
-                  {["أريد ساعة", "ما مدة التوصيل؟", "كيف أستبدل منتجًا؟"].map((question) => <button key={question} type="button" onClick={() => askQuickQuestion(question)} className="border border-border bg-background px-3 py-2 text-xs hover:border-primary hover:text-primary">{question}</button>)}
+                  {["أريد ساعة", "ما مدة التوصيل؟", "كيف أستبدل منتجًا؟"].map((question) => <button key={question} type="button" onClick={() => askQuickQuestion(question)} className="rounded-md border border-border bg-background px-3 py-2 text-xs transition-colors hover:border-primary hover:bg-primary/5 hover:text-primary">{question}</button>)}
                 </div>
               </div>
             )}
@@ -170,11 +183,11 @@ const CustomerAssistant = () => {
           </div>
           <div className="border-t border-border bg-background p-4">
             <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="mb-3 block text-center text-xs font-medium text-primary hover:underline">التواصل المباشر مع فريق الدعم عبر واتساب</a>
-            <form onSubmit={handleSubmit} className="flex items-center gap-2 border border-input bg-muted/30 p-1.5 focus-within:ring-2 focus-within:ring-ring"><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="اكتب استفسارك..." className="h-9 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none" /><button type="submit" disabled={isReplying} className="grid h-9 w-9 place-items-center bg-primary text-primary-foreground disabled:opacity-50" aria-label="إرسال"><Send className="h-4 w-4" /></button></form>
+            <form onSubmit={handleSubmit} className="flex items-center gap-2 rounded-md border border-input bg-muted/30 p-1.5 focus-within:ring-2 focus-within:ring-ring"><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="اكتب استفسارك..." className="h-9 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none" /><button type="submit" disabled={isReplying} className="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground disabled:opacity-50" aria-label="إرسال"><Send className="h-4 w-4" /></button></form>
           </div>
         </section>
       )}
-      <button type="button" onClick={() => setOpen((current) => !current)} className="grid h-14 w-14 place-items-center border border-primary/20 bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105" aria-label={open ? "إغلاق مساعد المتجر" : "فتح مساعد المتجر"}>
+      <button type="button" onClick={() => setOpen((current) => !current)} className="grid h-14 w-14 place-items-center rounded-lg border border-primary/20 bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105" aria-label={open ? "إغلاق مساعد المتجر" : "فتح مساعد المتجر"}>
         {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
       </button>
     </div>

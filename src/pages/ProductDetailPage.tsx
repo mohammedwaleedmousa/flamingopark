@@ -1,7 +1,8 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
@@ -19,7 +20,7 @@ import { toast } from '@/hooks/use-toast';
 import { useCurrency } from '@/lib/currency';
 import {
   ShoppingBag, Share2, ChevronLeft, ChevronRight, Minus, Plus, Check, Heart,
-  Truck, Shield, RotateCcw, Star, Package, ChevronDown, ZoomIn, ZoomOut,
+  Truck, Shield, RotateCcw, Star, Package, ChevronDown,
 } from 'lucide-react';
 import { FaWhatsapp } from "react-icons/fa";
 import { optimizeImage } from "@/lib/imageUrl";
@@ -41,12 +42,6 @@ const ProductDetailPage = () => {
   const [justAdded, setJustAdded] = useState(false);
   const [selectedQualityIdx, setSelectedQualityIdx] = useState<number | null>(null);
   const [openSection, setOpenSection] = useState<'specs' | 'return' | 'delivery' | null>(null);
-  // حالة تكبير الصورة (زوم على الصورة فقط، مش الصفحة)
-  const [isZoomed, setIsZoomed] = useState(false);
-  const [pinchScale, setPinchScale] = useState(1);
-  const [zoomOrigin, setZoomOrigin] = useState('center center');
-  const lastTapRef = useRef(0);
-  const pinchStartDistance = useRef<number | null>(null);
   const { format: formatCurrency, symbol: currencySymbol } = useCurrency();
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', slug],
@@ -256,69 +251,17 @@ const ProductDetailPage = () => {
   const isLiked = isFavorite(product.id);
  
   const nextImage = () => {
-    setIsZoomed(false);
     setSelectedImage((i) =>
       i === displayImages.length - 1 ? 0 : i + 1
     );
   };
   const prevImage = () => {
-    setIsZoomed(false);
     setSelectedImage((i) =>
       i === 0 ? displayImages.length - 1 : i - 1
     );
   };
   const goToImage = (i: number) => {
-    setIsZoomed(false);
     setSelectedImage(i);
-  };
- 
-  // تكبير الصورة بالضغط المزدوج (ديسكتوب) أو التاب المزدوج (موبايل) - بيأثر على الصورة فقط
-  const handleImageDoubleClick = (e: React.MouseEvent<HTMLImageElement>) => {
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = ((e.clientX - rect.left) / rect.width) * 100;
-    const y = ((e.clientY - rect.top) / rect.height) * 100;
-    setZoomOrigin(`${x}% ${y}%`);
-    setIsZoomed((z) => !z);
-  };
- 
-  const handleImageTouchEnd = (e: React.TouchEvent<HTMLImageElement>) => {
-    if (e.touches.length < 2 && pinchStartDistance.current !== null) {
-      pinchStartDistance.current = null;
-      setPinchScale(1);
-      setIsZoomed(false);
-      return;
-    }
-
-    const now = Date.now();
-    if (now - lastTapRef.current < 300) {
-      const touch = e.changedTouches[0];
-      const rect = e.currentTarget.getBoundingClientRect();
-      const x = ((touch.clientX - rect.left) / rect.width) * 100;
-      const y = ((touch.clientY - rect.top) / rect.height) * 100;
-      setZoomOrigin(`${x}% ${y}%`);
-      setIsZoomed((z) => !z);
-    }
-    lastTapRef.current = now;
-  };
-
-  const handleImageTouchStart = (e: React.TouchEvent<HTMLImageElement>) => {
-    if (e.touches.length !== 2) return;
-    const [firstTouch, secondTouch] = e.touches;
-    pinchStartDistance.current = Math.hypot(secondTouch.clientX - firstTouch.clientX, secondTouch.clientY - firstTouch.clientY);
-    const rect = e.currentTarget.getBoundingClientRect();
-    const centerX = ((firstTouch.clientX + secondTouch.clientX) / 2 - rect.left) / rect.width * 100;
-    const centerY = ((firstTouch.clientY + secondTouch.clientY) / 2 - rect.top) / rect.height * 100;
-    setZoomOrigin(`${centerX}% ${centerY}%`);
-  };
-
-  const handleImageTouchMove = (e: React.TouchEvent<HTMLImageElement>) => {
-    if (e.touches.length !== 2 || !pinchStartDistance.current) return;
-    e.preventDefault();
-    const [firstTouch, secondTouch] = e.touches;
-    const distance = Math.hypot(secondTouch.clientX - firstTouch.clientX, secondTouch.clientY - firstTouch.clientY);
-    const nextScale = Math.min(3.5, Math.max(1, distance / pinchStartDistance.current));
-    setPinchScale(nextScale);
-    setIsZoomed(nextScale > 1.02);
   };
  
   const defaultFeatures = [
@@ -350,37 +293,36 @@ const ProductDetailPage = () => {
             {/* معرض المنتج */}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="lg:col-span-7 lg:sticky lg:top-24 lg:self-start">
               <div className="flex flex-col gap-4 lg:flex-row-reverse lg:items-start">
-              <div
-                className="relative flex-1 border border-border/70 bg-[#f6f5f2] rounded-2xl overflow-hidden aspect-[4/5] md:aspect-[5/6] group touch-pan-y shadow-sm"
-              >
-                <motion.img
+              <div className="relative flex-1 border border-border/70 bg-[#f6f5f2] rounded-2xl overflow-hidden aspect-[4/5] md:aspect-[5/6] group shadow-sm">
+                <motion.div
                   key={`${activeColorVariant?.name || 'default'}-${selectedImage}`}
                   initial={{ opacity: 0, scale: 0.985 }}
-                  animate={{ opacity: 1, scale: pinchScale > 1 ? pinchScale : isZoomed ? 3.5 : 1 }}
+                  animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.18, ease: 'easeOut' }}
-                  src={optimizeImage(displayImages?.[selectedImage], 3000, 100)}
-                  alt={product.nameAr}
-                  fetchPriority="high"
-                  decoding="async"
-                  style={{ transformOrigin: zoomOrigin, touchAction: 'pan-y' }}
-                  className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
-                  draggable={false}
-                  drag={isZoomed ? true : "x"}
-                  dragConstraints={isZoomed ? { left: -250, right: 250, top: -250, bottom: 250 } : { left: 0, right: 0 }}
-                  dragElastic={isZoomed ? 0.05 : 0.2}
-                  onDoubleClick={handleImageDoubleClick}
-                  onTouchStart={handleImageTouchStart}
-                  onTouchMove={handleImageTouchMove}
-                  onTouchEnd={handleImageTouchEnd}
+                  className="h-full w-full"
+                  drag="x"
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.15}
                   onDragEnd={(e, info) => {
-                    if (isZoomed) return;
                     if (info.offset.x < -50) prevImage();
                     if (info.offset.x > 50) nextImage();
                   }}
-                />
+                >
+                  <TransformWrapper
+                    minScale={1}
+                    maxScale={4}
+                    wheel={{ disabled: true }}
+                    doubleClick={{ disabled: true }}
+                    onZoomStop={({ instance }) => instance.resetTransform(180)}
+                  >
+                    <TransformComponent wrapperClass="!h-full !w-full" contentClass="!h-full !w-full">
+                      <img src={optimizeImage(displayImages?.[selectedImage], 3000, 100)} alt={product.nameAr} fetchPriority="high" decoding="async" className="h-full w-full object-cover" draggable={false} />
+                    </TransformComponent>
+                  </TransformWrapper>
+                </motion.div>
  
                 {/* Nav arrows — subtle */}
-                {displayImages.length > 1 && !isZoomed && (
+                {displayImages.length > 1 && (
                   <>
                     <button onClick={prevImage} aria-label="السابق" className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-xl border border-border/70 bg-background/90 hover:bg-background shadow-md items-center justify-center hidden md:flex opacity-0 group-hover:opacity-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                       <ChevronRight className="w-5 h-5" />
@@ -392,35 +334,24 @@ const ProductDetailPage = () => {
                 )}
  
                 {/* Wishlist */}
-                {!isZoomed && (
-                  <button onClick={() => { toggleFavorite(product); }}
+                <button onClick={() => { toggleFavorite(product); }}
                     aria-label={isLiked ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}
                     className={`absolute top-4 left-4 w-11 h-11 rounded-xl border border-border/70 flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isLiked ? 'bg-gold text-white' : 'bg-background/90 hover:bg-background'}`}>
                     <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
                   </button>
-                )}
  
                 {/* Discount tag */}
-                {product.discount && !isZoomed && (
+                {product.discount && (
                   <span className="absolute top-4 right-4 bg-gold text-white text-xs font-medium px-3 py-1.5 rounded-full">-{product.discount}%</span>
                 )}
  
                 {/* Counter */}
-                {displayImages.length > 1 && !isZoomed && (
+                {displayImages.length > 1 && (
                   <div className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-background/80 backdrop-blur-sm text-xs px-3 py-1 rounded-full">
                     {selectedImage + 1} / {displayImages.length}
                   </div>
                 )}
  
-                {/* Zoom toggle button */}
-                <button
-                  type="button"
-                  onClick={() => setIsZoomed((z) => !z)}
-                  aria-label={isZoomed ? 'تصغير الصورة' : 'تكبير الصورة'}
-                  className="absolute bottom-4 right-4 w-10 h-10 rounded-xl border border-border/70 bg-background/90 hover:bg-background shadow-md flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-                >
-                  {isZoomed ? <ZoomOut className="w-4 h-4" /> : <ZoomIn className="w-4 h-4" />}
-                </button>
               </div>
  
               {/* Thumbnails */}

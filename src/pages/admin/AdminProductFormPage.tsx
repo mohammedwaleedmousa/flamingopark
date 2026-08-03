@@ -106,8 +106,7 @@ const AdminProductFormPage = () => {
   const [newQuality, setNewQuality] = useState({ name: '', price: '', description: '' });
   const [uploadingQualityIdx, setUploadingQualityIdx] = useState<number | null>(null);
   const [uploadingAccessoryImage, setUploadingAccessoryImage] = useState(false);
-  const [selectedParentSlug, setSelectedParentSlug] = useState('');
-  const [selectedSubcategorySlug, setSelectedSubcategorySlug] = useState('');
+  const [selectedParentCategoryId, setSelectedParentCategoryId] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   // Fetch all homepage sections
@@ -191,19 +190,17 @@ const AdminProductFormPage = () => {
 
     if (category.parent_id) {
       const parent = categories.find((c) => c.id === category.parent_id);
-      setSelectedParentSlug(parent?.slug || '');
-      setSelectedSubcategorySlug(category.slug);
+      setSelectedParentCategoryId(parent?.id || '');
     } else {
-      setSelectedParentSlug(category.slug);
-      setSelectedSubcategorySlug('');
+      setSelectedParentCategoryId(category.id);
     }
   }, [categories, formData.category, selectedCategoryId]);
 
   const parentCategories = useMemo(() => categories.filter((c) => !c.parent_id), [categories]);
 
   const selectedParentCategory = useMemo(
-    () => parentCategories.find((c) => c.slug === selectedParentSlug) || null,
-    [parentCategories, selectedParentSlug],
+    () => parentCategories.find((c) => c.id === selectedParentCategoryId) || null,
+    [parentCategories, selectedParentCategoryId],
   );
 
   const subCategoriesForSelectedParent = useMemo(() => {
@@ -297,7 +294,7 @@ const AdminProductFormPage = () => {
     
     const resolvedName = formData.name.trim() || formData.name_ar.trim();
     const resolvedSlug = formData.slug.trim() || generateSlug(resolvedName);
-    const resolvedCategory = formData.category || selectedParentSlug;
+    const resolvedCategory = formData.category || selectedParentCategory?.slug || '';
     const price = parseLocalizedNumber(formData.price);
     const missingFields = [
       !resolvedName && 'الاسم',
@@ -367,11 +364,16 @@ const AdminProductFormPage = () => {
 
     try {
       if (isEditing) {
-        const { error } = await supabase
+        const { data: savedProduct, error } = await supabase
           .from('products')
           .update(productData)
-          .eq('id', id);
+          .eq('id', id)
+          .select('category,category_id')
+          .single();
         if (error) throw error;
+        if (savedProduct.category_id !== selectedCat?.id) {
+          throw new Error('لم يتم حفظ القسم الفرعي المحدد. أعد اختيار القسم ثم احفظ مرة أخرى.');
+        }
         toast({ title: 'تم', description: 'تم تحديث المنتج بنجاح' });
       } else {
         const { data: inserted, error } = await supabase
@@ -545,16 +547,15 @@ const AdminProductFormPage = () => {
             <div>
               <label className="block text-sm font-body text-muted-foreground mb-2">القسم الرئيسي *</label>
               <Select
-                value={selectedParentSlug}
+                value={selectedParentCategoryId}
                 onValueChange={(value) => {
-                  const category = parentCategories.find((item) => item.slug === value) || null;
-                  setSelectedParentSlug(value);
-                  setSelectedSubcategorySlug('');
+                  const category = parentCategories.find((item) => item.id === value) || null;
+                  setSelectedParentCategoryId(value);
                   setSelectedCategoryId(category?.id || null);
-                  setFormData({
-                    ...formData,
+                  setFormData((current) => ({
+                    ...current,
                     category: value,
-                  });
+                  }));
                 }}
               >
                 <SelectTrigger>
@@ -562,7 +563,7 @@ const AdminProductFormPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {parentCategories.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.slug}>
+                    <SelectItem key={cat.id} value={cat.id}>
                       {cat.name_ar} ({cat.name})
                     </SelectItem>
                   ))}
@@ -573,12 +574,11 @@ const AdminProductFormPage = () => {
             <div>
               <label className="block text-sm font-body text-muted-foreground mb-2">القسم الفرعي</label>
               <Select
-                value={selectedSubcategorySlug}
+                value={subCategoriesForSelectedParent.some((category) => category.id === selectedCategoryId) ? selectedCategoryId || '' : ''}
                 onValueChange={(value) => {
-                  const category = subCategoriesForSelectedParent.find((item) => item.slug === value) || null;
-                  setSelectedSubcategorySlug(value);
+                  const category = subCategoriesForSelectedParent.find((item) => item.id === value) || null;
                   setSelectedCategoryId(category?.id || null);
-                  setFormData({ ...formData, category: value });
+                  setFormData((current) => ({ ...current, category: category?.slug || '' }));
                 }}
                 disabled={subCategoriesForSelectedParent.length === 0}
               >
@@ -587,7 +587,7 @@ const AdminProductFormPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   {subCategoriesForSelectedParent.map((cat) => (
-                    <SelectItem key={cat.id} value={cat.slug}>
+                    <SelectItem key={cat.id} value={cat.id}>
                       {cat.name_ar} ({cat.name})
                     </SelectItem>
                   ))}

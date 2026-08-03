@@ -310,7 +310,6 @@ const ProductDetailPage = () => {
                     panning={{ disabled: true }}
                     wheel={{ disabled: true }}
                     doubleClick={{ disabled: true }}
-                    onZoomStop={({ instance }) => instance.resetTransform(180)}
                   >
                     <TransformComponent wrapperClass="!h-full !w-full !overflow-hidden" contentClass="!h-full !w-full">
                       <img src={optimizeImage(displayImages?.[selectedImage], 3000, 100)} alt={product.nameAr} fetchPriority="high" decoding="async" className="h-full w-full object-cover" draggable={false} />
@@ -321,10 +320,10 @@ const ProductDetailPage = () => {
                 {/* Nav arrows — subtle */}
                 {displayImages.length > 1 && (
                   <>
-                    <button onClick={prevImage} aria-label="السابق" className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-xl border border-border/70 bg-background/90 hover:bg-background shadow-md items-center justify-center hidden md:flex opacity-0 group-hover:opacity-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <button type="button" onClick={prevImage} aria-label="السابق" className="absolute right-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl border border-border/70 bg-background/90 hover:bg-background shadow-md flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:right-4 md:w-11 md:h-11">
                       <ChevronRight className="w-5 h-5" />
                     </button>
-                    <button onClick={nextImage} aria-label="التالي" className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-xl border border-border/70 bg-background/90 hover:bg-background shadow-md items-center justify-center hidden md:flex opacity-0 group-hover:opacity-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
+                    <button type="button" onClick={nextImage} aria-label="التالي" className="absolute left-3 top-1/2 -translate-y-1/2 w-10 h-10 rounded-xl border border-border/70 bg-background/90 hover:bg-background shadow-md flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring md:left-4 md:w-11 md:h-11">
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                   </>
@@ -455,7 +454,6 @@ const ProductDetailPage = () => {
                         onClick={() => {
                           setSelectedColorIdx(i);
                           setSelectedImage(0);
-                          setIsZoomed(false);
                           setSelectedSize(null);
                         }}
                         className={`relative w-10 h-10 rounded-full border-2 transition-all ${

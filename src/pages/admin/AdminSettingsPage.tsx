@@ -4,8 +4,21 @@ import { toast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Upload, X, FileText, Save } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Loader2, Upload, X, FileText, Save, MessageCircle, Plus } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
+
+type ChatbotConfig = {
+  enabled: boolean;
+  greeting: string;
+  faqs: Array<{ question: string; answer: string }>;
+};
+
+const defaultChatbotConfig: ChatbotConfig = {
+  enabled: true,
+  greeting: "أهلاً بك. أنا دليل فلامنجو الافتراضي، ويسعدني مساعدتك في اختيار المنتجات ومعرفة الأسعار والتوفر والشحن.",
+  faqs: [],
+};
 
 const AdminSettingsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
@@ -28,6 +41,7 @@ const AdminSettingsPage = () => {
 
   const [certPdfUrl, setCertPdfUrl] = useState("");
   const [certImages, setCertImages] = useState<string[]>([]);
+  const [chatbotConfig, setChatbotConfig] = useState<ChatbotConfig>(defaultChatbotConfig);
 
   useEffect(() => {
     fetchSettings();
@@ -87,6 +101,16 @@ const AdminSettingsPage = () => {
             case "social_instagram":
               setSocialLinks((prev) => ({ ...prev, instagram: typeof value === "string" ? value : "" }));
               break;
+            case "chatbot_config":
+              if (value && typeof value === "object" && !Array.isArray(value)) {
+                const config = value as Partial<ChatbotConfig>;
+                setChatbotConfig({
+                  enabled: config.enabled !== false,
+                  greeting: config.greeting || defaultChatbotConfig.greeting,
+                  faqs: Array.isArray(config.faqs) ? config.faqs.filter((item): item is { question: string; answer: string } => Boolean(item?.question && item?.answer)) : [],
+                });
+              }
+              break;
           }
         });
       }
@@ -128,6 +152,7 @@ const AdminSettingsPage = () => {
         updateSetting("certification_pdf_url", certPdfUrl),
         updateSetting("social_whatsapp", socialLinks.whatsapp),
         updateSetting("social_instagram", socialLinks.instagram),
+        updateSetting("chatbot_config", chatbotConfig),
       ]);
 
       toast({ title: "تم", description: "تم حفظ الإعدادات بنجاح" });
@@ -325,6 +350,32 @@ const AdminSettingsPage = () => {
               dir="ltr"
             />
           </div>
+        </div>
+      </div>
+
+      {/* Customer Assistant */}
+      <div className="bg-card border border-border rounded p-6 space-y-5">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <span className="grid h-10 w-10 place-items-center rounded-lg bg-primary/10 text-primary"><MessageCircle className="h-5 w-5" /></span>
+            <div><h2 className="font-heading text-lg text-foreground">مساعد العملاء</h2><p className="text-sm text-muted-foreground">أدر ظهور المساعد وإجاباته المجانية من محتوى المتجر.</p></div>
+          </div>
+          <Switch checked={chatbotConfig.enabled} onCheckedChange={(enabled) => setChatbotConfig((current) => ({ ...current, enabled }))} aria-label="تفعيل مساعد العملاء" />
+        </div>
+        <div>
+          <label className="block text-sm text-muted-foreground mb-2">رسالة الترحيب</label>
+          <Textarea value={chatbotConfig.greeting} onChange={(event) => setChatbotConfig((current) => ({ ...current, greeting: event.target.value }))} rows={3} />
+        </div>
+        <div className="space-y-3">
+          <div className="flex items-center justify-between"><label className="text-sm text-muted-foreground">أسئلة وأجوبة المساعد</label><Button type="button" size="sm" variant="outline" onClick={() => setChatbotConfig((current) => ({ ...current, faqs: [...current.faqs, { question: "", answer: "" }] }))}><Plus className="w-4 h-4 ml-1" />إضافة سؤال</Button></div>
+          {chatbotConfig.faqs.map((faq, index) => (
+            <div key={index} className="grid gap-3 border border-border p-3 md:grid-cols-[1fr_1fr_auto]">
+              <Input value={faq.question} onChange={(event) => setChatbotConfig((current) => ({ ...current, faqs: current.faqs.map((item, itemIndex) => itemIndex === index ? { ...item, question: event.target.value } : item) }))} placeholder="سؤال العميل" />
+              <Textarea value={faq.answer} onChange={(event) => setChatbotConfig((current) => ({ ...current, faqs: current.faqs.map((item, itemIndex) => itemIndex === index ? { ...item, answer: event.target.value } : item) }))} placeholder="إجابة المساعد" rows={2} />
+              <Button type="button" size="icon" variant="ghost" className="text-destructive" onClick={() => setChatbotConfig((current) => ({ ...current, faqs: current.faqs.filter((_, itemIndex) => itemIndex !== index) }))}><X className="w-4 h-4" /></Button>
+            </div>
+          ))}
+          <p className="text-xs text-muted-foreground">يقرأ المساعد هذه الإجابات، إضافة إلى نصوص الصفحات المنشورة والمنتجات والماركات والأقسام.</p>
         </div>
       </div>
 

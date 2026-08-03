@@ -311,11 +311,15 @@ const ProductDetailPage = () => {
                   <TransformWrapper
                     minScale={1}
                     maxScale={4}
+                    centerOnInit
+                    centerZoomedOut
+                    limitToBounds
+                    panning={{ disabled: true }}
                     wheel={{ disabled: true }}
                     doubleClick={{ disabled: true }}
                     onZoomStop={({ instance }) => instance.resetTransform(180)}
                   >
-                    <TransformComponent wrapperClass="!h-full !w-full" contentClass="!h-full !w-full">
+                    <TransformComponent wrapperClass="!h-full !w-full !overflow-hidden" contentClass="!h-full !w-full">
                       <img src={optimizeImage(displayImages?.[selectedImage], 3000, 100)} alt={product.nameAr} fetchPriority="high" decoding="async" className="h-full w-full object-cover" draggable={false} />
                     </TransformComponent>
                   </TransformWrapper>

@@ -7,6 +7,7 @@ import { optimizeImage } from "@/lib/imageUrl";
 
 type Message = { id: number; role: "assistant" | "user"; text: string; products?: ReturnType<typeof mapProductCard>[] };
 type ProductResult = ReturnType<typeof mapProductCard>;
+type ChatbotConfig = { enabled: boolean; greeting: string; faqs: Array<{ question: string; answer: string }> };
 
 const welcomeMessage: Message = {
   id: 1,
@@ -16,6 +17,7 @@ const welcomeMessage: Message = {
 
 const normalize = (value: string) => value.trim().toLowerCase();
 const ignoredSearchWords = new Set(["اريد", "أريد", "ابغى", "أبغى", "هل", "في", "من", "عن", "مع", "ما", "هو", "هذه", "هذا", "منتج", "منتجات", "ال", "لي"]);
+const defaultChatbotConfig: ChatbotConfig = { enabled: true, greeting: welcomeMessage.text, faqs: [] };
 
 const CustomerAssistant = () => {
   const { pathname } = useLocation();
@@ -24,10 +26,12 @@ const CustomerAssistant = () => {
   const [messages, setMessages] = useState<Message[]>([welcomeMessage]);
   const [isReplying, setIsReplying] = useState(false);
   const [whatsapp, setWhatsapp] = useState("967778579777");
+  const [chatbotConfig, setChatbotConfig] = useState<ChatbotConfig>(defaultChatbotConfig);
   const nextMessageId = useRef(2);
   const messageListRef = useRef<HTMLDivElement>(null);
   const lastSuggestedProducts = useRef<ProductResult[]>([]);
   const aiAvailable = useRef(true);
+  const siteKnowledge = useRef<Array<{ title: string; text: string }>>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -35,14 +39,24 @@ const CustomerAssistant = () => {
   }, [messages, open]);
 
   useEffect(() => {
-    supabase.from("site_settings").select("key,value").in("key", ["whatsapp", "whatsapp_ye", "whatsapp_sa"])
+    supabase.from("site_settings").select("key,value").in("key", ["whatsapp", "whatsapp_ye", "whatsapp_sa", "chatbot_config"])
       .then(({ data }) => {
         const setting = data?.find((item) => item.key === "whatsapp" || item.key === "whatsapp_ye" || item.key === "whatsapp_sa");
         if (setting?.value) setWhatsapp(String(setting.value).replace(/\D/g, ""));
+        const config = data?.find((item) => item.key === "chatbot_config")?.value;
+        if (config && typeof config === "object" && !Array.isArray(config)) {
+          const parsed = config as Partial<ChatbotConfig>;
+          const nextConfig = { enabled: parsed.enabled !== false, greeting: parsed.greeting || defaultChatbotConfig.greeting, faqs: Array.isArray(parsed.faqs) ? parsed.faqs.filter((faq): faq is { question: string; answer: string } => Boolean(faq?.question && faq?.answer)) : [] };
+          setChatbotConfig(nextConfig);
+          setMessages((current) => current.length === 1 ? [{ ...current[0], text: nextConfig.greeting }] : current);
+        }
       });
+    supabase.from("site_content").select("title,content,content_ar").then(({ data }) => {
+      siteKnowledge.current = (data || []).map((item) => ({ title: item.title, text: `${item.content_ar || ""} ${item.content || ""}`.trim() })).filter((item) => item.text);
+    });
   }, []);
 
-  if (pathname.startsWith("/admin") || pathname === "/auth" || pathname === "/signin" || pathname === "/signup") return null;
+  if (!chatbotConfig.enabled || pathname.startsWith("/admin") || pathname === "/auth" || pathname === "/signin" || pathname === "/signup") return null;
 
   const addAssistantMessage = (text: string, products?: ReturnType<typeof mapProductCard>[]) => {
     setMessages((current) => [...current, { id: nextMessageId.current++, role: "assistant", text, products }]);
@@ -91,6 +105,12 @@ const CustomerAssistant = () => {
       return;
     }
 
+    const faq = chatbotConfig.faqs.find((item) => normalize(item.question).split(/\s+/).filter((word) => word.length > 2).some((word) => term.includes(word)));
+    if (faq) {
+      addAssistantMessage(faq.answer);
+      return;
+    }
+
     if (/متوفر|توفر|مخزون|نفد/.test(term) && /هذا|هذه|الاول|الأول|الثاني|الثانية/.test(term) && lastSuggestedProducts.current.length > 0) {
       const product = /الثاني|الثانية/.test(term) ? lastSuggestedProducts.current[1] : lastSuggestedProducts.current[0];
       if (product) {
@@ -102,6 +122,12 @@ const CustomerAssistant = () => {
     const words = term.split(/\s+/).map((word) => word.replace(/[^\p{L}\p{N}]/gu, "")).filter((word) => word.length > 1 && !ignoredSearchWords.has(word)).slice(0, 4);
     if (words.length === 0) {
       addAssistantMessage("اكتب اسم المنتج أو نوعه، مثل: ساعة ذهبية أو حقيبة جلد، ويمكنك أيضًا تحديد ميزانيتك مثل: حقيبة أقل من 20,000.");
+      return;
+    }
+
+    const pageContent = siteKnowledge.current.find((item) => words.some((word) => `${item.title} ${item.text}`.toLowerCase().includes(word)));
+    if (pageContent) {
+      addAssistantMessage(`${pageContent.title}: ${pageContent.text.slice(0, 500)}`);
       return;
     }
 

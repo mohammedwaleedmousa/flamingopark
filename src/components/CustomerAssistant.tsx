@@ -11,7 +11,7 @@ type ProductResult = ReturnType<typeof mapProductCard>;
 const welcomeMessage: Message = {
   id: 1,
   role: "assistant",
-  text: "أهلاً بك، أنا مساعد فلامنجو بارك. اسألني عن المنتجات، الأسعار، التوفر، الشحن أو الإرجاع.",
+  text: "أهلاً بك. أنا دليل فلامنجو الافتراضي، ويسعدني مساعدتك في اختيار المنتجات ومعرفة الأسعار والتوفر والشحن.",
 };
 
 const normalize = (value: string) => value.trim().toLowerCase();
@@ -47,8 +47,20 @@ const CustomerAssistant = () => {
     setMessages((current) => [...current, { id: nextMessageId.current++, role: "assistant", text, products }]);
   };
 
+  const requestAiReply = async (question: string) => {
+    const history = messages.slice(-6).map(({ role, text }) => ({ role, text }));
+    const { data, error } = await supabase.functions.invoke("customer-assistant", { body: { message: question, history } });
+    if (error || !data?.reply) return null;
+    return String(data.reply);
+  };
+
   const answer = async (question: string) => {
     const term = normalize(question);
+    const aiReply = await requestAiReply(question);
+    if (aiReply) {
+      addAssistantMessage(aiReply);
+      return;
+    }
     if (/^((مرحبا|مرحب|هلا|اهلا|أهلا|السلام|هاي|hello|hi)[!،. ]*)+$/.test(term)) {
       addAssistantMessage("أهلاً بك. أخبرني بما تبحث عنه وسأساعدك في إيجاد المنتج المناسب أو معرفة السعر والتوفر.");
       return;
@@ -131,7 +143,7 @@ const CustomerAssistant = () => {
       {open && (
         <section className="absolute bottom-16 left-0 flex h-[min(580px,calc(100vh-6rem))] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden border border-border bg-background shadow-2xl">
           <header className="flex items-center justify-between border-b border-primary/20 bg-primary px-5 py-4 text-primary-foreground">
-            <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center bg-white/15"><Bot className="h-5 w-5" /></span><div><p className="text-sm font-semibold">مساعد فلامنجو</p><p className="mt-0.5 flex items-center gap-1 text-[11px] opacity-90"><span className="h-1.5 w-1.5 bg-emerald-300" /> متصل لمساعدتك</p></div></div>
+            <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center bg-white/15"><Bot className="h-5 w-5" /></span><div><p className="text-sm font-semibold">دليل فلامنجو</p><p className="mt-0.5 flex items-center gap-1 text-[11px] opacity-90"><span className="h-1.5 w-1.5 bg-emerald-300" /> مساعد افتراضي متاح الآن</p></div></div>
             <button type="button" onClick={() => setOpen(false)} className="grid h-8 w-8 place-items-center border border-white/20 hover:bg-white/10" aria-label="إغلاق المحادثة"><X className="h-4 w-4" /></button>
           </header>
           <div ref={messageListRef} className="flex-1 space-y-4 overflow-y-auto bg-muted/30 p-4">

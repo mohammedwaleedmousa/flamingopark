@@ -12,6 +12,14 @@ export const optimizeImage = (url?: string | null, width = 600, quality = 70): s
             return u.toString();
         }
 
+        if (u.hostname.endsWith("supabase.co") && u.pathname.includes("/storage/v1/object/public/")) {
+            u.pathname = u.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
+            u.searchParams.set("width", String(width));
+            u.searchParams.set("quality", String(quality));
+            u.searchParams.set("resize", "contain");
+            return u.toString();
+        }
+
         return url;
     } catch {
         return url;

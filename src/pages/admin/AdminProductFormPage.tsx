@@ -82,19 +82,15 @@ const AdminProductFormPage = () => {
     countries: [SINGLE_COUNTRY] as string[],
     section_ids: [] as string[],
     home_collections: [] as string[],
-    has_sizes: false,
-    sizes: [] as string[],
     accessories: [] as Accessory[],
     features: [] as ProductFeature[],
     color_variants: [] as ColorVariant[],
-    stock_quantity: '0',
     return_policy: '',
     specs: [] as { label: string; value: string }[],
     has_quality_variants: false,
     quality_variants: [] as { name: string; price: number; description: string; images: string[]; in_stock: boolean }[],
   });
 
-  const [newSize, setNewSize] = useState('');
   const [newAccessory, setNewAccessory] = useState({ name: '', name_ar: '', price: '', image_url: '', description: '', description_ar: '' });
   const [newFeature, setNewFeature] = useState({ icon: 'truck', title: '', desc: '' });
   const [newSpec, setNewSpec] = useState({ label: '', value: '' });
@@ -235,12 +231,9 @@ const AdminProductFormPage = () => {
         countries: data.countries || [SINGLE_COUNTRY],
         section_ids: (data as any).section_ids || [],
         home_collections: (data as any).home_collections || [],
-        has_sizes: (data as any).has_sizes ?? false,
-        sizes: (data as any).sizes || [],
         accessories: ((data as any).accessories || []) as Accessory[],
         features: ((data as any).features || []) as ProductFeature[],
         color_variants: ((data as any).color_variants || []) as ColorVariant[],
-        stock_quantity: (data as any).stock_quantity?.toString() || '0',
         return_policy: (data as any).return_policy || '',
         specs: ((data as any).specs || []) as { label: string; value: string }[],
         has_quality_variants: (data as any).has_quality_variants ?? false,
@@ -281,7 +274,9 @@ const AdminProductFormPage = () => {
 
     setIsSaving(true);
 
-    const stockQty = Math.max(0, parseInt(formData.stock_quantity || '0') || 0);
+    const stockQty = formData.color_variants.reduce((total, color) =>
+      total + (color.sizes || []).reduce((colorTotal, entry) =>
+        colorTotal + (typeof entry === 'string' ? 0 : entry.stock || 0), 0), 0);
     const selectedCat = categories.find((c) => c.slug === formData.category) || null;
     const selectedBrand = (brands as any[]).find((b: any) => b.name?.trim() === formData.brand?.trim()) || null;
     const productData = {
@@ -306,8 +301,8 @@ const AdminProductFormPage = () => {
       countries: formData.countries,
       section_ids: formData.section_ids,
       home_collections: formData.home_collections,
-      has_sizes: formData.has_sizes,
-      sizes: formData.sizes,
+      has_sizes: formData.color_variants.some((color) => (color.sizes || []).length > 0),
+      sizes: [],
       accessories: formData.accessories as unknown as any,
       features: formData.features as unknown as any,
       color_variants: formData.color_variants as unknown as any,
@@ -585,39 +580,11 @@ const AdminProductFormPage = () => {
         <div className="bg-background border border-border/60 rounded-3xl p-7 space-y-6 shadow-sm hover:shadow-md transition-all">
           <h2 className="font-heading text-xl font-bold flex items-center gap-2">الإعدادات</h2>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-body text-muted-foreground mb-2">
-                الكمية في المخزون *
-              </label>
-              <Input
-                className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
-                type="number"
-                min={0}
-                value={formData.stock_quantity}
-                onChange={(e) => {
-                  const v = e.target.value;
-                  const n = Math.max(0, parseInt(v || '0') || 0);
-                  setFormData({
-                    ...formData,
-                    stock_quantity: v,
-                    in_stock: n > 0 ? formData.in_stock : false,
-                  });
-                }}
-                placeholder="0"
-              />
-              <p className="text-xs text-muted-foreground mt-1">
-                عند وصول الكمية إلى 0 سيصبح المنتج غير متوفر تلقائياً وسيُخصم عند كل طلب.
-              </p>
-            </div>
-          </div>
-
           <div className="flex flex-wrap gap-6">
             <label className="flex items-center gap-2 cursor-pointer">
               <Checkbox
                 checked={formData.in_stock}
                 onCheckedChange={(checked) => setFormData({ ...formData, in_stock: !!checked })}
-                disabled={(parseInt(formData.stock_quantity || '0') || 0) === 0}
               />
               <span className="text-sm">متوفر</span>
             </label>
@@ -716,72 +683,6 @@ const AdminProductFormPage = () => {
               <p className="text-xs text-muted-foreground mt-2">
                 اختر الأقسام التي تريد عرض هذا المنتج فيها
               </p>
-            </div>
-          )}
-        </div>
-
-        {/* Sizes Section */}
-        <div className="bg-background border border-border/60 rounded-3xl p-7 space-y-6 shadow-sm hover:shadow-md transition-all">
-          <div className="flex items-center justify-between">
-            <h2 className="font-heading text-xl font-bold flex items-center gap-2">الأحجام</h2>
-            <label className="flex items-center gap-2 cursor-pointer">
-              <Checkbox
-                checked={formData.has_sizes}
-                onCheckedChange={(checked) => setFormData({ ...formData, has_sizes: !!checked })}
-              />
-              <span className="text-sm">هذا المنتج له أحجام</span>
-            </label>
-          </div>
-
-          {formData.has_sizes && (
-            <div className="space-y-4">
-              <div className="flex gap-2">
-                <Input
-                  value={newSize}
-                  onChange={(e) => setNewSize(e.target.value)}
-                  placeholder="أضف حجم (مثال: S, M, L, XL)"
-                  dir="rtl"
-                  className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30"
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => {
-                    if (newSize.trim() && !formData.sizes.includes(newSize.trim())) {
-                      setFormData(prev => ({
-                        ...prev,
-                        sizes: [...prev.sizes, newSize.trim()],
-                      }));
-                      setNewSize('');
-                    }
-                  }}
-                >
-                  <Plus className="w-4 h-4" />
-                </Button>
-              </div>
-              
-              {formData.sizes.length > 0 && (
-                <div className="flex flex-wrap gap-2">
-                  {formData.sizes.map((size, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2 px-3 py-1.5 bg-muted rounded-lg"
-                    >
-                      <span className="text-sm">{size}</span>
-                      <button
-                        type="button"
-                        onClick={() => setFormData(prev => ({
-                          ...prev,
-                          sizes: prev.sizes.filter((_, i) => i !== index),
-                        }))}
-                        className="text-destructive hover:text-destructive/80"
-                      >
-                        <X className="w-3 h-3" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              )}
             </div>
           )}
         </div>

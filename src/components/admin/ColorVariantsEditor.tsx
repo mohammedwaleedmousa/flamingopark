@@ -6,13 +6,17 @@ import { Input } from '@/components/ui/input';
 import { Loader2, Plus, Trash2, Upload, X } from 'lucide-react';
 import { prepareImageUpload } from "@/lib/prepareImageUpload";
 
+export interface VariantSize {
+  size: string;
+  stock: number;
+}
+
 export interface ColorVariant {
   name: string;
   hex: string;
   hex2?: string;
   images: string[];
-  sizes?: string[];
-  stock?: number;
+  sizes?: Array<VariantSize | string>;
 }
 
 interface Props {
@@ -47,7 +51,7 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
         hex: newColor.hex,
         hex2: newColor.dual && newColor.hex2 ? newColor.hex2 : undefined,
         images: [],
-        stock: 0,
+        sizes: [],
       },
     ]);
 
@@ -413,53 +417,62 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
           </label>
           </div>
 
-        {/* مخزون هذا اللون */}
-        <div className="mt-4 pt-4 border-t border-border/60 flex items-center gap-3">
-          <label className="text-xs text-muted-foreground whitespace-nowrap">
-            الكمية المتوفرة لهذا اللون
-          </label>
-          <Input
-            type="number"
-            min={0}
-            value={c.stock ?? 0}
-            onChange={(e) => {
-              const next = [...value];
-              next[ci].stock = Math.max(0, parseInt(e.target.value || '0') || 0);
-              onChange(next);
-            }}
-            className="h-9 w-28 rounded-xl"
-          />
-          <span className="text-[11px] text-muted-foreground">
-            مخزون مستقل لكل لون — لا يمكن للعميل طلب أكثر منه
-          </span>
-        </div>
-
-        {/* أحجام هذا اللون */}
+        {/* أحجام وكميات هذا اللون */}
         <div className="mt-4 pt-4 border-t border-border/60">
           <label className="block text-xs text-muted-foreground mb-2">
-            الأحجام المتاحة لهذا اللون (اختياري)
+            المقاسات والكميات لهذا اللون
           </label>
-          <div className="flex flex-wrap gap-2 mb-2">
-            {(c.sizes || []).map((sz, si) => (
-              <span key={si} className="inline-flex items-center gap-1 px-3 py-1.5 bg-muted rounded-lg text-sm">
-                {sz}
-                <button
-                  type="button"
-                  onClick={() => {
-                    const next = [...value];
-                    next[ci].sizes = (next[ci].sizes || []).filter((_, i) => i !== si);
-                    onChange(next);
-                  }}
-                  className="text-destructive hover:text-destructive/80"
-                >
-                  <X className="w-3 h-3" />
-                </button>
-              </span>
-            ))}
+          <div className="space-y-2 mb-3">
+            {(c.sizes || []).map((entry, si) => {
+              const variantSize = typeof entry === 'string' ? { size: entry, stock: 0 } : entry;
+              return (
+                <div key={si} className="flex items-center gap-2">
+                  <Input
+                    value={variantSize.size}
+                    onChange={(e) => {
+                      const next = [...value];
+                      const sizes = [...(next[ci].sizes || [])];
+                      sizes[si] = { ...variantSize, size: e.target.value };
+                      next[ci].sizes = sizes;
+                      onChange(next);
+                    }}
+                    placeholder="المقاس"
+                    className="h-9 flex-1 rounded-xl"
+                  />
+                  <Input
+                    type="number"
+                    min={0}
+                    value={variantSize.stock}
+                    onChange={(e) => {
+                      const next = [...value];
+                      const sizes = [...(next[ci].sizes || [])];
+                      sizes[si] = { ...variantSize, stock: Math.max(0, parseInt(e.target.value || '0') || 0) };
+                      next[ci].sizes = sizes;
+                      onChange(next);
+                    }}
+                    placeholder="الكمية"
+                    className="h-9 w-28 rounded-xl"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => {
+                      const next = [...value];
+                      next[ci].sizes = (next[ci].sizes || []).filter((_, i) => i !== si);
+                      onChange(next);
+                    }}
+                    aria-label="حذف المقاس"
+                  >
+                    <X className="w-4 h-4 text-destructive" />
+                  </Button>
+                </div>
+              );
+            })}
           </div>
           <div className="flex gap-2">
             <Input
-              placeholder="مثال: 36, 37, 38"
+              placeholder="أضف مقاساً"
               dir="rtl"
               className="h-9 rounded-xl"
               onKeyDown={(e) => {
@@ -467,11 +480,10 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
                   e.preventDefault();
                   const raw = (e.target as HTMLInputElement).value.trim();
                   if (!raw) return;
-                  const parts = raw.split(/[,\s]+/).filter(Boolean);
                   const next = [...value];
-                  const existing = new Set(next[ci].sizes || []);
-                  parts.forEach((p) => existing.add(p));
-                  next[ci].sizes = Array.from(existing);
+                  const sizes = (next[ci].sizes || []).map((size) => typeof size === 'string' ? size : size.size);
+                  if (sizes.includes(raw)) return;
+                  next[ci].sizes = [...(next[ci].sizes || []), { size: raw, stock: 0 }];
                   onChange(next);
                   (e.target as HTMLInputElement).value = '';
                 }

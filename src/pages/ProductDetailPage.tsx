@@ -217,14 +217,10 @@ const ProductDetailPage = () => {
   const displayImages = qualityImages
     ? qualityImages
     : (activeColorVariant && activeColorVariant.images.length > 0 ? activeColorVariant.images : product.images);
-  // الأحجام حسب اللون المختار: إن وُجدت للّون تُستخدم، وإلا نعرض الأحجام العامة
-  const sizesToShow =
-  activeColorVariant?.sizes && activeColorVariant.sizes.length > 0
+  // الأحجام والكميات محفوظة داخل اللون؛ نستمر بعرض المقاسات القديمة عند وجودها.
+  const sizesToShow = (activeColorVariant?.sizes && activeColorVariant.sizes.length > 0
     ? activeColorVariant.sizes
-    : product.sizes || [];
-    console.log("PRODUCT SIZES:", product.sizes);
-console.log("COLOR VARIANT:", activeColorVariant);
-console.log("SIZES TO SHOW:", sizesToShow); // هنا الخطأ
+    : product.sizes || []).map((entry) => typeof entry === 'string' ? entry : entry.size);
   const effectiveReturnPolicy = product.returnPolicy || defaultReturnPolicy;
 
   const updateAccessoryQuantity = (key: string, delta: number) => {

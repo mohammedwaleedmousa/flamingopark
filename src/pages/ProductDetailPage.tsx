@@ -99,7 +99,7 @@ const ProductDetailPage = () => {
       product.colorVariants.forEach((color) => {
         color.images?.forEach((src) => {
           const img = new Image();
-          img.src = optimizeImage(src, 2400, 95);
+          img.src = optimizeImage(src, 3000, 100);
         });
       });
     }, [product]);
@@ -316,7 +316,7 @@ const ProductDetailPage = () => {
     e.preventDefault();
     const [firstTouch, secondTouch] = e.touches;
     const distance = Math.hypot(secondTouch.clientX - firstTouch.clientX, secondTouch.clientY - firstTouch.clientY);
-    const nextScale = Math.min(2.5, Math.max(1, distance / pinchStartDistance.current));
+    const nextScale = Math.min(3.5, Math.max(1, distance / pinchStartDistance.current));
     setPinchScale(nextScale);
     setIsZoomed(nextScale > 1.02);
   };
@@ -356,9 +356,9 @@ const ProductDetailPage = () => {
                 <motion.img
                   key={`${activeColorVariant?.name || 'default'}-${selectedImage}`}
                   initial={{ opacity: 0, scale: 0.985 }}
-                  animate={{ opacity: 1, scale: pinchScale > 1 ? pinchScale : isZoomed ? 2.2 : 1 }}
+                  animate={{ opacity: 1, scale: pinchScale > 1 ? pinchScale : isZoomed ? 3.5 : 1 }}
                   transition={{ duration: 0.18, ease: 'easeOut' }}
-                  src={optimizeImage(displayImages?.[selectedImage], 2400, 95)}
+                  src={optimizeImage(displayImages?.[selectedImage], 3000, 100)}
                   alt={product.nameAr}
                   fetchPriority="high"
                   decoding="async"
@@ -366,7 +366,7 @@ const ProductDetailPage = () => {
                   className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
                   draggable={false}
                   drag={isZoomed ? true : "x"}
-                  dragConstraints={isZoomed ? { left: -150, right: 150, top: -150, bottom: 150 } : { left: 0, right: 0 }}
+                  dragConstraints={isZoomed ? { left: -250, right: 250, top: -250, bottom: 250 } : { left: 0, right: 0 }}
                   dragElastic={isZoomed ? 0.05 : 0.2}
                   onDoubleClick={handleImageDoubleClick}
                   onTouchStart={handleImageTouchStart}
@@ -374,8 +374,8 @@ const ProductDetailPage = () => {
                   onTouchEnd={handleImageTouchEnd}
                   onDragEnd={(e, info) => {
                     if (isZoomed) return;
-                    if (info.offset.x < -50) nextImage();
-                    if (info.offset.x > 50) prevImage();
+                    if (info.offset.x < -50) prevImage();
+                    if (info.offset.x > 50) nextImage();
                   }}
                 />
  

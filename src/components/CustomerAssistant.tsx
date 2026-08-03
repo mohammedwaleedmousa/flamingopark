@@ -1,6 +1,6 @@
 import { FormEvent, useEffect, useRef, useState } from "react";
 import { Link, useLocation } from "react-router-dom";
-import { Bot, MessageCircle, Send, X } from "lucide-react";
+import { Bot, MessageCircle, Send, Sparkles, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import { optimizeImage } from "@/lib/imageUrl";
@@ -86,35 +86,51 @@ const CustomerAssistant = () => {
     setIsReplying(false);
   };
 
+  const askQuickQuestion = (question: string) => {
+    setInput(question);
+    requestAnimationFrame(() => {
+      const form = document.getElementById("customer-assistant-form") as HTMLFormElement | null;
+      form?.requestSubmit();
+    });
+  };
+
   return (
     <div className="fixed bottom-5 left-4 z-[60]" dir="rtl">
       {open && (
-        <section className="mb-3 flex h-[min(560px,calc(100vh-7rem))] w-[min(380px,calc(100vw-2rem))] flex-col overflow-hidden border border-border bg-background shadow-2xl">
-          <header className="flex items-center justify-between border-b border-border bg-primary px-4 py-3 text-primary-foreground">
-            <div className="flex items-center gap-2"><Bot className="h-5 w-5" /><div><p className="text-sm font-semibold">مساعد فلامنجو</p><p className="text-[11px] opacity-80">مساعد المنتجات والمتجر</p></div></div>
-            <button type="button" onClick={() => setOpen(false)} className="grid h-8 w-8 place-items-center hover:bg-black/10" aria-label="إغلاق المحادثة"><X className="h-4 w-4" /></button>
+        <section className="absolute bottom-16 left-0 flex h-[min(580px,calc(100vh-6rem))] w-[min(400px,calc(100vw-2rem))] flex-col overflow-hidden border border-border bg-background shadow-2xl">
+          <header className="flex items-center justify-between border-b border-primary/20 bg-primary px-5 py-4 text-primary-foreground">
+            <div className="flex items-center gap-3"><span className="grid h-9 w-9 place-items-center bg-white/15"><Bot className="h-5 w-5" /></span><div><p className="text-sm font-semibold">مساعد فلامنجو</p><p className="mt-0.5 flex items-center gap-1 text-[11px] opacity-90"><span className="h-1.5 w-1.5 bg-emerald-300" /> متصل لمساعدتك</p></div></div>
+            <button type="button" onClick={() => setOpen(false)} className="grid h-8 w-8 place-items-center border border-white/20 hover:bg-white/10" aria-label="إغلاق المحادثة"><X className="h-4 w-4" /></button>
           </header>
-          <div ref={messageListRef} className="flex-1 space-y-3 overflow-y-auto bg-muted/30 p-3">
+          <div ref={messageListRef} className="flex-1 space-y-4 overflow-y-auto bg-muted/30 p-4">
             {messages.map((message) => (
               <div key={message.id} className={message.role === "user" ? "mr-auto max-w-[85%]" : "max-w-[85%]"}>
-                <p className={`px-3 py-2 text-sm leading-6 ${message.role === "user" ? "bg-primary text-primary-foreground" : "border border-border bg-background text-foreground"}`}>{message.text}</p>
+                <p className={`px-3.5 py-2.5 text-sm leading-6 shadow-sm ${message.role === "user" ? "bg-primary text-primary-foreground" : "border border-border bg-background text-foreground"}`}>{message.text}</p>
                 {message.products?.map((product) => (
-                  <Link key={product.id} to={`/product/${product.slug}`} onClick={() => setOpen(false)} className="mt-2 flex items-center gap-2 border border-border bg-background p-2 transition-colors hover:bg-muted">
-                    <img src={optimizeImage(product.images[0], 120, 85)} alt="" className="h-12 w-12 object-cover" />
-                    <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{product.nameAr}</span><span className="text-xs text-muted-foreground">{product.price.toLocaleString("ar-EG")} ر.ي</span></span>
+                  <Link key={product.id} to={`/product/${product.slug}`} onClick={() => setOpen(false)} className="mt-2 flex items-center gap-3 border border-border bg-background p-2.5 transition-colors hover:bg-muted">
+                    <img src={optimizeImage(product.images[0], 160, 90)} alt="" className="h-14 w-12 object-cover" />
+                    <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{product.nameAr}</span><span className="mt-1 block text-xs text-primary">{product.price.toLocaleString("ar-EG")} ر.ي</span></span>
                   </Link>
                 ))}
               </div>
             ))}
-            {isReplying && <div className="w-fit border border-border bg-background px-3 py-2 text-xs text-muted-foreground">جاري البحث...</div>}
+            {messages.length === 1 && !isReplying && (
+              <div className="space-y-2 pt-1">
+                <p className="text-xs text-muted-foreground">أسئلة سريعة</p>
+                <div className="flex flex-wrap gap-2">
+                  {["أريد ساعة", "ما مدة التوصيل؟", "كيف أستبدل منتجًا؟"].map((question) => <button key={question} type="button" onClick={() => askQuickQuestion(question)} className="border border-border bg-background px-3 py-2 text-xs hover:border-primary hover:text-primary">{question}</button>)}
+                </div>
+              </div>
+            )}
+            {isReplying && <div className="flex w-fit items-center gap-2 border border-border bg-background px-3 py-2 text-xs text-muted-foreground"><Sparkles className="h-3.5 w-3.5 text-primary" /> جاري البحث...</div>}
           </div>
-          <div className="border-t border-border p-3">
-            <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="mb-2 block text-center text-xs font-medium text-primary hover:underline">التواصل مع فريق الدعم عبر واتساب</a>
-            <form onSubmit={handleSubmit} className="flex gap-2"><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="اكتب استفسارك..." className="h-10 min-w-0 flex-1 border border-input bg-background px-3 text-sm outline-none focus:ring-2 focus:ring-ring" /><button type="submit" disabled={isReplying} className="grid h-10 w-10 place-items-center bg-primary text-primary-foreground disabled:opacity-50" aria-label="إرسال"><Send className="h-4 w-4" /></button></form>
+          <div className="border-t border-border bg-background p-4">
+            <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="mb-3 block text-center text-xs font-medium text-primary hover:underline">التواصل المباشر مع فريق الدعم عبر واتساب</a>
+            <form id="customer-assistant-form" onSubmit={handleSubmit} className="flex items-center gap-2 border border-input bg-muted/30 p-1.5 focus-within:ring-2 focus-within:ring-ring"><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="اكتب استفسارك..." className="h-9 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none" /><button type="submit" disabled={isReplying} className="grid h-9 w-9 place-items-center bg-primary text-primary-foreground disabled:opacity-50" aria-label="إرسال"><Send className="h-4 w-4" /></button></form>
           </div>
         </section>
       )}
-      <button type="button" onClick={() => setOpen((current) => !current)} className="grid h-14 w-14 place-items-center bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105" aria-label={open ? "إغلاق مساعد المتجر" : "فتح مساعد المتجر"}>
+      <button type="button" onClick={() => setOpen((current) => !current)} className="grid h-14 w-14 place-items-center border border-primary/20 bg-primary text-primary-foreground shadow-lg transition-transform hover:scale-105" aria-label={open ? "إغلاق مساعد المتجر" : "فتح مساعد المتجر"}>
         {open ? <X className="h-6 w-6" /> : <MessageCircle className="h-6 w-6" />}
       </button>
     </div>

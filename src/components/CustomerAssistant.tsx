@@ -6,6 +6,7 @@ import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import { optimizeImage } from "@/lib/imageUrl";
 
 type Message = { id: number; role: "assistant" | "user"; text: string; products?: ReturnType<typeof mapProductCard>[] };
+type ProductResult = ReturnType<typeof mapProductCard>;
 
 const welcomeMessage: Message = {
   id: 1,
@@ -14,6 +15,7 @@ const welcomeMessage: Message = {
 };
 
 const normalize = (value: string) => value.trim().toLowerCase();
+const ignoredSearchWords = new Set(["اريد", "أريد", "ابغى", "أبغى", "هل", "في", "من", "عن", "مع", "ما", "هو", "هذه", "هذا", "منتج", "منتجات", "ال", "لي"]);
 
 const CustomerAssistant = () => {
   const { pathname } = useLocation();
@@ -24,6 +26,7 @@ const CustomerAssistant = () => {
   const [whatsapp, setWhatsapp] = useState("967778579777");
   const nextMessageId = useRef(2);
   const messageListRef = useRef<HTMLDivElement>(null);
+  const lastSuggestedProducts = useRef<ProductResult[]>([]);
 
   useEffect(() => {
     if (!open) return;
@@ -46,6 +49,10 @@ const CustomerAssistant = () => {
 
   const answer = async (question: string) => {
     const term = normalize(question);
+    if (/^((مرحبا|مرحب|هلا|اهلا|أهلا|السلام|هاي|hello|hi)[!،. ]*)+$/.test(term)) {
+      addAssistantMessage("أهلاً بك. أخبرني بما تبحث عنه وسأساعدك في إيجاد المنتج المناسب أو معرفة السعر والتوفر.");
+      return;
+    }
     if (/شحن|توصيل|يوصل|مدة/.test(term)) {
       addAssistantMessage("التوصيل داخل عدن في اليوم نفسه، وإلى بقية المحافظات عادة خلال 2 إلى 7 أيام حسب إجراءات الشحن.");
       return;
@@ -59,20 +66,44 @@ const CustomerAssistant = () => {
       return;
     }
 
-    const words = term.split(/\s+/).filter((word) => word.length > 1).slice(0, 3);
+    if (/متوفر|توفر|مخزون|نفد/.test(term) && /هذا|هذه|الاول|الأول|الثاني|الثانية/.test(term) && lastSuggestedProducts.current.length > 0) {
+      const product = /الثاني|الثانية/.test(term) ? lastSuggestedProducts.current[1] : lastSuggestedProducts.current[0];
+      if (product) {
+        addAssistantMessage(`${product.nameAr} ${product.inStock ? "متوفر حاليًا ويمكنك فتح المنتج لاختيار اللون أو المقاس." : "غير متوفر حاليًا."}`, [product]);
+        return;
+      }
+    }
+
+    const words = term.split(/\s+/).map((word) => word.replace(/[^\p{L}\p{N}]/gu, "")).filter((word) => word.length > 1 && !ignoredSearchWords.has(word)).slice(0, 4);
     if (words.length === 0) {
-      addAssistantMessage("اكتب اسم المنتج أو نوعه، مثل: ساعة ذهبية أو حقيبة جلد.");
+      addAssistantMessage("اكتب اسم المنتج أو نوعه، مثل: ساعة ذهبية أو حقيبة جلد، ويمكنك أيضًا تحديد ميزانيتك مثل: حقيبة أقل من 20,000.");
       return;
     }
 
     const pattern = words.map((word) => `name_ar.ilike.%${word}%,name.ilike.%${word}%,description_ar.ilike.%${word}%`).join(",");
-    const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).or(pattern).limit(3);
+    const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).or(pattern).limit(30);
     if (error || !data?.length) {
       addAssistantMessage("لم أجد منتجًا مطابقًا بوضوح. جرّب كتابة اسم المنتج أو الماركة، أو تواصل معنا عبر واتساب للمساعدة.");
       return;
     }
-    const products = data.map(mapProductCard);
-    addAssistantMessage("وجدت هذه المنتجات التي قد تناسب طلبك:", products);
+    const priceMatch = term.match(/(?:اقل|أقل|تحت|حدود|بحدود|من)\s*(\d[\d,،.]*)/);
+    const maxPrice = priceMatch ? Number(priceMatch[1].replace(/[,،.]/g, "")) : null;
+    const products = data.map(mapProductCard)
+      .filter((product) => !maxPrice || product.price <= maxPrice)
+      .sort((first, second) => {
+        const firstText = `${first.nameAr} ${first.name} ${first.brand} ${first.descriptionAr}`.toLowerCase();
+        const secondText = `${second.nameAr} ${second.name} ${second.brand} ${second.descriptionAr}`.toLowerCase();
+        const score = (text: string, product: ProductResult) => words.reduce((total, word) => total + (text.includes(word) ? 3 : 0) + (product.nameAr.toLowerCase().includes(word) ? 4 : 0), product.inStock ? 1 : 0);
+        return score(secondText, second) - score(firstText, first);
+      })
+      .slice(0, 3);
+    if (products.length === 0) {
+      addAssistantMessage("لم أجد منتجًا ضمن هذه الميزانية. جرّب رفع الحد أو اكتب نوع المنتج الذي تريده.");
+      return;
+    }
+    lastSuggestedProducts.current = products;
+    const availableCount = products.filter((product) => product.inStock).length;
+    addAssistantMessage(`رشحت لك ${products.length} منتجات${maxPrice ? ` ضمن ${maxPrice.toLocaleString("ar-EG")} ر.ي` : ""}. المتوفر منها الآن: ${availableCount}.`, products);
   };
 
   const handleSubmit = async (event: FormEvent) => {

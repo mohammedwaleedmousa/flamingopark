@@ -12,6 +12,7 @@ import { DateRangeProvider } from "@/lib/analytics/dateRange";
 import { hydrateCurrencies } from "@/lib/currency";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { MotionConfig } from "framer-motion";
+import CustomerAssistant from "@/components/CustomerAssistant";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
@@ -180,6 +181,7 @@ const App = () => {
           <ScrollToTop />
           <AnalyticsTracker />
           <SpeedInsights />
+          <CustomerAssistant />
           <Suspense fallback={<RouteFallback />}>
             <Routes>
             <Route path="/" element={<AuthRedirect />} />

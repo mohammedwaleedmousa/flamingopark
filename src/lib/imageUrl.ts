@@ -1,4 +1,4 @@
-export const optimizeImage = (url?: string | null, width = 600, quality = 70): string => {
+export const optimizeImage = (url?: string | null, width = 720, quality = 82): string => {
     if (!url) return "/placeholder.svg";
 
     try {

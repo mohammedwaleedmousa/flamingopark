@@ -17,7 +17,7 @@ async function bitmapToJpegFile(file: File): Promise<File> {
     canvas.toBlob(
       (b) => (b ? resolve(b) : reject(new Error("toBlob فشل"))),
       "image/jpeg",
-      0.85
+      0.92
     )
   );
 
@@ -32,7 +32,7 @@ async function convertHeic(file: File): Promise<File> {
     const convertedBlob = await heicTo({
       blob: file,
       type: "image/jpeg",
-      quality: 0.85,
+      quality: 0.92,
     });
     return new File([convertedBlob], `${crypto.randomUUID()}.jpg`, {
       type: "image/jpeg",
@@ -92,8 +92,8 @@ export async function prepareImageUpload(
   }
 
   const compressed = await imageCompression(working as File, {
-    maxSizeMB: opts.maxSizeMB ?? 1,
-    maxWidthOrHeight: opts.maxWidthOrHeight ?? 1600,
+    maxSizeMB: opts.maxSizeMB ?? 3,
+    maxWidthOrHeight: opts.maxWidthOrHeight ?? 2400,
     useWebWorker: true,
     fileType: "image/webp",
   });

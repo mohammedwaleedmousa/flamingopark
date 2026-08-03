@@ -97,7 +97,7 @@ const ProductDetailPage = () => {
       product.colorVariants.forEach((color) => {
         color.images?.forEach((src) => {
           const img = new Image();
-          img.src = optimizeImage(src, 1000, 75);
+          img.src = optimizeImage(src, 2000, 90);
         });
       });
     }, [product]);
@@ -321,14 +321,14 @@ const ProductDetailPage = () => {
             {/* معرض المنتج */}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="lg:col-span-7 lg:sticky lg:top-24 lg:self-start">
               <div
-                className="relative bg-[#f6f5f2] rounded-2xl md:rounded-3xl overflow-hidden aspect-[4/5] md:aspect-[5/6] group touch-pan-y"
+                className="relative border border-border/70 bg-[#f6f5f2] rounded-2xl overflow-hidden aspect-[4/5] md:aspect-[5/6] group touch-pan-y shadow-sm"
               >
                 <motion.img
                   key={`${activeColorVariant?.name || 'default'}-${selectedImage}`}
                   initial={{ opacity: 0, scale: 0.985 }}
                   animate={{ opacity: 1, scale: isZoomed ? 2.2 : 1 }}
                   transition={{ duration: 0.18, ease: 'easeOut' }}
-                  src={optimizeImage(displayImages?.[selectedImage], 1000, 75)}
+                  src={optimizeImage(displayImages?.[selectedImage], 2000, 90)}
                   alt={product.nameAr}
                   fetchPriority="high"
                   decoding="async"
@@ -350,10 +350,10 @@ const ProductDetailPage = () => {
                 {/* Nav arrows — subtle */}
                 {displayImages.length > 1 && !isZoomed && (
                   <>
-                    <button onClick={prevImage} aria-label="السابق" className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-background/70 hover:bg-background shadow-md items-center justify-center hidden md:flex opacity-0 group-hover:opacity-100 transition-all">
+                    <button onClick={prevImage} aria-label="السابق" className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-xl border border-border/70 bg-background/90 hover:bg-background shadow-md items-center justify-center hidden md:flex opacity-0 group-hover:opacity-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                       <ChevronRight className="w-5 h-5" />
                     </button>
-                    <button onClick={nextImage} aria-label="التالي" className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-background/70 hover:bg-background shadow-md items-center justify-center hidden md:flex opacity-0 group-hover:opacity-100 transition-all">
+                    <button onClick={nextImage} aria-label="التالي" className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-xl border border-border/70 bg-background/90 hover:bg-background shadow-md items-center justify-center hidden md:flex opacity-0 group-hover:opacity-100 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring">
                       <ChevronLeft className="w-5 h-5" />
                     </button>
                   </>
@@ -362,7 +362,8 @@ const ProductDetailPage = () => {
                 {/* Wishlist */}
                 {!isZoomed && (
                   <button onClick={() => { toggleFavorite(product); }}
-                    className={`absolute top-4 left-4 w-11 h-11 rounded-full flex items-center justify-center transition-all ${isLiked ? 'bg-gold text-white' : 'bg-background/80 hover:bg-background'}`}>
+                    aria-label={isLiked ? 'إزالة من المفضلة' : 'إضافة إلى المفضلة'}
+                    className={`absolute top-4 left-4 w-11 h-11 rounded-xl border border-border/70 flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${isLiked ? 'bg-gold text-white' : 'bg-background/90 hover:bg-background'}`}>
                     <Heart className={`w-5 h-5 ${isLiked ? 'fill-current' : ''}`} />
                   </button>
                 )}
@@ -384,7 +385,7 @@ const ProductDetailPage = () => {
                   type="button"
                   onClick={() => setIsZoomed((z) => !z)}
                   aria-label={isZoomed ? 'تصغير الصورة' : 'تكبير الصورة'}
-                  className="absolute bottom-4 right-4 w-10 h-10 rounded-full bg-background/80 hover:bg-background shadow-md flex items-center justify-center transition-all"
+                  className="absolute bottom-4 right-4 w-10 h-10 rounded-xl border border-border/70 bg-background/90 hover:bg-background shadow-md flex items-center justify-center transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                 >
                   {isZoomed ? <ZoomOut className="w-4 h-4" /> : <ZoomIn className="w-4 h-4" />}
                 </button>
@@ -392,11 +393,13 @@ const ProductDetailPage = () => {
  
               {/* Thumbnails */}
               {displayImages.length > 1 && (
-                <div className="flex gap-2 mt-4 overflow-x-auto scrollbar-none">
+                <div className="flex gap-3 mt-4 overflow-x-auto scrollbar-none pb-1">
                   {displayImages.map((img, i) => (
                     <button key={i} onClick={() => goToImage(i)}
-                      className={`shrink-0 w-16 h-16 rounded-xl overflow-hidden border-2 transition-all ${selectedImage === i ? 'border-gold' : 'border-transparent hover:border-border'}`}>
-                      <img src={optimizeImage(img, 160)} alt="" loading="lazy" decoding="async" width={128} height={128} className="w-full h-full object-cover" />
+                      aria-label={`عرض الصورة ${i + 1}`}
+                      aria-current={selectedImage === i ? 'true' : undefined}
+                      className={`shrink-0 w-[72px] h-[88px] rounded-xl overflow-hidden border-2 bg-muted transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selectedImage === i ? 'border-gold shadow-sm' : 'border-transparent hover:border-border'}`}>
+                      <img src={optimizeImage(img, 240, 85)} alt="" loading="lazy" decoding="async" width={144} height={176} className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>

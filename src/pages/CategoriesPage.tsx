@@ -61,13 +61,14 @@ const CategoriesPage = () => {
     [categories, selectedParent],
   );
   const selectedSub = useMemo(() => subCategories.find((s) => s.slug === subSlug) || null, [subCategories, subSlug]);
+  const activeProductCategory = selectedSub || (selectedParent && subCategories.length === 0 ? selectedParent : null);
   const page = Math.max(1, Number(searchParams.get("page") || 1));
   const PAGE_SIZE = 24;
 
   const scopedCategoryIds = useMemo(() => {
-    if (!selectedSub) return [] as string[];
-    return [selectedSub.id];
-  }, [selectedSub]);
+    if (!activeProductCategory) return [] as string[];
+    return [activeProductCategory.id];
+  }, [activeProductCategory]);
 
   useEffect(() => {
     if (subSlug && !selectedSub) {
@@ -156,8 +157,8 @@ const CategoriesPage = () => {
       <CartDrawer />
       <main className="pt-24 pb-20">
         <section
-          className={`container mx-auto px-6 ${selectedSub ? "mb-4" : "mb-10"} text-center`}>
-          {!selectedSub && (
+          className={`container mx-auto px-6 ${activeProductCategory ? "mb-4" : "mb-10"} text-center`}>
+          {!activeProductCategory && (
             <>
               <p className="text-[10px] tracking-[0.08em] uppercase text-muted-foreground mb-3">
                 {getSiteText(content, "categories_page_eyebrow", " ")}
@@ -171,7 +172,7 @@ const CategoriesPage = () => {
             </>
           )}
           <section className="container mx-auto px-6 mb-10">
-            {selectedSub && (
+            {activeProductCategory && (
               <div
                 dir="rtl"
                 className="
@@ -230,7 +231,7 @@ const CategoriesPage = () => {
                 )}
               </div>
               {/* Dropdown الماركات */}
-              {selectedSub && availableBrands.length > 0 && (
+              {activeProductCategory && availableBrands.length > 0 && (
                 <div className="relative">
                   <button
                     onClick={() => setBrandOpen(!brandOpen)}
@@ -410,7 +411,7 @@ const CategoriesPage = () => {
           </section>
         )}
 
-        {!!selectedSub && (
+        {!!activeProductCategory && (
           <section
             className="container mx-auto px-4 md:px-6 space-y-5"
           >

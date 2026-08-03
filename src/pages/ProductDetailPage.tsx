@@ -97,7 +97,7 @@ const ProductDetailPage = () => {
       product.colorVariants.forEach((color) => {
         color.images?.forEach((src) => {
           const img = new Image();
-          img.src = optimizeImage(src, 2000, 90);
+          img.src = optimizeImage(src, 2400, 95);
         });
       });
     }, [product]);
@@ -328,12 +328,12 @@ const ProductDetailPage = () => {
                   initial={{ opacity: 0, scale: 0.985 }}
                   animate={{ opacity: 1, scale: isZoomed ? 2.2 : 1 }}
                   transition={{ duration: 0.18, ease: 'easeOut' }}
-                  src={optimizeImage(displayImages?.[selectedImage], 2000, 90)}
+                  src={optimizeImage(displayImages?.[selectedImage], 2400, 95)}
                   alt={product.nameAr}
                   fetchPriority="high"
                   decoding="async"
                   style={{ transformOrigin: zoomOrigin, touchAction: isZoomed ? 'none' : 'pan-y' }}
-                  className="w-full h-full object-contain p-2 md:p-4 cursor-grab active:cursor-grabbing"
+                  className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
                   draggable={false}
                   drag={isZoomed ? true : "x"}
                   dragConstraints={isZoomed ? { left: -150, right: 150, top: -150, bottom: 150 } : { left: 0, right: 0 }}

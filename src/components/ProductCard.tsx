@@ -92,12 +92,12 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
       {/* IMAGE FULL AREA */}
       <div className="relative flex-1 overflow-hidden bg-neutral-100 ">
         <img
-          src={optimizeImage(getProductImage(), 600)}
+          src={optimizeImage(getProductImage(), 800, 88)}
           alt={product.nameAr}
           loading="lazy"
           decoding="async"
-          width={600}
-          height={800}
+          width={800}
+          height={1000}
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           className="
             w-full h-full object-cover

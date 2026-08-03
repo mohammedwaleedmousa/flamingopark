@@ -1,4 +1,4 @@
-export const optimizeImage = (url?: string | null, width = 720, quality = 82): string => {
+export const optimizeImage = (url?: string | null, width = 800, quality = 88): string => {
     if (!url) return "/placeholder.svg";
 
     try {
@@ -16,7 +16,7 @@ export const optimizeImage = (url?: string | null, width = 720, quality = 82): s
             u.pathname = u.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
             u.searchParams.set("width", String(width));
             u.searchParams.set("quality", String(quality));
-            u.searchParams.set("resize", "contain");
+            u.searchParams.set("resize", "cover");
             return u.toString();
         }
 

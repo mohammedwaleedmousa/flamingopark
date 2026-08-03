@@ -43,8 +43,10 @@ const ProductDetailPage = () => {
   const [openSection, setOpenSection] = useState<'specs' | 'return' | 'delivery' | null>(null);
   // حالة تكبير الصورة (زوم على الصورة فقط، مش الصفحة)
   const [isZoomed, setIsZoomed] = useState(false);
+  const [pinchScale, setPinchScale] = useState(1);
   const [zoomOrigin, setZoomOrigin] = useState('center center');
   const lastTapRef = useRef(0);
+  const pinchStartDistance = useRef<number | null>(null);
   const { format: formatCurrency, symbol: currencySymbol } = useCurrency();
   const { data: product, isLoading } = useQuery({
     queryKey: ['product', slug],
@@ -280,6 +282,13 @@ const ProductDetailPage = () => {
   };
  
   const handleImageTouchEnd = (e: React.TouchEvent<HTMLImageElement>) => {
+    if (e.touches.length < 2 && pinchStartDistance.current !== null) {
+      pinchStartDistance.current = null;
+      setPinchScale(1);
+      setIsZoomed(false);
+      return;
+    }
+
     const now = Date.now();
     if (now - lastTapRef.current < 300) {
       const touch = e.changedTouches[0];
@@ -290,6 +299,26 @@ const ProductDetailPage = () => {
       setIsZoomed((z) => !z);
     }
     lastTapRef.current = now;
+  };
+
+  const handleImageTouchStart = (e: React.TouchEvent<HTMLImageElement>) => {
+    if (e.touches.length !== 2) return;
+    const [firstTouch, secondTouch] = e.touches;
+    pinchStartDistance.current = Math.hypot(secondTouch.clientX - firstTouch.clientX, secondTouch.clientY - firstTouch.clientY);
+    const rect = e.currentTarget.getBoundingClientRect();
+    const centerX = ((firstTouch.clientX + secondTouch.clientX) / 2 - rect.left) / rect.width * 100;
+    const centerY = ((firstTouch.clientY + secondTouch.clientY) / 2 - rect.top) / rect.height * 100;
+    setZoomOrigin(`${centerX}% ${centerY}%`);
+  };
+
+  const handleImageTouchMove = (e: React.TouchEvent<HTMLImageElement>) => {
+    if (e.touches.length !== 2 || !pinchStartDistance.current) return;
+    e.preventDefault();
+    const [firstTouch, secondTouch] = e.touches;
+    const distance = Math.hypot(secondTouch.clientX - firstTouch.clientX, secondTouch.clientY - firstTouch.clientY);
+    const nextScale = Math.min(2.5, Math.max(1, distance / pinchStartDistance.current));
+    setPinchScale(nextScale);
+    setIsZoomed(nextScale > 1.02);
   };
  
   const defaultFeatures = [
@@ -320,25 +349,28 @@ const ProductDetailPage = () => {
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-16">
             {/* معرض المنتج */}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="lg:col-span-7 lg:sticky lg:top-24 lg:self-start">
+              <div className="flex flex-col gap-4 lg:flex-row-reverse lg:items-start">
               <div
-                className="relative border border-border/70 bg-[#f6f5f2] rounded-2xl overflow-hidden aspect-[4/5] md:aspect-[5/6] group touch-pan-y shadow-sm"
+                className="relative flex-1 border border-border/70 bg-[#f6f5f2] rounded-2xl overflow-hidden aspect-[4/5] md:aspect-[5/6] group touch-pan-y shadow-sm"
               >
                 <motion.img
                   key={`${activeColorVariant?.name || 'default'}-${selectedImage}`}
                   initial={{ opacity: 0, scale: 0.985 }}
-                  animate={{ opacity: 1, scale: isZoomed ? 2.2 : 1 }}
+                  animate={{ opacity: 1, scale: pinchScale > 1 ? pinchScale : isZoomed ? 2.2 : 1 }}
                   transition={{ duration: 0.18, ease: 'easeOut' }}
                   src={optimizeImage(displayImages?.[selectedImage], 2400, 95)}
                   alt={product.nameAr}
                   fetchPriority="high"
                   decoding="async"
-                  style={{ transformOrigin: zoomOrigin, touchAction: isZoomed ? 'none' : 'pan-y' }}
+                  style={{ transformOrigin: zoomOrigin, touchAction: 'pan-y' }}
                   className="w-full h-full object-cover cursor-grab active:cursor-grabbing"
                   draggable={false}
                   drag={isZoomed ? true : "x"}
                   dragConstraints={isZoomed ? { left: -150, right: 150, top: -150, bottom: 150 } : { left: 0, right: 0 }}
                   dragElastic={isZoomed ? 0.05 : 0.2}
                   onDoubleClick={handleImageDoubleClick}
+                  onTouchStart={handleImageTouchStart}
+                  onTouchMove={handleImageTouchMove}
                   onTouchEnd={handleImageTouchEnd}
                   onDragEnd={(e, info) => {
                     if (isZoomed) return;
@@ -393,7 +425,7 @@ const ProductDetailPage = () => {
  
               {/* Thumbnails */}
               {displayImages.length > 1 && (
-                <div className="flex gap-3 mt-4 overflow-x-auto scrollbar-none pb-1">
+                <div className="flex gap-3 overflow-x-auto scrollbar-none pb-1 lg:max-h-[calc(100vh-8rem)] lg:flex-col lg:overflow-y-auto lg:overflow-x-hidden lg:pl-1">
                   {displayImages.map((img, i) => (
                     <button key={i} onClick={() => goToImage(i)}
                       aria-label={`عرض الصورة ${i + 1}`}
@@ -404,6 +436,7 @@ const ProductDetailPage = () => {
                   ))}
                 </div>
               )}
+              </div>
             </motion.div>
  
             {/* Details — spacious, refined */}

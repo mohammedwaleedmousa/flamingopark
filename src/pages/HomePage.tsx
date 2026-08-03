@@ -372,20 +372,11 @@ const HomePage = () => {
         .from("products")
         .select(PRODUCT_CARD_SELECT)
         .eq("is_active", true)
-        .or("is_featured.eq.true,home_collections.cs.{curated}")
+        .contains("home_collections", ["curated"] as any)
         .order("sort_order")
         .limit(8);
       if (error) throw error;
-      if ((data || []).length > 0) return (data || []).map(mapProductCard);
-
-      const { data: fallback, error: fallbackError } = await supabase
-        .from("products")
-        .select(PRODUCT_CARD_SELECT)
-        .eq("is_active", true)
-        .order("sort_order")
-        .limit(8);
-      if (fallbackError) throw fallbackError;
-      return (fallback || []).map(mapProductCard);
+      return (data || []).map(mapProductCard);
     },
   });
 
@@ -417,16 +408,7 @@ const HomePage = () => {
         .order("created_at", { ascending: false })
         .limit(8);
       if (error) throw error;
-      if ((data || []).length > 0) return (data || []).map(mapProductCard);
-
-      const { data: latest, error: latestError } = await supabase
-        .from("products")
-        .select(PRODUCT_CARD_SELECT)
-        .eq("is_active", true)
-        .order("created_at", { ascending: false })
-        .limit(8);
-      if (latestError) throw latestError;
-      return (latest || []).map(mapProductCard);
+      return (data || []).map(mapProductCard);
     },
   });
   return (

@@ -28,16 +28,7 @@ const CollectionPage = ({ collection, eyebrow, title, description, badge }: Coll
         .order("sort_order", { ascending: true })
         .limit(60);
       if (error) throw error;
-      if ((assigned || []).length > 0) return (assigned || []).map(mapProductCard);
-
-      let fallback = base();
-      if (collection === "curated") fallback = fallback.eq("is_featured", true);
-      if (collection === "best_sellers") fallback = fallback.eq("is_best_seller", true);
-      const { data, error: fallbackError } = await fallback
-        .order("created_at", { ascending: false })
-        .limit(60);
-      if (fallbackError) throw fallbackError;
-      return (data || []).map(mapProductCard);
+      return (assigned || []).map(mapProductCard);
     },
   });
 

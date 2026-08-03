@@ -289,6 +289,15 @@ const AdminProductFormPage = () => {
     }));
   };
 
+  const toggleHomeCollection = (collection: string) => {
+    setFormData((prev) => ({
+      ...prev,
+      home_collections: prev.home_collections.includes(collection)
+        ? prev.home_collections.filter((item) => item !== collection)
+        : [...prev.home_collections, collection],
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -679,27 +688,22 @@ const AdminProductFormPage = () => {
                 { key: "new_season", label: "جديد الموسم" },
                 { key: "best_sellers", label: "الأكثر مبيعاً" },
               ].map((collection) => (
-                <label
+                <button
+                  type="button"
                   key={collection.key}
-                  className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border transition-all ${
+                  aria-pressed={formData.home_collections.includes(collection.key)}
+                  onClick={() => toggleHomeCollection(collection.key)}
+                  className={`flex items-center gap-2 cursor-pointer px-3 py-2 rounded-lg border text-right transition-all ${
                     formData.home_collections.includes(collection.key)
                       ? 'border-primary bg-primary/10 text-primary'
                       : 'border-border hover:border-primary/50'
                   }`}
                 >
-                  <Checkbox
-                    checked={formData.home_collections.includes(collection.key)}
-                    onCheckedChange={() =>
-                      setFormData((prev) => ({
-                        ...prev,
-                        home_collections: prev.home_collections.includes(collection.key)
-                          ? prev.home_collections.filter((c) => c !== collection.key)
-                          : [...prev.home_collections, collection.key],
-                      }))
-                    }
-                  />
+                  <span className={`flex h-4 w-4 items-center justify-center rounded border ${formData.home_collections.includes(collection.key) ? 'border-primary bg-primary text-primary-foreground' : 'border-muted-foreground/50'}`}>
+                    {formData.home_collections.includes(collection.key) && '✓'}
+                  </span>
                   <span className="text-sm">{collection.label}</span>
-                </label>
+                </button>
               ))}
             </div>
             <p className="text-xs text-muted-foreground mt-2">

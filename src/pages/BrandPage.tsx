@@ -200,7 +200,7 @@ const { data: sectionProducts = [] } = useQuery({
               <div className="flex items-center justify-between mb-6">
                 <h2 className="font-heading text-xl md:text-2xl tracking-widest uppercase">المنتجات</h2>
                 <Link
-                  to={`/products?brand=${encodeURIComponent(brand.name)}`}
+                  to={`/brands/${brand.slug || slug}/products`}
                   className="text-sm text-black/60 hover:text-gold inline-flex items-center gap-1"
                 >
                   عرض الكل <ChevronLeft className="w-4 h-4" />

@@ -300,13 +300,6 @@ const ProductDetailPage = () => {
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ duration: 0.18, ease: 'easeOut' }}
                   className="h-full w-full"
-                  drag="x"
-                  dragConstraints={{ left: 0, right: 0 }}
-                  dragElastic={0.15}
-                  onDragEnd={(e, info) => {
-                    if (info.offset.x < -50) prevImage();
-                    if (info.offset.x > 50) nextImage();
-                  }}
                 >
                   <TransformWrapper
                     minScale={1}

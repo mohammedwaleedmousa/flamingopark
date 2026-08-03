@@ -32,7 +32,10 @@ const AdminBrandFiltersPage = () => {
   const navigate = useNavigate();
   const qc = useQueryClient();
   const [selectedBrandId, setSelectedBrandId] = useState<string | undefined>(routeBrandId);
-  const [selectedSectionId, setSelectedSectionId] = useState<string | undefined>();
+  const [selectedSectionId, setSelectedSectionId] = useState<string | undefined>(() => {
+    if (!routeBrandId) return undefined;
+    return sessionStorage.getItem(`admin-brand-filter-section:${routeBrandId}`) || undefined;
+  });
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editing, setEditing] = useState<Filter | null>(null);
   const [form, setForm] = useState({
@@ -57,13 +60,12 @@ const AdminBrandFiltersPage = () => {
   const activeBrandId = selectedBrandId || brands[0]?.id;
   const { data: sections = [] } = useQuery({
     queryKey: ["brand-sections-filters", activeBrandId],
-    enabled: !!activeBrandId && !!selectedSectionId,
+    enabled: !!activeBrandId,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("brand_sections")
         .select("id,name")
         .eq("brand_id", activeBrandId)
-        .eq("section_id", selectedSectionId)
         .order("sort_order");
 
       if (error) throw error;
@@ -71,6 +73,16 @@ const AdminBrandFiltersPage = () => {
       return data || [];
     },
   });
+
+  const selectBrand = (brandId: string) => {
+    setSelectedBrandId(brandId);
+    setSelectedSectionId(sessionStorage.getItem(`admin-brand-filter-section:${brandId}`) || undefined);
+  };
+
+  const selectSection = (sectionId: string) => {
+    setSelectedSectionId(sectionId);
+    if (activeBrandId) sessionStorage.setItem(`admin-brand-filter-section:${activeBrandId}`, sectionId);
+  };
 
   const { data: filters = [], isLoading } = useQuery({
     queryKey: ["brand-filters-admin", activeBrandId],
@@ -164,7 +176,7 @@ const AdminBrandFiltersPage = () => {
 
       <div className="flex items-center gap-3">
         <Label>الماركة:</Label>
-        <Select value={activeBrandId || ""} onValueChange={(value) => {setSelectedBrandId(value);setSelectedSectionId(undefined);}}>
+        <Select value={activeBrandId || ""} onValueChange={selectBrand}>
           <SelectTrigger className="w-64"><SelectValue placeholder="اختر ماركة" /></SelectTrigger>
           <SelectContent>
             {brands.map((b: any) => (<SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>))}
@@ -177,7 +189,7 @@ const AdminBrandFiltersPage = () => {
 
         <Select
           value={selectedSectionId || ""}
-          onValueChange={setSelectedSectionId}
+          onValueChange={selectSection}
         >
           <SelectTrigger className="w-64">
             <SelectValue placeholder="اختر القسم" />

@@ -108,6 +108,7 @@ const AdminProductFormPage = () => {
   const [uploadingAccessoryImage, setUploadingAccessoryImage] = useState(false);
   const [selectedParentSlug, setSelectedParentSlug] = useState('');
   const [selectedSubcategorySlug, setSelectedSubcategorySlug] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
 
   // Fetch all homepage sections
   const { data: sections = [] } = useQuery({
@@ -150,7 +151,9 @@ const AdminProductFormPage = () => {
     },
   });
 
-  const selectedCategory = categories.find((c) => c.slug === formData.category) || null;
+  const selectedCategory = categories.find((c) => c.id === selectedCategoryId)
+    || categories.find((c) => c.slug === formData.category)
+    || null;
 
   const { data: mappedBrandRows = [] } = useQuery({
     queryKey: ['category-brand-links', selectedCategory?.id],
@@ -177,9 +180,14 @@ const AdminProductFormPage = () => {
   }, [id]);
 
   useEffect(() => {
-    if (!categories.length || !formData.category) return;
-    const category = categories.find((c) => c.slug === formData.category);
+    if (!categories.length || (!formData.category && !selectedCategoryId)) return;
+    const category = categories.find((c) => c.id === selectedCategoryId)
+      || categories.find((c) => c.slug === formData.category);
     if (!category) return;
+
+    if (formData.category !== category.slug) {
+      setFormData((current) => ({ ...current, category: category.slug }));
+    }
 
     if (category.parent_id) {
       const parent = categories.find((c) => c.id === category.parent_id);
@@ -189,7 +197,7 @@ const AdminProductFormPage = () => {
       setSelectedParentSlug(category.slug);
       setSelectedSubcategorySlug('');
     }
-  }, [categories, formData.category]);
+  }, [categories, formData.category, selectedCategoryId]);
 
   const parentCategories = useMemo(() => categories.filter((c) => !c.parent_id), [categories]);
 
@@ -215,6 +223,7 @@ const AdminProductFormPage = () => {
       toast({ title: 'خطأ', description: 'فشل في تحميل المنتج', variant: 'destructive' });
       navigate('/admin/products');
     } else {
+      setSelectedCategoryId(data.category_id || null);
       let brandName = data.brand?.trim() || '';
       if (!brandName && data.brand_id) {
         const { data: registeredBrand } = await supabase
@@ -318,7 +327,9 @@ const AdminProductFormPage = () => {
             : color.stock || 0);
         }, 0)
       : Math.max(0, parseInt(formData.stock_quantity || '0') || 0);
-    const selectedCat = categories.find((c) => c.slug === resolvedCategory) || null;
+    const selectedCat = categories.find((c) => c.id === selectedCategoryId)
+      || categories.find((c) => c.slug === resolvedCategory)
+      || null;
     const brandName = formData.brand.trim();
     const selectedBrand = (brands as any[]).find((b: any) => b.name?.trim() === brandName) || null;
     const productData = {
@@ -331,7 +342,7 @@ const AdminProductFormPage = () => {
       discount: parseLocalizedNumber(formData.discount) || 0,
       description: formData.description,
       description_ar: formData.description_ar,
-      category: resolvedCategory || null,
+      category: selectedCat?.slug || resolvedCategory || null,
       brand: brandName || null,
       category_id: selectedCat?.id ?? null,
       brand_id: selectedBrand?.id ?? null,
@@ -536,8 +547,10 @@ const AdminProductFormPage = () => {
               <Select
                 value={selectedParentSlug}
                 onValueChange={(value) => {
+                  const category = parentCategories.find((item) => item.slug === value) || null;
                   setSelectedParentSlug(value);
                   setSelectedSubcategorySlug('');
+                  setSelectedCategoryId(category?.id || null);
                   setFormData({
                     ...formData,
                     category: value,
@@ -562,7 +575,9 @@ const AdminProductFormPage = () => {
               <Select
                 value={selectedSubcategorySlug}
                 onValueChange={(value) => {
+                  const category = subCategoriesForSelectedParent.find((item) => item.slug === value) || null;
                   setSelectedSubcategorySlug(value);
+                  setSelectedCategoryId(category?.id || null);
                   setFormData({ ...formData, category: value });
                 }}
                 disabled={subCategoriesForSelectedParent.length === 0}

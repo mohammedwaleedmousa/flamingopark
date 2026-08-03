@@ -70,12 +70,8 @@ const CategoriesPage = () => {
 
   const scopedCategoryIds = useMemo(() => {
     if (!selectedSub) return [] as string[];
-    // Include products assigned to the sub-category OR its parent, so items
-    // linked only at the parent level still appear inside the sub view.
-    const ids = [selectedSub.id];
-    if (selectedParent) ids.push(selectedParent.id);
-    return ids;
-  }, [selectedSub, selectedParent]);
+    return [selectedSub.id];
+  }, [selectedSub]);
 
   const productQueries = useQueries({
     queries: Array.from({ length: page }, (_, pageIndex) => ({

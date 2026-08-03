@@ -61,10 +61,6 @@ const CategoriesPage = () => {
     [categories, selectedParent],
   );
   const selectedSub = useMemo(() => subCategories.find((s) => s.slug === subSlug) || null, [subCategories, subSlug]);
-  // Opening a parent category includes it and its subcategories in the product query.
-  const effectiveLeafCategory = selectedSub || null;
-
-  const effectiveLeafSlug = effectiveLeafCategory?.slug || "";
   const page = Math.max(1, Number(searchParams.get("page") || 1));
   const PAGE_SIZE = 24;
 
@@ -72,6 +68,18 @@ const CategoriesPage = () => {
     if (!selectedSub) return [] as string[];
     return [selectedSub.id];
   }, [selectedSub]);
+
+  useEffect(() => {
+    if (subSlug && !selectedSub) {
+      setSearchParams((current) => {
+        const next = new URLSearchParams(current);
+        next.delete("sub");
+        next.delete("brand");
+        next.delete("page");
+        return next;
+      }, { replace: true });
+    }
+  }, [selectedSub, setSearchParams, subSlug]);
 
   const productQueries = useQueries({
     queries: Array.from({ length: page }, (_, pageIndex) => ({

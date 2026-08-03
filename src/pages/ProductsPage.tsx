@@ -299,7 +299,9 @@ const ProductsPage = () => {
 
   const leafCategoryIds = useMemo(() => {
     if (!currentCategory) return null;
-    return isParent ? subCategories.map((category) => category.id) : [currentCategory.id];
+    // A parent route deliberately shows its own products plus all children.
+    // A child route always receives only that child's ID.
+    return isParent ? [currentCategory.id, ...subCategories.map((category) => category.id)] : [currentCategory.id];
   }, [currentCategory, isParent, subCategories]);
 
   const productQueries = useQueries({

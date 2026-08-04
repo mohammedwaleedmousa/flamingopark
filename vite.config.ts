@@ -36,6 +36,17 @@ export default defineConfig(({ mode }) => ({
             "jspdf",
             "html2canvas",
           ],
+
+          motion: [
+            "framer-motion",
+          ],
+
+          commerce: [
+            "@tanstack/react-query",
+            "@supabase/supabase-js",
+            "zustand",
+          ],
+
         },
       },
     },

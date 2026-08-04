@@ -1,12 +1,14 @@
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import { motion } from "framer-motion";
+import { supabase } from "@/integrations/supabase/client";
 
 import "swiper/css";
 import "swiper/css/free-mode";
 
-const services = [
+const fallbackServices = [
   {
     title: "مساعد التسوق الخاص",
     description: "نساعدك في اختيار القطعة المناسبة حسب ذوقك ومناسبتك بكل سهولة.",
@@ -28,6 +30,15 @@ const services = [
 ];
 
 const FlamingoServices = () => {
+  const { data: managedServices = [] } = useQuery({
+    queryKey: ["home-services"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("campaign_pages").select("slug,title_ar,description_ar,image_url").eq("page_type", "service").eq("is_active", true).order("sort_order");
+      if (error) throw error;
+      return (data || []).map((service: any) => ({ title: service.title_ar, description: service.description_ar || "", image: service.image_url || "/icons/flamingo.jpeg", link: `/campaigns/${service.slug}` }));
+    },
+  });
+  const services = managedServices.length ? managedServices : fallbackServices;
   return (
     <section
       className="py-16 md:py-24 bg-[#FCFAF8]"

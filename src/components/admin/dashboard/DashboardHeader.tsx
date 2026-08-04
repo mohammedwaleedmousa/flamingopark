@@ -1,10 +1,5 @@
 import { Link } from "react-router-dom";
-import {
-  CalendarDays,
-  BarChart3,
-  Wallet,
-  Sparkles,
-} from "lucide-react";
+import { BarChart3, CalendarDays, Sparkles, Wallet } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
 import { DateRangePicker } from "@/lib/analytics/dateRange";
@@ -21,59 +16,8 @@ const DashboardHeader = ({
 
 return (
 
-<header
-dir="rtl"
-className="
-relative
-overflow-hidden
-
-rounded-[32px]
-
-border
-border-slate-100
-
-bg-white
-
-px-6
-py-7
-lg:px-8
-
-shadow-sm
-
-"
->
-
-
-{/* Background */}
-
-<div
-className="
-absolute
-inset-0
-bg-gradient-to-br
-from-pink-50/70
-via-white
-to-violet-50/60
-"
-/>
-
-
-
-<div
-className="
-absolute
--top-24
--left-20
-w-64
-h-64
-rounded-full
-bg-pink-300/20
-blur-3xl
-"
-/>
-
-
-<div className="relative">
+  <header dir="rtl" className="border border-border bg-card px-5 py-6 md:px-6">
+<div>
 
 
 <div
@@ -83,7 +27,7 @@ flex-col
 xl:flex-row
 xl:items-center
 xl:justify-between
-gap-7
+          gap-5
 "
 >
 
@@ -98,9 +42,7 @@ gap-7
 className="
 flex
 items-center
-gap-2
-text-xs
-text-slate-400
+          gap-2 text-xs text-muted-foreground
 "
 >
 
@@ -108,7 +50,7 @@ text-slate-400
 className="
 w-4
 h-4
-text-pink-500
+          text-primary
 "
 />
 
@@ -122,11 +64,7 @@ text-pink-500
 
 <h1
 className="
-mt-3
-text-4xl
-font-black
-tracking-tight
-text-slate-900
+          mt-2 text-3xl font-heading text-foreground md:text-4xl
 "
 >
 نظرة عامة
@@ -137,25 +75,7 @@ text-slate-900
 
 <div
 className="
-mt-5
-inline-flex
-items-center
-gap-2
-
-rounded-2xl
-
-border
-border-slate-200
-
-bg-white/80
-
-px-4
-py-2.5
-
-shadow-sm
-
-text-xs
-text-slate-500
+          mt-4 inline-flex items-center gap-2 border border-border bg-background px-3 py-2 text-xs text-muted-foreground
 "
 >
 
@@ -164,7 +84,7 @@ text-slate-500
 className="
 w-4
 h-4
-text-pink-600
+          text-primary
 "
 />
 
@@ -177,8 +97,7 @@ text-pink-600
 
 <span
 className="
-font-bold
-text-slate-900
+          font-medium text-foreground
 "
 >
 {rangeText}

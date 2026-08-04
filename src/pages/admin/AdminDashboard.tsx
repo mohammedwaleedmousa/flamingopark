@@ -41,6 +41,7 @@ import { ar } from "date-fns/locale";
 import DashboardAlerts from "@/components/admin/dashboard/DashboardAlerts";
 import RevenueChart from "@/components/admin/dashboard/RevenueChart";
 import RecentActivity from "@/components/admin/dashboard/RecentActivity";
+import OperationsBoard from "@/components/admin/dashboard/OperationsBoard";
 
 interface Kpi {
   revenue: number;
@@ -489,10 +490,12 @@ const AdminDashboard = () => {
   };
 
   return (
-    <div dir="rtl" className="mx-auto max-w-[1600px] space-y-10 px-6 lg:px-10 pb-10 bg-slate-50 min-h-screen">
+    <div dir="rtl" className="mx-auto min-h-screen max-w-[1600px] space-y-6 px-4 pb-10 md:px-6 lg:px-8">
       <DashboardHeader
         rangeText={rangeText}
       />
+
+      <OperationsBoard pendingOrders={pendingCount} lowStockCount={lowStock.length} />
 
       {partialIssues.length > 0 && (
         <section className="rounded-xl border border-amber-300 bg-amber-50 px-4 py-3 text-sm text-amber-800">

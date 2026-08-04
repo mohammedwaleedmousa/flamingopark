@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react';
-import { Outlet, useNavigate } from 'react-router-dom';
+import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar';
 import AdminSidebar from './AdminSidebar';
-import { Loader2, Menu } from 'lucide-react';
+import { ChevronLeft, Loader2, Menu, Store } from 'lucide-react';
 import Logo from '@/components/Logo';
 import NotificationsDropdown from './NotificationsDropdown';
 import { DateRangeProvider } from '@/lib/analytics/dateRange';
 
 const AdminLayout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
 
@@ -19,12 +20,10 @@ const AdminLayout = () => {
 
   const checkAdminAccess = async () => {
     try {
-      // Local dev bypass: add ?dev=true to URL to skip auth checks when needed
-      if (typeof window !== "undefined") {
+      if (import.meta.env.DEV) {
         const params = new URLSearchParams(window.location.search);
         if (params.get("dev") === "true") {
           setIsAdmin(true);
-          setIsLoading(false);
           return;
         }
       }
@@ -83,25 +82,26 @@ const AdminLayout = () => {
   return (
     <SidebarProvider defaultOpen={true}>
       <DateRangeProvider>
-      <div className="min-h-screen flex w-full bg-background font-admin" dir="rtl">
+      <div className="admin-workspace min-h-screen flex w-full bg-muted/30 font-admin" dir="rtl">
         <AdminSidebar />
         <div className="flex-1 flex flex-col overflow-hidden">
           {/* Header */}
-          <header className="flex items-center justify-between gap-3 px-4 py-3 md:px-6 md:py-4 border-b border-border bg-card sticky top-0 z-40">
+          <header className="sticky top-0 z-40 flex items-center justify-between gap-3 border-b border-border bg-background/95 px-4 py-3 backdrop-blur md:px-6">
             <div className="flex items-center gap-3">
-              <SidebarTrigger className="text-foreground hover:text-primary hover:bg-muted p-2 rounded-lg transition-colors">
+              <SidebarTrigger className="rounded-md border border-border bg-card p-2 text-foreground transition-colors hover:bg-muted hover:text-primary">
                 <Menu className="w-5 h-5" />
               </SidebarTrigger>
-              <div className="hidden sm:flex items-center gap-3">
-                <Logo size="sm" />
-                <p className="text-xs text-muted-foreground">لوحة الإدارة</p>
+              <div className="hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
+                <Store className="h-4 w-4 text-primary" />
+                <span>إدارة المتجر</span>
+                {location.pathname !== "/admin" && <><ChevronLeft className="h-3.5 w-3.5" /><span className="max-w-48 truncate" dir="ltr">{location.pathname.replace("/admin/", "")}</span></>}
               </div>
             </div>
             <div className="flex items-center gap-2">
               <NotificationsDropdown />
             </div>
           </header>
-          <main className="flex-1 p-6 overflow-auto bg-gradient-to-b from-gray-50 to-white">
+          <main className="flex-1 overflow-auto p-4 md:p-6 lg:p-8">
             <Outlet />
           </main>
         </div>

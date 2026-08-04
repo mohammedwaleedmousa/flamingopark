@@ -9,6 +9,7 @@ import { useSiteContent, getSiteText } from '@/hooks/useSiteContent';
 interface SearchSuggestion {
   id: string;
   name: string;
+  slug: string;
   image?: string;
   price?: number;
 }
@@ -45,13 +46,14 @@ export const NavbarSearch = () => {
       
       const { data } = await supabase
         .from('products')
-        .select('id, name_ar, images, price')
+        .select('id, name_ar, slug, images, price')
         .ilike('name_ar', `%${query}%`)
         .limit(5);
       
       return (data || []).map(p => ({
         id: p.id,
         name: p.name_ar,
+        slug: p.slug,
         image: p.images?.[0],
         price: p.price,
       }));
@@ -153,7 +155,12 @@ export const NavbarSearch = () => {
                   {displaySuggestions.map(item => (
                     <button
                       key={item.id}
-                      onClick={() => handleSearch(item.name)}
+                      onClick={() => {
+                        saveSearch(item.name);
+                        navigate(`/product/${item.slug}`);
+                        setQuery('');
+                        setIsOpen(false);
+                      }}
                       className="w-full px-4 py-2 text-left hover:bg-muted/50 flex items-center gap-3 transition"
                     >
                       {item.image && (

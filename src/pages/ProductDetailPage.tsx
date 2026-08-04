@@ -8,7 +8,9 @@ import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import ProductCard from '@/components/ProductCard';
 import ProductReviews from '@/components/ProductReviews';
+import ProductQA from '@/components/ProductQA';
 import AccessoryCard from '@/components/AccessoryCard';
+import FrequentlyBoughtTogether from '@/components/FrequentlyBoughtTogether';
 import ProductDetailSkeleton from '@/components/ProductDetailSkeleton';
 import { Button } from '@/components/ui/button';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
@@ -118,6 +120,24 @@ const ProductDetailPage = () => {
       return (data || []).map(mapProductCard);
     },
     enabled: !!product && !!country,
+  });
+  const { data: curatedPairings = [] } = useQuery({
+    queryKey: ['product-recommendations', product?.id],
+    enabled: !!product?.id,
+    queryFn: async () => {
+      const { data: links, error } = await (supabase as any)
+        .from('product_recommendations')
+        .select('recommended_product_id,sort_order')
+        .eq('product_id', product!.id)
+        .order('sort_order');
+      if (error) throw error;
+      const ids = (links || []).map((link: { recommended_product_id: string }) => link.recommended_product_id);
+      if (!ids.length) return [];
+      const { data, error: productsError } = await supabase.from('products').select(PRODUCT_CARD_SELECT).in('id', ids).eq('is_active', true);
+      if (productsError) throw productsError;
+      const byId = new Map((data || []).map((item) => [item.id, mapProductCard(item)]));
+      return ids.map((id) => byId.get(id)).filter(Boolean) as Product[];
+    },
   });
  
   useEffect(() => { if (product) addRecent(product as Product); /* eslint-disable-next-line */ }, [product?.id]);
@@ -652,6 +672,14 @@ const ProductDetailPage = () => {
           )}
  
           {/* Reviews */}
+          {(curatedPairings.length > 0 || relatedProducts.length > 0) && (
+            <FrequentlyBoughtTogether current={product as Product} related={curatedPairings.length > 0 ? curatedPairings : relatedProducts} currency={currency} />
+          )}
+
+          <div className="mt-24">
+            <ProductQA productId={product.id} />
+          </div>
+
           <div className="mt-24">
             <ProductReviews productId={product.id} productName={product.nameAr} />
           </div>

@@ -159,19 +159,24 @@ export const ProductQA = ({ productId }: { productId: string }) => {
   }, [myHelpful, questions, refetch]);
 
   return (
-    <div className="space-y-6">
+    <section className="border-t border-border pt-12">
+      <div className="mb-8">
+        <p className="mb-2 text-[10px] tracking-[0.2em] text-muted-foreground">مساعدة قبل الشراء</p>
+        <h2 className="font-heading text-2xl md:text-3xl">الأسئلة والأجوبة</h2>
+      </div>
+      <div className="space-y-6">
       {/* Ask Question Section */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="bg-card rounded-xl border border-border p-6"
+        className="border border-border bg-card p-5 md:p-6"
       >
-        <h3 className="font-heading text-lg mb-4">
+        <h3 className="mb-4 font-heading text-lg">
           {getSiteText(content, 'qa_ask_question', 'اسأل سؤالك')}
         </h3>
 
         {!isAuthenticated && !authChecking && (
-          <div className="mb-4 p-4 bg-destructive/10 border border-destructive/30 rounded-lg flex items-start gap-3">
+          <div className="mb-4 flex items-start gap-3 border border-destructive/30 bg-destructive/10 p-4">
             <AlertCircle className="w-5 h-5 text-destructive flex-shrink-0 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm font-medium text-destructive">
@@ -181,7 +186,7 @@ export const ProductQA = ({ productId }: { productId: string }) => {
                 {getSiteText(content, 'qa_auth_message', 'يجب أن تكون مسجلاً للدخول لطرح أسئلة')}
               </p>
               <Link to="/auth">
-                <button className="mt-3 inline-flex items-center gap-2 px-4 py-2 bg-destructive text-destructive-foreground rounded-md hover:bg-destructive/90 text-sm font-medium transition">
+                <button className="mt-3 inline-flex items-center gap-2 bg-destructive px-4 py-2 text-sm font-medium text-destructive-foreground transition hover:bg-destructive/90">
                   <LogIn className="w-4 h-4" />
                   {getSiteText(content, 'qa_go_to_login', 'اذهب إلى تسجيل الدخول')}
                 </button>
@@ -190,18 +195,18 @@ export const ProductQA = ({ productId }: { productId: string }) => {
           </div>
         )}
 
-        <div className={`flex gap-3 ${!isAuthenticated || authChecking ? 'opacity-60 pointer-events-none' : ''}`}>
+        <div className={`flex flex-col gap-3 sm:flex-row ${!isAuthenticated || authChecking ? 'pointer-events-none opacity-60' : ''}`}>
           <textarea
             value={newQuestion}
             onChange={(e) => setNewQuestion(e.target.value)}
             placeholder={getSiteText(content, 'qa_placeholder', 'ماذا تريد أن تعرف عن هذا المنتج؟')}
             disabled={!isAuthenticated || authChecking}
-            className="flex-1 px-4 py-2 rounded-lg border border-border bg-background resize-none min-h-20 disabled:opacity-60 disabled:cursor-not-allowed"
+            className="min-h-24 flex-1 resize-none border border-border bg-background px-4 py-3 text-sm outline-none focus:ring-2 focus:ring-ring disabled:cursor-not-allowed disabled:opacity-60"
           />
           <button
             onClick={handleAskQuestion}
             disabled={loading || !isAuthenticated || authChecking}
-            className="btn-unified flex items-center gap-2 self-end disabled:opacity-50 disabled:cursor-not-allowed"
+            className="btn-unified h-11 self-end gap-2 px-5 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Send className="w-4 h-4" />
             {getSiteText(content, 'qa_send', 'أرسل')}
@@ -210,10 +215,8 @@ export const ProductQA = ({ productId }: { productId: string }) => {
       </motion.div>
 
       {/* Questions List */}
-      <div className="space-y-4">
-        <h3 className="font-heading text-lg">
-          {getSiteText(content, 'qa_title', 'الأسئلة الشائعة')} ({questions.length})
-        </h3>
+      <div className="space-y-3">
+        <p className="text-sm text-muted-foreground">{questions.length} {getSiteText(content, 'qa_title', 'سؤال')}</p>
 
         {questions.length === 0 ? (
           <p className="text-muted-foreground py-8 text-center">
@@ -224,11 +227,11 @@ export const ProductQA = ({ productId }: { productId: string }) => {
             <motion.div
               key={question.id}
               layout
-              className="bg-card rounded-lg border border-border overflow-hidden"
+              className="overflow-hidden border border-border bg-card"
             >
               <button
                 onClick={() => setExpandedId(expandedId === question.id ? null : question.id)}
-                className="w-full px-6 py-4 flex items-start justify-between hover:bg-muted/50 transition"
+                className="flex w-full items-start justify-between px-5 py-4 text-right transition hover:bg-muted/40"
               >
                 <div className="flex items-start gap-3 flex-1 text-left">
                   <MessageCircle className="w-5 h-5 text-primary mt-0.5 flex-shrink-0" />
@@ -254,7 +257,7 @@ export const ProductQA = ({ productId }: { productId: string }) => {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="border-t border-border px-6 py-4 bg-muted/30 space-y-4"
+                    className="space-y-4 border-t border-border bg-muted/30 px-5 py-4"
                   >
                     {question.answer_ar ? (
                       <div>
@@ -287,7 +290,8 @@ export const ProductQA = ({ productId }: { productId: string }) => {
           ))
         )}
       </div>
-    </div>
+      </div>
+    </section>
   );
 };
 

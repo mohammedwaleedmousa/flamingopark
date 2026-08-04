@@ -426,6 +426,59 @@
     -ms-overflow-style: none;
     scrollbar-width: none;
   }
+
+  /* Shared operational surface for every admin route. */
+  .admin-workspace {
+    color: hsl(var(--foreground));
+  }
+
+  .admin-workspace main > * {
+    animation: admin-content-enter 180ms ease-out;
+  }
+
+  .admin-workspace :is(.bg-card, .bg-background.border) {
+    box-shadow: 0 8px 24px -20px hsl(25 18% 14% / 0.3);
+  }
+
+  .admin-workspace :is(table) {
+    border-collapse: separate;
+    border-spacing: 0;
+  }
+
+  .admin-workspace :is(thead) {
+    background: hsl(var(--muted) / 0.72);
+  }
+
+  .admin-workspace :is(th) {
+    color: hsl(var(--muted-foreground));
+    font-size: 0.75rem;
+    font-weight: 600;
+  }
+
+  .admin-workspace :is(tbody tr) {
+    transition: background-color 160ms ease;
+  }
+
+  .admin-workspace :is(tbody tr:hover) {
+    background: hsl(var(--primary) / 0.035);
+  }
+
+  .admin-workspace :is(input, textarea, [role="combobox"]) {
+    transition: border-color 160ms ease, box-shadow 160ms ease, background-color 160ms ease;
+  }
+
+  .admin-workspace :is(input, textarea):focus {
+    background: hsl(var(--background));
+  }
+
+  .admin-workspace :is([data-radix-popper-content-wrapper]) {
+    z-index: 80 !important;
+  }
+
+  @keyframes admin-content-enter {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
 }
 
 @layer utilities {

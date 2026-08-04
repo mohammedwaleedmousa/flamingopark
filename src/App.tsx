@@ -43,6 +43,7 @@ const MyOrdersPage = lazy(() => import("./pages/MyOrdersPage"));
 const MyShipmentsPage = lazy(() => import("./pages/MyShipmentsPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const StoreInfoPage = lazy(() => import("./pages/StoreInfoPage"));
+const CampaignPage = lazy(() => import("./pages/CampaignPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const OrderTrackingPage = lazy(() => import("./pages/OrderTrackingPage"));
 
@@ -52,6 +53,7 @@ const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
 const AdminProductsPage = lazy(() => import("./pages/admin/AdminProductsPage"));
 const AdminProductFormPage = lazy(() => import("./pages/admin/AdminProductFormPage"));
+const AdminProductExperiencePage = lazy(() => import("./pages/admin/AdminProductExperiencePage"));
 const AdminOrdersPage = lazy(() => import("./pages/admin/AdminOrdersPage"));
 const AdminCustomersPage = lazy(() => import("./pages/admin/AdminCustomersPage"));
 const AdminBannersPage = lazy(() => import("./pages/admin/AdminBannersPage"));
@@ -88,6 +90,8 @@ const AdminNotificationDeliveriesPage = lazy(() => import("./pages/admin/AdminNo
 const AdminCurrenciesPage = lazy(() => import("./pages/admin/AdminCurrenciesPage"));
 const AdminCountriesPage = lazy(() => import("./pages/admin/AdminCountriesPage"));
 const AdminCustomerExperiencePage = lazy(() => import("./pages/admin/AdminCustomerExperiencePage"));
+const AdminStorefrontMapPage = lazy(() => import("./pages/admin/AdminStorefrontMapPage"));
+const AdminCampaignsPage = lazy(() => import("./pages/admin/AdminCampaignsPage"));
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -149,7 +153,7 @@ const ScrollToTop = () => {
   useEffect(() => {
     // On POP (back/forward) let the browser restore the previous scroll position.
     if (navType === "POP") return;
-    window.scrollTo({ top: 0, left: 0, behavior: "smooth" });
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [pathname, navType]);
 
   return null;
@@ -220,6 +224,7 @@ const App = () => {
             <Route path="/favorites" element={<ProtectedRoute><FavoritesPage /></ProtectedRoute>} />
             <Route path="/qr-code" element={<QRCodePage />} />
             <Route path="/store-info" element={<ProtectedRoute><StoreInfoPage /></ProtectedRoute>} />
+            <Route path="/campaigns/:slug" element={<ProtectedRoute><CampaignPage /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/order-tracking" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
             <Route path="/brands/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />
@@ -231,9 +236,11 @@ const App = () => {
               <Route path="products" element={<AdminProductsPage />} />
               <Route path="products/new" element={<AdminProductFormPage />} />
               <Route path="products/:id" element={<AdminProductFormPage />} />
+              <Route path="product-experience" element={<AdminProductExperiencePage />} />
               <Route path="orders" element={<AdminOrdersPage />} />
               <Route path="customers" element={<AdminCustomersPage />} />
               <Route path="banners" element={<AdminBannersPage />} />
+              <Route path="campaigns" element={<AdminCampaignsPage />} />
               <Route path="brands" element={<AdminBrandsPage />} />
               <Route path="brand-category-map" element={<AdminBrandCategoryMapPage />} />
               <Route path="catalog-workflow" element={<AdminCatalogWorkflowPage />} />
@@ -275,6 +282,7 @@ const App = () => {
               <Route path="currencies" element={<AdminCurrenciesPage />} />
               <Route path="countries" element={<AdminCountriesPage />} />
               <Route path="customer-experience" element={<AdminCustomerExperiencePage />} />
+              <Route path="storefront-map" element={<AdminStorefrontMapPage />} />
               <Route path="brand-sections/:id/products" element={<AdminBrandSectionProductsPage />} />
             </Route>
 

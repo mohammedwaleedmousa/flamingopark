@@ -3,7 +3,7 @@ import {
   Settings, LogOut, Grid3X3, LayoutGrid, FileText, Receipt, MapPin,
   TrendingUp, Percent, Ticket, QrCode, PieChart, BarChart3, ShieldAlert,
   BookOpen, RotateCcw, Wallet, Boxes, LogIn,
-  ChevronDown, Brain, Link2, ListChecks, Bell, Coins, Globe, MonitorCog,
+  ChevronDown, Brain, Link2, ListChecks, Bell, Coins, Globe, MonitorCog, Route,
 } from 'lucide-react';
 import { NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { supabase } from '@/integrations/supabase/client';
@@ -26,38 +26,21 @@ const groups: {
     label: 'لوحة التحكم',
     items: [
       { title: 'لوحة التحكم', url: '/admin', icon: LayoutDashboard },
+      { title: 'رحلة العميل', url: '/admin/storefront-map', icon: Route },
     ],
   },
 
   {
-    label: 'التقارير والتحليلات',
-    items: [
-      { title: 'نظرة عامة والإيرادات', url: '/admin/reports', icon: BarChart3 },
-      { title: 'الأرباح والمالية', url: '/admin/reports/finance', icon: PieChart },
-      { title: 'تحليل العملاء', url: '/admin/reports/customers', icon: Brain },
-    ],
-  },
-
-  {
-  label: 'الكتالوج',
+  label: 'الكتالوج والماركات',
   items: [
     { title: 'المنتجات', url: '/admin/products', icon: Package },
-
+    { title: 'تجربة المنتج', url: '/admin/product-experience', icon: Star },
     { title: 'الفئات', url: '/admin/categories', icon: Grid3X3 },
-
     { title: 'الماركات', url: '/admin/brands', icon: Tag },
-
     { title: 'صفحات الماركات', url: '/admin/brand-pages', icon: LayoutGrid },
-
     { title: 'أقسام الماركات', url: '/admin/brand-sections', icon: Boxes },
-
     { title: 'فلاتر الماركات', url: '/admin/brand-filters', icon: ListChecks },
-
-    { title: 'الأقسام', url: '/admin/sections', icon: LayoutGrid },
-
     { title: 'ربط الماركات بالأقسام', url: '/admin/brand-category-map', icon: Link2 },
-
-
   ],
 },
 
@@ -69,46 +52,43 @@ const groups: {
       { title: 'الفواتير', url: '/admin/invoices', icon: Receipt },
       { title: 'المرتجعات', url: '/admin/refunds', icon: RotateCcw },
       { title: 'إشعارات العملاء', url: '/admin/customer-notifications', icon: Bell },
-      { title: 'سجل تسليم الإشعارات', url: '/admin/notification-deliveries', icon: Bell },
     ],
   },
 
   {
-    label: 'المالية',
+    label: 'المحتوى والظهور',
     items: [
-      { title: 'دفتر اليومية', url: '/admin/ledger', icon: BookOpen },
-      { title: 'المصروفات', url: '/admin/expenses', icon: Receipt },
-      { title: 'طرق الدفع والتسويات', url: '/admin/payment-methods', icon: Wallet },
-      { title: 'تسوية المخزون', url: '/admin/inventory-adjustments', icon: Boxes },
-    ],
-  },
-
-  {
-    label: 'التسويق',
-    items: [
-      { title: 'العروض', url: '/admin/offers', icon: Percent },
-      { title: 'الكوبونات', url: '/admin/coupons', icon: Ticket },
-      { title: 'البانرات', url: '/admin/banners', icon: Image },
+      { title: 'البانرات الرئيسية', url: '/admin/banners', icon: Image },
+      { title: 'الحملات والخدمات', url: '/admin/campaigns', icon: LayoutGrid },
+      { title: 'أقسام الصفحة الرئيسية', url: '/admin/sections', icon: LayoutGrid },
+      { title: 'محتوى الصفحات', url: '/admin/content', icon: FileText },
       { title: 'التقييمات', url: '/admin/reviews', icon: Star },
+      { title: 'واجهة العميل', url: '/admin/customer-experience', icon: MonitorCog },
     ],
   },
 
   {
-    label: 'الشحن',
+    label: 'التشغيل والمالية',
     items: [
       { title: 'شركات التوصيل', url: '/admin/delivery', icon: Truck },
       { title: 'مناطق الدفع', url: '/admin/cod-regions', icon: MapPin },
+      { title: 'طرق الدفع', url: '/admin/payment-methods', icon: Wallet },
+      { title: 'تسوية المخزون', url: '/admin/inventory-adjustments', icon: Boxes },
+      { title: 'دفتر اليومية', url: '/admin/ledger', icon: BookOpen },
+      { title: 'المصروفات', url: '/admin/expenses', icon: Receipt },
     ],
   },
 
   {
-    label: 'النظام',
+    label: 'التقارير والإعدادات',
     items: [
-      { title: 'واجهة العميل', url: '/admin/customer-experience', icon: MonitorCog },
-      { title: 'المحتوى', url: '/admin/content', icon: FileText },
+      { title: 'نظرة عامة', url: '/admin/reports', icon: BarChart3 },
+      { title: 'الأرباح والمالية', url: '/admin/reports/finance', icon: PieChart },
+      { title: 'تحليل العملاء', url: '/admin/reports/customers', icon: Brain },
       { title: 'العملات', url: '/admin/currencies', icon: Coins },
       { title: 'الدول', url: '/admin/countries', icon: Globe },
       { title: 'سجل التدقيق', url: '/admin/audit-log', icon: ShieldAlert },
+      { title: 'سجل تسليم الإشعارات', url: '/admin/notification-deliveries', icon: Bell },
       { title: 'الإعدادات', url: '/admin/settings', icon: Settings },
       { title: 'الباركود', url: '/qr-code', icon: QrCode },
     ],
@@ -137,9 +117,17 @@ const AdminSidebar = () => {
     url === '/admin' ? location.pathname === '/admin' : location.pathname.startsWith(url);
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
-    for (const g of groups) init[g.label] = g.items.some((i) => isActive(i.url)) || true;
+    for (const g of groups) init[g.label] = g.items.some((i) => isActive(i.url));
+    if (!Object.values(init).some(Boolean)) init['لوحة التحكم'] = true;
     return init;
   });
+
+  useEffect(() => {
+    const activeGroup = groups.find((group) => group.items.some((item) => isActive(item.url)));
+    if (activeGroup) {
+      setOpenGroups((current) => ({ ...current, [activeGroup.label]: true }));
+    }
+  }, [location.pathname]);
 
   const handleLogout = async () => {
     if (!window.confirm('هل تريد تسجيل الخروج من لوحة التحكم؟')) return;
@@ -160,34 +148,26 @@ const AdminSidebar = () => {
 
   return (
     <Sidebar
- className="
-    border-l-2 border-pink-400
-    bg-white
-    text-black
-    [&_*]:text-black
-    shadow-[20px_0_60px_-30px_rgba(0,0,0,0.25)]
-    font-admin
-  "      collapsible="icon"
+ className="border-l border-border bg-background text-foreground shadow-[20px_0_60px_-38px_rgba(0,0,0,0.3)] font-admin" collapsible="icon"
       side="right"
     >
-      <SidebarHeader className="px-4 py-6 border-b border-black/5 bg-white/40 backdrop-blur-xl flex justify-center items-center">
+      <SidebarHeader className="flex items-center justify-center border-b border-border px-4 py-5">
         <div className="flex items-center justify-center">
   <img
     src="/icons/flamingo.jpeg"
     alt="logo"
     loading="lazy"
-    className="w-20 h-20 object-contain transition-all duration-500 ease-in-out
-    hover:scale-105"
+    className="h-16 w-16 object-contain"
   />
 </div>
       </SidebarHeader>
 
-      <SidebarContent className="py-3 gap-1 hide-scrollbar overflow-y-auto overflow-x-hidden overscroll-contain">
+      <SidebarContent className="hide-scrollbar gap-1 overflow-x-hidden overflow-y-auto py-3 overscroll-contain">
         {groups.map((group) => {
           const groupActive = group.items.some((i) => isActive(i.url));
           const isOpen = collapsed ? true : openGroups[group.label] ?? true;
           return (
-            <SidebarGroup key={group.label} className="px-1 py-1 mb-2 rounded-xl bg-white/60 border border-black/5 shadow-[0_6px_20px_-18px_rgba(0,0,0,0.2)] backdrop-blur-md">
+            <SidebarGroup key={group.label} className="mb-1 px-2 py-1">
               {collapsed ? (
                 <GroupItems group={group} isActive={isActive} onNav={handleNavClick} collapsed />
               ) : (
@@ -198,21 +178,20 @@ const AdminSidebar = () => {
                   <CollapsibleTrigger
   className="
     w-full flex items-center justify-between
-    px-4 py-3
-    bg-white/60
-    hover:bg-white
-    transition-all duration-300
+    px-3 py-2.5
+    hover:bg-muted/70
+    transition-colors
     group
   "
 >
-  <span className="text-[11px] tracking-[0.3em] uppercase font-semibold text-black/60 group-hover:text-black">
+  <span className="text-[10px] tracking-[0.18em] font-semibold text-muted-foreground group-hover:text-foreground">
     {group.label}
   </span>
 
   <ChevronDown
     className={cn(
-      "w-4 h-4 text-black/40 transition-transform duration-300",
-      isOpen && "rotate-180 text-pink-500"
+      "w-4 h-4 text-muted-foreground transition-transform duration-200",
+      isOpen && "rotate-180 text-primary"
     )}
   />
 </CollapsibleTrigger>
@@ -290,33 +269,31 @@ const GroupItems = ({
                 end={item.url === '/admin'}
                 onClick={onNav}
                 className={cn(
-                  "group relative flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300 ease-out",
+                  "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors",
                   "focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
 
                   active
-                    ? "bg-white text-black font-medium shadow-[0_10px_30px_-12px_rgba(0,0,0,0.25)] ring-1 ring-black/5"
-                    : "text-black/80 hover:bg-white hover:text-black hover:shadow-[0_12px_35px_-15px_rgba(0,0,0,0.25)] hover:translate-y-[-3px] hover:scale-[1.02] active:scale-[0.98]"
+                    ? "bg-primary/10 text-primary font-medium"
+                    : "text-foreground/75 hover:bg-muted hover:text-foreground"
                 )}
                 style={{ 
                   direction: "rtl",
-                  transformStyle: "preserve-3d",
-                  willChange: "transform",
                   color: "inherit"
                 }}
               >
                 {active && (
-                <span className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-full bg-pink-500 shadow-md" />
+                <span className="absolute right-0 top-1/2 h-6 w-0.5 -translate-y-1/2 bg-primary" />
                 )}
                 <item.icon
                   className={cn(
                     'shrink-0 w-5 h-5 transition-all duration-300 ease-out',
                     active
-  ? "text-gold"
-  : "text-black/70 group-hover:text-gold"
+  ? "text-primary"
+  : "text-muted-foreground group-hover:text-foreground"
                   )}
                 />
                 {!collapsed && (
-                  <span className="flex-1 text-[13px] leading-none text-right text-black/80">
+                  <span className="flex-1 text-right text-[13px] leading-none">
                     {item.title}
                   </span>
                 )}

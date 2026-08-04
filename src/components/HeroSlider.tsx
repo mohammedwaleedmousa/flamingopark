@@ -1,11 +1,13 @@
 import { useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
 import { Swiper, SwiperSlide } from "swiper/react";
 import type { Swiper as SwiperInstance } from "swiper";
 import { Autoplay } from "swiper/modules";
+import { supabase } from "@/integrations/supabase/client";
 import "swiper/css";
 
-const slides = [
+const fallbackSlides = [
   {
     image: "https://images.unsplash.com/photo-1483985988355-763728e1935b?auto=format&fit=crop&w=1200&q=70",
     title: "تسوق أحدث صيحات الموضة",
@@ -24,6 +26,15 @@ const slides = [
 ];
 
 export default function HeroSlider() {
+  const { data: managedSlides = [] } = useQuery({
+    queryKey: ["home-hero-banners"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("banners").select("image_url,title_ar,subtitle_ar,cta_text_ar,cta_link").eq("is_active", true).order("sort_order").limit(3);
+      if (error) throw error;
+      return (data || []).filter((slide) => slide.image_url).map((slide) => ({ image: slide.image_url, title: slide.title_ar, desc: slide.subtitle_ar || "", cta: slide.cta_text_ar || "اكتشف المجموعة", link: slide.cta_link || "/products" }));
+    },
+  });
+  const slides = managedSlides.length ? managedSlides : fallbackSlides.map((slide) => ({ ...slide, cta: "اكتشف المجموعة", link: "/products" }));
   const [activeIndex, setActiveIndex] = useState(0);
   const [loadedSlides, setLoadedSlides] = useState(() => new Set([0]));
   const swiperRef = useRef<SwiperInstance | null>(null);
@@ -81,10 +92,10 @@ export default function HeroSlider() {
                     {slide.desc}
                   </p>
                   <Link
-                    to="/products"
+                    to={slide.link}
                     className="inline-flex mt-8 text-sm border-b border-white pb-2 hover:opacity-70 transition"
                   >
-                    اكتشف المجموعة
+                    {slide.cta}
                   </Link>
                 </div>
               </div>

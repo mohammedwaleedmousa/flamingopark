@@ -7,7 +7,7 @@ import { useCurrency } from "@/lib/currency";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Heart, ShoppingBag } from "lucide-react";
 import { saveCatalogScroll } from "@/lib/catalogScroll";
-import { optimizeImage } from "@/lib/imageUrl";
+import { optimizeImage, handleImageError } from "@/lib/imageUrl";
 
 type ColorVariant = { name?: string; hex?: string; images?: string[] };
 type DisplayProduct = Product & { colorVariants?: ColorVariant[]; color_variants?: ColorVariant[]; rating?: number };
@@ -96,6 +96,7 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
           alt={product.nameAr}
           loading="lazy"
           decoding="async"
+          onError={handleImageError}
           width={800}
           height={1000}
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"

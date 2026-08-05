@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import { supabase } from "@/integrations/supabase/client";
+import { optimizeImage, handleImageError } from "@/lib/imageUrl";
 
 interface BrandRow {
   id: string;
@@ -86,9 +87,11 @@ const AllBrandsPage = () => {
                     <div className="w-[82px] h-[82px] rounded-full bg-white border border-border flex items-center justify-center overflow-hidden transition-colors duration-300 group-hover:border-pink-400">
                         {brand.logo_url ? (
                         <img
-                            src={brand.logo_url}
+                            src={optimizeImage(brand.logo_url, 200, 80)}
                             alt={brand.name}
                             loading="lazy"
+                            decoding="async"
+                            onError={handleImageError}
                             className="max-w-[56%] max-h-[56%] object-contain transition-transform duration-300 group-hover:scale-110"
                         />
                         ) : (

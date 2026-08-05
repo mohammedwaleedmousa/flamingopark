@@ -96,10 +96,10 @@ const AdminCampaignsPage = lazy(() => import("./pages/admin/AdminCampaignsPage")
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 2 * 60 * 1000, // Default pages stay light; sensitive pages override this.
+      staleTime: 5 * 60 * 1000, // Default pages stay light; sensitive pages override this.
       gcTime: 30 * 60 * 1000, // 30 minutes - keep unused data in cache for 30 minutes
-      retry: 2, // retry failed requests 2 times
-      retryDelay: attemptIndex => Math.min(1000 * 2 ** attemptIndex, 30000), // exponential backoff
+      retry: 1, // محاولة واحدة فقط حتى لا تتجمد الصفحة دقيقة كاملة عند فشل الطلب
+      retryDelay: attemptIndex => Math.min(500 * 2 ** attemptIndex, 2000), // انتظار قصير جداً
       refetchOnWindowFocus: false,
       refetchOnMount: false,
       refetchOnReconnect: true, // refetch when connection is restored

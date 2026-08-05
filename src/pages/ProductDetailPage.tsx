@@ -10,7 +10,6 @@ import ProductCard from '@/components/ProductCard';
 import ProductReviews from '@/components/ProductReviews';
 import ProductQA from '@/components/ProductQA';
 import AccessoryCard from '@/components/AccessoryCard';
-import FrequentlyBoughtTogether from '@/components/FrequentlyBoughtTogether';
 import ProductDetailSkeleton from '@/components/ProductDetailSkeleton';
 import { Button } from '@/components/ui/button';
 import { useRecentlyViewed } from '@/hooks/useRecentlyViewed';
@@ -25,7 +24,7 @@ import {
   Truck, Shield, RotateCcw, Star, Package, ChevronDown,
 } from 'lucide-react';
 import { FaWhatsapp } from "react-icons/fa";
-import { optimizeImage } from "@/lib/imageUrl";
+import { optimizeImage, handleImageError } from "@/lib/imageUrl";
 const handleWhatsApp = () => {
   window.open("https://wa.me/967778579777", "_blank");
 };
@@ -96,7 +95,7 @@ const ProductDetailPage = () => {
       product.colorVariants.forEach((color) => {
         color.images?.forEach((src) => {
           const img = new Image();
-          img.src = optimizeImage(src, 3000, 100);
+          img.src = optimizeImage(src, 1400, 82);
         });
       });
     }, [product]);
@@ -120,24 +119,6 @@ const ProductDetailPage = () => {
       return (data || []).map(mapProductCard);
     },
     enabled: !!product && !!country,
-  });
-  const { data: curatedPairings = [] } = useQuery({
-    queryKey: ['product-recommendations', product?.id],
-    enabled: !!product?.id,
-    queryFn: async () => {
-      const { data: links, error } = await (supabase as any)
-        .from('product_recommendations')
-        .select('recommended_product_id,sort_order')
-        .eq('product_id', product!.id)
-        .order('sort_order');
-      if (error) throw error;
-      const ids = (links || []).map((link: { recommended_product_id: string }) => link.recommended_product_id);
-      if (!ids.length) return [];
-      const { data, error: productsError } = await supabase.from('products').select(PRODUCT_CARD_SELECT).in('id', ids).eq('is_active', true);
-      if (productsError) throw productsError;
-      const byId = new Map((data || []).map((item) => [item.id, mapProductCard(item)]));
-      return ids.map((id) => byId.get(id)).filter(Boolean) as Product[];
-    },
   });
  
   useEffect(() => { if (product) addRecent(product as Product); /* eslint-disable-next-line */ }, [product?.id]);
@@ -332,7 +313,7 @@ const ProductDetailPage = () => {
                     doubleClick={{ disabled: true }}
                   >
                     <TransformComponent wrapperClass="!h-full !w-full !overflow-hidden" contentClass="!h-full !w-full">
-                      <img src={optimizeImage(displayImages?.[selectedImage], 3000, 100)} alt={product.nameAr} fetchPriority="high" decoding="async" className="h-full w-full object-cover" draggable={false} />
+                      <img src={optimizeImage(displayImages?.[selectedImage], 1400, 82)} alt={product.nameAr} fetchPriority="high" decoding="async" onError={handleImageError} className="h-full w-full object-cover" draggable={false} />
                     </TransformComponent>
                   </TransformWrapper>
                 </motion.div>
@@ -378,7 +359,7 @@ const ProductDetailPage = () => {
                       aria-label={`عرض الصورة ${i + 1}`}
                       aria-current={selectedImage === i ? 'true' : undefined}
                       className={`shrink-0 w-[72px] h-[88px] rounded-xl overflow-hidden border-2 bg-muted transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selectedImage === i ? 'border-gold shadow-sm' : 'border-transparent hover:border-border'}`}>
-                      <img src={optimizeImage(img, 240, 85)} alt="" loading="lazy" decoding="async" width={144} height={176} className="w-full h-full object-cover" />
+                      <img src={optimizeImage(img, 240, 80)} alt="" loading="lazy" decoding="async" width={144} height={176} onError={handleImageError} className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>
@@ -437,7 +418,7 @@ const ProductDetailPage = () => {
                           className={`flex items-center gap-3 p-3 rounded-xl border-2 text-right transition-all ${isActive ? 'border-gold bg-gold/5' : 'border-border hover:border-muted-foreground'}`}
                         >
                           {qv.images && qv.images[0] ? (
-                            <img src={qv.images[0]} alt={qv.name} loading="lazy" decoding="async" width={112} height={112} className="w-14 h-14 rounded-lg object-cover shrink-0" />
+                            <img src={optimizeImage(qv.images[0], 200, 80)} alt={qv.name} loading="lazy" decoding="async" width={112} height={112} onError={handleImageError} className="w-14 h-14 rounded-lg object-cover shrink-0" />
                           ) : (
                             <div className="w-14 h-14 rounded-lg bg-muted flex items-center justify-center shrink-0">
                               <Package className="w-5 h-5 text-muted-foreground" />
@@ -671,11 +652,6 @@ const ProductDetailPage = () => {
             </section>
           )}
  
-          {/* Reviews */}
-          {(curatedPairings.length > 0 || relatedProducts.length > 0) && (
-            <FrequentlyBoughtTogether current={product as Product} related={curatedPairings.length > 0 ? curatedPairings : relatedProducts} currency={currency} />
-          )}
-
           <div className="mt-24">
             <ProductQA productId={product.id} />
           </div>

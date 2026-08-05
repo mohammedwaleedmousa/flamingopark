@@ -7,6 +7,8 @@ import CartDrawer from "@/components/CartDrawer";
 import ProductCard from "@/components/ProductCard";
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
+import { optimizeImage, handleImageError } from "@/lib/imageUrl";
+import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 import { ChevronLeft } from "lucide-react";
 
 interface BrandRow {
@@ -110,7 +112,12 @@ const { data: sectionProducts = [] } = useQuery({
 
       <main className="flex-1">
         {brandLoading ? (
-          <div className="h-[50vh] flex items-center justify-center text-muted-foreground">جاري التحميل...</div>
+          <>
+            <div className="w-full h-[46vh] md:h-[62vh] bg-neutral-100 animate-pulse" />
+            <div className="max-w-6xl mx-auto px-4 py-10 grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+              {Array.from({ length: 8 }).map((_, index) => <ProductCardSkeleton key={index} />)}
+            </div>
+          </>
         ) : !brand || error ? (
           <div className="max-w-3xl mx-auto py-24 px-4 text-center">
             <h1 className="text-2xl font-heading mb-3">الماركة غير موجودة</h1>
@@ -120,31 +127,31 @@ const { data: sectionProducts = [] } = useQuery({
           <>
             {/* Hero */}
             <section
-              className="relative w-full h-[46vh] md:h-[62vh] bg-neutral-100 overflow-hidden"
+              className="relative w-full h-[46vh] md:h-[62vh] bg-neutral-900 overflow-hidden"
               aria-label={`${brand.name} hero`}
             >
-              {brand.hero_image && (
+              {(brand.hero_image || brand.logo_url) && (
                 <img
-                  src={brand.hero_image}
+                  src={optimizeImage(brand.hero_image || brand.logo_url, 1600, 80)}
                   alt={brand.name}
                   loading="eager"
                   decoding="async"
                   fetchPriority="high"
-                  width={1600}
-                  height={900}
                   sizes="100vw"
-                  className="absolute inset-0 w-full h-full object-cover"
+                  onError={handleImageError}
+                  className="absolute inset-0 h-full w-full object-cover object-center"
                 />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
               <div className="relative z-10 h-full max-w-6xl mx-auto px-4 flex flex-col items-center justify-end pb-10 text-center text-white">
                 {brand.logo_url && (
                   <img
-                    src={brand.logo_url}
+                    src={optimizeImage(brand.logo_url, 320, 80)}
                     loading="lazy"
                     decoding="async"
                     width={320}
                     height={120}
+                    onError={handleImageError}
                     alt={`${brand.name} logo`}
                     className="h-16 md:h-20 object-contain mb-4 bg-white/95 rounded-lg px-6 py-2"
                   />
@@ -174,13 +181,12 @@ const { data: sectionProducts = [] } = useQuery({
                     >
                       {s.image_url && (
                         <img
-                          src={s.image_url}
+                          src={optimizeImage(s.image_url, 800, 80)}
                           alt={s.name}
                           loading="lazy"
                           decoding="async"
-                          width={800}
-                          height={1000}
                           sizes="(max-width: 768px) 50vw, 33vw"
+                          onError={handleImageError}
                           className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
                         />
                       )}
@@ -207,7 +213,9 @@ const { data: sectionProducts = [] } = useQuery({
                 </Link>
               </div>
               {prodLoading ? (
-                <div className="py-16 text-center text-muted-foreground">جاري التحميل...</div>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6">
+                  {Array.from({ length: 8 }).map((_, index) => <ProductCardSkeleton key={index} />)}
+                </div>
               ) : products.length === 0 ? (
                 <div className="py-16 text-center text-muted-foreground">لا توجد منتجات حالياً</div>
               ) : (

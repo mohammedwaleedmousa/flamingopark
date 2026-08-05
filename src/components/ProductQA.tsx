@@ -31,18 +31,21 @@ export const ProductQA = ({ productId }: { productId: string }) => {
   const [newQuestion, setNewQuestion] = useState('');
   const [loading, setLoading] = useState(false);
   const [myHelpful, setMyHelpful] = useState<Set<string>>(new Set());
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [supabaseAuthed, setSupabaseAuthed] = useState(false);
   const [authChecking, setAuthChecking] = useState(true);
+
+  // يعتمد تسجيل الدخول برقم الهاتف (جلسة العميل) أو جلسة Supabase.
+  const isAuthenticated = Boolean(customer) || supabaseAuthed;
 
   // Check Supabase authentication state
   useEffect(() => {
     const checkAuth = async () => {
       try {
         const { data: { session } } = await supabase.auth.getSession();
-        setIsAuthenticated(!!session?.user);
+        setSupabaseAuthed(!!session?.user);
       } catch (error) {
         console.error('Error checking auth:', error);
-        setIsAuthenticated(false);
+        setSupabaseAuthed(false);
       } finally {
         setAuthChecking(false);
       }
@@ -52,7 +55,7 @@ export const ProductQA = ({ productId }: { productId: string }) => {
 
     // Listen for auth changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      setIsAuthenticated(!!session?.user);
+      setSupabaseAuthed(!!session?.user);
     });
 
     return () => {
@@ -97,23 +100,11 @@ export const ProductQA = ({ productId }: { productId: string }) => {
 
     setLoading(true);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      
-      if (!user) {
-        toast({
-          title: getSiteText(content, 'qa_session_expired', 'انتهت جلستك'),
-          description: getSiteText(content, 'qa_login_again', 'يرجى تسجيل الدخول مرة أخرى'),
-          variant: 'destructive',
-        });
-        setIsAuthenticated(false);
-        return;
-      }
-
       const { error } = await (supabase as any).from('product_questions').insert({
         product_id: productId,
         content: newQuestion,
         content_ar: newQuestion,
-        author: customer?.name || customer?.phone || user.email || 'Guest',
+        author: customer?.name || customer?.phone || 'عميل',
         helpful_count: 0,
       });
 

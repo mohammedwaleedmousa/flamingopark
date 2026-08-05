@@ -1,4 +1,3 @@
-import { optimizeImage, handleImageError } from "@/lib/imageUrl";
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -204,11 +203,9 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
                 <div className="logo-box">
                   {brand.logo_url ? (
                     <img
-                      src={optimizeImage(brand.logo_url, 200, 80)}
+                      src={brand.logo_url}
                       alt={brand.name}
                       loading="lazy"
-                      decoding="async"
-                      onError={handleImageError}
                     />
                   ) : (
                     <span className="text-[11px] text-center px-2">

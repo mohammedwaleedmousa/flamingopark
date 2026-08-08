@@ -4,9 +4,11 @@ import { Bot, MessageCircle, Send, Sparkles, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import { optimizeImage } from "@/lib/imageUrl";
+import { useCurrency } from "@/lib/currency";
 
 type Message = { id: number; role: "assistant" | "user"; text: string; products?: ReturnType<typeof mapProductCard>[] };
 type ProductResult = ReturnType<typeof mapProductCard>;
+type AssistantApiProduct = Parameters<typeof mapProductCard>[0];
 type ChatbotConfig = { enabled: boolean; greeting: string; faqs: Array<{ question: string; answer: string }> };
 
 const welcomeMessage: Message = {
@@ -19,9 +21,10 @@ const normalize = (value: string) => value.trim().toLowerCase();
 const ignoredSearchWords = new Set(["اريد", "أريد", "ابغى", "أبغى", "هل", "في", "من", "عن", "مع", "ما", "هو", "هذه", "هذا", "منتج", "منتجات", "ال", "لي"]);
 const defaultChatbotConfig: ChatbotConfig = { enabled: true, greeting: welcomeMessage.text, faqs: [] };
 
-const CustomerAssistant = () => {
+const CustomerAssistant = ({ initialOpen = false }: { initialOpen?: boolean }) => {
   const { pathname } = useLocation();
-  const [open, setOpen] = useState(false);
+  const currency = useCurrency();
+  const [open, setOpen] = useState(initialOpen);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([welcomeMessage]);
   const [isReplying, setIsReplying] = useState(false);
@@ -30,7 +33,6 @@ const CustomerAssistant = () => {
   const nextMessageId = useRef(2);
   const messageListRef = useRef<HTMLDivElement>(null);
   const lastSuggestedProducts = useRef<ProductResult[]>([]);
-  const aiAvailable = useRef(true);
   const siteKnowledge = useRef<Array<{ title: string; text: string }>>([]);
 
   useEffect(() => {
@@ -63,21 +65,20 @@ const CustomerAssistant = () => {
   };
 
   const requestAiReply = async (question: string) => {
-    if (!aiAvailable.current) return null;
     const history = messages.slice(-6).map(({ role, text }) => ({ role, text }));
-    const { data, error } = await supabase.functions.invoke("customer-assistant", { body: { message: question, history } });
-    if (error || !data?.reply) {
-      aiAvailable.current = false;
-      return null;
-    }
-    return String(data.reply);
+    const { data, error } = await supabase.functions.invoke("customer-assistant", { body: { message: question, history, currencyMode: currency.mode } });
+    if (error || !data?.reply) return null;
+    const products = Array.isArray(data.products) ? data.products.flatMap((product: unknown) => {
+      try { return [mapProductCard(product as AssistantApiProduct)]; } catch { return []; }
+    }) : [];
+    return { reply: String(data.reply), products };
   };
 
   const answer = async (question: string) => {
     const term = normalize(question);
-    const aiReply = await requestAiReply(question);
-    if (aiReply) {
-      addAssistantMessage(aiReply);
+    const aiResult = await requestAiReply(question);
+    if (aiResult) {
+      addAssistantMessage(aiResult.reply, aiResult.products);
       return;
     }
     if (/^((مرحبا|مرحب|هلا|اهلا|أهلا|السلام|هاي|hello|hi)[!،. ]*)+$/.test(term)) {
@@ -85,7 +86,7 @@ const CustomerAssistant = () => {
       return;
     }
     if (/شحن|توصيل|يوصل|مدة/.test(term)) {
-      addAssistantMessage("التوصيل داخل عدن في اليوم نفسه، وإلى بقية المحافظات عادة خلال 2 إلى 7 أيام حسب إجراءات الشحن.");
+      addAssistantMessage("تختلف مدة وتكلفة التوصيل حسب العنوان، وستظهر الخيارات المتاحة أثناء إتمام الطلب. ويمكن لفريق واتساب تأكيدها لك.");
       return;
     }
     if (/اتمام|إتمام|اكمل|أكمل|انهاء|إنهاء|اطلب|أطلب|طلب.*كيف|كيف.*طلب/.test(term)) {
@@ -190,7 +191,7 @@ const CustomerAssistant = () => {
     }
     lastSuggestedProducts.current = products;
     const availableCount = products.filter((product) => product.inStock).length;
-    addAssistantMessage(`رشحت لك ${products.length} منتجات${maxPrice ? ` ضمن ${maxPrice.toLocaleString("ar-EG")} ر.ي` : ""}. المتوفر منها الآن: ${availableCount}.`, products);
+    addAssistantMessage(`رشحت لك ${products.length} منتجات${maxPrice ? ` ضمن ${maxPrice.toLocaleString("ar-EG")} ${currency.symbol}` : ""}. المتوفر منها الآن: ${availableCount}.`, products);
   };
 
   const handleSubmit = async (event: FormEvent) => {
@@ -227,8 +228,8 @@ const CustomerAssistant = () => {
                 <p className={`rounded-lg px-3.5 py-2.5 text-sm leading-6 shadow-sm ${message.role === "user" ? "bg-primary text-primary-foreground" : "border border-border bg-background text-foreground"}`}>{message.text}</p>
                 {message.products?.map((product) => (
                   <Link key={product.id} to={`/product/${product.slug}`} onClick={() => setOpen(false)} className="mt-2 flex items-center gap-3 rounded-md border border-border bg-background p-2.5 transition-colors hover:border-primary/40 hover:bg-muted/40">
-                    <img src={optimizeImage(product.images[0], 160, 90)} alt="" className="h-14 w-12 rounded-sm object-cover" />
-                    <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{product.nameAr}</span><span className="mt-1 block text-xs text-primary">{product.price.toLocaleString("ar-EG")} ر.ي</span></span>
+                    <img src={optimizeImage(product.images[0], 160, 90)} alt="" loading="lazy" decoding="async" width={48} height={56} className="h-14 w-12 rounded-sm object-cover" />
+                    <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{product.nameAr}</span><span className="mt-1 block text-xs text-primary">{currency.format(product.price)}</span></span>
                   </Link>
                 ))}
               </div>
@@ -245,7 +246,7 @@ const CustomerAssistant = () => {
           </div>
           <div className="border-t border-border bg-background p-4">
             <a href={`https://wa.me/${whatsapp}`} target="_blank" rel="noopener noreferrer" className="mb-3 block text-center text-xs font-medium text-primary hover:underline">التواصل المباشر مع فريق الدعم عبر واتساب</a>
-            <form onSubmit={handleSubmit} className="flex items-center gap-2 rounded-md border border-input bg-muted/30 p-1.5 focus-within:ring-2 focus-within:ring-ring"><input value={input} onChange={(event) => setInput(event.target.value)} placeholder="اكتب استفسارك..." className="h-9 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none" /><button type="submit" disabled={isReplying} className="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground disabled:opacity-50" aria-label="إرسال"><Send className="h-4 w-4" /></button></form>
+            <form onSubmit={handleSubmit} className="flex items-center gap-2 rounded-md border border-input bg-muted/30 p-1.5 focus-within:ring-2 focus-within:ring-ring"><input value={input} onChange={(event) => setInput(event.target.value)} maxLength={800} placeholder="اكتب استفسارك..." className="h-9 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none" /><button type="submit" disabled={isReplying} className="grid h-9 w-9 place-items-center rounded-md bg-primary text-primary-foreground disabled:opacity-50" aria-label="إرسال"><Send className="h-4 w-4" /></button></form>
           </div>
         </section>
       )}

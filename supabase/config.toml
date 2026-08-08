@@ -1,1 +1,4 @@
-project_id = "xpxpzqaolcieldhmrezy"
+project_id = "hcomhdkmtqttzghjxjcb"
+
+[functions.customer-assistant]
+verify_jwt = false

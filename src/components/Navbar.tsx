@@ -1,3 +1,4 @@
+import ThemeToggle from "@/components/ThemeToggle";
 import {
   ShoppingCart,
   MagnifyingGlass,

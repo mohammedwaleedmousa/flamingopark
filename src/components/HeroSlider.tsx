@@ -5,6 +5,7 @@ import { Swiper, SwiperSlide } from "swiper/react";
 import type { Swiper as SwiperInstance } from "swiper";
 import { Autoplay } from "swiper/modules";
 import { supabase } from "@/integrations/supabase/client";
+import SmartImage from "@/components/SmartImage";
 import "swiper/css";
 
 const fallbackSlides = [
@@ -72,13 +73,18 @@ export default function HeroSlider() {
           <SwiperSlide key={index}>
             <div className="relative h-full w-full overflow-hidden bg-neutral-900">
               {loadedSlides.has(index) && (
-                <img
+                <SmartImage
                   src={slide.image}
                   alt=""
                   aria-hidden="true"
                   loading={index === 0 ? "eager" : "lazy"}
                   decoding="async"
                   fetchPriority={index === 0 ? "high" : "auto"}
+                  width={1440}
+                  height={720}
+                  quality={78}
+                  responsiveWidths={[640, 960, 1280, 1600]}
+                  sizes="100vw"
                   className="absolute inset-0 h-full w-full object-cover"
                 />
               )}

@@ -19,9 +19,9 @@ const normalize = (value: string) => value.trim().toLowerCase();
 const ignoredSearchWords = new Set(["اريد", "أريد", "ابغى", "أبغى", "هل", "في", "من", "عن", "مع", "ما", "هو", "هذه", "هذا", "منتج", "منتجات", "ال", "لي"]);
 const defaultChatbotConfig: ChatbotConfig = { enabled: true, greeting: welcomeMessage.text, faqs: [] };
 
-const CustomerAssistant = () => {
+const CustomerAssistant = ({ initialOpen = false }: { initialOpen?: boolean }) => {
   const { pathname } = useLocation();
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(initialOpen);
   const [input, setInput] = useState("");
   const [messages, setMessages] = useState<Message[]>([welcomeMessage]);
   const [isReplying, setIsReplying] = useState(false);
@@ -227,7 +227,7 @@ const CustomerAssistant = () => {
                 <p className={`rounded-lg px-3.5 py-2.5 text-sm leading-6 shadow-sm ${message.role === "user" ? "bg-primary text-primary-foreground" : "border border-border bg-background text-foreground"}`}>{message.text}</p>
                 {message.products?.map((product) => (
                   <Link key={product.id} to={`/product/${product.slug}`} onClick={() => setOpen(false)} className="mt-2 flex items-center gap-3 rounded-md border border-border bg-background p-2.5 transition-colors hover:border-primary/40 hover:bg-muted/40">
-                    <img src={optimizeImage(product.images[0], 160, 90)} alt="" className="h-14 w-12 rounded-sm object-cover" />
+                    <img src={optimizeImage(product.images[0], 160, 90)} alt="" loading="lazy" decoding="async" width={48} height={56} className="h-14 w-12 rounded-sm object-cover" />
                     <span className="min-w-0 flex-1"><span className="block truncate text-xs font-medium">{product.nameAr}</span><span className="mt-1 block text-xs text-primary">{product.price.toLocaleString("ar-EG")} ر.ي</span></span>
                   </Link>
                 ))}

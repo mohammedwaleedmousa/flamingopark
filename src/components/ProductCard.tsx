@@ -7,7 +7,7 @@ import { useCurrency } from "@/lib/currency";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Heart, ShoppingBag } from "lucide-react";
 import { saveCatalogScroll } from "@/lib/catalogScroll";
-import { optimizeImage, handleImageError } from "@/lib/imageUrl";
+import SmartImage from "@/components/SmartImage";
 
 type ColorVariant = { name?: string; hex?: string; images?: string[] };
 type DisplayProduct = Product & { colorVariants?: ColorVariant[]; color_variants?: ColorVariant[]; rating?: number };
@@ -91,14 +91,15 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
 
       {/* IMAGE FULL AREA */}
       <div className="relative flex-1 overflow-hidden bg-neutral-100 ">
-        <img
-          src={optimizeImage(getProductImage(), 800, 88)}
+        <SmartImage
+          src={getProductImage()}
           alt={product.nameAr}
           loading="lazy"
           decoding="async"
-          onError={handleImageError}
           width={800}
           height={1000}
+          quality={82}
+          responsiveWidths={[320, 480, 640, 800]}
           sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw"
           className="
             w-full h-full object-cover

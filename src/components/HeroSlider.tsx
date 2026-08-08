@@ -29,9 +29,9 @@ export default function HeroSlider() {
   const { data: managedSlides = [] } = useQuery({
     queryKey: ["home-hero-banners"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("banners").select("image_url,title_ar,subtitle_ar,cta_text_ar,cta_link").eq("is_active", true).order("sort_order").limit(3);
+      const { data, error } = await (supabase as any).from("banners").select("image_url,title_ar,subtitle_ar,cta_text_ar,cta_link,page_slug").eq("is_active", true).order("sort_order").limit(3);
       if (error) throw error;
-      return (data || []).filter((slide) => slide.image_url).map((slide) => ({ image: slide.image_url, title: slide.title_ar, desc: slide.subtitle_ar || "", cta: slide.cta_text_ar || "اكتشف المجموعة", link: slide.cta_link || "/products" }));
+      return (data || []).filter((slide: any) => slide.image_url).map((slide: any) => ({ image: slide.image_url, title: slide.title_ar, desc: slide.subtitle_ar || "", cta: slide.cta_text_ar || "اكتشف المجموعة", link: slide.page_slug ? `/banner/${slide.page_slug}` : slide.cta_link || "/products" }));
     },
   });
   const slides = managedSlides.length ? managedSlides : fallbackSlides.map((slide) => ({ ...slide, cta: "اكتشف المجموعة", link: "/products" }));

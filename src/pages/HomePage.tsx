@@ -388,7 +388,7 @@ const HomePage = () => {
         .from("products")
         .select(PRODUCT_CARD_SELECT)
         .eq("is_active", true)
-        .or("is_best_seller.eq.true,home_collections.cs.{best_sellers}")
+        .contains("home_collections", ["best_sellers"] as any)
         .order("sort_order")
         .limit(8);
       if (error) throw error;

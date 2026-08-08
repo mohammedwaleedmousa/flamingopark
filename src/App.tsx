@@ -13,6 +13,7 @@ import { hydrateCurrencies } from "@/lib/currency";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { MotionConfig } from "framer-motion";
 import CustomerAssistant from "@/components/CustomerAssistant";
+import { ThemeProvider } from "next-themes";
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
@@ -44,6 +45,7 @@ const MyShipmentsPage = lazy(() => import("./pages/MyShipmentsPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const StoreInfoPage = lazy(() => import("./pages/StoreInfoPage"));
 const CampaignPage = lazy(() => import("./pages/CampaignPage"));
+const BannerPage = lazy(() => import("./pages/BannerPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const OrderTrackingPage = lazy(() => import("./pages/OrderTrackingPage"));
 
@@ -177,6 +179,7 @@ const App = () => {
 
   return (
   <QueryClientProvider client={queryClient}>
+    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
     <MotionConfig reducedMotion={isMobile ? "always" : "user"}>
     <TooltipProvider>
       <Toaster />
@@ -225,6 +228,7 @@ const App = () => {
             <Route path="/qr-code" element={<QRCodePage />} />
             <Route path="/store-info" element={<ProtectedRoute><StoreInfoPage /></ProtectedRoute>} />
             <Route path="/campaigns/:slug" element={<ProtectedRoute><CampaignPage /></ProtectedRoute>} />
+            <Route path="/banner/:slug" element={<ProtectedRoute><BannerPage /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/order-tracking" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
             <Route path="/brands/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />
@@ -293,6 +297,7 @@ const App = () => {
       </DateRangeProvider>
     </TooltipProvider>
     </MotionConfig>
+    </ThemeProvider>
   </QueryClientProvider>
 );
 };

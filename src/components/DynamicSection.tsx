@@ -57,29 +57,13 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
         .eq('is_active', true)
         .contains('countries', [country]);
 
-      const runFilterQuery = async () => {
-        let query = baseQuery();
-        switch (section.filter_type) {
-          case 'featured': query = query.eq('is_featured', true); break;
-          case 'best_seller': query = query.eq('is_best_seller', true); break;
-          case 'discounted': query = query.gt('discount', 0).order('discount', { ascending: false }); break;
-          case 'new': query = query.order('created_at', { ascending: false }); break;
-        }
-        return query.order('sort_order', { ascending: true }).range(offset, offset + limit - 1);
-      };
-
-      if (useDirect !== false) {
-        const { data, error } = await baseQuery()
-          .contains('section_ids', [section.id])
-          .order('sort_order', { ascending: true })
-          .range(offset, offset + limit - 1);
-        if (error) throw error;
-        if (useDirect || (data || []).length > 0) return { products: (data || []).map(mapProductCard), useDirect: true };
-      }
-
-      const { data, error } = await runFilterQuery();
+      // Only products explicitly assigned to this section from the admin are shown.
+      const { data, error } = await baseQuery()
+        .contains('section_ids', [section.id])
+        .order('sort_order', { ascending: true })
+        .range(offset, offset + limit - 1);
       if (error) throw error;
-      return { products: (data || []).map(mapProductCard), useDirect: false };
+      return { products: (data || []).map(mapProductCard), useDirect: true };
     },
     getNextPageParam: (lastPage, allPages) => {
       const loaded = allPages.reduce((sum, page) => sum + page.products.length, 0);

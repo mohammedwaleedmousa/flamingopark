@@ -30,6 +30,9 @@ interface Banner {
   image_zoom: number;
   image_position_x: number;
   image_position_y: number;
+  page_slug?: string | null;
+  page_title_ar?: string | null;
+  page_content_ar?: string | null;
 }
 
 const AdminBannersPage = () => {
@@ -56,6 +59,9 @@ const AdminBannersPage = () => {
     image_zoom: 1,
     image_position_x: 50,
     image_position_y: 50,
+    page_slug: '',
+    page_title_ar: '',
+    page_content_ar: '',
   });
 
   useEffect(() => {
@@ -71,7 +77,7 @@ const AdminBannersPage = () => {
     if (error) {
       toast({ title: 'خطأ', description: 'فشل في تحميل البانرات', variant: 'destructive' });
     } else {
-      setBanners(data || []);
+      setBanners((data || []) as any);
     }
     setIsLoading(false);
   };
@@ -92,6 +98,9 @@ const AdminBannersPage = () => {
       image_zoom: 1,
       image_position_x: 50,
       image_position_y: 50,
+      page_slug: '',
+      page_title_ar: '',
+      page_content_ar: '',
     });
     setEditingBanner(null);
   };
@@ -114,6 +123,9 @@ const AdminBannersPage = () => {
         image_zoom: banner.image_zoom || 1,
         image_position_x: banner.image_position_x ?? 50,
         image_position_y: banner.image_position_y ?? 50,
+        page_slug: banner.page_slug || '',
+        page_title_ar: banner.page_title_ar || '',
+        page_content_ar: banner.page_content_ar || '',
       });
     } else {
       resetForm();
@@ -163,12 +175,12 @@ const AdminBannersPage = () => {
       if (editingBanner) {
         const { error } = await supabase
           .from('banners')
-          .update(formData)
+          .update(formData as any)
           .eq('id', editingBanner.id);
         if (error) throw error;
         toast({ title: 'تم', description: 'تم تحديث البانر' });
       } else {
-        const { error } = await supabase.from('banners').insert(formData);
+        const { error } = await supabase.from('banners').insert(formData as any);
         if (error) throw error;
         toast({ title: 'تم', description: 'تم إضافة البانر' });
       }
@@ -448,6 +460,38 @@ const AdminBannersPage = () => {
                   onChange={(e) => setFormData({ ...formData, cta_link: e.target.value })}
                   placeholder="/products"
                   dir="ltr"
+                />
+              </div>
+            </div>
+            <div className="space-y-4 rounded-lg border border-border p-4">
+              <p className="text-sm font-medium">صفحة البانر الخاصة</p>
+              <div>
+                <label className="block text-sm text-muted-foreground mb-2">رابط الصفحة (بالإنجليزية)</label>
+                <Input
+                  value={formData.page_slug}
+                  onChange={(e) => setFormData({ ...formData, page_slug: e.target.value.trim().toLowerCase().replace(/[^a-z0-9-]/g, '-') })}
+                  placeholder="summer-sale"
+                  dir="ltr"
+                />
+                {formData.page_slug && <p className="mt-1 text-xs text-muted-foreground">سيتم فتح: /banner/{formData.page_slug}</p>}
+              </div>
+              <div>
+                <label className="block text-sm text-muted-foreground mb-2">عنوان الصفحة</label>
+                <Input
+                  value={formData.page_title_ar}
+                  onChange={(e) => setFormData({ ...formData, page_title_ar: e.target.value })}
+                  dir="rtl"
+                />
+              </div>
+              <div>
+                <label className="block text-sm text-muted-foreground mb-2">محتوى الصفحة</label>
+                <textarea
+                  value={formData.page_content_ar}
+                  onChange={(e) => setFormData({ ...formData, page_content_ar: e.target.value })}
+                  dir="rtl"
+                  rows={6}
+                  className="w-full rounded-md border border-input bg-transparent p-3 text-sm outline-none focus:border-ring"
+                  placeholder="اكتب محتوى الصفحة هنا. كل سطر يظهر كفقرة."
                 />
               </div>
             </div>

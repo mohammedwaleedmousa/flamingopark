@@ -1,129 +1,15 @@
 import { Link } from "react-router-dom";
-import { FaInstagram, FaWhatsapp, FaFacebookF, FaSnapchatGhost } from "react-icons/fa";
 import { ArrowUp } from "lucide-react";
+import { FaFacebookF, FaInstagram, FaSnapchatGhost, FaWhatsapp } from "react-icons/fa";
 
-const cols: { title: string; links: { label: string; href: string }[] }[] = [
-  {
-    title: "خدمة العملاء",
-    links: [
-      { label: "اتصل بنا", href: "/store-info" },
-      { label: "الشحن والتوصيل", href: "/store-info" },
-      { label: "الإرجاع والاستبدال", href: "/store-info" },
-      { label: "الأسئلة الشائعة", href: "/store-info" },
-    ],
-  },
-  {
-    title: "الرئيسية",
-    links: [
-      { label: "عن فلامنجو", href: "/store-info" },
-      { label: "متاجرنا", href: "/store-info" },
-      { label: "الوظائف", href: "/store-info" },
-      { label: "الاستدامة", href: "/store-info" },
-    ],
-  },
-  {
-    title: "اكتشف",
-    links: [
-      { label: "نساء", href: "/products?category=women" },
-      { label: "رجال", href: "/products?category=men" },
-      { label: "جمال", href: "/products?category=beauty" },
-      { label: "العروض", href: "/offers" },
-    ],
-  },
+const cols = [
+  { title: "خدمة العملاء", links: [{ label: "اتصل بنا", href: "/store-info" }, { label: "الشحن والتوصيل", href: "/store-info" }, { label: "الإرجاع والاستبدال", href: "/store-info" }, { label: "الأسئلة الشائعة", href: "/store-info" }] },
+  { title: "فلامنجو بارك", links: [{ label: "عن فلامنجو", href: "/store-info" }, { label: "متاجرنا", href: "/store-info" }, { label: "الوظائف", href: "/store-info" }, { label: "الاستدامة", href: "/store-info" }] },
+  { title: "اكتشف", links: [{ label: "نساء", href: "/products?category=women" }, { label: "رجال", href: "/products?category=men" }, { label: "جمال", href: "/products?category=beauty" }, { label: "العروض", href: "/offers" }] },
 ];
 
-const Footer = () => {
-  return (
-    <footer className="bg-background text-foreground border-t border-border">
+const socialLinks = [{ label: "Instagram", icon: FaInstagram, href: "#" }, { label: "WhatsApp", icon: FaWhatsapp, href: "#" }, { label: "Facebook", icon: FaFacebookF, href: "#" }, { label: "Snapchat", icon: FaSnapchatGhost, href: "#" }];
 
-      {/* Link columns */}
-      <div className="container mx-auto px-6 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
-          <div>
-            <Link to="/home" className="flex items-center">
-              <img
-                src="/icons/flamingo.jpeg"
-                alt="Flamingo"
-                loading="lazy"
-                className="h-20 md:h-10 w-auto object-contain pr-8"
-              />
-            </Link>
-            <p className="mt-5 text-xs text-muted-foreground leading-relaxed break-words overflow-wrap-break-word">
-              متجر أزياء يجمع بين الحرفة الفاخرة والروح المعاصرة.
-            </p>
-            <div className="flex items-center gap-3 mt-6">
-
-              {/* Instagram */}
-              <a
-                href="#"
-                aria-label="Instagram"
-                className="w-9 h-9 rounded-full border border-border flex items-center justify-center
-                hover:bg-pink-500 hover:text-white transition"
-              >
-                <FaInstagram />
-              </a>
-
-              {/* WhatsApp */}
-              <a
-                href="#"
-                aria-label="WhatsApp"
-                className="w-9 h-9 rounded-full border border-border flex items-center justify-center
-                hover:bg-green-500 hover:text-white transition"
-              >
-                <FaWhatsapp />
-              </a>
-
-              {/* Facebook */}
-              <a
-                href="#"
-                aria-label="Facebook"
-                className="w-9 h-9 rounded-full border border-border flex items-center justify-center
-                hover:bg-blue-600 hover:text-white transition"
-              >
-                <FaFacebookF />
-              </a>
-
-              {/* Snapchat */}
-              <a
-                href="#"
-                aria-label="Snapchat"
-                className="w-9 h-9 rounded-full border border-border flex items-center justify-center
-                hover:bg-yellow-400 hover:text-black transition"
-              >
-                <FaSnapchatGhost />
-              </a>
-
-            </div>
-          </div>
-
-          {cols.map((col) => (
-            <div key={col.title}>
-              <h3 className="text-[10px] tracking-[0.35em] uppercase text-foreground mb-5 break-words overflow-wrap-break-word whitespace-normal">{col.title}</h3>
-              <ul className="space-y-3">
-                {col.links.map((l) => (
-                  <li key={l.label}>
-                    <Link to={l.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors break-words overflow-wrap-break-word">
-                      {l.label}
-                    </Link>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          ))}
-        </div>
-
-        <div className="mt-16 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center text-[11px] text-muted-foreground gap-4 -mb-20">
-          <p>© 2026 فلامنجو بارك — جميع الحقوق محفوظة.</p>
-          <button
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="flex items-center gap-2 hover:text-foreground transition-colors"
-          >
-            عودة للأعلى <ArrowUp className="w-3 h-3" />
-          </button>
-        </div>
-      </div>
-    </footer>
-  );
-};
-
-export default Footer;
+export default function Footer() {
+  return <footer className="border-t border-foreground/10 bg-foreground text-background" dir="rtl"><div className="mx-auto max-w-[1440px] px-5 py-12 sm:px-6 sm:py-16 lg:px-10"><div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-[1.35fr_repeat(3,1fr)]"><div><Link to="/home" className="inline-flex items-center gap-3"><img src="/icons/flamingo.jpeg" alt="Flamingo Park" loading="lazy" width={52} height={52} className="h-[52px] w-[52px] rounded-xl object-cover" /><span><strong className="block text-sm tracking-[0.18em]">FLAMINGO</strong><span className="mt-1 block text-xs text-background/55">فلامنجو بارك</span></span></Link><p className="mt-5 max-w-xs text-sm leading-7 text-background/65">متجر أزياء يجمع بين الحرفة الفاخرة والروح المعاصرة.</p><div className="mt-6 flex items-center gap-2">{socialLinks.map(({ label, icon: Icon, href }) => <a key={label} href={href} aria-label={label} className="grid h-9 w-9 place-items-center rounded-full border border-background/20 text-background/70 transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground"><Icon className="h-4 w-4" /></a>)}</div></div>{cols.map((col) => <div key={col.title}><h3 className="text-sm font-semibold text-background">{col.title}</h3><ul className="mt-5 space-y-3">{col.links.map((link) => <li key={link.label}><Link to={link.href} className="text-sm text-background/60 transition-colors hover:text-primary">{link.label}</Link></li>)}</ul></div>)}</div><div className="mt-12 flex flex-col gap-4 border-t border-background/15 pt-5 text-xs text-background/50 sm:flex-row sm:items-center sm:justify-between"><p>© 2026 فلامنجو بارك — جميع الحقوق محفوظة.</p><button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} className="inline-flex items-center gap-2 self-start text-background/65 transition-colors hover:text-primary sm:self-auto">عودة للأعلى <ArrowUp className="h-3.5 w-3.5" /></button></div></div></footer>;
+}

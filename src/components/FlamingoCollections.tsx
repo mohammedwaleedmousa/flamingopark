@@ -1,61 +1,6 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import SmartImage from "@/components/SmartImage";
 
-const FlamingoHighlight = () => {
-  return (
-    <section className="py-16 md:py-24 bg-white" dir="rtl">
-
-      <div className="container mx-auto px-6">
-
-        <motion.div
-          initial={{ opacity: 0 }}
-          whileInView={{ opacity: 1 }}
-          viewport={{ once: true }}
-          transition={{ duration: 1 }}
-          className="max-w-4xl mx-auto text-center"
-        >
-
-          <p className="text-[10px] tracking-[0.5em] uppercase text-pink-500 mb-8">
-            Flamingo Selection
-          </p>
-
-
-          <div className="relative overflow-hidden h-[320px] md:h-[480px]">
-
-            <img
-              src="https://images.unsplash.com/photo-1485230895905-ec40ba36b9bc?w=1400&q=85"
-              alt="Flamingo"
-              loading="lazy"
-              className="w-full h-full object-cover transition-transform duration-[1500ms] hover:scale-105"
-            />
-
-          </div>
-
-
-          <div className="mt-8">
-
-
-
-            <p className="mt-4 text-sm text-muted-foreground">
-              اختيارات مصممة لمن يبحث عن الأناقة والتميز.
-            </p>
-
-
-            <Link
-              to="/collections"
-              className="inline-block mt-7 text-xs tracking-[0.35em] uppercase border-b border-black pb-2"
-            >
-              اكتشف الآن
-            </Link>
-
-          </div>
-
-        </motion.div>
-
-      </div>
-
-    </section>
-  );
-};
-
-export default FlamingoHighlight;
+export default function FlamingoCollections() {
+  return <section className="bg-foreground py-12 text-background sm:py-16 lg:py-20" dir="rtl"><div className="mx-auto grid max-w-[1440px] items-center gap-8 px-4 sm:px-6 md:grid-cols-2 lg:gap-14 lg:px-10"><div className="order-2 md:order-1"><p className="text-[10px] font-semibold tracking-[0.16em] text-primary-foreground/70">قصة فلامنجو</p><h2 className="mt-3 font-heading text-3xl leading-tight sm:text-4xl">أزياء تُشبهك، لا تسبقك.</h2><p className="mt-5 max-w-lg text-sm leading-8 text-background/70 sm:text-base">نختار القطع التي تمنح يومك حضورًا هادئًا وتفاصيل تتكرر في الذاكرة.</p><Link to="/collections" className="mt-7 inline-flex min-h-11 items-center rounded-full border border-background/40 px-6 text-sm font-medium transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground">اكتشف الحكاية</Link></div><div className="order-1 overflow-hidden rounded-2xl bg-muted md:order-2"><SmartImage src="https://images.unsplash.com/photo-1485230895905-ec40ba36b9bc?w=1400&q=85" alt="مختارات فلامنجو" width={1200} height={800} quality={78} responsiveWidths={[640, 960, 1280]} sizes="(max-width: 768px) 100vw, 50vw" className="aspect-[4/3] h-full w-full object-cover" /></div></div></section>;
+}

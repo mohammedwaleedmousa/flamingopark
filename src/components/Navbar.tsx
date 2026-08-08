@@ -173,10 +173,10 @@ const Navbar = () => {
 
   return (
     <header
-      className="fixed top-0 inset-x-0 z-50 bg-white backdrop-blur-none md:backdrop-blur-xl border-b border-black/5 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.2)]"
+      className="fixed inset-x-0 top-0 z-50 border-b border-border/80 bg-background/95 shadow-[0_8px_24px_-18px_rgba(36,24,29,0.3)] backdrop-blur-xl"
       dir="rtl"
     >
-      <div className="container mx-auto px-4 md:px-8">
+      <div className="mx-auto max-w-[1440px] px-4 md:px-8 lg:px-10">
         <div className="relative flex items-center justify-between h-16 md:h-20">
           {/* Right (in RTL): menu + search */}
           <div className="flex items-center gap-1 z-10">
@@ -344,7 +344,7 @@ const Navbar = () => {
               text-black/80
             "
           >
-            <img loading="lazy" src="/icons/flamingo.jpeg" alt="Flamingo" className="w-12 h-12" />
+            <img src="/icons/flamingo.jpeg" alt="Flamingo" loading="eager" fetchPriority="high" width={48} height={48} className="h-12 w-12" />
           </Link>
 
           {/* Left (RTL): account, wishlist, bag */}

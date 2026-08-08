@@ -1,43 +1,28 @@
+import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
-import { useRef, useState, useEffect, useMemo } from "react";
-import { ArrowLeft, Truck, ShieldCheck, Sparkles, RotateCcw } from "lucide-react";
+import { RotateCcw, ShieldCheck, Sparkles, Truck } from "lucide-react";
+import { FreeMode } from "swiper/modules";
+import { Swiper, SwiperSlide } from "swiper/react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import HeroSlider from "@/components/HeroSlider";
 import ProductCard from "@/components/ProductCard";
 import BrandsStrip from "@/components/BrandsStrip";
+import FlamingoServices from "@/components/FlamingoServices";
+import FlamingoCollections from "@/components/FlamingoCollections";
+import SmartImage from "@/components/SmartImage";
+import StoreSectionHeader from "@/components/StoreSectionHeader";
+import { useNearViewport } from "@/hooks/useNearViewport";
+import { useCustomerExperience } from "@/hooks/useCustomerExperience";
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import type { Product } from "@/store/useStore";
-import { motion, AnimatePresence } from "framer-motion";
-import { useNearViewport } from "@/hooks/useNearViewport";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { FreeMode } from "swiper/modules";
-import FlamingoServices from "@/components/FlamingoServices";
-import FlamingoCollections from "@/components/FlamingoCollections";
-import { useCustomerExperience } from "@/hooks/useCustomerExperience";
-
 import "swiper/css";
 import "swiper/css/free-mode";
 
-type FeaturedCategoryItem = {
-  title: string;
-  subtitle: string;
-  image: string;
-  link: string;
-};
-
-type EditorialItem = {
-  eyebrow: string;
-  title: string;
-  body: string;
-  cta: string;
-  href: string;
-  image: string;
-  reverse: boolean;
-};
+type FeaturedCategoryItem = { title: string; subtitle: string; image: string; link: string };
 
 const fallbackCategoryImages: Record<string, string> = {
   women: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=640&q=65",
@@ -49,522 +34,52 @@ const fallbackCategoryImages: Record<string, string> = {
 };
 
 const fallbackFeaturedCategories: FeaturedCategoryItem[] = [
-  {
-    title: "نسائي",
-    subtitle: "Women",
-    image: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=640&q=65",
-    link: "/categories?parent=women",
-  },
-  {
-    title: "رجالي",
-    subtitle: "Men",
-    image: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=640&q=65",
-    link: "/categories?parent=men",
-  },
-  {
-    title: "أطفال",
-    subtitle: "Kids",
-    image: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=640&q=65",
-    link: "/categories?parent=kids",
-  },
-  {
-    title: "حقائب",
-    subtitle: "Bags",
-    image: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=640&q=65",
-    link: "/categories?parent=bags",
-  },
-  {
-    title: "أحذية",
-    subtitle: "Shoes",
-    image: "c:\Users\Soo\Pictures\nike.jpg",
-    link: "/categories?parent=shoes",
-  },
-  {
-    title: "تجميل",
-    subtitle: "Beauty",
-    image: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=640&q=65",
-    link: "/categories?parent=beauty",
-  },
+  { title: "نسائي", subtitle: "إطلالات الموسم", image: fallbackCategoryImages.women, link: "/categories?parent=women" },
+  { title: "رجالي", subtitle: "قطع مختارة", image: fallbackCategoryImages.men, link: "/categories?parent=men" },
+  { title: "أطفال", subtitle: "أناقة صغيرة", image: fallbackCategoryImages.kids, link: "/categories?parent=kids" },
+  { title: "حقائب", subtitle: "تفاصيل تكتمل", image: fallbackCategoryImages.bags, link: "/categories?parent=bags" },
+  { title: "أحذية", subtitle: "خطوتك القادمة", image: fallbackCategoryImages.shoes, link: "/categories?parent=shoes" },
+  { title: "تجميل", subtitle: "عناية يومية", image: fallbackCategoryImages.beauty, link: "/categories?parent=beauty" },
 ];
 
-// Inline Brands strip with auto-scroll, pause-on-hover and seamless loop
-const BrandsStripInline = () => {
-  // static placeholder brands as requested
-  const brands = [
-    "/brands/nike.svg",
-    "/brands/adidas.svg",
-    "/brands/zara.svg",
-    "/brands/gucci.svg",
-    "/brands/puma.svg",
-    "/brands/lv.svg",
-  ];
+const trustItems = [
+  { icon: ShieldCheck, title: "تسوق بثقة", text: "منتجات مختارة بعناية" },
+  { icon: Truck, title: "توصيل مرن", text: "نرتّب وصول طلبك بسهولة" },
+  { icon: RotateCcw, title: "خدمة بعد الشراء", text: "نساعدك في الاستبدال والإرجاع" },
+  { icon: Sparkles, title: "مختارات جديدة", text: "يصل الجديد إلى واجهتك أولاً" },
+];
 
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [isHover, setIsHover] = useState(false);
+function TrustRail() {
+  return <section className="border-b border-border bg-card" aria-label="مزايا التسوق"><div className="mx-auto grid max-w-[1440px] grid-cols-2 divide-x divide-x-reverse divide-border px-4 sm:px-6 md:grid-cols-4 lg:px-10">{trustItems.map(({ icon: Icon, title, text }) => <div key={title} className="flex items-center gap-3 px-3 py-4 sm:px-5 md:py-5"><span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 text-primary"><Icon className="h-4 w-4" /></span><span><strong className="block text-xs font-semibold text-foreground">{title}</strong><span className="mt-0.5 block text-[11px] leading-5 text-muted-foreground">{text}</span></span></div>)}</div></section>;
+}
 
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el || brands.length === 0) return;
+function CategoryCarousel({ items }: { items: FeaturedCategoryItem[] }) {
+  return <section className="border-b border-border bg-card py-10 sm:py-14" dir="rtl" aria-label="الأقسام"><div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-10"><StoreSectionHeader eyebrow="تسوّق حسب ذوقك" title="ابدأ من القسم المناسب" href="/categories" action="كل الأقسام" /><Swiper modules={[FreeMode]} slidesPerView="auto" spaceBetween={12} freeMode={{ enabled: true, momentum: true }} grabCursor className="!overflow-visible"><>{items.map((item) => <SwiperSlide key={item.title} className="!w-[148px] sm:!w-[176px]"><Link to={item.link} className="group block overflow-hidden rounded-2xl border border-border bg-background"><div className="aspect-[4/5] overflow-hidden bg-muted"><SmartImage src={item.image} alt={item.title} width={480} height={600} quality={78} responsiveWidths={[240, 360, 480]} sizes="(max-width: 640px) 148px, 176px" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.035]" /></div><div className="p-3.5"><h3 className="text-sm font-semibold text-foreground">{item.title}</h3><p className="mt-1 text-[11px] text-muted-foreground">{item.subtitle}</p></div></Link></SwiperSlide>)}</></Swiper></div></section>;
+}
 
-    let rafId: number | null = null;
-    let last = performance.now();
-    const speed = 22; // px/sec, slow premium feel
+function ProductSkeleton() {
+  return <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-4">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="overflow-hidden rounded-2xl border border-border bg-card"><div className="aspect-[3/4] animate-pulse bg-muted" /><div className="space-y-2 p-4"><div className="h-3 w-2/5 animate-pulse rounded bg-muted" /><div className="h-3 w-4/5 animate-pulse rounded bg-muted" /><div className="h-3 w-1/3 animate-pulse rounded bg-muted" /></div></div>)}</div>;
+}
 
-    // duplicate content by cloning children for seamless scroll
-    // we'll rely on doubling the sequence in rendering
-    const step = (now: number) => {
-      const dt = (now - last) / 1000;
-      last = now;
-      if (!isHover) {
-        el.scrollLeft += speed * dt;
-        if (el.scrollLeft >= el.scrollWidth / 2) el.scrollLeft -= el.scrollWidth / 2;
-      }
-      rafId = requestAnimationFrame(step);
-    };
+function ProductSection({ eyebrow, title, description, href, action, products, loading, badge }: { eyebrow: string; title: string; description: string; href: string; action: string; products: Product[]; loading: boolean; badge?: string }) {
+  if (!loading && products.length === 0) return null;
+  return <section className="py-12 sm:py-16 lg:py-20"><div className="mx-auto max-w-[1440px] px-4 sm:px-6 lg:px-10"><StoreSectionHeader eyebrow={eyebrow} title={title} description={description} href={href} action={action} />{loading ? <ProductSkeleton /> : <div className="grid grid-cols-2 gap-3 sm:gap-5 md:grid-cols-4 lg:gap-7">{products.slice(0, 8).map((product) => <ProductCard key={product.id} product={product} badge={badge} />)}</div>}<div className="mt-8 text-center sm:mt-10"><Link to={href} className="inline-flex min-h-11 items-center justify-center rounded-full border border-foreground px-6 text-sm font-medium text-foreground transition-colors hover:border-primary hover:bg-primary hover:text-primary-foreground">{action}</Link></div></div></section>;
+}
 
-    rafId = requestAnimationFrame(step);
-    return () => { if (rafId) cancelAnimationFrame(rafId); };
-  }, [isHover]);
-
-  
-};
-
-// Category horizontal scroll carousel (replaces grid)
-
-const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
-  const [active, setActive] = useState(items[0]);
-
-  return (
-    <section className="categories-strip" dir="rtl" aria-label="الأقسام">
-      <style>{`
-        .categories-strip{
-          --accent:#E8547C;
-          --text:#1F1F1F;
-          --muted:#777;
-          --border:#ECECEC;
-          --cream:#FCFAF8;
-
-          background:#fff;
-          padding:14px 0 18px;
-        }
-
-        .categories-strip .header{
-          display:flex;
-          justify-content:space-between;
-          align-items:center;
-          margin-bottom:20px;
-        }
-
-        .categories-strip .title{
-          font-family:"Noto Kufi Arabic",sans-serif;
-          font-size:18px;
-          font-weight:700;
-          color:var(--text);
-          margin:0;
-        }
-
-        /* نفس تصميم قسم الماركات */
-
-        .categories-strip .view-all{
-          display:inline-flex;
-          align-items:center;
-          gap:6px;
-          color:var(--muted);
-          text-decoration:none;
-          font-size:13px;
-          font-weight:600;
-          transition:all .25s ease;
-        }
-
-        .categories-strip .view-all svg{
-          width:14px;
-          height:14px;
-          transition:transform .25s ease;
-        }
-
-        .categories-strip .view-all:hover{
-          color:var(--accent);
-        }
-
-        .categories-strip .view-all:hover svg{
-          transform:translateX(-3px);
-        }
-
-        .categories-strip .swiper{
-          overflow:hidden;
-          padding:6px 0;
-          touch-action:pan-y;
-        }
-
-        .categories-strip .swiper-slide{
-          width:150px;
-        }
-
-        .categories-strip .card{
-          display:block;
-          text-decoration:none;
-          border-radius:22px;
-          overflow:hidden;
-          background:var(--cream);
-          border:1px solid var(--border);
-          transition:all .28s ease;
-        }
-
-        .categories-strip .image{
-          aspect-ratio:1/1;
-          overflow:hidden;
-          background:#fff;
-        }
-
-        .categories-strip .image img{
-          width:100%;
-          height:100%;
-          object-fit:cover;
-          transition:transform .45s ease;
-        }
-
-        .categories-strip .content{
-          padding:14px;
-          text-align:center;
-        }
-
-        .categories-strip .name{
-          font-size:14px;
-          font-weight:600;
-          color:var(--text);
-          transition:.25s;
-        }
-
-        .categories-strip .card:hover{
-          border-color:var(--accent);
-        }
-
-        .categories-strip .card:hover img{
-          transform:scale(1.06);
-        }
-
-        .categories-strip .card:hover .name{
-          color:var(--accent);
-        }
-      `}</style>
-
-      <div className="container mx-auto px-4">
-
-        <div className="header">
-          <h2 className="title">الأقسام</h2>
-
-          <Link to="/categories" className="view-all">
-            عرض جميع الأقسام
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M9 18l6-6-6-6" />
-            </svg>
-          </Link>
-        </div>
-
-        <Swiper
-          modules={[FreeMode]}
-          slidesPerView="auto"
-          spaceBetween={18}
-          freeMode={{ enabled: true, momentum: true }}
-          grabCursor
-        >
-          {items.map((item) => (
-            <SwiperSlide key={item.title}>
-              <Link
-                to={item.link}
-                className="card"
-              >
-                <div className="image">
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    loading="lazy"
-                  />
-                </div>
-
-                <div className="content">
-                  <div className="name">
-                    {item.title}
-                  </div>
-                </div>
-              </Link>
-            </SwiperSlide>
-          ))}
-        </Swiper>
-
-      </div>
-    </section>
-  );
-};
-
-
-const HomePage = () => {
+export default function HomePage() {
   const { data: customerExperience } = useCustomerExperience();
   const showHomeSection = (section: string) => customerExperience?.homeSections[section] !== false;
-  const {
-  data: categories = [],
-  isLoading: categoriesLoading
-  } = useQuery({
-    queryKey: ["categories-all-active"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("categories")
-        .select("id,slug,name,name_ar,parent_id,image_url,sort_order")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true });
-      if (error) throw error;
-      return data || [];
-    },
-  });
-
-  const { data: homeContent = {} } = useQuery({
-    queryKey: ["home-content"],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("site_content")
-        .select("key, content, content_ar")
-        .like("key", "home_%");
-      if (error) throw error;
-      return (data || []).reduce((acc, row) => {
-        acc[row.key] = row.content_ar || row.content || "";
-        return acc;
-      }, {} as Record<string, string>);
-    },
-  });
-
-  const featuredCategories = useMemo<FeaturedCategoryItem[]>(() => {
-    if (categoriesLoading) return [];
-
-    if (!categories.length) return fallbackFeaturedCategories;
-
-    return categories
-      .filter((category: any) => !category.parent_id)
-      .map((c: any) => ({
-        title: c.name_ar || c.name || c.slug,
-        subtitle: c.name || c.name_ar || c.slug,
-        image:
-          c.image_url ||
-          fallbackCategoryImages[c.slug] ||
-          fallbackFeaturedCategories[0].image,
-        link: `/categories?parent=${c.slug}`,
-      }));
-  }, [categories, categoriesLoading]);
-
-  const getHomeContent = (key: string, fallback: string) => homeContent[key] || fallback;
-
   const featuredViewport = useNearViewport<HTMLDivElement>();
   const bestSellersViewport = useNearViewport<HTMLDivElement>();
   const newArrivalsViewport = useNearViewport<HTMLDivElement>();
   const brandsViewport = useNearViewport<HTMLDivElement>();
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({ queryKey: ["categories-all-active"], queryFn: async () => { const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order", { ascending: true }); if (error) throw error; return data || []; } });
+  const { data: homeContent = {} } = useQuery({ queryKey: ["home-content"], queryFn: async () => { const { data, error } = await supabase.from("site_content").select("key, content, content_ar").like("key", "home_%"); if (error) throw error; return (data || []).reduce((all, row) => ({ ...all, [row.key]: row.content_ar || row.content || "" }), {} as Record<string, string>); } });
+  const featuredCategories = useMemo<FeaturedCategoryItem[]>(() => { if (categoriesLoading) return []; if (!categories.length) return fallbackFeaturedCategories; return categories.filter((category: any) => !category.parent_id).map((category: any) => ({ title: category.name_ar || category.name || category.slug, subtitle: category.name || category.name_ar || "اكتشف المجموعة", image: category.image_url || fallbackCategoryImages[category.slug] || fallbackFeaturedCategories[0].image, link: `/categories?parent=${category.slug}` })); }, [categories, categoriesLoading]);
+  const { data: products = [], isLoading: productsLoading } = useQuery({ queryKey: ["home-products"], enabled: featuredViewport.isNearViewport, queryFn: async () => { const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).contains("home_collections", ["curated"] as any).order("sort_order").limit(8); if (error) throw error; return (data || []).map(mapProductCard); } });
+  const { data: bestSellers = [], isLoading: bestSellersLoading } = useQuery({ queryKey: ["home-best-sellers"], enabled: bestSellersViewport.isNearViewport, queryFn: async () => { const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).contains("home_collections", ["best_sellers"] as any).order("sort_order").limit(8); if (error) throw error; return (data || []).map(mapProductCard); } });
+  const { data: newArrivals = [], isLoading: newArrivalsLoading } = useQuery({ queryKey: ["home-new-arrivals"], enabled: newArrivalsViewport.isNearViewport, queryFn: async () => { const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).contains("home_collections", ["new_season"] as any).order("created_at", { ascending: false }).limit(8); if (error) throw error; return (data || []).map(mapProductCard); } });
+  const content = (key: string, fallback: string) => homeContent[key] || fallback;
 
-  const { data: products = [] } = useQuery({
-    queryKey: ["home-products"],
-    enabled: featuredViewport.isNearViewport,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select(PRODUCT_CARD_SELECT)
-        .eq("is_active", true)
-        .contains("home_collections", ["curated"] as any)
-        .order("sort_order")
-        .limit(8);
-      if (error) throw error;
-      return (data || []).map(mapProductCard);
-    },
-  });
-
-  const { data: bestSellers = [] } = useQuery({
-    queryKey: ["home-best-sellers"],
-    enabled: bestSellersViewport.isNearViewport,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select(PRODUCT_CARD_SELECT)
-        .eq("is_active", true)
-        .contains("home_collections", ["best_sellers"] as any)
-        .order("sort_order")
-        .limit(8);
-      if (error) throw error;
-      return (data || []).map(mapProductCard);
-    },
-  });
-
-  const { data: newArrivals = [] } = useQuery({
-    queryKey: ["home-new-arrivals"],
-    enabled: newArrivalsViewport.isNearViewport,
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from("products")
-        .select(PRODUCT_CARD_SELECT)
-        .eq("is_active", true)
-        .contains("home_collections", ["new_season"] as any)
-        .order("created_at", { ascending: false })
-        .limit(8);
-      if (error) throw error;
-      return (data || []).map(mapProductCard);
-    },
-  });
-  return (
-    <div className="min-h-screen relative bg-background" dir="rtl">
-      <Navbar />
-      <CartDrawer />
-
-      <main>
-        {/* Hero — sits behind the navbar */}
-        {showHomeSection("hero") && <HeroSlider />}
-
-        {/* Brands strip */}
-        {showHomeSection("brands") && (
-          <div ref={brandsViewport.ref} style={{ minHeight: 96 }}>
-            <BrandsStrip enabled={brandsViewport.isNearViewport} />
-          </div>
-        )}
-
-        {/* Categories — replaced with horizontal CategoryCarousel for improved UX */}
-        {showHomeSection("categories") && <CategoryCarousel items={featuredCategories} />}
-        {/* banner */}
-        {showHomeSection("editorial") && <section className="py-16 md:py-24 bg-background">
-          <motion.div initial={{ opacity: 0, y: 35, filter: "blur(8px)" }} whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }} viewport={{ once: false, amount: 0.25 }} transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }} className="container mx-auto px-6">
-            <div className="max-w-5xl mx-auto text-center">
-              <motion.h2 initial={{ opacity: 0, y: 25 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.4 }} transition={{ duration: 1, delay: 0.15, ease: [0.22, 1, 0.36, 1] }} className="text-3xl md:text-6xl font-light leading-[1.25] tracking-tight text-foreground">
-                الأناقة ليست ما ترتديه...
-                <br />
-                بل ما يبقى في الذاكرة بعد رحيلك.
-              </motion.h2>
-              <motion.div initial={{ width: 0, opacity: 0 }} whileInView={{ width: 80, opacity: 1 }} viewport={{ once: false, amount: 0.4 }} transition={{ duration: 0.9, delay: 0.45, ease: "easeOut" }} className="h-px bg-zinc-300 mx-auto my-10" />
-              <motion.p initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.4 }} transition={{ duration: 1, delay: 0.6, ease: [0.22, 1, 0.36, 1] }} className="max-w-xl mx-auto text-pink-500 leading-8 text-sm md:text-base">
-                مختارات استثنائية صُممت لمن يقدّر التفاصيل،
-                ويبحث عن الجودة قبل كل شيء.
-              </motion.p>
-            </div>
-          </motion.div>
-        </section>}
-
-        {/* Featured products */}
-        {showHomeSection("featuredProducts") && <div ref={featuredViewport.ref}>
-        {products.length > 0 && (
-          <section className="py-16 md:py-24 bg-background">
-            <div className="container mx-auto px-6">
-              {/* Title */}
-              <div className="flex items-end justify-between mb-12">
-                <div>
-                  <h2 className="font-heading text-2xl md:text-5xl text-foreground">منتجات مختارة بعناية</h2>
-                </div>
-                <Link
-                  to="/curated"
-                  className="text-[11px] tracking-[0.02em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
-                >
-                  عرض الكل <ArrowLeft className="w-3 h-3" />
-                </Link>
-              </div>
-
-              {/* Products */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
-                {products.slice(0, 8).map((p) => (
-                  <ProductCard key={p.id} product={p} />
-                ))}
-              </div>
-
-              {/* CTA */}
-              <div className="text-center mt-12">
-                <Link
-                  to="/curated"
-                  className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-pink-500 pb-1 hover:opacity-60 transition text-pink-500"
-                >
-                  عرض المزيد <ArrowLeft className="w-3 h-3" />
-                </Link>
-              </div>
-
-            </div>
-          </section>
-        )}
-        </div>}
-
-        {showHomeSection("collections") && <FlamingoCollections />}
-
-        {/* New Arrivals */}
-        {showHomeSection("newArrivals") && <div ref={newArrivalsViewport.ref} style={{ minHeight: 640 }}>
-        {newArrivals.length > 0 && (
-          <section className="py-10 md:py-28">
-            <div className="container mx-auto px-6">
-              <div className="flex items-end justify-between mb-12">
-                <div>
-                  <p className="text-[10px] tracking-[0.02em] uppercase text-muted-foreground mb-3">وصل حديثاً</p>
-                  <h2 className="font-heading text-3xl md:text-5xl text-foreground">جديد الموسم</h2>
-                </div>
-                <Link
-                  to="/new-season"
-                  className="text-[11px] tracking-[0.02em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
-                >
-                  عرض الكل <ArrowLeft className="w-3 h-3" />
-                </Link>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
-                {newArrivals.slice(0, 8).map((p) => (
-                  <ProductCard key={p.id} product={p} badge="NEW IN" />
-                ))}
-              </div>
-              <div className="text-center mt-12">
-                <Link
-                  to="/new-season"
-                  className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-pink-500 pb-1 hover:opacity-60 transition text-pink-500"
-                >
-                  عرض المزيد <ArrowLeft className="w-3 h-3" />
-                </Link>
-              </div>
-            </div>
-          </section>
-        )}
-        </div>}
-
-        {/* Best sellers */}
-        {showHomeSection("bestSellers") && <div ref={bestSellersViewport.ref}>
-        {bestSellers.length > 0 && (
-          <section className="py-10 md:py-28 bg-background">
-            <div className="container mx-auto px-6">
-              <div className="flex items-end justify-between mb-12">
-                <div>
-                  <p className="text-[10px] tracking-[0.02em] uppercase text-muted-foreground mb-3">Best Sellers</p>
-                  <h2 className="font-heading text-3xl md:text-5xl text-foreground">الأكثر مبيعاً</h2>
-                </div>
-                <Link
-                  to="/top-selling"
-                  className="text-[11px] tracking-[0.02em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
-                >
-                  عرض الكل <ArrowLeft className="w-3 h-3" />
-                </Link>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
-                {bestSellers.slice(0, 8).map((p) => (
-                  <ProductCard key={p.id} product={p} badge="BEST SELLER" />
-                ))}
-              </div>
-              <div className="text-center mt-12">
-                <Link
-                  to="/top-selling"
-                  className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-pink-500 pb-1 hover:opacity-60 transition text-pink-500"
-                >
-                  عرض المزيد <ArrowLeft className="w-3 h-3" />
-                </Link>
-              </div>
-            </div>
-          </section>
-        )}
-        </div>}
-
-        {showHomeSection("services") && <FlamingoServices />}
-
-      </main>
-      <Footer />
-    </div>
-  );
-};
-
-export default HomePage;
+  return <div className="min-h-screen bg-background" dir="rtl"><Navbar /><CartDrawer /><main className="overflow-hidden">{showHomeSection("hero") && <HeroSlider />}<TrustRail />{showHomeSection("brands") && <div ref={brandsViewport.ref}><BrandsStrip enabled={brandsViewport.isNearViewport} /></div>}{showHomeSection("categories") && <CategoryCarousel items={featuredCategories} />}{showHomeSection("editorial") && <section className="bg-muted/55 py-14 sm:py-20"><div className="mx-auto max-w-[900px] px-6 text-center"><p className="text-[10px] font-semibold tracking-[0.16em] text-primary">فلامنجو بارك</p><h1 className="mt-4 font-heading text-3xl leading-[1.35] text-foreground sm:text-4xl md:text-5xl">{content("home_editorial_title", "تفاصيل هادئة، حضور لا يُنسى.")}</h1><p className="mx-auto mt-5 max-w-2xl text-sm leading-8 text-muted-foreground sm:text-base">{content("home_editorial_body", "مختارات أصلية لأسلوبك اليومي، تُعرض لك ببساطة وتصل إليك بعناية.")}</p><Link to="/products" className="mt-7 inline-flex min-h-11 items-center rounded-full bg-foreground px-6 text-sm font-medium text-background transition-colors hover:bg-primary">اكتشف المجموعة</Link></div></section>}<div ref={featuredViewport.ref}>{showHomeSection("featuredProducts") && <ProductSection eyebrow="اختيار فلامنجو" title="منتجات مختارة بعناية" description="قطع لافتة اخترناها لتبدأ منها." href="/curated" action="كل المختارات" products={products} loading={productsLoading && featuredViewport.isNearViewport} />}</div>{showHomeSection("collections") && <FlamingoCollections />}<div ref={newArrivalsViewport.ref}>{showHomeSection("newArrivals") && <ProductSection eyebrow="وصل حديثًا" title="جديد الموسم" description="إضافات جديدة تصل إلى واجهة المتجر أولاً." href="/new-season" action="كل الجديد" products={newArrivals} loading={newArrivalsLoading && newArrivalsViewport.isNearViewport} badge="NEW IN" />}</div><div ref={bestSellersViewport.ref}>{showHomeSection("bestSellers") && <ProductSection eyebrow="اختيارات العملاء" title="الأكثر مبيعًا" description="القطع التي يعود إليها عملاؤنا باستمرار." href="/top-selling" action="كل الأكثر مبيعًا" products={bestSellers} loading={bestSellersLoading && bestSellersViewport.isNearViewport} badge="BEST SELLER" />}</div>{showHomeSection("services") && <FlamingoServices />}</main><Footer /></div>;
+}

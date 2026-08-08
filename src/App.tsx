@@ -45,7 +45,7 @@ const MyShipmentsPage = lazy(() => import("./pages/MyShipmentsPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const StoreInfoPage = lazy(() => import("./pages/StoreInfoPage"));
 const CampaignPage = lazy(() => import("./pages/CampaignPage"));
-const BannerPage = lazy(() => import("./pages/BannerPage"));
+const BannerPage = lazy(() => import("./pages/bannerPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const OrderTrackingPage = lazy(() => import("./pages/OrderTrackingPage"));
 

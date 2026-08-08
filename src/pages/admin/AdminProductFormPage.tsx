@@ -375,7 +375,7 @@ const AdminProductFormPage = () => {
       if (isEditing) {
         const { data: savedProduct, error } = await supabase
           .from('products')
-          .update(productData)
+          .update(productData as any)
           .eq('id', id)
           .select('category,category_id')
           .single();
@@ -387,7 +387,7 @@ const AdminProductFormPage = () => {
       } else {
         const { data: inserted, error } = await supabase
           .from('products')
-          .insert(productData)
+          .insert(productData as any)
           .select()
           .single();
         if (error) throw error;

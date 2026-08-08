@@ -329,6 +329,7 @@ const Navbar = () => {
                 />
               )}
             </button>
+            <ThemeToggle />
           </div>
 
           {/* Center wordmark */}

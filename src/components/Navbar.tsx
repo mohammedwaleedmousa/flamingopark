@@ -1,3 +1,4 @@
+import ThemeToggle from "@/components/ThemeToggle";
 import {
   ShoppingCart,
   MagnifyingGlass,
@@ -329,6 +330,7 @@ const Navbar = () => {
                 />
               )}
             </button>
+            <ThemeToggle />
           </div>
 
           {/* Center wordmark */}

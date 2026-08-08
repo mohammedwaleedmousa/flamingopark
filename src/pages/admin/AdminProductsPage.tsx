@@ -138,7 +138,7 @@ const AdminProductsPage = () => {
         const categoryValues = categoryScope
           .flatMap((category) => [category.slug, category.name, category.name_ar])
           .filter(Boolean)
-          .map((value) => `"${value.replaceAll('"', '\\"')}"`);
+          .map((value) => `"${value.split('"').join('\\"')}"`);
         query = query.or(`category_id.in.(${categoryIds.join(",")}),category.in.(${categoryValues.join(",")})`);
       }
       const { data } = await query;
@@ -192,7 +192,7 @@ const AdminProductsPage = () => {
       const categoryValues = categoryScope
         .flatMap((category) => [category.slug, category.name, category.name_ar])
         .filter(Boolean)
-        .map((value) => `"${value.replaceAll('"', '\\"')}"`);
+        .map((value) => `"${value.split('"').join('\\"')}"`);
       q = q.or(`category_id.in.(${categoryIds.join(",")}),category.in.(${categoryValues.join(",")})`);
     }
     if (brandFilter !== "all") q = q.eq("brand", brandFilter);

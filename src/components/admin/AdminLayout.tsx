@@ -6,6 +6,8 @@ import AdminSidebar from './AdminSidebar';
 import { ChevronLeft, Loader2, Menu, Store } from 'lucide-react';
 import Logo from '@/components/Logo';
 import NotificationsDropdown from './NotificationsDropdown';
+import ExcelToolbar from './ExcelToolbar';
+import { resolveExcelTable } from '@/lib/admin/excelTables';
 import { DateRangeProvider } from '@/lib/analytics/dateRange';
 
 const AdminLayout = () => {
@@ -13,6 +15,7 @@ const AdminLayout = () => {
   const location = useLocation();
   const [isLoading, setIsLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
+  const excelConfig = resolveExcelTable(location.pathname);
 
   useEffect(() => {
     checkAdminAccess();
@@ -98,6 +101,7 @@ const AdminLayout = () => {
               </div>
             </div>
             <div className="flex items-center gap-2">
+              {excelConfig && <ExcelToolbar config={excelConfig} />}
               <NotificationsDropdown />
             </div>
           </header>

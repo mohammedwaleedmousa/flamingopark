@@ -139,41 +139,48 @@
   }
 
   .dark {
-    --background: 0 0% 6%;
-    --foreground: 0 0% 97%;
-    --card: 0 0% 9%;
-    --card-foreground: 0 0% 97%;
-    --popover: 0 0% 8%;
-    --popover-foreground: 0 0% 97%;
-    --primary: 0 0% 97%;
-    --primary-foreground: 0 0% 7%;
-    --primary-container: 0 0% 14%;
-    --secondary: 0 0% 14%;
-    --secondary-foreground: 0 0% 97%;
-    --muted: 0 0% 12%;
-    --muted-foreground: 0 0% 65%;
-    --accent: 0 0% 97%;
-    --accent-foreground: 0 0% 7%;
-    --destructive: 0 65% 45%;
+    /* Warm charcoal base keeping the flamingo rose identity */
+    --background: 25 12% 8%;
+    --foreground: 30 20% 96%;
+    --card: 25 12% 11%;
+    --card-foreground: 30 20% 96%;
+    --popover: 25 12% 11%;
+    --popover-foreground: 30 20% 96%;
+    --primary: 346 72% 64%;
+    --primary-foreground: 25 20% 8%;
+    --primary-container: 346 30% 18%;
+    --secondary: 346 30% 22%;
+    --secondary-foreground: 30 20% 96%;
+    --muted: 25 10% 15%;
+    --muted-foreground: 30 10% 68%;
+    --accent: 346 28% 20%;
+    --accent-foreground: 346 70% 88%;
+    --destructive: 0 62% 50%;
     --destructive-foreground: 0 0% 100%;
-    --border: 0 0% 18%;
-    --input: 0 0% 18%;
-    --ring: 0 0% 97%;
-    --gold: 0 0% 97%;
-    --gold-light: 0 0% 80%;
-    --gold-dark: 0 0% 60%;
-    --beige: 0 0% 12%;
-    --beige-dark: 0 0% 8%;
-    --cream: 0 0% 6%;
-    --charcoal: 0 0% 97%;
-    --sidebar-background: 0 0% 4%;
-    --sidebar-foreground: 0 0% 97%;
-    --sidebar-primary: 0 0% 97%;
-    --sidebar-primary-foreground: 0 0% 7%;
-    --sidebar-accent: 0 0% 10%;
-    --sidebar-accent-foreground: 0 0% 97%;
-    --sidebar-border: 0 0% 18%;
-    --sidebar-ring: 0 0% 97%;
+    --success: 145 45% 48%;
+    --warning: 38 80% 58%;
+    --border: 25 10% 20%;
+    --input: 25 10% 20%;
+    --ring: 346 72% 64%;
+    --gold: 346 60% 70%;
+    --gold-light: 346 50% 82%;
+    --gold-dark: 346 55% 52%;
+    --rose: 346 72% 64%;
+    --rose-light: 346 40% 30%;
+    --beige: 25 10% 15%;
+    --beige-dark: 25 12% 11%;
+    --cream: 25 12% 8%;
+    --charcoal: 30 20% 96%;
+    --marble: 25 12% 10%;
+    --icon-light: 30 20% 92%;
+    --sidebar-background: 25 12% 6%;
+    --sidebar-foreground: 30 20% 96%;
+    --sidebar-primary: 346 72% 64%;
+    --sidebar-primary-foreground: 25 20% 8%;
+    --sidebar-accent: 25 10% 13%;
+    --sidebar-accent-foreground: 30 20% 96%;
+    --sidebar-border: 25 10% 20%;
+    --sidebar-ring: 346 72% 64%;
     --flamingo-btn-start: 346 54% 36%;
     --flamingo-btn-end: 346 48% 28%;
     --flamingo-btn-text: 0 0% 98%;
@@ -181,6 +188,62 @@
     --flamingo-btn-hover-start: 346 56% 40%;
     --flamingo-btn-hover-end: 346 50% 32%;
   }
+}
+
+/* Dark-mode compatibility layer: legacy hardcoded utilities follow the theme */
+.dark .bg-white,
+.dark .bg-gray-50,
+.dark .bg-gray-100,
+.dark .bg-gray-200,
+.dark .bg-slate-50,
+.dark .bg-slate-100,
+.dark .bg-\[\#fffdfd\],
+.dark .bg-\[\#fff8fa\],
+.dark .bg-\[\#f6f5f2\],
+.dark .bg-\[\#FCFAF8\] {
+  background-color: hsl(var(--card));
+}
+
+.dark .bg-white\/95 {
+  background-color: hsl(var(--card) / 0.95);
+}
+.dark .bg-white\/90 {
+  background-color: hsl(var(--card) / 0.9);
+}
+.dark .bg-white\/80 {
+  background-color: hsl(var(--card) / 0.8);
+}
+.dark .bg-white\/40 {
+  background-color: hsl(var(--card) / 0.4);
+}
+
+.dark .text-black,
+.dark .text-gray-900,
+.dark .text-gray-800,
+.dark .text-gray-700,
+.dark .text-slate-900,
+.dark .text-slate-800 {
+  color: hsl(var(--foreground));
+}
+
+.dark .text-gray-600,
+.dark .text-gray-500,
+.dark .text-gray-400,
+.dark .text-slate-600,
+.dark .text-slate-500 {
+  color: hsl(var(--muted-foreground));
+}
+
+.dark .border-gray-100,
+.dark .border-gray-200,
+.dark .border-gray-300,
+.dark .border-slate-100,
+.dark .border-slate-200 {
+  border-color: hsl(var(--border));
+}
+
+.dark img.invert-on-dark {
+  filter: brightness(0) invert(1);
 }
 
 @layer base {

@@ -46,7 +46,7 @@ const AdminCustomerExperiencePage = () => {
     try {
       const { error } = await supabase
         .from("site_settings")
-        .upsert({ key: CUSTOMER_EXPERIENCE_SETTING_KEY, value: settings as Json }, { onConflict: "key" });
+        .upsert({ key: CUSTOMER_EXPERIENCE_SETTING_KEY, value: settings as unknown as Json }, { onConflict: "key" });
       if (error) throw error;
       await queryClient.invalidateQueries({ queryKey: customerExperienceQueryKey });
       toast({ title: "تم الحفظ", description: "تم تحديث ظهور واجهات العميل." });
@@ -71,7 +71,7 @@ const AdminCustomerExperiencePage = () => {
         category="واجهة العميل"
         title="التحكم بالمتجر"
         description="إدارة ظهور صفحات العميل وأقسام الصفحة الرئيسية. تبقى المنتجات والعروض والمحتوى قابلة للتحرير من أقسام الإدارة المتخصصة."
-        actions={[{ label: "حفظ التغييرات", icon: Save, onClick: handleSave, disabled: isSaving }]}
+        actions={[{ label: "حفظ التغييرات", icon: Save, onClick: handleSave }]}
       />
 
       <Card>

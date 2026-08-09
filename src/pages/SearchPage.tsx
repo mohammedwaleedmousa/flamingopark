@@ -8,9 +8,8 @@ import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import ProductCard from '@/components/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
-import { PRODUCT_CARD_SELECT } from '@/lib/productCardData';
+import { PRODUCT_CARD_SELECT, mapProductCard } from '@/lib/productCardData';
 import { useSiteContent, getSiteText } from '@/hooks/useSiteContent';
-import { Product } from '@/store/useStore';
 import {
   Select,
   SelectContent,
@@ -29,35 +28,6 @@ interface SearchFilters {
   sortBy: 'relevance' | 'price_asc' | 'price_desc' | 'newest' | 'rating';
   inStockOnly: boolean;
 }
-
-type SearchProductRow = {
-  id: string; name: string | null; name_ar: string | null; slug: string; price: number | string;
-  cost_price?: number | string | null; discount: number | null; description: string | null; description_ar: string | null;
-  images: string[] | null; color_variants: { images?: string[] }[] | null; category: string | null; brand: string | null;
-  in_stock: boolean | null; countries: string[] | null; is_best_seller: boolean | null; is_featured: boolean | null;
-};
-
-const convertToProduct = (data: SearchProductRow): Product => ({
-  id: data.id,
-  name: data.name || '',
-  nameAr: data.name_ar || '',
-  slug: data.slug || '',
-  price: Number(data.price) || 0,
-  costPrice: data.cost_price === null || data.cost_price === undefined ? undefined : Number(data.cost_price),
-  discount: data.discount,
-  description: data.description || '',
-  descriptionAr: data.description_ar || '',
-  images:
-  data.images?.length > 0
-    ? data.images
-    : (data.color_variants?.[0]?.images || []),
-  category: data.category || '',
-  brand: data.brand || '',
-  inStock: data.in_stock || false,
-  countries: data.countries,
-  isBestSeller: data.is_best_seller,
-  isFeatured: data.is_featured,
-});
 
 const SearchPage = () => {
   const { data: content } = useSiteContent('search_page_');
@@ -133,7 +103,7 @@ const SearchPage = () => {
 
       const { data, error } = await q;
       if (error) throw error;
-      return (data || []).map((row) => convertToProduct(row as unknown as SearchProductRow));
+      return (data || []).map(mapProductCard);
     },
     enabled: query.trim().length > 0,
   });

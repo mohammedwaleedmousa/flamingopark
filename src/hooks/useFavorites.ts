@@ -2,16 +2,9 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { Product } from '@/store/useStore';
 import { supabase } from '@/integrations/supabase/client';
+import { mapProductCard } from '@/lib/productCardData';
 
 const syncedKey = (userId: string) => `flamingopark-favorites-db-synced:${userId}`;
-
-const toProduct = (p: any): Product => ({
-  id: p.id, name: p.name, nameAr: p.name_ar, slug: p.slug, price: Number(p.price),
-  originalPrice: p.original_price ? Number(p.original_price) : undefined,
-  discount: p.discount || undefined, description: p.description || '', descriptionAr: p.description_ar || '',
-  images: p.images || [], category: p.category || '', brand: p.brand || '', inStock: p.in_stock ?? true,
-  countries: p.countries || ['GLOBAL'], isFeatured: p.is_featured, isBestSeller: p.is_best_seller,
-});
 
 interface FavoritesState {
   favorites: Product[];
@@ -58,6 +51,6 @@ export const useFavorites = create<FavoritesState>()(persist((set, get) => ({
       .select('products(*)')
       .eq('user_id', userId)
       .order('created_at', { ascending: false });
-    if (!error) set({ favorites: (data || []).map((r: any) => r.products).filter(Boolean).map(toProduct) });
+    if (!error) set({ favorites: (data || []).map((r: any) => r.products).filter(Boolean).map((product: any) => mapProductCard(product)) });
   },
 }), { name: 'flamingopark-favorites' }));

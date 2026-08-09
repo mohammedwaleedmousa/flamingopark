@@ -7,6 +7,8 @@ import { useStore } from "@/store/useStore";
 import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, Tag } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
+import { firstProductImage, handleImageError, isUsableImageUrl, optimizeImage } from "@/lib/imageUrl";
+import { preloadCustomerRoute } from "@/lib/customerRoutePreload";
 
 const CartPage = () => {
   const { cart, updateQuantity, removeFromCart, getCartTotal } = useStore();
@@ -106,6 +108,9 @@ const CartPage = () => {
                     const discount = variant && variant.discount !== undefined ? variant.discount : item.product.discount;
                     const price = discount ? basePrice * (1 - discount / 100) : basePrice;
                     const itemTotal = price * item.quantity;
+                    const variantImage = variant?.images?.find(isUsableImageUrl);
+                    const itemImage = variantImage || firstProductImage(item.product);
+                    const productHref = `/product/${item.product.slug}`;
 
                     return (
                       <motion.div
@@ -114,16 +119,21 @@ const CartPage = () => {
                         exit={itemVariants.exit}
                       >
                         <Link
-                          to={`/product/${item.product.slug}`}
+                          to={productHref}
+                          onPointerEnter={() => preloadCustomerRoute(productHref)}
+                          onFocus={() => preloadCustomerRoute(productHref)}
+                          onTouchStart={() => preloadCustomerRoute(productHref)}
                           className="flex gap-4 p-4 md:p-6 border border-border bg-card hover:border-primary/50 hover:bg-primary/5 transition-all duration-300 group rounded-xl shadow-sm hover:shadow-md"
                         >
                           {/* Product Image */}
                           <div className="w-24 h-32 md:w-32 md:h-40 flex-shrink-0 bg-muted overflow-hidden rounded-lg relative">
-                            {((variant && variant.images && variant.images[0]) || item.product.images?.[0]) && (
+                            {itemImage !== "/placeholder.svg" && (
                               <img
-                                src={(variant && variant.images && variant.images[0]) || item.product.images[0]}
+                                src={optimizeImage(itemImage, 420, 88)}
                                 alt={item.product.nameAr}
                                 loading="lazy"
+                                decoding="async"
+                                onError={handleImageError}
                                 className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                               />
                             )}
@@ -229,6 +239,8 @@ const CartPage = () => {
                   {/* Checkout Button */}
                   <Button
                     onClick={() => navigate("/checkout")}
+                    onPointerEnter={() => preloadCustomerRoute('/checkout')}
+                    onFocus={() => preloadCustomerRoute('/checkout')}
                     className="w-full h-12 rounded-lg btn-gold text-sm font-heading tracking-wide"
                   >
                     {getSiteText(content, "cart_checkout_cta", "إتمام الطلب")}

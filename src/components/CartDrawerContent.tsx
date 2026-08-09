@@ -3,6 +3,8 @@ import { X, Minus, Plus, ShoppingBag, Trash2 } from 'lucide-react';
 import { useStore } from '@/store/useStore';
 import { useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
+import { firstProductImage, handleImageError, isUsableImageUrl, optimizeImage } from '@/lib/imageUrl';
+import { preloadCustomerRoute } from '@/lib/customerRoutePreload';
 
 const CartDrawerContent = () => {
   const { cart, isCartOpen, closeCart, removeFromCart, updateQuantity, getCartTotal, clearCart } = useStore();
@@ -61,6 +63,8 @@ const CartDrawerContent = () => {
                       closeCart();
                       navigate('/products');
                     }}
+                    onPointerEnter={() => preloadCustomerRoute('/products')}
+                    onFocus={() => preloadCustomerRoute('/products')}
                     className="mt-6 btn-gold"
                   >
                     تصفح المنتجات
@@ -84,6 +88,8 @@ const CartDrawerContent = () => {
                       : 0;
 
                     const itemTotalPrice = itemPrice + accessoriesTotal;
+                    const variantImage = variant?.images?.find(isUsableImageUrl);
+                    const itemImage = variantImage || firstProductImage(item.product);
 
                     return (
                       <motion.div
@@ -95,10 +101,11 @@ const CartDrawerContent = () => {
                         className="flex gap-4 p-4 bg-muted/50 rounded-lg"
                       >
                         <img
-                          src={(variant && variant.images && variant.images[0]) || item.product.images[0]}
+                          src={optimizeImage(itemImage, 320, 88)}
                           alt={item.product.nameAr}
                           loading="lazy"
                           decoding="async"
+                          onError={handleImageError}
                           className="w-20 h-20 object-cover rounded-md"
                         />
                         <div className="flex-1">
@@ -179,6 +186,8 @@ const CartDrawerContent = () => {
                 </div>
                 <Button
                   onClick={handleCheckout}
+                  onPointerEnter={() => preloadCustomerRoute('/checkout')}
+                  onFocus={() => preloadCustomerRoute('/checkout')}
                   className="w-full btn-gold py-6 font-heading tracking-wider"
                 >
                   إتمام الشراء

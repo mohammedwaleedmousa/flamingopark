@@ -14,26 +14,37 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { MotionConfig } from "framer-motion";
 import CustomerAssistantEntry from "@/components/CustomerAssistantEntry";
 import { ThemeProvider } from "next-themes";
+import {
+  loadAccountPage,
+  loadCartPage,
+  loadCategoriesPage,
+  loadCheckoutPage,
+  loadFavoritesPage,
+  loadHomePage,
+  loadProductDetailPage,
+  loadProductsPage,
+  preloadCoreCustomerRoutes,
+} from "@/lib/customerRoutePreload";
 
 // Temporary launch switch: keep the assistant implementation ready without showing its entry button.
 const SHOW_CUSTOMER_ASSISTANT = false;
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
-const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
-const HomePage = lazy(() => import("./pages/HomePage"));
-const ProductsPage = lazy(() => import("./pages/ProductsPage"));
-const ProductDetailPage = lazy(() => import("./pages/ProductDetailPage"));
+const FavoritesPage = lazy(loadFavoritesPage);
+const HomePage = lazy(loadHomePage);
+const ProductsPage = lazy(loadProductsPage);
+const ProductDetailPage = lazy(loadProductDetailPage);
 const BrandPage = lazy(() => import("./pages/BrandPage"));
 const BrandProductsPage = lazy(() => import("./pages/BrandProductsPage"));
 const AllBrandsPage = lazy(() => import("./pages/AllBrandsPage"));
 const BrandSectionPage = lazy(() => import("./pages/BrandSectionPage"));
-const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
+const CheckoutPage = lazy(loadCheckoutPage);
 const OrderConfirmationPage = lazy(() => import("./pages/OrderConfirmationPage"));
 const OffersPage = lazy(() => import("./pages/OffersPage"));
 const ReviewsPage = lazy(() => import("./pages/ReviewsPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const QRCodePage = lazy(() => import("./pages/QRCodePage"));
-const CategoriesPage = lazy(() => import("./pages/CategoriesPage"));
+const CategoriesPage = lazy(loadCategoriesPage);
 const BestSellersPage = lazy(() => import("./pages/BestSellersPage"));
 const NewArrivalsPage = lazy(() => import("./pages/NewArrivalsPage"));
 const CuratedPage = lazy(() => import("./pages/CuratedPage"));
@@ -41,8 +52,8 @@ const NewSeasonPage = lazy(() => import("./pages/NewSeasonPage"));
 const TopSellingPage = lazy(() => import("./pages/TopSellingPage"));
 const SearchPage = lazy(() => import("./pages/SearchPage"));
 const SeasonalOffersPage = lazy(() => import("./pages/SeasonalOffersPage"));
-const CartPage = lazy(() => import("./pages/CartPage"));
-const AccountPage = lazy(() => import("./pages/AccountPage"));
+const CartPage = lazy(loadCartPage);
+const AccountPage = lazy(loadAccountPage);
 const MyOrdersPage = lazy(() => import("./pages/MyOrdersPage"));
 const MyShipmentsPage = lazy(() => import("./pages/MyShipmentsPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
@@ -178,6 +189,22 @@ const App = () => {
   // هنا يتم تجهيز العملات عند تشغيل الموقع
   useEffect(() => {
     hydrateCurrencies();
+  }, []);
+
+  useEffect(() => {
+    if (window.location.pathname.startsWith("/admin")) return;
+    const idleWindow = window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (handle: number) => void;
+    };
+    const handle = idleWindow.requestIdleCallback
+      ? idleWindow.requestIdleCallback(preloadCoreCustomerRoutes, { timeout: 2500 })
+      : window.setTimeout(preloadCoreCustomerRoutes, 1200);
+
+    return () => {
+      if (idleWindow.cancelIdleCallback) idleWindow.cancelIdleCallback(handle);
+      else window.clearTimeout(handle);
+    };
   }, []);
 
   return (

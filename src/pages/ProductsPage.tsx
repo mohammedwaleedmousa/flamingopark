@@ -15,6 +15,7 @@ import { Slider } from "@/components/ui/slider";
 import { useLocation, useNavigationType } from "react-router-dom";
 import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
 import { clearCatalogScroll, restoreCatalogScroll } from "@/lib/catalogScroll";
+import { handleImageError, optimizeImage } from "@/lib/imageUrl";
 if ("scrollRestoration" in window.history) {
   // Let the browser restore scroll on back/forward so we return to the same product row.
   window.history.scrollRestoration = "auto";
@@ -157,7 +158,19 @@ const QuickView = ({ product, onClose, isMobile }: { product: CatalogProduct | n
         <div className="space-y-3">
           <div className="w-full aspect-[4/3] bg-muted rounded-xl overflow-hidden flex items-center justify-center">
             {images?.[activeImage] ? (
-              <img loading="lazy" decoding="async" width={1200} height={900} sizes="(max-width: 768px) 100vw, 50vw" src={images[activeImage]} alt={product.nameAr} className="w-full h-full object-cover" />
+              <img
+                loading="eager"
+                fetchPriority="high"
+                decoding="async"
+                width={1200}
+                height={900}
+                sizes="(max-width: 768px) 100vw, 50vw"
+                src={optimizeImage(images[activeImage], 1200, 90)}
+                srcSet={`${optimizeImage(images[activeImage], 640, 88)} 640w, ${optimizeImage(images[activeImage], 1200, 90)} 1200w`}
+                onError={handleImageError}
+                alt={product.nameAr}
+                className="w-full h-full object-cover"
+              />
             ) : (
               <div className="text-muted-foreground">No image</div>
             )}
@@ -166,7 +179,7 @@ const QuickView = ({ product, onClose, isMobile }: { product: CatalogProduct | n
           <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
             {(images || []).map((img, idx) => (
               <button key={idx} onClick={() => setActiveImage(idx)} className={`w-20 h-14 rounded-md overflow-hidden border ${activeImage===idx ? 'ring-2 ring-foreground' : ''}`}>
-                <img loading="lazy" src={img} className="w-full h-full object-cover" />
+                <img loading="lazy" decoding="async" src={optimizeImage(img, 240, 84)} onError={handleImageError} alt="" className="w-full h-full object-cover" />
               </button>
             ))}
           </div>

@@ -1,6 +1,6 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { TransformComponent, TransformWrapper } from 'react-zoom-pan-pinch';
 import Navbar from '@/components/Navbar';
@@ -24,7 +24,13 @@ import {
   Truck, Shield, RotateCcw, Star, Package, ChevronDown,
 } from 'lucide-react';
 import { FaWhatsapp } from "react-icons/fa";
-import { optimizeImage, handleImageError } from "@/lib/imageUrl";
+import {
+  collectProductImageUrls,
+  filterUsableImageUrls,
+  firstProductImage,
+  optimizeImage,
+  handleImageError,
+} from "@/lib/imageUrl";
 const handleWhatsApp = () => {
   window.open("https://wa.me/967778579777", "_blank");
 };
@@ -51,15 +57,25 @@ const ProductDetailPage = () => {
       if (error) throw error;
       if (!data) return null;
       const accessories = (data as any).accessories || [];
+      const colorVariants = (((data as any).color_variants || []) as Array<{ name: string; hex: string; hex2?: string; images: string[]; sizes?: Array<string | { size: string; stock: number }>; stock?: number }>).map((variant) => ({
+        ...variant,
+        images: filterUsableImageUrls(variant.images),
+      }));
+      const qualityVariants = (((data as any).quality_variants || []) as Array<{ id?: string; name: string; price: number; description?: string; images?: string[]; in_stock?: boolean }>).map((variant) => ({
+        ...variant,
+        images: filterUsableImageUrls(variant.images),
+      }));
+      const productImages = collectProductImageUrls({
+        images: data.images,
+        colorVariants,
+        qualityVariants,
+      });
       return {
         id: data.id, name: data.name, nameAr: data.name_ar, slug: data.slug,
         price: Number(data.price), costPrice: data.cost_price ? Number(data.cost_price) : undefined,
         originalPrice: data.original_price ? Number(data.original_price) : undefined,
         discount: data.discount || undefined, description: data.description || '',
-        descriptionAr: data.description_ar || '', images:
-        data.images?.length > 0
-    ? data.images
-    : ((data as any).color_variants?.[0]?.images || []),
+        descriptionAr: data.description_ar || '', images: productImages,
         category: data.category, categoryId: (data as any).category_id || undefined, brand: data.brand, inStock: data.in_stock ?? true,
         stockQuantity: typeof (data as any).stock_quantity === "number" ? (data as any).stock_quantity : undefined,
         countries: (data.countries || ['GLOBAL']) as Product['countries'],
@@ -67,11 +83,11 @@ const ProductDetailPage = () => {
         hasSizes: (data as any).has_sizes ?? false, sizes: (data as any).sizes || [],
         accessories: accessories as { name: string; name_ar: string; price: number; image_url?: string; description?: string; description_ar?: string }[],
         features: ((data as any).features || []) as { icon: string; title: string; desc: string }[],
-        colorVariants: ((data as any).color_variants || []) as { name: string; hex: string; hex2?: string; images: string[];sizes?: Array<string | { size: string; stock: number }>; stock?: number }[],
+        colorVariants,
         specs: ((data as any).specs || []) as { label: string; value: string }[],
         returnPolicy: (data as any).return_policy as string | null,
         hasQualityVariants: (data as any).has_quality_variants ?? false,
-        qualityVariants: ((data as any).quality_variants || []) as { id?: string; name: string; price: number; description?: string; images?: string[]; in_stock?: boolean }[],
+        qualityVariants,
       };
     },
     enabled: !!slug,
@@ -79,26 +95,60 @@ const ProductDetailPage = () => {
     gcTime: 1000 * 60 * 10,
   });
 
-    useEffect(() => {
-      if (
-        product?.colorVariants &&
-        product.colorVariants.length > 0 &&
-        selectedColorIdx === null
-      ) {
-        setSelectedColorIdx(0);
-      }
-    }, [product, selectedColorIdx]);
-    // تحميل نسخ العرض مسبقاً حتى يكون التبديل بين الصور والألوان سريعاً.
-    useEffect(() => {
-      if (!product?.colorVariants) return;
+  useEffect(() => {
+    if (!product) return;
+    const firstColorWithImage = product.colorVariants.findIndex((variant) => variant.images.length > 0);
+    setSelectedColorIdx(product.colorVariants.length > 0 ? Math.max(0, firstColorWithImage) : null);
+    setSelectedImage(0);
+    setSelectedQualityIdx(null);
+  }, [product]);
 
-      product.colorVariants.forEach((color) => {
-        color.images?.forEach((src) => {
-          const img = new Image();
-          img.src = optimizeImage(src, 1400, 82);
-        });
+  const activeQuality = useMemo(() => (
+    product?.hasQualityVariants && selectedQualityIdx !== null
+      ? product.qualityVariants?.[selectedQualityIdx] || null
+      : null
+  ), [product, selectedQualityIdx]);
+
+  const activeColorVariant = useMemo(() => (
+    product && selectedColorIdx !== null ? product.colorVariants?.[selectedColorIdx] || null : null
+  ), [product, selectedColorIdx]);
+
+  const displayImages = useMemo(() => {
+    const qualityImages = filterUsableImageUrls(activeQuality?.images);
+    if (qualityImages.length > 0) return qualityImages;
+
+    const colorImages = filterUsableImageUrls(activeColorVariant?.images);
+    if (colorImages.length > 0) return colorImages;
+
+    const fallbackImages = product ? collectProductImageUrls(product) : [];
+    return fallbackImages.length > 0 ? fallbackImages : ['/placeholder.svg'];
+  }, [activeColorVariant, activeQuality, product]);
+
+  useEffect(() => {
+    if (selectedImage < displayImages.length) return;
+    setSelectedImage(0);
+  }, [displayImages.length, selectedImage]);
+
+  // حمّل الصورتين المجاورتين فقط؛ هذا يجعل الأسهم فورية من دون استنزاف الباقة.
+  useEffect(() => {
+    if (displayImages.length < 2) return;
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    if (connection?.saveData || connection?.effectiveType?.includes('2g')) return;
+
+    const handle = window.setTimeout(() => {
+      const indexes = new Set([
+        (selectedImage + 1) % displayImages.length,
+        (selectedImage - 1 + displayImages.length) % displayImages.length,
+      ]);
+      indexes.forEach((index) => {
+        const image = new Image();
+        image.decoding = 'async';
+        image.src = optimizeImage(displayImages[index], 1800, 90);
       });
-    }, [product]);
+    }, 120);
+
+    return () => window.clearTimeout(handle);
+  }, [displayImages, selectedImage]);
 
   // Default return policy from site settings
   const { data: defaultReturnPolicy } = useQuery({
@@ -130,7 +180,7 @@ const ProductDetailPage = () => {
     const productUrl = `${siteUrl}/product/${encodeURIComponent(product.slug)}`;
     const title = `${product.nameAr || product.name} | Flamingo Park`;
     const description = product.descriptionAr || product.description || `تسوّق ${product.nameAr || product.name} من Flamingo Park.`;
-    const image = product.images[0] || `${siteUrl}/icons/flamingo.jpeg`;
+    const image = firstProductImage(product) || `${siteUrl}/icons/flamingo.jpeg`;
     const previousTitle = document.title;
     const setMeta = (selector: string, content: string) => {
       const element = document.head.querySelector<HTMLMetaElement>(selector);
@@ -198,9 +248,6 @@ const ProductDetailPage = () => {
   );
  
   const accessoriesTotal = product.accessories?.reduce((sum, acc, idx) => sum + acc.price * (accessoryQuantities[`${idx}-${acc.name_ar}`] || 0), 0) || 0;
-  // Quality variant swap: overrides price/description/images when selected
-  const activeQuality = product.hasQualityVariants && selectedQualityIdx !== null
-    ? product.qualityVariants?.[selectedQualityIdx] : null;
   const effectivePrice = activeQuality ? Number(activeQuality.price) : product.price;
   const effectiveDescription = activeQuality?.description || product.descriptionAr;
   // السعر المعروض هو السعر المُدخل مباشرة؛ لا نُطبّق نسبة الخصم رياضياً هنا
@@ -208,11 +255,6 @@ const ProductDetailPage = () => {
   const discountedPrice = effectivePrice;
   const totalPrice = discountedPrice + accessoriesTotal;
   const currency = currencySymbol;
-  const activeColorVariant = selectedColorIdx !== null ? product.colorVariants?.[selectedColorIdx] : null;
-  const qualityImages = activeQuality?.images && activeQuality.images.length > 0 ? activeQuality.images : null;
-  const displayImages = qualityImages
-    ? qualityImages
-    : (activeColorVariant && activeColorVariant.images.length > 0 ? activeColorVariant.images : product.images);
   // الأحجام والكميات محفوظة داخل اللون؛ نستمر بعرض المقاسات القديمة عند وجودها.
   const sizesToShow = (activeColorVariant?.sizes && activeColorVariant.sizes.length > 0
     ? activeColorVariant.sizes
@@ -313,7 +355,18 @@ const ProductDetailPage = () => {
                     doubleClick={{ disabled: true }}
                   >
                     <TransformComponent wrapperClass="!h-full !w-full !overflow-hidden" contentClass="!h-full !w-full">
-                      <img src={optimizeImage(displayImages?.[selectedImage], 1400, 82)} alt={product.nameAr} fetchPriority="high" decoding="async" onError={handleImageError} className="h-full w-full object-cover" draggable={false} />
+                      <img
+                        src={optimizeImage(displayImages[selectedImage], 1800, 90)}
+                        srcSet={`${optimizeImage(displayImages[selectedImage], 720, 88)} 720w, ${optimizeImage(displayImages[selectedImage], 1200, 90)} 1200w, ${optimizeImage(displayImages[selectedImage], 1800, 90)} 1800w`}
+                        sizes="(max-width: 1024px) 100vw, 58vw"
+                        alt={product.nameAr}
+                        loading="eager"
+                        fetchPriority="high"
+                        decoding="async"
+                        onError={handleImageError}
+                        className="h-full w-full object-cover"
+                        draggable={false}
+                      />
                     </TransformComponent>
                   </TransformWrapper>
                 </motion.div>
@@ -359,7 +412,7 @@ const ProductDetailPage = () => {
                       aria-label={`عرض الصورة ${i + 1}`}
                       aria-current={selectedImage === i ? 'true' : undefined}
                       className={`shrink-0 w-[72px] h-[88px] rounded-xl overflow-hidden border-2 bg-muted transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring ${selectedImage === i ? 'border-gold shadow-sm' : 'border-transparent hover:border-border'}`}>
-                      <img src={optimizeImage(img, 240, 80)} alt="" loading="lazy" decoding="async" width={144} height={176} onError={handleImageError} className="w-full h-full object-cover" />
+                      <img src={optimizeImage(img, 240, 84)} alt="" loading="lazy" decoding="async" width={144} height={176} onError={handleImageError} className="w-full h-full object-cover" />
                     </button>
                   ))}
                 </div>

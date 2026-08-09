@@ -5,6 +5,8 @@ import { Product } from "@/store/useStore";
 import { useStore } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
 import { toast } from "@/hooks/use-toast";
+import { firstProductImage, handleImageError, optimizeImage } from "@/lib/imageUrl";
+import { preloadCustomerRoute } from "@/lib/customerRoutePreload";
 
 interface ProductCardMinimalProps {
   product: Product;
@@ -38,6 +40,8 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
   };
 
   const discountedPrice = product.discount ? product.price * (1 - product.discount / 100) : product.price;
+  const productImage = firstProductImage(product);
+  const productHref = `/product/${product.slug}`;
 
   return (
     <motion.div
@@ -50,18 +54,23 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
       }}
       className="group h-full"
     >
-      <Link to={`/product/${product.slug}`} className="block h-full">
+      <Link
+        to={productHref}
+        onPointerEnter={() => preloadCustomerRoute(productHref)}
+        onFocus={() => preloadCustomerRoute(productHref)}
+        onTouchStart={() => preloadCustomerRoute(productHref)}
+        className="block h-full"
+      >
         <div className="relative flex flex-col h-full overflow-hidden rounded-lg bg-beige border-2 border-gold transition-all duration-300 hover:border-gold-light hover:shadow-[0_10px_30px_-8px_hsl(var(--gold)/0.3)]">
           {/* Image */}
           <div className="w-full flex-1 overflow-hidden relative">
-            {product.images[0] ? (
+            {productImage !== "/placeholder.svg" ? (
               <img
-                src={product.images[0].includes('unsplash.com') 
-                  ? product.images[0].replace(/w=\d+/, 'w=400').replace(/&q=\d+/, '&q=75') + (product.images[0].includes('?') ? '' : '?w=400&q=75')
-                  : product.images[0]}
+                src={optimizeImage(productImage, 640, 88)}
                 alt={product.nameAr}
                 loading="lazy"
                 decoding="async"
+                onError={handleImageError}
                 className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105"
               />
             ) : (

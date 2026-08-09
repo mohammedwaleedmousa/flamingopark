@@ -28,15 +28,6 @@ export default defineConfig(({ mode }) => ({
             "react-router-dom",
           ],
 
-          charts: [
-            "recharts",
-          ],
-
-          pdf: [
-            "jspdf",
-            "html2canvas",
-          ],
-
           motion: [
             "framer-motion",
           ],

@@ -7,7 +7,9 @@ import { useCurrency } from "@/lib/currency";
 import { useFavorites } from "@/hooks/useFavorites";
 import { Heart, ShoppingBag } from "lucide-react";
 import { saveCatalogScroll } from "@/lib/catalogScroll";
-import { optimizeImage, handleImageError } from "@/lib/imageUrl";
+import { firstProductImage, optimizeImage, handleImageError } from "@/lib/imageUrl";
+import { preloadCustomerRoute } from "@/lib/customerRoutePreload";
+import { preloadCartDrawer } from "@/lib/cartDrawerPreload";
 
 type ColorVariant = { name?: string; hex?: string; images?: string[] };
 type DisplayProduct = Product & { colorVariants?: ColorVariant[]; color_variants?: ColorVariant[]; rating?: number };
@@ -57,26 +59,23 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
     setBagPop(true);
     setTimeout(() => setBagPop(false), 400);
     toast({ title: "تمت الإضافة إلى السلة" });
+    void preloadCartDrawer();
     openCart();
   };
 
   const aspectClass = size === 'large' ? 'aspect-[4/5] sm:aspect-[3/4]' : size === 'medium' ? 'aspect-[3/5] sm:aspect-[3/4]' : 'aspect-[4/8] sm:aspect-[3/4]';
-  const getProductImage = () => {
-    // عرض صورة أول لون مضاف للمنتج
-    const variants = product.colorVariants || product.color_variants;
-    if (Array.isArray(variants) && variants.length > 0) {
-      const firstColorImage = variants[0]?.images?.[0];
-      if (firstColorImage) {
-        return firstColorImage;
-      }
-    }
-    if (product.images?.length > 0) {
-      return product.images[0];
-    }
-    return "/placeholder.svg";
-  };
+  const productImage = firstProductImage(product);
+  const productHref = `/product/${product.slug}`;
   return (
-    <Link to={`/product/${product.slug}`} onClick={() => saveCatalogScroll(`${location.pathname}${location.search}`)} className="group block" dir="rtl">
+    <Link
+      to={productHref}
+      onClick={() => saveCatalogScroll(`${location.pathname}${location.search}`)}
+      onPointerEnter={() => preloadCustomerRoute(productHref)}
+      onFocus={() => preloadCustomerRoute(productHref)}
+      onTouchStart={() => preloadCustomerRoute(productHref)}
+      className="group block"
+      dir="rtl"
+    >
       <div
         className={`relative ${aspectClass}
           bg-white
@@ -92,7 +91,8 @@ const ProductCard = ({ product, badge, size = 'small', onQuickView }: ProductCar
       {/* IMAGE FULL AREA */}
       <div className="relative flex-1 overflow-hidden bg-neutral-100 ">
         <img
-          src={optimizeImage(getProductImage(), 800, 88)}
+          src={optimizeImage(productImage, 800, 88)}
+          srcSet={`${optimizeImage(productImage, 420, 86)} 420w, ${optimizeImage(productImage, 640, 88)} 640w, ${optimizeImage(productImage, 900, 88)} 900w`}
           alt={product.nameAr}
           loading="lazy"
           decoding="async"

@@ -14,6 +14,7 @@ import {
   convertPrice,
   hydrateCurrencies
 } from '@/lib/currency';
+import { handleImageError, optimizeImage } from '@/lib/imageUrl';
 const STORE_WHATSAPP = "967778579777";
 interface SelectedAccessory {
   name: string;
@@ -320,8 +321,10 @@ const OrderConfirmationPage = () => {
                   <div key={index} className="p-3 bg-gray-50 rounded-lg">
                     <div className="flex items-start gap-4">
                       <img
-                        src={item.product_image}
+                        src={optimizeImage(item.product_image, 320, 88)}
                         loading="lazy"
+                        decoding="async"
+                        onError={handleImageError}
                         alt={item.product_name}
                         className="w-16 h-16 object-cover rounded-md print:w-12 print:h-12"
                       />

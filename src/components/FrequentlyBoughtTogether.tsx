@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { Check, Plus, ShoppingBag } from "lucide-react";
 import { Product, useStore } from "@/store/useStore";
 import { toast } from "@/hooks/use-toast";
+import { firstProductImage, handleImageError, optimizeImage } from "@/lib/imageUrl";
+import { preloadCustomerRoute } from "@/lib/customerRoutePreload";
 
 interface Props {
   current: Product;
@@ -46,13 +48,20 @@ const FrequentlyBoughtTogether = ({ current, related, currency = "ر.ي" }: Prop
         <div className="flex flex-wrap items-start gap-3 md:gap-5">
           {all.map((p, i) => (
             <div key={p.id} className="flex items-center gap-3 md:gap-6">
-              <Link to={`/product/${p.slug}`} className="group block w-28 md:w-36">
+              <Link
+                to={`/product/${p.slug}`}
+                onPointerEnter={() => preloadCustomerRoute(`/product/${p.slug}`)}
+                onFocus={() => preloadCustomerRoute(`/product/${p.slug}`)}
+                className="group block w-28 md:w-36"
+              >
                 <div className="relative aspect-[4/5] overflow-hidden border border-border bg-muted">
-                  {p.images?.[0] && (
+                  {firstProductImage(p) !== "/placeholder.svg" && (
                     <img
-                      src={p.images[0]}
+                      src={optimizeImage(firstProductImage(p), 420, 88)}
                       alt={p.nameAr}
                       loading="lazy"
+                      decoding="async"
+                      onError={handleImageError}
                       className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105"
                     />
                   )}

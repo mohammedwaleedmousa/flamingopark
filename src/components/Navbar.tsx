@@ -30,6 +30,8 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import { useCustomerNotifications } from "@/hooks/useCustomerNotifications";
 import { useCustomerExperience } from "@/hooks/useCustomerExperience";
+import { preloadCustomerRoute } from "@/lib/customerRoutePreload";
+import { preloadCartDrawer } from "@/lib/cartDrawerPreload";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -63,7 +65,14 @@ const NavItem = ({
   badge?: number | string;
   onNavigate?: () => void;
 }) => (
-  <NavLink to={to} end={to === "/home"} onClick={onNavigate}>
+  <NavLink
+    to={to}
+    end={to === "/home"}
+    onClick={onNavigate}
+    onPointerEnter={() => preloadCustomerRoute(to)}
+    onFocus={() => preloadCustomerRoute(to)}
+    onTouchStart={() => preloadCustomerRoute(to)}
+  >
     {({ isActive }) => (
       <div
         className={`
@@ -186,6 +195,8 @@ const Navbar = () => {
               <SheetTrigger asChild>
                 <button
                   onClick={() => setMenuOpen(true)}
+                  onPointerEnter={() => preloadCustomerRoute('/products')}
+                  onFocus={() => preloadCustomerRoute('/products')}
                   className="
                     p-2 rounded-xl
                     hover:bg-pink-50
@@ -315,6 +326,8 @@ const Navbar = () => {
             </Sheet>
             <button
               onClick={() => setIsSearchOpen((v) => !v)}
+              onPointerEnter={() => preloadCustomerRoute('/products')}
+              onFocus={() => preloadCustomerRoute('/products')}
               className="
                 p-2 rounded-xl
                 hover:bg-pink-50
@@ -337,6 +350,8 @@ const Navbar = () => {
           {/* Center wordmark */}
           <Link
             to="/home"
+            onPointerEnter={() => preloadCustomerRoute('/home')}
+            onFocus={() => preloadCustomerRoute('/home')}
             className="
               absolute left-1/2 -translate-x-1/2
               text-[14px] md:text-xl
@@ -383,7 +398,13 @@ const Navbar = () => {
               </DropdownMenuContent>
             </DropdownMenu>
             <button
-              onClick={openCart}
+              onClick={() => {
+                void preloadCartDrawer();
+                openCart();
+              }}
+              onPointerEnter={() => { void preloadCartDrawer(); }}
+              onFocus={() => { void preloadCartDrawer(); }}
+              onTouchStart={() => { void preloadCartDrawer(); }}
               className="
                 relative p-2 rounded-xl
                 hover:bg-pink-50

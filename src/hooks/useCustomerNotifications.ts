@@ -73,6 +73,7 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
   const deletedIdsRef = useRef<Set<string>>(readLocalSet(DELETED_KEY));
 
   useEffect(() => {
+    if (!enabled) return;
     let mounted = true;
     const loadCustomer = async () => {
       const savedCustomer = localStorage.getItem("customer");
@@ -97,7 +98,7 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [enabled]);
 
   const notificationsQuery = useQuery({
     queryKey: ["customer-notifications", userId, userPhone, customerId],

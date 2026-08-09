@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Plus, Trash2, Upload, X } from 'lucide-react';
 import { prepareImageUpload } from "@/lib/prepareImageUpload";
+import { handleImageError } from "@/lib/imageUrl";
 
 export interface VariantSize {
   size: string;
@@ -23,10 +24,11 @@ export interface ColorVariant {
 interface Props {
   value: ColorVariant[];
   onChange: (v: ColorVariant[]) => void;
-  
+  onUploadingChange?: (uploading: boolean) => void;
+  disabled?: boolean;
 }
 
-const ColorVariantsEditor = ({ value, onChange }: Props) => {
+const ColorVariantsEditor = ({ value, onChange, onUploadingChange, disabled = false }: Props) => {
   const [newColor, setNewColor] = useState({
     name: '',
     hex: '#F4A6B8',
@@ -35,6 +37,22 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
   });
 
   const [uploading, setUploading] = useState<number | null>(null);
+  const [previewImages, setPreviewImages] = useState<Record<number, string[]>>({});
+  const valueRef = useRef(value);
+  const previewImagesRef = useRef(previewImages);
+
+  useEffect(() => {
+    valueRef.current = value;
+  }, [value]);
+
+  useEffect(() => {
+    previewImagesRef.current = previewImages;
+  }, [previewImages]);
+
+  useEffect(() => () => {
+    Object.values(previewImagesRef.current).flat().forEach(URL.revokeObjectURL);
+    onUploadingChange?.(false);
+  }, [onUploadingChange]);
 
   const addColor = () => {
     if (!newColor.name.trim()) {
@@ -66,11 +84,13 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
   };
 
   const removeColor = (i: number) => {
+    if (uploading !== null) return;
     onChange(value.filter((_, idx) => idx !== i));
   };
 
   const uploadImage = async (colorIdx: number, files: FileList) => {
-    if (!value[colorIdx]?.name) {
+    if (disabled || uploading !== null) return;
+    if (!valueRef.current[colorIdx]?.name) {
       toast({
         title: 'حدد اسم اللون أولاً',
         variant: 'destructive',
@@ -79,30 +99,22 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
     }
 
     setUploading(colorIdx);
+    onUploadingChange?.(true);
     let previewUrls: string[] = [];
 
     try {
       const fileArray = Array.from(files);
-      const currentImages = value[colorIdx].images.length;
+      const currentImages = valueRef.current[colorIdx].images.length;
       if (currentImages + fileArray.length > 5) {
         toast({
           title: "الحد الأقصى هو 5 صور لكل لون",
           variant: "destructive",
         });
-
-        setUploading(null);
         return;
       }
 
-      
-
       previewUrls = fileArray.map((file) => URL.createObjectURL(file));
-      const optimistic = [...value];
-      optimistic[colorIdx] = {
-        ...optimistic[colorIdx],
-        images: [...(optimistic[colorIdx].images || []), ...previewUrls],
-      };
-      onChange(optimistic);
+      setPreviewImages((current) => ({ ...current, [colorIdx]: previewUrls }));
 
       const uploadPromises = fileArray.map(async (file) => {
   const extension = file.name.split('.').pop()?.toLowerCase();
@@ -119,15 +131,15 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
   let finalFile: File;
   try {
     finalFile = await prepareImageUpload(file, {
-      maxSizeMB: 0.25,
-      maxWidthOrHeight: 800,
+      maxSizeMB: 1.2,
+      maxWidthOrHeight: 2000,
     });
   } catch (error: any) {
     console.error('IMAGE PREP ERROR:', file.name, error);
     throw new Error(`تعذر معالجة صورة ${file.name} (${error?.message || 'خطأ غير معروف'})`);
   }
 
-  const fileName = `color-variants/${crypto.randomUUID()}`;
+  const fileName = `color-variants/${crypto.randomUUID()}.webp`;
 
   const { error } = await supabase.storage
     .from('uploads')
@@ -143,28 +155,32 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
   return data.publicUrl;
 });
 
-      const urls = await Promise.all(uploadPromises);
+      const results = await Promise.allSettled(uploadPromises);
+      const urls = results
+        .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
+        .map((result) => result.value);
+      const failed = results.filter((result) => result.status === 'rejected');
 
-      previewUrls.forEach(URL.revokeObjectURL);
-      const next = [...value];
-      next[colorIdx] = {
-        ...next[colorIdx],
-        images: [...(next[colorIdx].images || []).filter((image) => !previewUrls.includes(image)), ...urls],
-      };
+      if (urls.length > 0) {
+        const current = valueRef.current;
+        const next = current.map((variant, index) => index === colorIdx
+          ? { ...variant, images: [...(variant.images || []), ...urls] }
+          : variant);
+        valueRef.current = next;
+        onChange(next);
+      }
 
-      onChange(next);
-
-      toast({
-        title: `تم رفع ${urls.length} صور`,
-      });
+      if (failed.length > 0) {
+        const firstError = failed[0] as PromiseRejectedResult;
+        toast({
+          title: urls.length > 0 ? `تم رفع ${urls.length} صور وتعذر رفع ${failed.length}` : 'فشل رفع الصور',
+          description: firstError.reason?.message || 'تعذر رفع بعض الصور',
+          variant: 'destructive',
+        });
+      } else {
+        toast({ title: `تم رفع ${urls.length} صور` });
+      }
     } catch (error: any) {
-      previewUrls.forEach(URL.revokeObjectURL);
-      const next = [...value];
-      next[colorIdx] = {
-        ...next[colorIdx],
-        images: (next[colorIdx].images || []).filter((image) => !previewUrls.includes(image)),
-      };
-      onChange(next);
       console.error('COLOR UPLOAD ERROR:', error);
       toast({
         title: 'فشل رفع الصور',
@@ -172,7 +188,14 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
         variant: 'destructive',
       });
     } finally {
+      previewUrls.forEach(URL.revokeObjectURL);
+      setPreviewImages((current) => {
+        const next = { ...current };
+        delete next[colorIdx];
+        return next;
+      });
       setUploading(null);
+      onUploadingChange?.(false);
     }
   };
 
@@ -366,6 +389,8 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
                 src={img}
                 alt=""
                 loading="lazy"
+                decoding="async"
+                onError={handleImageError}
                 className="w-full h-full object-contain"
               />
 
@@ -378,9 +403,20 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
               </button>
             </div>
           ))}
+          {(previewImages[ci] || []).map((img) => (
+            <div
+              key={img}
+              className="relative aspect-[3/4] rounded-xl overflow-hidden bg-muted opacity-75"
+            >
+              <img src={img} alt="معاينة الصورة أثناء الرفع" className="w-full h-full object-contain" />
+              <span className="absolute inset-x-2 bottom-2 rounded-full bg-black/65 px-2 py-1 text-center text-[10px] text-white">
+                جاري الرفع...
+              </span>
+            </div>
+          ))}
                     <label
             className={`aspect-square border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition ${
-              uploading === ci
+              uploading !== null || disabled
                 ? "opacity-60 cursor-not-allowed"
                 : "hover:border-primary"
             }`}
@@ -412,7 +448,7 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
               accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif"
               multiple
               className="hidden"
-              disabled={uploading === ci}
+              disabled={uploading !== null || disabled}
               onChange={(e) => {
                 const files = e.target.files;
 

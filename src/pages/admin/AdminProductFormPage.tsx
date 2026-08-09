@@ -11,6 +11,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Slider } from '@/components/ui/slider';
 import { ArrowRight, Loader2, Upload, X, LayoutGrid, Plus, Trash2, Truck, Shield, RotateCcw, GripVertical, ZoomIn, Move } from 'lucide-react';
 import type { ColorVariant } from '@/components/admin/ColorVariantsEditor';
+import { filterUsableImageUrls, isUsableImageUrl } from '@/lib/imageUrl';
 
 const ColorVariantsEditor = lazy(() => import('@/components/admin/ColorVariantsEditor'));
 
@@ -106,8 +107,10 @@ const AdminProductFormPage = () => {
   const [newQuality, setNewQuality] = useState({ name: '', price: '', description: '' });
   const [uploadingQualityIdx, setUploadingQualityIdx] = useState<number | null>(null);
   const [uploadingAccessoryImage, setUploadingAccessoryImage] = useState(false);
+  const [uploadingColorImages, setUploadingColorImages] = useState(false);
   const [selectedParentCategoryId, setSelectedParentCategoryId] = useState('');
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | null>(null);
+  const isUploadingImages = uploadingColorImages || uploadingQualityIdx !== null || uploadingAccessoryImage;
 
   // Fetch all homepage sections
   const { data: sections = [] } = useQuery({
@@ -230,6 +233,24 @@ const AdminProductFormPage = () => {
           .maybeSingle();
         brandName = registeredBrand?.name?.trim() || '';
       }
+      const rawColorVariants = ((data as any).color_variants || []) as ColorVariant[];
+      const colorVariants = rawColorVariants.map((variant) => ({
+        ...variant,
+        images: filterUsableImageUrls(variant.images),
+      }));
+      const rawQualityVariants = ((data as any).quality_variants || []) as Array<{ name: string; price: number; description: string; images: string[]; in_stock: boolean }>;
+      const qualityVariants = rawQualityVariants.map((variant) => ({
+        ...variant,
+        images: filterUsableImageUrls(variant.images),
+      }));
+      const removedTemporaryImages = rawColorVariants.reduce(
+        (count, variant) => count + Math.max(0, (variant.images || []).length - filterUsableImageUrls(variant.images).length),
+        0,
+      ) + rawQualityVariants.reduce(
+        (count, variant) => count + Math.max(0, (variant.images || []).length - filterUsableImageUrls(variant.images).length),
+        0,
+      );
+
       setFormData({
         name: data.name || '',
         name_ar: data.name_ar || '',
@@ -251,13 +272,19 @@ const AdminProductFormPage = () => {
         home_collections: (data as any).home_collections || [],
         accessories: ((data as any).accessories || []) as Accessory[],
         features: ((data as any).features || []) as ProductFeature[],
-        color_variants: ((data as any).color_variants || []) as ColorVariant[],
+        color_variants: colorVariants,
         stock_quantity: (data as any).stock_quantity?.toString() || '0',
         return_policy: (data as any).return_policy || '',
         specs: ((data as any).specs || []) as { label: string; value: string }[],
         has_quality_variants: (data as any).has_quality_variants ?? false,
-        quality_variants: ((data as any).quality_variants || []) as { name: string; price: number; description: string; images: string[]; in_stock: boolean }[],
+        quality_variants: qualityVariants,
       });
+      if (removedTemporaryImages > 0) {
+        toast({
+          title: 'تم تجاهل روابط صور مؤقتة',
+          description: 'الروابط التالفة لن تُحفظ مجددًا. أعد رفع أي صورة ما زالت مفقودة.',
+        });
+      }
     }
     setIsLoading(false);
   };
@@ -300,6 +327,25 @@ const AdminProductFormPage = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    if (isUploadingImages) {
+      toast({ title: 'انتظر اكتمال رفع الصور', description: 'سيُتاح الحفظ فور انتهاء الرفع.' });
+      return;
+    }
+
+    const hasTemporaryImage = formData.color_variants.some((variant) =>
+      (variant.images || []).some((image) => !isUsableImageUrl(image)),
+    ) || formData.quality_variants.some((variant) =>
+      (variant.images || []).some((image) => !isUsableImageUrl(image)),
+    );
+    if (hasTemporaryImage) {
+      toast({
+        title: 'تعذر حفظ رابط صورة مؤقت',
+        description: 'احذف الصورة التالفة ثم ارفعها من جديد.',
+        variant: 'destructive',
+      });
+      return;
+    }
     
     const resolvedName = formData.name.trim() || formData.name_ar.trim();
     const resolvedSlug = formData.slug.trim() || generateSlug(resolvedName);
@@ -808,6 +854,7 @@ const AdminProductFormPage = () => {
                   <input
                     type="file"
                     accept="image/*,.heic,.heif"
+                    disabled={isUploadingImages}
                     className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30 hidden"
                     onChange={async (e) => {
                       const file = e.target.files?.[0];
@@ -918,6 +965,8 @@ const AdminProductFormPage = () => {
           <ColorVariantsEditor
             value={formData.color_variants}
             onChange={(v) => setFormData((prev) => ({ ...prev, color_variants: v }))}
+            onUploadingChange={setUploadingColorImages}
+            disabled={uploadingQualityIdx !== null || uploadingAccessoryImage}
           />
         </Suspense>
 
@@ -1083,6 +1132,7 @@ const AdminProductFormPage = () => {
                               type="file"
                               accept="image/*,.heic,.heif"
                               multiple
+                              disabled={isUploadingImages}
                               className="h-12 rounded-2xl bg-muted/30 border-border/60 focus-visible:ring-primary/30 hidden"
                               onChange={async (e) => {
                                 const files = Array.from(e.target.files || []);
@@ -1102,9 +1152,11 @@ const AdminProductFormPage = () => {
                                     toast({ title: `فشل رفع ${f.name}`, description: err?.message, variant: 'destructive' });
                                   }
                                 }
-                                const v = [...formData.quality_variants];
-                                v[idx] = { ...v[idx], images: [...(v[idx].images || []), ...urls] };
-                                setFormData({ ...formData, quality_variants: v });
+                                setFormData((current) => {
+                                  const variants = [...current.quality_variants];
+                                  variants[idx] = { ...variants[idx], images: [...(variants[idx].images || []), ...urls] };
+                                  return { ...current, quality_variants: variants };
+                                });
                                 setUploadingQualityIdx(null);
                                 e.target.value = '';
                               }}
@@ -1141,7 +1193,7 @@ const AdminProductFormPage = () => {
         <div className="flex gap-4">
           <Button
             type="submit"
-            disabled={isSaving}
+            disabled={isSaving || isUploadingImages}
             className="
             h-12 px-10 rounded-2xl
             bg-gradient-to-r from-pink-500 to-rose-500
@@ -1150,7 +1202,11 @@ const AdminProductFormPage = () => {
             transition-all hover:scale-[1.02]
             "
             >
-            {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : isEditing ? 'تحديث' : 'إضافة'}
+            {isSaving
+              ? <Loader2 className="w-4 h-4 animate-spin" />
+              : isUploadingImages
+                ? 'انتظر اكتمال رفع الصور'
+                : isEditing ? 'تحديث' : 'إضافة'}
           </Button>
           <Button
             type="button"

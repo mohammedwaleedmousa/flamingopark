@@ -15,6 +15,9 @@ import { MotionConfig } from "framer-motion";
 import CustomerAssistantEntry from "@/components/CustomerAssistantEntry";
 import { ThemeProvider } from "next-themes";
 
+// Temporary launch switch: keep the assistant implementation ready without showing its entry button.
+const SHOW_CUSTOMER_ASSISTANT = false;
+
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
 const FavoritesPage = lazy(() => import("./pages/FavoritesPage"));
 const HomePage = lazy(() => import("./pages/HomePage"));
@@ -189,7 +192,7 @@ const App = () => {
           <ScrollToTop />
           <AnalyticsTracker />
           <SpeedInsights />
-          <CustomerAssistantEntry />
+          {SHOW_CUSTOMER_ASSISTANT && <CustomerAssistantEntry />}
           <Suspense fallback={<RouteFallback />}>
             <Routes>
             <Route path="/" element={<AuthRedirect />} />

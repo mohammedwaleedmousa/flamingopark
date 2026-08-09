@@ -29,6 +29,7 @@ import { useCurrency, getActiveCurrencies } from "@/lib/currency";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useLocation } from "react-router-dom";
 import { useCustomerNotifications } from "@/hooks/useCustomerNotifications";
+import { useCustomerExperience } from "@/hooks/useCustomerExperience";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -122,6 +123,8 @@ const Navbar = () => {
   const { favorites } = useFavorites();
   const cartCount = getCartCount();
   const { unreadCount } = useCustomerNotifications({ enabled: menuOpen, enableToasts: menuOpen });
+  const { data: customerExperience } = useCustomerExperience();
+  const showPage = (page: string) => customerExperience?.pages[page] !== false;
   const navigate = useNavigate();
   const { logout } = useAuthActions();
   const { mode, setMode, short, label } = useCurrency();
@@ -229,9 +232,9 @@ const Navbar = () => {
                       <NavItem onNavigate={() => setMenuOpen(false)} to="/home" icon={House} label="الرئيسية" />
                       <NavItem onNavigate={() => setMenuOpen(false)} to="/categories" icon={SquaresFour} label="جميع الأقسام" />
                       <NavItem onNavigate={() => setMenuOpen(false)} to="/products" icon={Package} label="جميع المنتجات" />
-                      <NavItem onNavigate={() => setMenuOpen(false)} to="/seasonal-offers" icon={Tag} label="العروض الموسمية" />
+                      {showPage("offers") && <NavItem onNavigate={() => setMenuOpen(false)} to="/seasonal-offers" icon={Tag} label="العروض الموسمية" />}
                       <NavItem onNavigate={() => setMenuOpen(false)} to="/new-arrivals" icon={Package} label="وصل حديثاً" />
-                      <NavItem onNavigate={() => setMenuOpen(false)} to="/best-sellers" icon={Crown} label="الأكثر مبيعاً" />
+                      {showPage("best-sellers") && <NavItem onNavigate={() => setMenuOpen(false)} to="/best-sellers" icon={Crown} label="الأكثر مبيعاً" />}
                     </Section>
 
                     <Section label="الحساب">

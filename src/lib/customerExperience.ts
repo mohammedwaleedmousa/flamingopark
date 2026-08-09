@@ -43,8 +43,20 @@ export interface CustomerExperienceSettings {
 }
 
 export const defaultCustomerExperienceSettings: CustomerExperienceSettings = {
-  pages: Object.fromEntries(customerPageOptions.map((page) => [page.id, true])),
-  homeSections: Object.fromEntries(homeSectionOptions.map((section) => [section.id, true])),
+  pages: {
+    ...Object.fromEntries(customerPageOptions.map((page) => [page.id, true])),
+    // Launch cleanup: keep empty campaign pages ready in admin, but hidden from customers.
+    offers: false,
+    "best-sellers": false,
+    "new-season": false,
+    "top-selling": false,
+  },
+  homeSections: {
+    ...Object.fromEntries(homeSectionOptions.map((section) => [section.id, true])),
+    // These sections use the empty new-season and best-seller collections.
+    newArrivals: false,
+    bestSellers: false,
+  },
 };
 
 export const parseCustomerExperienceSettings = (value: unknown): CustomerExperienceSettings => {

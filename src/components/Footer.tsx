@@ -1,6 +1,7 @@
 import { Link } from "react-router-dom";
 import { FaInstagram, FaWhatsapp, FaFacebookF, FaSnapchatGhost } from "react-icons/fa";
 import { ArrowUp } from "lucide-react";
+import { useCustomerExperience } from "@/hooks/useCustomerExperience";
 
 const cols: { title: string; links: { label: string; href: string }[] }[] = [
   {
@@ -33,6 +34,9 @@ const cols: { title: string; links: { label: string; href: string }[] }[] = [
 ];
 
 const Footer = () => {
+  const { data: customerExperience } = useCustomerExperience();
+  const showOffers = customerExperience?.pages.offers !== false;
+
   return (
     <footer className="bg-background text-foreground border-t border-border">
 
@@ -100,7 +104,7 @@ const Footer = () => {
             <div key={col.title}>
               <h3 className="text-[10px] tracking-[0.35em] uppercase text-foreground mb-5 break-words overflow-wrap-break-word whitespace-normal">{col.title}</h3>
               <ul className="space-y-3">
-                {col.links.map((l) => (
+                {col.links.filter((link) => link.href !== "/offers" || showOffers).map((l) => (
                   <li key={l.label}>
                     <Link to={l.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors break-words overflow-wrap-break-word">
                       {l.label}

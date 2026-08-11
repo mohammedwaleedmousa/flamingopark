@@ -528,7 +528,7 @@ const Navbar = () => {
                 h-11 w-full
                 rounded-2xl
                 border border-[#F3DDE6]
-                bg-[#FFF9FB]
+                bg-[#FAFAFA]
                 pr-11 pl-4
                 text-[13px]
                 text-black

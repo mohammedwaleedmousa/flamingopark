@@ -1,34 +1,32 @@
 import {
-  ShoppingCart,
-  MagnifyingGlass,
-  List,
-  X,
-  House,
-  Tag,
-  TrendUp,
-  Crown,
-  Heart,
-  User,
-  CaretLeft,
-  SquaresFour,
   Bell,
-  Info,
+  CaretLeft,
+  Crown,
+  Globe,
+  Heart,
+  House,
+  List,
+  MagnifyingGlass,
   MapPin,
   Package,
+  ShoppingCart,
+  SignIn,
+  SignOut,
+  SquaresFour,
+  Tag,
+  User,
 } from "phosphor-react";
-import { Globe } from "phosphor-react";
 import type { Icon } from "phosphor-react";
-import { SignOut } from "phosphor-react";
-import { SignIn } from "phosphor-react";
 import { useEffect, useState } from "react";
+import { Link, NavLink, useNavigate } from "react-router-dom";
+
 import { useStore } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { useAuthActions } from "@/hooks/useAuthActions";
 import { useCurrency, getActiveCurrencies } from "@/lib/currency";
-import { Link, NavLink, useNavigate } from "react-router-dom";
-import { useLocation } from "react-router-dom";
 import { useCustomerNotifications } from "@/hooks/useCustomerNotifications";
+
+import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -38,15 +36,22 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
-const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
-  <div className="pt-5 pb-1">
-    <div className="flex items-center gap-3 px-6 mb-2">
-      <span className="h-px flex-1 bg-border" />
-      <p className="text-[10px] tracking-[0.45em] uppercase text-muted-foreground font-medium">{label}</p>
-      <span className="h-px w-6 bg-border" />
-    </div>
-    <div>{children}</div>
-  </div>
+const BRAND = "#AC2471";
+
+const Section = ({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) => (
+  <section className="mt-6">
+    <p className="mb-2 px-2 text-[11px] font-semibold text-black/35">
+      {label}
+    </p>
+
+    <div className="space-y-1">{children}</div>
+  </section>
 );
 
 const NavItem = ({
@@ -62,386 +67,515 @@ const NavItem = ({
   badge?: number | string;
   onNavigate?: () => void;
 }) => (
-  <NavLink to={to} end={to === "/home"} onClick={onNavigate}>
+  <NavLink
+    to={to}
+    end={to === "/home"}
+    onClick={onNavigate}
+    className={({ isActive }) =>
+      `
+      flex min-h-[48px] items-center gap-3
+      rounded-2xl px-3
+      ${
+        isActive
+          ? "bg-[#FFF3F8] text-[#AC2471]"
+          : "text-black/70 hover:bg-black/[0.025]"
+      }
+      `
+    }
+  >
     {({ isActive }) => (
-      <div
-        className={`
-          group relative w-full flex items-center gap-3
-          px-4 py-3 rounded-xl transition-all duration-300
-
-          ${
-            isActive
-              ? "bg-white text-black shadow-[0_10px_30px_-12px_rgba(0,0,0,.18)] ring-1 ring-black/5"
-              : "text-black/80 hover:bg-white hover:text-black hover:shadow-[0_12px_35px_-15px_rgba(0,0,0,.18)]"
-          }
-        `}
-      >
-        {isActive && (
-          <span className="absolute right-0 top-1/2 -translate-y-1/2 h-6 w-[3px] rounded-full bg-pink-500" />
-        )}
-
+      <>
         <span
           className={`
-            w-9 h-9 rounded-xl
-            flex items-center justify-center
-            transition-all duration-300
-            ${
-              isActive
-                ? "bg-pink-50 text-pink-500"
-                : "bg-gray-50 text-black/60 group-hover:bg-pink-50 group-hover:text-pink-600"
-            }
+          flex h-9 w-9 shrink-0
+          items-center justify-center
+          rounded-xl
+          ${
+            isActive
+              ? "bg-white text-[#AC2471]"
+              : "bg-[#FAFAFA] text-black/50"
+          }
           `}
         >
-          <Icon size={18} weight="regular" className="w-[18px] h-[18px]" />
+          <Icon size={19} weight="regular" />
         </span>
 
-        <span className="flex-1 text-[13px] font-medium text-right">{label}</span>
+        <span className="flex-1 text-right text-[13px] font-medium">
+          {label}
+        </span>
 
-        {badge !== undefined && badge !== 0 && (
-          <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-gradient-to-br from-pink-400 via-pink-500 to-rose-600 text-white text-[10px] font-bold flex items-center justify-center">
+        {!!badge && (
+          <span className="flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#AC2471] px-1.5 text-[10px] font-bold text-white">
             {badge}
           </span>
         )}
 
         <CaretLeft
-          className={`w-4 h-4 transition-all duration-300 ${
-            isActive ? "text-pink-500" : "text-black/30 group-hover:text-pink-500 group-hover:-translate-x-1"
-          }`}
+          size={14}
+          className={isActive ? "text-[#AC2471]" : "text-black/20"}
         />
-      </div>
+      </>
     )}
   </NavLink>
 );
 
 const Navbar = () => {
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [sideSearch, setSideSearch] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [compact, setCompact] = useState(false);
+
+  const navigate = useNavigate();
+
   const { openCart, getCartCount, customer, setCustomer } = useStore();
   const { favorites } = useFavorites();
-  const cartCount = getCartCount();
-  const { unreadCount } = useCustomerNotifications({ enabled: menuOpen, enableToasts: menuOpen });
-  const navigate = useNavigate();
   const { logout } = useAuthActions();
-  const { mode, setMode, short, label } = useCurrency();
-  const location = useLocation();
-  const [scrolled, setScrolled] = useState(false);
-  const [currencyList, setCurrencyList] = useState(getActiveCurrencies());
 
+  const cartCount = getCartCount();
 
-  // Restore old-style labels for the known 3 currencies; fall back to DB label for any custom currency the admin adds.
-  const staticLabels: Record<string, { label: string; flag: string }> = {
-    SAR: { label: "ريال سعودي (SAR)", flag: "🇸🇦" },
-    YER_SOUTH: { label: "ريال يمني - جنوبي (YER S)", flag: "🇾🇪" },
-    YER_NORTH: { label: "ريال يمني - شمالي (YER N)", flag: "🇾🇪" },
+  const { unreadCount } = useCustomerNotifications({
+    enabled: menuOpen,
+    enableToasts: false,
+  });
+
+  const { mode, setMode, short } = useCurrency();
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setCompact(window.scrollY > 70);
+    };
+
+    handleScroll();
+
+    window.addEventListener("scroll", handleScroll, {
+      passive: true,
+    });
+
+    return () => {
+      window.removeEventListener("scroll", handleScroll);
+    };
+  }, []);
+
+  const staticLabels: Record<
+    string,
+    { label: string; flag: string }
+  > = {
+    SAR: {
+      label: "ريال سعودي",
+      flag: "🇸🇦",
+    },
+    YER_SOUTH: {
+      label: "ريال يمني - جنوبي",
+      flag: "🇾🇪",
+    },
+    YER_NORTH: {
+      label: "ريال يمني - شمالي",
+      flag: "🇾🇪",
+    },
   };
-  const currencies = currencyList.map((c) => ({
-    key: c.code as typeof mode,
-    label: staticLabels[c.code]?.label ?? `${c.meta.label} (${c.code})`,
-    flag: staticLabels[c.code]?.flag ?? "💱",
+
+  const currencies = getActiveCurrencies().map((currency) => ({
+    key: currency.code as typeof mode,
+    label:
+      staticLabels[currency.code]?.label ??
+      currency.meta.label,
+    flag:
+      staticLabels[currency.code]?.flag ??
+      "💱",
   }));
 
-
-
-  const submit = (e: React.FormEvent) => {
+  const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!searchTerm.trim()) return;
-    navigate(`/products?search=${encodeURIComponent(searchTerm.trim())}`);
-    setIsSearchOpen(false);
+
+    const value = searchTerm.trim();
+
+    if (!value) return;
+
+    navigate(`/products?search=${encodeURIComponent(value)}`);
     setSearchTerm("");
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
+    await logout();
+
     setCustomer(null);
     setMenuOpen(false);
+
     navigate("/home");
-  };
-
-  const goTo = (href: string) => {
-    setMenuOpen(false);
-    navigate(href);
-  };
-
-  const sideSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!sideSearch.trim()) return;
-    goTo(`/products?search=${encodeURIComponent(sideSearch.trim())}`);
-    setSideSearch("");
   };
 
   return (
     <header
-      className="fixed top-0 inset-x-0 z-50 bg-white backdrop-blur-none md:backdrop-blur-xl border-b border-black/5 shadow-[0_10px_30px_-20px_rgba(0,0,0,0.2)]"
       dir="rtl"
+      className="
+      fixed inset-x-0 top-0 z-50
+      border-b border-black/[0.04]
+      bg-white
+      "
     >
-      <div className="container mx-auto px-4 md:px-8">
-        <div className="relative flex items-center justify-between h-16 md:h-20">
-          {/* Right (in RTL): menu + search */}
-          <div className="flex items-center gap-1 z-10">
+      <div className="mx-auto max-w-7xl px-4 md:px-8">
+
+        {/* TOP ROW */}
+        <div className="relative flex h-14 items-center justify-between md:h-16">
+
+          {/* RIGHT */}
+          <div className="flex items-center">
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
                 <button
-                  onClick={() => setMenuOpen(true)}
+                  type="button"
+                  aria-label="فتح القائمة"
                   className="
-                    p-2 rounded-xl
-                    hover:bg-pink-50
-                    transition group
+                  flex h-10 w-10
+                  items-center justify-center
+                  rounded-xl
+                  text-black/70
+                  hover:bg-[#FFF3F8]
+                  hover:text-[#AC2471]
                   "
-                  aria-label="القائمة"
                 >
-                  <List size={20} weight="regular" className="text-black/80 group-hover:text-black transition" />
+                  <List size={22} />
                 </button>
               </SheetTrigger>
+
               <SheetContent
                 side="right"
-                className="
-                w-[80vw] sm:w-[360px] p-0
-                bg-white backdrop-blur-none md:backdrop-blur-xl
-                border-l border-black/5
-                shadow-[20px_0_60px_-30px_rgba(0,0,0,0.25)]
-                [&>button]:left-3
-                [&>button]:right-auto
-                flex flex-col h-full
-              "
                 dir="rtl"
+                className="
+                flex h-full
+                w-[86vw]
+                max-w-[355px]
+                flex-col
+                border-l border-black/5
+                bg-white
+                p-0
+                "
               >
-                <div className="flex flex-col h-full p-3">
-                  {/* Hero header */}
-                  <div className="w-full flex justify-center items-center py-4">
+                {/* MENU HEADER */}
+                <div className="flex items-center justify-center border-b border-black/5 px-5 py-5">
+                  <Link
+                    to="/home"
+                    onClick={() => setMenuOpen(false)}
+                    className="flex items-center"
+                  >
                     <img
                       src="/icons/flamingo.jpeg"
-                      alt="logo"
+                      alt="فلامنجو"
+                      width={60}
+                      height={60}
                       loading="lazy"
-                      className="w-20 h-20 object-contain transition-all duration-500 ease-in-out hover:scale-105"
+                      className="h-[60px] w-[60px] object-contain"
                     />
-                  </div>
+                  </Link>
+                </div>
 
-                  <nav className="flex-1 overflow-y-auto pb-4 flex flex-col [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden">
-                    {unreadCount > 0 && (
-                      <div className="mx-3 mb-3 rounded-xl border border-pink-200 bg-pink-50 px-3 py-2 text-xs text-pink-700">
+                {/* MENU */}
+                <nav className="flex-1 overflow-y-auto px-3 pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+
+                  {unreadCount > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        navigate("/notifications");
+                      }}
+                      className="
+                      mt-4 flex w-full
+                      items-center gap-3
+                      rounded-2xl
+                      bg-[#FFF3F8]
+                      px-4 py-3
+                      text-right
+                      "
+                    >
+                      <Bell size={19} className="text-[#AC2471]" />
+
+                      <span className="flex-1 text-xs font-medium text-[#AC2471]">
                         لديك {unreadCount} إشعار جديد
-                      </div>
-                    )}
-                    {/* Shopping */}
-                    <Section label="التسوق">
-                      <NavItem onNavigate={() => setMenuOpen(false)} to="/notifications" icon={Bell} label="الإشعارات" badge={unreadCount || undefined} />
-                      <NavItem onNavigate={() => setMenuOpen(false)} to="/home" icon={House} label="الرئيسية" />
-                      <NavItem onNavigate={() => setMenuOpen(false)} to="/categories" icon={SquaresFour} label="جميع الأقسام" />
-                      <NavItem onNavigate={() => setMenuOpen(false)} to="/products" icon={Package} label="جميع المنتجات" />
-                      <NavItem onNavigate={() => setMenuOpen(false)} to="/seasonal-offers" icon={Tag} label="العروض الموسمية" />
-                      <NavItem onNavigate={() => setMenuOpen(false)} to="/new-arrivals" icon={Package} label="وصل حديثاً" />
-                      <NavItem onNavigate={() => setMenuOpen(false)} to="/best-sellers" icon={Crown} label="الأكثر مبيعاً" />
-                    </Section>
+                      </span>
+                    </button>
+                  )}
 
-                    <Section label="الحساب">
-                      <NavItem onNavigate={() => setMenuOpen(false)} to="/cart" icon={ShoppingCart} label="الحقيبة" badge={cartCount || undefined} />
-                      <NavItem onNavigate={() => setMenuOpen(false)} to="/favorites" icon={Heart} label="المفضلة" badge={favorites.length || undefined} />
-                      <NavItem onNavigate={() => setMenuOpen(false)} to="/account" icon={User} label="حسابي" />
-                    </Section>
+                  <Section label="التسوق">
+                    <NavItem
+                      to="/home"
+                      icon={House}
+                      label="الرئيسية"
+                      onNavigate={() => setMenuOpen(false)}
+                    />
 
-                    <Section label="معلومات">
-                      <NavItem onNavigate={() => setMenuOpen(false)} to="/store-info" icon={MapPin} label="معلومات المتجر" />
-                    </Section>
-                  </nav>
-                  <div className="border-t border-border px-6 py-5 bg-white">
-                    {customer ? (
-                      <button
-                        onClick={handleLogout}
-                        className="
-                        w-full flex items-center justify-center gap-2
-                        py-3
+                    <NavItem
+                      to="/categories"
+                      icon={SquaresFour}
+                      label="الأقسام"
+                      onNavigate={() => setMenuOpen(false)}
+                    />
 
-                        text-[12px]
-                        tracking-[0.35em]
-                        uppercase
-                        font-medium
+                    <NavItem
+                      to="/products"
+                      icon={Package}
+                      label="جميع المنتجات"
+                      onNavigate={() => setMenuOpen(false)}
+                    />
 
-                        text-black
-                        border border-black/10
-                        bg-transparent
+                    <NavItem
+                      to="/seasonal-offers"
+                      icon={Tag}
+                      label="العروض"
+                      onNavigate={() => setMenuOpen(false)}
+                    />
 
-                        transition-all duration-300 ease-out
-                        relative overflow-hidden
+                    <NavItem
+                      to="/new-arrivals"
+                      icon={Package}
+                      label="وصل حديثاً"
+                      onNavigate={() => setMenuOpen(false)}
+                    />
 
-                        hover:text-pink-600
-                        hover:border-pink-300
-                        hover:tracking-[0.45em]
+                    <NavItem
+                      to="/best-sellers"
+                      icon={Crown}
+                      label="الأكثر مبيعاً"
+                      onNavigate={() => setMenuOpen(false)}
+                    />
+                  </Section>
 
-                        active:scale-[0.98]
+                  <Section label="الحساب">
+                    <NavItem
+                      to="/cart"
+                      icon={ShoppingCart}
+                      label="السلة"
+                      badge={cartCount || undefined}
+                      onNavigate={() => setMenuOpen(false)}
+                    />
+
+                    <NavItem
+                      to="/favorites"
+                      icon={Heart}
+                      label="المفضلة"
+                      badge={favorites.length || undefined}
+                      onNavigate={() => setMenuOpen(false)}
+                    />
+
+                    <NavItem
+                      to="/account"
+                      icon={User}
+                      label="حسابي"
+                      onNavigate={() => setMenuOpen(false)}
+                    />
+                  </Section>
+
+                  <Section label="المتجر">
+                    <NavItem
+                      to="/store-info"
+                      icon={MapPin}
+                      label="معلومات المتجر"
+                      onNavigate={() => setMenuOpen(false)}
+                    />
+                  </Section>
+                </nav>
+
+                {/* MENU FOOTER */}
+                <div className="border-t border-black/5 p-4">
+                  {customer ? (
+                    <button
+                      type="button"
+                      onClick={handleLogout}
+                      className="
+                      flex h-11 w-full
+                      items-center justify-center gap-2
+                      rounded-xl
+                      border border-black/10
+                      bg-white
+                      text-sm font-medium
+                      text-black/70
+                      hover:border-[#AC2471]/25
+                      hover:text-[#AC2471]
                       "
-                      >
-                        <SignOut size={18} weight="bold" />
-                        <span className="relative z-10">تسجيل الخروج</span>
-                        <span className="group absolute bottom-0 left-0 w-0 h-[1px] bg-pink-500 transition-all duration-300 group-hover:w-full" />
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => goTo("/auth")}
-                        className="
-                        w-full flex items-center justify-center gap-2
-                        py-3
-
-                        text-[12px]
-                        tracking-[0.35em]
-                        uppercase
-                        font-medium
-
-                        text-black
-                        border border-black/10
-                        bg-transparent
-
-                        transition-all duration-300 ease-out
-                        relative overflow-hidden
-
-                        hover:text-pink-600
-                        hover:border-pink-300
-                        hover:tracking-[0.45em]
-
-                        active:scale-[0.98]
+                    >
+                      <SignOut size={18} />
+                      تسجيل الخروج
+                    </button>
+                  ) : (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setMenuOpen(false);
+                        navigate("/auth");
+                      }}
+                      className="
+                      flex h-11 w-full
+                      items-center justify-center gap-2
+                      rounded-xl
+                      bg-[#AC2471]
+                      text-sm font-semibold
+                      text-white
                       "
-                      >
-                        <SignIn size={18} weight="bold" />
-                        <span className="relative z-10">تسجيل الدخول</span>
-                        <span className="group absolute bottom-0 left-0 w-0 h-[1px] bg-pink-500 transition-all duration-300 group-hover:w-full" />
-                      </button>
-                    )}
-                  </div>
+                    >
+                      <SignIn size={18} />
+                      تسجيل الدخول
+                    </button>
+                  )}
                 </div>
               </SheetContent>
             </Sheet>
-            <button
-              onClick={() => setIsSearchOpen((v) => !v)}
-              className="
-                p-2 rounded-xl
-                hover:bg-pink-50
-                transition group
-              "
-              aria-label="بحث"
-            >
-              {isSearchOpen ? (
-                <X className="w-5 h-5 text-pink-500 transition" />
-              ) : (
-                <MagnifyingGlass
-                  size={20}
-                  weight="regular"
-                  className="text-black/80 group-hover:text-pink-500 transition"
-                />
-              )}
-            </button>
           </div>
 
-          {/* Center wordmark */}
+          {/* LOGO */}
           <Link
             to="/home"
+            aria-label="الرئيسية"
             className="
-              absolute left-1/2 -translate-x-1/2
-              text-[14px] md:text-xl
-              font-semibold tracking-[0.4em]
-              uppercase
-              text-black/80
+            absolute left-1/2
+            -translate-x-1/2
             "
           >
-            <img loading="lazy" src="/icons/flamingo.jpeg" alt="Flamingo" className="w-12 h-12" />
+            <img
+              src="/icons/flamingo.jpeg"
+              alt="فلامنجو"
+              width={48}
+              height={48}
+              fetchPriority="high"
+              className="h-12 w-12 object-contain"
+            />
           </Link>
 
-          {/* Left (RTL): account, wishlist, bag */}
-          <div className="flex items-center z-10">
+          {/* LEFT */}
+          <div className="flex items-center gap-0.5">
+
+            {/* CURRENCY */}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button
+                  type="button"
+                  aria-label="العملة"
                   className="
-                    flex items-center gap-2 px-2.5 py-2 rounded-xl
-                    text-xs font-medium
-                    text-black hover:text-pink-500
-                    hover:bg-pink-50 transition
+                  flex h-10 items-center gap-1
+                  rounded-xl px-2
+                  text-[11px] font-semibold
+                  text-black/55
+                  hover:bg-[#FFF3F8]
+                  hover:text-[#AC2471]
                   "
                 >
-                  <Globe size={18} weight="regular" />
+                  <Globe size={17} />
                   <span>{short}</span>
                 </button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end" className="w-64" style={{ direction: "rtl" }}>
-                <DropdownMenuLabel className="text-xs">اختر العملة</DropdownMenuLabel>
+
+              <DropdownMenuContent
+                align="end"
+                className="w-60"
+              >
+                <DropdownMenuLabel className="text-xs">
+                  اختر العملة
+                </DropdownMenuLabel>
+
                 <DropdownMenuSeparator />
-                {currencies.map((c) => (
+
+                {currencies.map((currency) => (
                   <DropdownMenuItem
-                    key={c.key}
-                    onClick={() => setMode(c.key)}
-                    className="justify-between gap-20 cursor-pointer"
+                    key={currency.key}
+                    onClick={() => setMode(currency.key)}
+                    className="cursor-pointer justify-between"
                   >
                     <span className="flex items-center gap-2 text-sm">
-                      <span>{c.flag}</span>
-                      {c.label}
+                      <span>{currency.flag}</span>
+                      {currency.label}
                     </span>
-                    {mode === c.key && <span className="text-[10px] text-primary">●</span>}
+
+                    {mode === currency.key && (
+                      <span className="h-2 w-2 rounded-full bg-[#AC2471]" />
+                    )}
                   </DropdownMenuItem>
                 ))}
               </DropdownMenuContent>
             </DropdownMenu>
+
+            {/* CART */}
             <button
+              type="button"
               onClick={openCart}
-              className="
-                relative p-2 rounded-xl
-                hover:bg-pink-50
-                transition group
-              "
               aria-label="السلة"
+              className="
+              relative flex h-10 w-10
+              items-center justify-center
+              rounded-xl
+              text-black/70
+              hover:bg-[#FFF3F8]
+              hover:text-[#AC2471]
+              "
             >
-              <ShoppingCart size={20} weight="fill" className="text-black/80" />
+              <ShoppingCart size={21} weight="regular" />
 
               {cartCount > 0 && (
                 <span
                   className="
-                  absolute -top-1 -left-1
-                  min-w-[18px] h-[18px]
-                  px-1.5
+                  absolute -left-1 -top-0.5
+                  flex h-[18px] min-w-[18px]
+                  items-center justify-center
                   rounded-full
-                  bg-gradient-to-br from-pink-400 to-rose-500
-                  text-white text-[10px] font-bold
-                  flex items-center justify-center
-                  shadow-md
-                "
+                  bg-[#AC2471]
+                  px-1
+                  text-[10px] font-bold
+                  text-white
+                  "
                 >
-                  {cartCount}
+                  {cartCount > 99 ? "99+" : cartCount}
                 </span>
               )}
             </button>
           </div>
         </div>
-      </div>
 
-      {isSearchOpen && (
-        <div className="border-b bg-white/90 backdrop-blur-none md:backdrop-blur-xl animate-in fade-in duration-200">
-          <form onSubmit={submit} className="container mx-auto px-4 py-4">
-            <div className="relative">
+        {/* SEARCH */}
+        <div
+          className={`
+          overflow-hidden
+          ${
+            compact
+              ? "max-h-0 opacity-0"
+              : "max-h-16 opacity-100"
+          }
+          transition-[max-height,opacity]
+          duration-150
+          `}
+        >
+          <form onSubmit={submitSearch} className="pb-3">
+            <label className="relative block">
               <MagnifyingGlass
                 size={18}
-                weight="bold"
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-black/60"
+                className="
+                pointer-events-none
+                absolute right-4 top-1/2
+                -translate-y-1/2
+                text-black/30
+                "
               />
 
               <input
-                autoFocus
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="ابحث عن منتج، ماركة، قسم..."
+                placeholder="ابحث عن منتج، ماركة أو قسم..."
+                enterKeyHint="search"
+                autoComplete="off"
                 className="
-                  w-full pr-10 pl-4 py-3
-                  bg-white
-                  border border-pink-100
-                  rounded-xl
-                  text-sm
-                  focus:outline-none
-                  focus:ring-2 focus:ring-pink-200
-                  transition
+                h-11 w-full
+                rounded-2xl
+                border border-black/[0.05]
+                bg-[#FAFAFA]
+                pr-11 pl-4
+                text-[13px]
+                text-black
+                placeholder:text-black/30
+                outline-none
+                focus:border-[#AC2471]/20
+                focus:bg-white
                 "
-                dir="rtl"
               />
-            </div>
+            </label>
           </form>
         </div>
-      )}
+      </div>
     </header>
   );
 };

@@ -584,52 +584,6 @@ const HomePage = () => {
           </section>
         )}
 
-
-        {/* =========================================================
-            8 — CURATED PRODUCTS
-        ========================================================= */}
-        {showHomeSection("featuredProducts") && (
-          <div ref={featuredViewport.ref} style={{ minHeight: 520 }}>
-            {products.length > 0 && (
-              <section className="py-12 md:py-20 bg-background">
-                <div className="container mx-auto px-4 md:px-6">
-
-                  <div className="flex items-end justify-between gap-6 mb-8 md:mb-12">
-                    <div>
-                      <p className="text-[10px] text-muted-foreground mb-2 md:mb-3">
-                        اختيارات فلامنجو
-                      </p>
-
-                      <h2 className="font-heading text-2xl md:text-5xl text-foreground">
-                        منتجات مختارة بعناية
-                      </h2>
-                    </div>
-
-                    <Link
-                      to="/curated"
-                      className="shrink-0 text-[11px] border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
-                    >
-                      عرض الكل
-                      <ArrowLeft className="w-3 h-3" />
-                    </Link>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-10">
-                    {products.slice(0, 8).map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                      />
-                    ))}
-                  </div>
-
-                </div>
-              </section>
-            )}
-          </div>
-        )}
-
-
         {/* =========================================================
             9 — SERVICES
         ========================================================= */}

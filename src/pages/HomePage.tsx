@@ -132,129 +132,229 @@ const BrandsStripInline = () => {
 // Category horizontal scroll carousel (replaces grid)
 
 const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
-  const [active, setActive] = useState(items[0]);
-
   return (
-    <section className="categories-strip" dir="rtl" aria-label="الأقسام">
+    <section className="flamingo-categories" dir="rtl" aria-label="الأقسام">
       <style>{`
-        .categories-strip{
-          --accent:#E8547C;
-          --text:#1F1F1F;
-          --muted:#777;
-          --border:#ECECEC;
-          --cream:#FCFAF8;
+        .flamingo-categories{
+          --pink:#E8547C;
+          --text:#211D1F;
+          --muted:#8B8588;
+          --soft:#FFF5F6;
 
+          width:100%;
+          overflow:hidden;
           background:#fff;
-          padding:14px 0 18px;
+          padding:10px 0 16px;
         }
 
-        .categories-strip .header{
+        /* =========================
+           HEADER
+        ========================= */
+
+        .flamingo-categories .category-header{
           display:flex;
-          justify-content:space-between;
           align-items:center;
-          margin-bottom:20px;
+          justify-content:space-between;
+          margin-bottom:12px;
         }
 
-        .categories-strip .title{
-          font-family:"Noto Kufi Arabic",sans-serif;
-          font-size:18px;
-          font-weight:700;
-          color:var(--text);
+        .flamingo-categories .heading{
+          display:flex;
+          align-items:center;
+          gap:7px;
+        }
+
+        .flamingo-categories .heading-mark{
+          width:4px;
+          height:20px;
+          border-radius:999px;
+          background:var(--pink);
+        }
+
+        .flamingo-categories .title{
           margin:0;
+          color:var(--text);
+          font-family:"Noto Kufi Arabic",sans-serif;
+          font-size:16px;
+          font-weight:700;
+          line-height:1.2;
         }
 
-        /* نفس تصميم قسم الماركات */
-
-        .categories-strip .view-all{
+        .flamingo-categories .view-all{
           display:inline-flex;
           align-items:center;
-          gap:6px;
-          color:var(--muted);
+          gap:4px;
+
+          color:var(--pink);
           text-decoration:none;
-          font-size:13px;
+
+          font-size:11px;
           font-weight:600;
-          transition:all .25s ease;
+          white-space:nowrap;
         }
 
-        .categories-strip .view-all svg{
-          width:14px;
-          height:14px;
-          transition:transform .25s ease;
+        .flamingo-categories .view-all svg{
+          width:12px;
+          height:12px;
         }
 
-        .categories-strip .view-all:hover{
-          color:var(--accent);
+        /* =========================
+           SWIPER
+        ========================= */
+
+        .flamingo-categories .swiper{
+          overflow:visible;
         }
 
-        .categories-strip .view-all:hover svg{
-          transform:translateX(-3px);
+        .flamingo-categories .swiper-slide{
+          width:84px;
         }
 
-        .categories-strip .swiper{
-          overflow:hidden;
-          padding:6px 0;
-          touch-action:pan-y;
-        }
+        /* =========================
+           CATEGORY
+        ========================= */
 
-        .categories-strip .swiper-slide{
-          width:150px;
-        }
-
-        .categories-strip .card{
+        .flamingo-categories .category-item{
           display:block;
+          width:84px;
           text-decoration:none;
-          border-radius:22px;
-          overflow:hidden;
-          background:var(--cream);
-          border:1px solid var(--border);
-          transition:all .28s ease;
+          color:inherit;
+          -webkit-tap-highlight-color:transparent;
         }
 
-        .categories-strip .image{
-          aspect-ratio:1/1;
+        /* =========================
+           IMAGE
+        ========================= */
+
+        .flamingo-categories .category-image{
+          position:relative;
+
+          width:84px;
+          height:84px;
+
           overflow:hidden;
-          background:#fff;
+          border-radius:17px;
+
+          background:#FFF3F5;
         }
 
-        .categories-strip .image img{
+        .flamingo-categories .category-image img{
+          display:block;
           width:100%;
           height:100%;
+
           object-fit:cover;
-          transition:transform .45s ease;
         }
 
-        .categories-strip .content{
-          padding:14px;
-          text-align:center;
-        }
+        /* =========================
+           NAME
+        ========================= */
 
-        .categories-strip .name{
-          font-size:14px;
-          font-weight:600;
+        .flamingo-categories .category-name{
+          display:block;
+
+          width:100%;
+          margin-top:7px;
+
           color:var(--text);
-          transition:.25s;
+
+          text-align:center;
+          font-size:11px;
+          font-weight:600;
+          line-height:1.35;
+
+          white-space:nowrap;
+          overflow:hidden;
+          text-overflow:ellipsis;
         }
 
-        .categories-strip .card:hover{
-          border-color:var(--accent);
+        /* =========================
+           DESKTOP
+        ========================= */
+
+        @media(min-width:641px){
+
+          .flamingo-categories{
+            padding:14px 0 20px;
+          }
+
+          .flamingo-categories .category-header{
+            margin-bottom:14px;
+          }
+
+          .flamingo-categories .title{
+            font-size:18px;
+          }
+
+          .flamingo-categories .heading-mark{
+            height:22px;
+          }
+
+          .flamingo-categories .view-all{
+            font-size:12px;
+          }
+
+          .flamingo-categories .swiper-slide{
+            width:102px;
+          }
+
+          .flamingo-categories .category-item{
+            width:102px;
+          }
+
+          .flamingo-categories .category-image{
+            width:102px;
+            height:102px;
+            border-radius:19px;
+          }
+
+          .flamingo-categories .category-name{
+            margin-top:8px;
+            font-size:12px;
+          }
+
         }
 
-        .categories-strip .card:hover img{
-          transform:scale(1.06);
-        }
+        /* =========================
+           SMALL MOBILE
+        ========================= */
 
-        .categories-strip .card:hover .name{
-          color:var(--accent);
+        @media(max-width:380px){
+
+          .flamingo-categories .swiper-slide{
+            width:76px;
+          }
+
+          .flamingo-categories .category-item{
+            width:76px;
+          }
+
+          .flamingo-categories .category-image{
+            width:76px;
+            height:76px;
+            border-radius:15px;
+          }
+
+          .flamingo-categories .category-name{
+            font-size:10px;
+          }
+
         }
       `}</style>
 
       <div className="container mx-auto px-4">
 
-        <div className="header">
-          <h2 className="title">الأقسام</h2>
+        <div className="category-header">
+
+          <div className="heading">
+            <span className="heading-mark" />
+            <h2 className="title">الأقسام</h2>
+          </div>
 
           <Link to="/categories" className="view-all">
-            عرض جميع الأقسام
+
+            عرض الكل
+
             <svg
               viewBox="0 0 24 24"
               fill="none"
@@ -263,40 +363,53 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
               strokeLinecap="round"
               strokeLinejoin="round"
             >
-              <path d="M9 18l6-6-6-6" />
+              <path d="M15 18l-6-6 6-6" />
             </svg>
+
           </Link>
+
         </div>
 
         <Swiper
           modules={[FreeMode]}
           slidesPerView="auto"
-          spaceBetween={18}
-          freeMode={{ enabled: true, momentum: true }}
+          spaceBetween={10}
+          freeMode={{
+            enabled:true,
+            momentum:true,
+            momentumRatio:.65,
+          }}
           grabCursor
         >
+
           {items.map((item) => (
             <SwiperSlide key={item.title}>
+
               <Link
                 to={item.link}
-                className="card"
+                className="category-item"
               >
-                <div className="image">
+
+                <div className="category-image">
+
                   <img
                     src={item.image}
                     alt={item.title}
                     loading="lazy"
+                    decoding="async"
                   />
+
                 </div>
 
-                <div className="content">
-                  <div className="name">
-                    {item.title}
-                  </div>
-                </div>
+                <span className="category-name">
+                  {item.title}
+                </span>
+
               </Link>
+
             </SwiperSlide>
           ))}
+
         </Swiper>
 
       </div>
@@ -420,6 +533,9 @@ const HomePage = () => {
         {/* Hero — sits behind the navbar */}
         {showHomeSection("hero") && <HeroSlider />}
 
+        {/* Categories — replaced with horizontal CategoryCarousel for improved UX */}
+        {showHomeSection("categories") && <CategoryCarousel items={featuredCategories} />}
+        
         {/* Brands strip */}
         {showHomeSection("brands") && (
           <div ref={brandsViewport.ref} style={{ minHeight: 96 }}>
@@ -427,8 +543,7 @@ const HomePage = () => {
           </div>
         )}
 
-        {/* Categories — replaced with horizontal CategoryCarousel for improved UX */}
-        {showHomeSection("categories") && <CategoryCarousel items={featuredCategories} />}
+        
         {/* banner */}
         {showHomeSection("editorial") && <section className="py-16 md:py-24 bg-background">
           <motion.div initial={{ opacity: 0, y: 35, filter: "blur(8px)" }} whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }} viewport={{ once: false, amount: 0.25 }} transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }} className="container mx-auto px-6">

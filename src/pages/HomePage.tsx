@@ -1,7 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { useRef, useState, useEffect, useMemo } from "react";
-import { ArrowLeft, Truck, ShieldCheck, Sparkles, RotateCcw } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
@@ -10,8 +10,7 @@ import ProductCard from "@/components/ProductCard";
 import BrandsStrip from "@/components/BrandsStrip";
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
-import type { Product } from "@/store/useStore";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useNearViewport } from "@/hooks/useNearViewport";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
@@ -27,16 +26,6 @@ type FeaturedCategoryItem = {
   subtitle: string;
   image: string;
   link: string;
-};
-
-type EditorialItem = {
-  eyebrow: string;
-  title: string;
-  body: string;
-  cta: string;
-  href: string;
-  image: string;
-  reverse: boolean;
 };
 
 const fallbackCategoryImages: Record<string, string> = {
@@ -76,7 +65,7 @@ const fallbackFeaturedCategories: FeaturedCategoryItem[] = [
   {
     title: "أحذية",
     subtitle: "Shoes",
-    image: "c:\Users\Soo\Pictures\nike.jpg",
+    image: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=640&q=65",
     link: "/categories?parent=shoes",
   },
   {
@@ -86,50 +75,6 @@ const fallbackFeaturedCategories: FeaturedCategoryItem[] = [
     link: "/categories?parent=beauty",
   },
 ];
-
-// Inline Brands strip with auto-scroll, pause-on-hover and seamless loop
-const BrandsStripInline = () => {
-  // static placeholder brands as requested
-  const brands = [
-    "/brands/nike.svg",
-    "/brands/adidas.svg",
-    "/brands/zara.svg",
-    "/brands/gucci.svg",
-    "/brands/puma.svg",
-    "/brands/lv.svg",
-  ];
-
-  const containerRef = useRef<HTMLDivElement | null>(null);
-  const [isHover, setIsHover] = useState(false);
-
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el || brands.length === 0) return;
-
-    let rafId: number | null = null;
-    let last = performance.now();
-    const speed = 22; // px/sec, slow premium feel
-
-    // duplicate content by cloning children for seamless scroll
-    // we'll rely on doubling the sequence in rendering
-    const step = (now: number) => {
-      const dt = (now - last) / 1000;
-      last = now;
-      if (!isHover) {
-        el.scrollLeft += speed * dt;
-        if (el.scrollLeft >= el.scrollWidth / 2) el.scrollLeft -= el.scrollWidth / 2;
-      }
-      rafId = requestAnimationFrame(step);
-    };
-
-    rafId = requestAnimationFrame(step);
-    return () => { if (rafId) cancelAnimationFrame(rafId); };
-  }, [isHover]);
-
-  
-};
-
-// Category horizontal scroll carousel (replaces grid)
 
 const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
   return (
@@ -146,10 +91,6 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
           background:#fff;
           padding:10px 0 16px;
         }
-
-        /* =========================
-           HEADER
-        ========================= */
 
         .flamingo-categories .category-header{
           display:flex;
@@ -184,10 +125,8 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
           display:inline-flex;
           align-items:center;
           gap:4px;
-
           color:var(--pink);
           text-decoration:none;
-
           font-size:11px;
           font-weight:600;
           white-space:nowrap;
@@ -198,10 +137,6 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
           height:12px;
         }
 
-        /* =========================
-           SWIPER
-        ========================= */
-
         .flamingo-categories .swiper{
           overflow:visible;
         }
@@ -209,10 +144,6 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
         .flamingo-categories .swiper-slide{
           width:84px;
         }
-
-        /* =========================
-           CATEGORY
-        ========================= */
 
         .flamingo-categories .category-item{
           display:block;
@@ -222,19 +153,12 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
           -webkit-tap-highlight-color:transparent;
         }
 
-        /* =========================
-           IMAGE
-        ========================= */
-
         .flamingo-categories .category-image{
           position:relative;
-
           width:84px;
           height:84px;
-
           overflow:hidden;
           border-radius:17px;
-
           background:#FFF3F5;
         }
 
@@ -242,38 +166,24 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
           display:block;
           width:100%;
           height:100%;
-
           object-fit:cover;
         }
 
-        /* =========================
-           NAME
-        ========================= */
-
         .flamingo-categories .category-name{
           display:block;
-
           width:100%;
           margin-top:7px;
-
           color:var(--text);
-
           text-align:center;
           font-size:11px;
           font-weight:600;
           line-height:1.35;
-
           white-space:nowrap;
           overflow:hidden;
           text-overflow:ellipsis;
         }
 
-        /* =========================
-           DESKTOP
-        ========================= */
-
         @media(min-width:641px){
-
           .flamingo-categories{
             padding:14px 0 20px;
           }
@@ -312,15 +222,9 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
             margin-top:8px;
             font-size:12px;
           }
-
         }
 
-        /* =========================
-           SMALL MOBILE
-        ========================= */
-
         @media(max-width:380px){
-
           .flamingo-categories .swiper-slide{
             width:76px;
           }
@@ -338,36 +242,22 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
           .flamingo-categories .category-name{
             font-size:10px;
           }
-
         }
       `}</style>
 
       <div className="container mx-auto px-4">
-
         <div className="category-header">
-
           <div className="heading">
             <span className="heading-mark" />
             <h2 className="title">الأقسام</h2>
           </div>
 
           <Link to="/categories" className="view-all">
-
             عرض الكل
-
-            <svg
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M15 18l-6-6 6-6" />
             </svg>
-
           </Link>
-
         </div>
 
         <Swiper
@@ -375,55 +265,38 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
           slidesPerView="auto"
           spaceBetween={10}
           freeMode={{
-            enabled:true,
-            momentum:true,
-            momentumRatio:.65,
+            enabled: true,
+            momentum: true,
+            momentumRatio: 0.65,
           }}
           grabCursor
         >
-
           {items.map((item) => (
             <SwiperSlide key={item.title}>
-
-              <Link
-                to={item.link}
-                className="category-item"
-              >
-
+              <Link to={item.link} className="category-item">
                 <div className="category-image">
-
-                  <img
-                    src={item.image}
-                    alt={item.title}
-                    loading="lazy"
-                    decoding="async"
-                  />
-
+                  <img src={item.image} alt={item.title} loading="lazy" decoding="async" />
                 </div>
 
-                <span className="category-name">
-                  {item.title}
-                </span>
-
+                <span className="category-name">{item.title}</span>
               </Link>
-
             </SwiperSlide>
           ))}
-
         </Swiper>
-
       </div>
     </section>
   );
 };
 
-
 const HomePage = () => {
   const { data: customerExperience } = useCustomerExperience();
-  const showHomeSection = (section: string) => customerExperience?.homeSections[section] !== false;
+
+  const showHomeSection = (section: string) =>
+    customerExperience?.homeSections[section] !== false;
+
   const {
-  data: categories = [],
-  isLoading: categoriesLoading
+    data: categories = [],
+    isLoading: categoriesLoading,
   } = useQuery({
     queryKey: ["categories-all-active"],
     queryFn: async () => {
@@ -432,7 +305,9 @@ const HomePage = () => {
         .select("id,slug,name,name_ar,parent_id,image_url,sort_order")
         .eq("is_active", true)
         .order("sort_order", { ascending: true });
+
       if (error) throw error;
+
       return data || [];
     },
   });
@@ -444,7 +319,9 @@ const HomePage = () => {
         .from("site_content")
         .select("key, content, content_ar")
         .like("key", "home_%");
+
       if (error) throw error;
+
       return (data || []).reduce((acc, row) => {
         acc[row.key] = row.content_ar || row.content || "";
         return acc;
@@ -470,8 +347,6 @@ const HomePage = () => {
       }));
   }, [categories, categoriesLoading]);
 
-  const getHomeContent = (key: string, fallback: string) => homeContent[key] || fallback;
-
   const featuredViewport = useNearViewport<HTMLDivElement>();
   const bestSellersViewport = useNearViewport<HTMLDivElement>();
   const newArrivalsViewport = useNearViewport<HTMLDivElement>();
@@ -488,7 +363,9 @@ const HomePage = () => {
         .contains("home_collections", ["curated"] as any)
         .order("sort_order")
         .limit(8);
+
       if (error) throw error;
+
       return (data || []).map(mapProductCard);
     },
   });
@@ -504,7 +381,9 @@ const HomePage = () => {
         .contains("home_collections", ["best_sellers"] as any)
         .order("sort_order")
         .limit(8);
+
       if (error) throw error;
+
       return (data || []).map(mapProductCard);
     },
   });
@@ -520,163 +399,246 @@ const HomePage = () => {
         .contains("home_collections", ["new_season"] as any)
         .order("created_at", { ascending: false })
         .limit(8);
+
       if (error) throw error;
+
       return (data || []).map(mapProductCard);
     },
   });
+
   return (
     <div className="min-h-screen relative bg-background" dir="rtl">
       <Navbar />
       <CartDrawer />
-
       <main>
-        {/* Hero — sits behind the navbar */}
         {showHomeSection("hero") && <HeroSlider />}
 
-        {/* Categories — replaced with horizontal CategoryCarousel for improved UX */}
-        {showHomeSection("categories") && <CategoryCarousel items={featuredCategories} />}
-        
-        {/* Brands strip */}
+        {showHomeSection("categories") && (
+          <CategoryCarousel items={featuredCategories} />
+        )}
+
         {showHomeSection("brands") && (
           <div ref={brandsViewport.ref} style={{ minHeight: 96 }}>
             <BrandsStrip enabled={brandsViewport.isNearViewport} />
           </div>
         )}
 
-        
-        {/* banner */}
-        {showHomeSection("editorial") && <section className="py-16 md:py-24 bg-background">
-          <motion.div initial={{ opacity: 0, y: 35, filter: "blur(8px)" }} whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }} viewport={{ once: false, amount: 0.25 }} transition={{ duration: 1.2, ease: [0.22, 1, 0.36, 1] }} className="container mx-auto px-6">
-            <div className="max-w-5xl mx-auto text-center">
-              <motion.h2 initial={{ opacity: 0, y: 25 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.4 }} transition={{ duration: 1, delay: 0.15, ease: [0.22, 1, 0.36, 1] }} className="text-3xl md:text-6xl font-light leading-[1.25] tracking-tight text-foreground">
-                الأناقة ليست ما ترتديه...
-                <br />
-                بل ما يبقى في الذاكرة بعد رحيلك.
-              </motion.h2>
-              <motion.div initial={{ width: 0, opacity: 0 }} whileInView={{ width: 80, opacity: 1 }} viewport={{ once: false, amount: 0.4 }} transition={{ duration: 0.9, delay: 0.45, ease: "easeOut" }} className="h-px bg-zinc-300 mx-auto my-10" />
-              <motion.p initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: false, amount: 0.4 }} transition={{ duration: 1, delay: 0.6, ease: [0.22, 1, 0.36, 1] }} className="max-w-xl mx-auto text-pink-500 leading-8 text-sm md:text-base">
-                مختارات استثنائية صُممت لمن يقدّر التفاصيل،
-                ويبحث عن الجودة قبل كل شيء.
-              </motion.p>
-            </div>
-          </motion.div>
-        </section>}
+        {showHomeSection("featuredProducts") && (
+          <div ref={featuredViewport.ref}>
+            {products.length > 0 && (
+              <section className="py-12 md:py-20 bg-background">
+                <div className="container mx-auto px-4 md:px-6">
 
-        {/* Featured products */}
-        {showHomeSection("featuredProducts") && <div ref={featuredViewport.ref}>
-        {products.length > 0 && (
-          <section className="py-16 md:py-24 bg-background">
-            <div className="container mx-auto px-6">
-              {/* Title */}
-              <div className="flex items-end justify-between mb-12">
-                <div>
-                  <h2 className="font-heading text-2xl md:text-5xl text-foreground">منتجات مختارة بعناية</h2>
+                  <div className="flex items-end justify-between gap-6 mb-8 md:mb-12">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-2 md:mb-3">
+                        اختيارات فلامنجو
+                      </p>
+
+                      <h2 className="font-heading text-2xl md:text-5xl text-foreground">
+                        منتجات مختارة بعناية
+                      </h2>
+                    </div>
+
+                    <Link
+                      to="/curated"
+                      className="shrink-0 text-[11px] border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
+                    >
+                      عرض الكل
+                      <ArrowLeft className="w-3 h-3" />
+                    </Link>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-10">
+                    {products.slice(0, 8).map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                      />
+                    ))}
+                  </div>
+
                 </div>
-                <Link
-                  to="/curated"
-                  className="text-[11px] tracking-[0.02em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
+              </section>
+            )}
+          </div>
+        )}
+
+
+        {/* =========================================================
+            5 — COLLECTIONS
+        ========================================================= */}
+        {showHomeSection("collections") && (
+          <FlamingoCollections />
+        )}
+
+
+        {/* =========================================================
+            6 — BEST SELLERS
+        ========================================================= */}
+        {showHomeSection("bestSellers") && (
+          <div ref={bestSellersViewport.ref} style={{ minHeight: 520 }}>
+            {bestSellers.length > 0 && (
+              <section className="py-12 md:py-20 bg-background">
+                <div className="container mx-auto px-4 md:px-6">
+
+                  <div className="flex items-end justify-between gap-6 mb-8 md:mb-12">
+                    <div>
+                      <p className="text-[10px] tracking-[0.02em] uppercase text-muted-foreground mb-2 md:mb-3">
+                        Best Sellers
+                      </p>
+
+                      <h2 className="font-heading text-2xl md:text-5xl text-foreground">
+                        الأكثر مبيعاً
+                      </h2>
+                    </div>
+
+                    <Link
+                      to="/top-selling"
+                      className="shrink-0 text-[11px] border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
+                    >
+                      عرض الكل
+                      <ArrowLeft className="w-3 h-3" />
+                    </Link>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-10">
+                    {bestSellers.slice(0, 8).map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        badge="BEST SELLER"
+                      />
+                    ))}
+                  </div>
+
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+
+
+        {/* =========================================================
+            7 — EDITORIAL / BRAND MOMENT
+        ========================================================= */}
+        {showHomeSection("editorial") && (
+          <section className="py-16 md:py-28 bg-background overflow-hidden">
+            <motion.div
+              initial={{ opacity: 0, y: 35, filter: "blur(8px)" }}
+              whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+              viewport={{ once: true, amount: 0.25 }}
+              transition={{
+                duration: 1.1,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className="container mx-auto px-6"
+            >
+              <div className="max-w-5xl mx-auto text-center">
+
+                <motion.h2
+                  initial={{ opacity: 0, y: 25 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.4 }}
+                  transition={{
+                    duration: 0.9,
+                    delay: 0.1,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  className="text-3xl md:text-6xl font-light leading-[1.35] tracking-tight text-foreground"
                 >
-                  عرض الكل <ArrowLeft className="w-3 h-3" />
-                </Link>
-              </div>
+                  الأناقة ليست ما ترتديه...
+                  <br />
+                  بل ما يبقى في الذاكرة بعد رحيلك.
+                </motion.h2>
 
-              {/* Products */}
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
-                {products.slice(0, 8).map((p) => (
-                  <ProductCard key={p.id} product={p} />
-                ))}
-              </div>
+                <motion.div
+                  initial={{ width: 0, opacity: 0 }}
+                  whileInView={{ width: 80, opacity: 1 }}
+                  viewport={{ once: true, amount: 0.4 }}
+                  transition={{
+                    duration: 0.8,
+                    delay: 0.35,
+                    ease: "easeOut",
+                  }}
+                  className="h-px bg-zinc-300 mx-auto my-8 md:my-10"
+                />
 
-              {/* CTA */}
-              <div className="text-center mt-12">
-                <Link
-                  to="/curated"
-                  className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-pink-500 pb-1 hover:opacity-60 transition text-pink-500"
+                <motion.p
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, amount: 0.4 }}
+                  transition={{
+                    duration: 0.9,
+                    delay: 0.5,
+                    ease: [0.22, 1, 0.36, 1],
+                  }}
+                  className="max-w-xl mx-auto text-pink-500 leading-8 text-sm md:text-base"
                 >
-                  عرض المزيد <ArrowLeft className="w-3 h-3" />
-                </Link>
-              </div>
+                  مختارات استثنائية صُممت لمن يقدّر التفاصيل،
+                  ويبحث عن الجودة قبل كل شيء.
+                </motion.p>
 
-            </div>
+              </div>
+            </motion.div>
           </section>
         )}
-        </div>}
 
-        {showHomeSection("collections") && <FlamingoCollections />}
 
-        {/* New Arrivals */}
-        {showHomeSection("newArrivals") && <div ref={newArrivalsViewport.ref} style={{ minHeight: 640 }}>
-        {newArrivals.length > 0 && (
-          <section className="py-10 md:py-28">
-            <div className="container mx-auto px-6">
-              <div className="flex items-end justify-between mb-12">
-                <div>
-                  <p className="text-[10px] tracking-[0.02em] uppercase text-muted-foreground mb-3">وصل حديثاً</p>
-                  <h2 className="font-heading text-3xl md:text-5xl text-foreground">جديد الموسم</h2>
+        {/* =========================================================
+            8 — CURATED PRODUCTS
+        ========================================================= */}
+        {showHomeSection("featuredProducts") && (
+          <div ref={featuredViewport.ref} style={{ minHeight: 520 }}>
+            {products.length > 0 && (
+              <section className="py-12 md:py-20 bg-background">
+                <div className="container mx-auto px-4 md:px-6">
+
+                  <div className="flex items-end justify-between gap-6 mb-8 md:mb-12">
+                    <div>
+                      <p className="text-[10px] text-muted-foreground mb-2 md:mb-3">
+                        اختيارات فلامنجو
+                      </p>
+
+                      <h2 className="font-heading text-2xl md:text-5xl text-foreground">
+                        منتجات مختارة بعناية
+                      </h2>
+                    </div>
+
+                    <Link
+                      to="/curated"
+                      className="shrink-0 text-[11px] border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
+                    >
+                      عرض الكل
+                      <ArrowLeft className="w-3 h-3" />
+                    </Link>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-10">
+                    {products.slice(0, 8).map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                      />
+                    ))}
+                  </div>
+
                 </div>
-                <Link
-                  to="/new-season"
-                  className="text-[11px] tracking-[0.02em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
-                >
-                  عرض الكل <ArrowLeft className="w-3 h-3" />
-                </Link>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
-                {newArrivals.slice(0, 8).map((p) => (
-                  <ProductCard key={p.id} product={p} badge="NEW IN" />
-                ))}
-              </div>
-              <div className="text-center mt-12">
-                <Link
-                  to="/new-season"
-                  className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-pink-500 pb-1 hover:opacity-60 transition text-pink-500"
-                >
-                  عرض المزيد <ArrowLeft className="w-3 h-3" />
-                </Link>
-              </div>
-            </div>
-          </section>
+              </section>
+            )}
+          </div>
         )}
-        </div>}
 
-        {/* Best sellers */}
-        {showHomeSection("bestSellers") && <div ref={bestSellersViewport.ref}>
-        {bestSellers.length > 0 && (
-          <section className="py-10 md:py-28 bg-background">
-            <div className="container mx-auto px-6">
-              <div className="flex items-end justify-between mb-12">
-                <div>
-                  <p className="text-[10px] tracking-[0.02em] uppercase text-muted-foreground mb-3">Best Sellers</p>
-                  <h2 className="font-heading text-3xl md:text-5xl text-foreground">الأكثر مبيعاً</h2>
-                </div>
-                <Link
-                  to="/top-selling"
-                  className="text-[11px] tracking-[0.02em] uppercase border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
-                >
-                  عرض الكل <ArrowLeft className="w-3 h-3" />
-                </Link>
-              </div>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-10">
-                {bestSellers.slice(0, 8).map((p) => (
-                  <ProductCard key={p.id} product={p} badge="BEST SELLER" />
-                ))}
-              </div>
-              <div className="text-center mt-12">
-                <Link
-                  to="/top-selling"
-                  className="inline-flex items-center gap-2 text-[11px] tracking-[0.35em] uppercase border-b border-pink-500 pb-1 hover:opacity-60 transition text-pink-500"
-                >
-                  عرض المزيد <ArrowLeft className="w-3 h-3" />
-                </Link>
-              </div>
-            </div>
-          </section>
+
+        {/* =========================================================
+            9 — SERVICES
+        ========================================================= */}
+        {showHomeSection("services") && (
+          <FlamingoServices />
         )}
-        </div>}
-
-        {showHomeSection("services") && <FlamingoServices />}
 
       </main>
+
       <Footer />
     </div>
   );

@@ -277,15 +277,36 @@ const ProductDetailPage = () => {
     <div className="min-h-screen bg-background" dir="rtl">
       <Navbar /><CartDrawer />
  
-      <main className="pt-16 md:pt-20 pb-24">
+      <main className=" md:pt-20 pb-24">
         {/* Minimal breadcrumb */}
-        <div className="container mx-auto px-4 pt-6">
-          <nav className="text-xs text-muted-foreground flex items-center gap-2">
-            <button onClick={() => navigate('/home')} className="hover:text-foreground transition">الرئيسية</button>
-            <ChevronLeft className="w-3 h-3" />
-            <button onClick={() => navigate(-1)} className="hover:text-foreground transition">المنتجات</button>
-            <ChevronLeft className="w-3 h-3" />
-            <span className="text-foreground truncate max-w-[180px]">{product.nameAr}</span>
+        <div className="w-full px-4 pt-4 md:container md:mx-auto md:px-6 md:pt-6">
+          <nav className="flex items-center" aria-label="مسار التنقل">
+
+            {/* Mobile */}
+            <button onClick={() => navigate(-1)} className="flex items-center gap-1.5 text-[12px] text-[#777075] transition-colors active:text-[#AC2471] md:hidden">
+              <ChevronRight className="w-3.5 h-3.5" strokeWidth={1.5} />
+              <span>العودة للمنتجات</span>
+            </button>
+
+            {/* Desktop */}
+            <div className="hidden md:flex items-center gap-2.5 text-[11px]">
+              <button onClick={() => navigate('/home')} className="text-[#999194] transition-colors hover:text-[#AC2471]">
+                الرئيسية
+              </button>
+
+              <span className="w-[3px] h-[3px] rounded-full bg-[#D8D3D5]" />
+
+              <button onClick={() => navigate(-1)} className="text-[#999194] transition-colors hover:text-[#AC2471]">
+                المنتجات
+              </button>
+
+              <span className="w-[3px] h-[3px] rounded-full bg-[#D8D3D5]" />
+
+              <span className="max-w-[240px] truncate text-[#332D30]">
+                {product.nameAr}
+              </span>
+            </div>
+
           </nav>
         </div>
  
@@ -294,7 +315,7 @@ const ProductDetailPage = () => {
             {/* معرض المنتج */}
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5 }} className="lg:col-span-7 lg:sticky lg:top-24 lg:self-start">
               <div className="flex flex-col gap-4 lg:flex-row-reverse lg:items-start">
-              <div className="relative flex-1 border border-border/70 bg-[#f6f5f2] rounded-2xl overflow-hidden aspect-[4/5] md:aspect-[5/6] group shadow-sm">
+              <div className="relative flex-1 border border-border/70 bg-[#f6f5f2] rounded-xl overflow-hidden aspect-[4/5] md:aspect-[5/6] group shadow-sm">
                 <motion.div
                   key={`${activeColorVariant?.name || 'default'}-${selectedImage}`}
                   initial={{ opacity: 0, scale: 0.985 }}

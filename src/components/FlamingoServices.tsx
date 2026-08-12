@@ -4,125 +4,153 @@ import { ArrowLeft } from "lucide-react";
 
 const FlamingoServices = () => {
   return (
-    <section className="bg-white py-8 md:py-14" dir="rtl">
-      <div className="mx-auto w-full max-w-[1500px] px-4 md:px-6">
+    <section className="w-full bg-white py-5 md:py-14" dir="rtl">
 
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.2 }}
-          transition={{
-            duration: 0.8,
-            ease: [0.22, 1, 0.36, 1],
-          }}
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        whileInView={{ opacity: 1, y: 0 }}
+        viewport={{ once: true, amount: 0.2 }}
+        transition={{
+          duration: 0.65,
+          ease: [0.22, 1, 0.36, 1],
+        }}
+        className="
+          relative
+          w-full
+          h-[360px]
+          overflow-hidden
+          bg-[#EAE4DE]
+
+          sm:h-[420px]
+
+          md:mx-auto
+          md:h-[580px]
+          md:max-w-[1450px]
+        "
+      >
+
+        {/* IMAGE */}
+        <img
+          src="/images/flamingo.png"
+          alt="Flamingo luxury brands"
+          loading="lazy"
+          decoding="async"
           className="
-            relative
-            min-h-[520px]
-            overflow-hidden
-            bg-[#F4F0EC]
-            md:min-h-[650px]
+            absolute
+            inset-0
+            h-full
+            w-full
+            object-cover
+            object-center
+          "
+        />
+
+        {/* VERY LIGHT OVERLAY */}
+        <div
+          className="
+            pointer-events-none
+            absolute
+            inset-0
+            bg-gradient-to-t
+            from-black/35
+            via-black/[0.02]
+            to-transparent
+          "
+        />
+
+        {/* FLAMINGO */}
+        <span
+          dir="ltr"
+          className="
+            absolute
+            left-4
+            top-4
+            z-10
+            text-[7px]
+            font-medium
+            tracking-[0.38em]
+            text-white/80
+
+            md:left-8
+            md:top-7
+            md:text-[9px]
           "
         >
+          FLAMINGO PARK
+        </span>
 
-          {/* IMAGE */}
-          <img
-            src="/images/flamingo.png"
-            alt="Flamingo luxury brands"
-            loading="lazy"
-            decoding="async"
+        {/* CONTENT */}
+        <div
+          className="
+            absolute
+            bottom-5
+            right-4
+            z-10
+
+            md:bottom-9
+            md:right-8
+          "
+        >
+          <h2
             className="
-              absolute
-              inset-0
-              h-full
-              w-full
-              object-cover
-              object-center
+              font-heading
+              text-[22px]
+              font-light
+              leading-[1.55]
+              tracking-[-0.025em]
+              text-white
+
+              sm:text-[25px]
+
+              md:text-[42px]
             "
-          />
+          >
+            علامات تعرفها.
+            <br />
 
-          {/* OVERLAY */}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/5" />
+            <span className="text-white/70">
+              اختيارات تستحقها.
+            </span>
+          </h2>
 
-          {/* LOGO */}
-          <span
-            dir="ltr"
+          <Link
+            to="/brands"
             className="
-              absolute
-              left-5
-              top-5
-              z-10
+              group
+              mt-3
+              inline-flex
+              items-center
+              gap-1.5
+
               text-[8px]
-              tracking-[0.34em]
-              text-white/80
-              md:left-8
-              md:top-8
-              md:text-[9px]
+              font-medium
+              text-white/90
+
+              md:mt-5
+              md:gap-2
+              md:text-[10px]
             "
           >
-            FLAMINGO PARK
-          </span>
+            اكتشف الماركات
 
-          {/* CONTENT */}
-          <div
-            className="
-              absolute
-              bottom-7
-              right-5
-              z-10
-              md:bottom-10
-              md:right-8
-            "
-          >
-            <h2
+            <ArrowLeft
               className="
-                font-heading
-                text-[31px]
-                font-light
-                leading-[1.45]
-                tracking-[-0.03em]
-                text-white
-                md:text-[50px]
+                h-2.5
+                w-2.5
+                transition-transform
+                duration-300
+                group-hover:-translate-x-1
+
+                md:h-3
+                md:w-3
               "
-            >
-              علامات تعرفها.
-              <br />
-              <span className="text-white/70">
-                اختيارات تستحقها.
-              </span>
-            </h2>
+              strokeWidth={1.5}
+            />
+          </Link>
+        </div>
 
-            <Link
-              to="/brands"
-              className="
-                group
-                mt-5
-                inline-flex
-                items-center
-                gap-2
-                text-[9px]
-                font-medium
-                text-white
-                md:text-[10px]
-              "
-            >
-              اكتشف الماركات
+      </motion.div>
 
-              <ArrowLeft
-                className="
-                  h-3
-                  w-3
-                  transition-transform
-                  duration-300
-                  group-hover:-translate-x-1
-                "
-                strokeWidth={1.5}
-              />
-            </Link>
-          </div>
-
-        </motion.div>
-
-      </div>
     </section>
   );
 };

@@ -1,309 +1,362 @@
 import {
-  LayoutDashboard, Package, ShoppingCart, Users, Image, Tag, Truck, Star,
-  Settings, LogOut, Grid3X3, LayoutGrid, FileText, Receipt, MapPin,
-  TrendingUp, Percent, Ticket, QrCode, PieChart, BarChart3, ShieldAlert,
-  BookOpen, RotateCcw, Wallet, Boxes, LogIn,
-  ChevronDown, Brain, Link2, ListChecks, Bell, Coins, Globe, MonitorCog, Route,
-} from 'lucide-react';
-import { NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useAuthActions } from '@/hooks/useAuthActions';
-import {
-  Sidebar, SidebarContent, SidebarGroup, SidebarGroupContent, SidebarGroupLabel,
-  SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarHeader, SidebarFooter,
-  useSidebar,
-} from '@/components/ui/sidebar';
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
-import { Button } from '@/components/ui/button';
-import { cn } from '@/lib/utils';
-import { useEffect, useState } from 'react';
+  LayoutDashboard,
+  ShoppingBag,
+  Package,
+  Users,
+  FileText,
+  Store,
+  WalletCards,
+  BarChart3,
+  Percent,
+  Settings,
+  CircleHelp,
+  LogOut,
+  ChevronDown,
+  Receipt,
+  RotateCcw,
+  CreditCard,
+  BookOpen,
+  PieChart,
+  Brain,
+  Tag,
+  Grid3X3,
+  Image,
+  LayoutGrid,
+  Bell,
+  Megaphone,
+} from "lucide-react";
 
-const groups: {
-  label: string;
-  items: { title: string; url: string; icon: any }[];
-}[] = [
+import { AnimatePresence, motion } from "framer-motion";
+import { NavLink, useLocation, useNavigate } from "react-router-dom";
+import { useEffect, useState, type CSSProperties, type ElementType } from "react";
+
+import { supabase } from "@/integrations/supabase/client";
+import { useAuthActions } from "@/hooks/useAuthActions";
+import { Sidebar, useSidebar } from "@/components/ui/sidebar";
+import { cn } from "@/lib/utils";
+
+type NavItem = {
+  title: string;
+  url: string;
+  icon: ElementType;
+  badge?: number;
+  exact?: boolean;
+};
+
+type NavSection = {
+  id: string;
+  title: string;
+  icon: ElementType;
+  items: NavItem[];
+};
+
+const primaryItems: NavItem[] = [
+  { title: "لوحة التحكم", url: "/admin", icon: LayoutDashboard, exact: true },
+  { title: "الطلبات", url: "/admin/orders", icon: ShoppingBag, badge: 46 },
+  { title: "المنتجات", url: "/admin/products", icon: Package },
+  { title: "العملاء", url: "/admin/customers", icon: Users },
+  { title: "المحتوى", url: "/admin/content", icon: FileText },
+];
+
+const sections: NavSection[] = [
   {
-    label: 'لوحة التحكم',
+    id: "store",
+    title: "المتجر الإلكتروني",
+    icon: Store,
     items: [
-      { title: 'لوحة التحكم', url: '/admin', icon: LayoutDashboard },
-      { title: 'رحلة العميل', url: '/admin/storefront-map', icon: Route },
+      { title: "الفئات", url: "/admin/categories", icon: Grid3X3 },
+      { title: "الماركات", url: "/admin/brands", icon: Tag },
+      { title: "البانرات", url: "/admin/banners", icon: Image },
+      { title: "أقسام الصفحة الرئيسية", url: "/admin/sections", icon: LayoutGrid },
+      { title: "إدارة الواجهة", url: "/admin/customer-experience", icon: Store },
     ],
   },
-
   {
-  label: 'الكتالوج والماركات',
-  items: [
-    { title: 'المنتجات', url: '/admin/products', icon: Package },
-    { title: 'تجربة المنتج', url: '/admin/product-experience', icon: Star },
-    { title: 'الفئات', url: '/admin/categories', icon: Grid3X3 },
-    { title: 'الماركات', url: '/admin/brands', icon: Tag },
-    { title: 'صفحات الماركات', url: '/admin/brand-pages', icon: LayoutGrid },
-    { title: 'أقسام الماركات', url: '/admin/brand-sections', icon: Boxes },
-    { title: 'فلاتر الماركات', url: '/admin/brand-filters', icon: ListChecks },
-    { title: 'ربط الماركات بالأقسام', url: '/admin/brand-category-map', icon: Link2 },
-  ],
-},
-
-  {
-    label: 'المبيعات',
+    id: "finance",
+    title: "المالية",
+    icon: WalletCards,
     items: [
-      { title: 'الطلبات', url: '/admin/orders', icon: ShoppingCart },
-      { title: 'العملاء', url: '/admin/customers', icon: Users },
-      { title: 'الفواتير', url: '/admin/invoices', icon: Receipt },
-      { title: 'المرتجعات', url: '/admin/refunds', icon: RotateCcw },
-      { title: 'إشعارات العملاء', url: '/admin/customer-notifications', icon: Bell },
+      { title: "الفواتير", url: "/admin/invoices", icon: Receipt },
+      { title: "طرق الدفع", url: "/admin/payment-methods", icon: CreditCard },
+      { title: "دفتر اليومية", url: "/admin/ledger", icon: BookOpen },
+      { title: "المرتجعات", url: "/admin/refunds", icon: RotateCcw },
     ],
   },
-
   {
-    label: 'المحتوى والظهور',
+    id: "analytics",
+    title: "التقارير والتحليلات",
+    icon: BarChart3,
     items: [
-      { title: 'البانرات الرئيسية', url: '/admin/banners', icon: Image },
-      { title: 'الحملات والخدمات', url: '/admin/campaigns', icon: LayoutGrid },
-      { title: 'أقسام الصفحة الرئيسية', url: '/admin/sections', icon: LayoutGrid },
-      { title: 'محتوى الصفحات', url: '/admin/content', icon: FileText },
-      { title: 'التقييمات', url: '/admin/reviews', icon: Star },
-      { title: 'واجهة العميل', url: '/admin/customer-experience', icon: MonitorCog },
+      { title: "نظرة عامة", url: "/admin/reports", icon: BarChart3, exact: true },
+      { title: "الأرباح والمالية", url: "/admin/reports/finance", icon: PieChart },
+      { title: "تحليل العملاء", url: "/admin/reports/customers", icon: Brain },
     ],
   },
-
   {
-    label: 'التشغيل والمالية',
+    id: "marketing",
+    title: "التسويق",
+    icon: Megaphone,
     items: [
-      { title: 'شركات التوصيل', url: '/admin/delivery', icon: Truck },
-      { title: 'مناطق الدفع', url: '/admin/cod-regions', icon: MapPin },
-      { title: 'طرق الدفع', url: '/admin/payment-methods', icon: Wallet },
-      { title: 'تسوية المخزون', url: '/admin/inventory-adjustments', icon: Boxes },
-      { title: 'دفتر اليومية', url: '/admin/ledger', icon: BookOpen },
-      { title: 'المصروفات', url: '/admin/expenses', icon: Receipt },
-    ],
-  },
-
-  {
-    label: 'التقارير والإعدادات',
-    items: [
-      { title: 'نظرة عامة', url: '/admin/reports', icon: BarChart3 },
-      { title: 'الأرباح والمالية', url: '/admin/reports/finance', icon: PieChart },
-      { title: 'تحليل العملاء', url: '/admin/reports/customers', icon: Brain },
-      { title: 'العملات', url: '/admin/currencies', icon: Coins },
-      { title: 'الدول', url: '/admin/countries', icon: Globe },
-      { title: 'سجل التدقيق', url: '/admin/audit-log', icon: ShieldAlert },
-      { title: 'سجل تسليم الإشعارات', url: '/admin/notification-deliveries', icon: Bell },
-      { title: 'الإعدادات', url: '/admin/settings', icon: Settings },
-      { title: 'الباركود', url: '/qr-code', icon: QrCode },
+      { title: "الحملات", url: "/admin/campaigns", icon: Megaphone },
+      { title: "الخصومات والقسائم", url: "/admin/discounts", icon: Percent },
+      { title: "إشعارات العملاء", url: "/admin/customer-notifications", icon: Bell },
     ],
   },
 ];
 
+const systemItems: NavItem[] = [
+  { title: "الإعدادات", url: "/admin/settings", icon: Settings },
+  { title: "المساعدة والدعم", url: "/admin/support", icon: CircleHelp },
+];
+
+const activeSpring = {
+  type: "spring" as const,
+  stiffness: 1050,
+  damping: 70,
+  mass: 0.28,
+};
+
+const fastEase = {
+  duration: 0.11,
+  ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
+};
+
 const AdminSidebar = () => {
-  const navigate = useNavigate();
   const location = useLocation();
+  const navigate = useNavigate();
   const { state, setOpenMobile } = useSidebar();
-  const collapsed = state === 'collapsed';
-  const [userEmail, setUserEmail] = useState<string>('');
   const { logout } = useAuthActions();
+
+  const collapsed = state === "collapsed";
+
+  const [userEmail, setUserEmail] = useState("");
+
+  const isActive = (item: NavItem) => {
+    if (item.exact) return location.pathname === item.url;
+    return location.pathname === item.url || location.pathname.startsWith(`${item.url}/`);
+  };
+
+  const isSectionActive = (section: NavSection) => section.items.some((item) => isActive(item));
+
+  const currentSection = () => sections.find((section) => isSectionActive(section))?.id ?? null;
+
+  const [openSection, setOpenSection] = useState<string | null>(() => currentSection());
+
+  useEffect(() => {
+    const current = currentSection();
+
+    if (current) setOpenSection(current);
+  }, [location.pathname]);
 
   useEffect(() => {
     supabase.auth.getUser().then(({ data }) => {
-      setUserEmail(data.user?.email || '');
+      setUserEmail(data.user?.email || "");
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_evt, session) => {
-      setUserEmail(session?.user?.email || '');
+
+    const { data } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUserEmail(session?.user?.email || "");
     });
-    return () => sub.subscription.unsubscribe();
+
+    return () => {
+      data.subscription.unsubscribe();
+    };
   }, []);
 
-  const isActive = (url: string) =>
-    url === '/admin' ? location.pathname === '/admin' : location.pathname.startsWith(url);
-  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>(() => {
-    const init: Record<string, boolean> = {};
-    for (const g of groups) init[g.label] = g.items.some((i) => isActive(i.url));
-    if (!Object.values(init).some(Boolean)) init['لوحة التحكم'] = true;
-    return init;
-  });
-
-  useEffect(() => {
-    const activeGroup = groups.find((group) => group.items.some((item) => isActive(item.url)));
-    if (activeGroup) {
-      setOpenGroups((current) => ({ ...current, [activeGroup.label]: true }));
-    }
-  }, [location.pathname]);
-
-  const handleLogout = async () => {
-    if (!window.confirm('هل تريد تسجيل الخروج من لوحة التحكم؟')) return;
-    await logout({
-      redirectTo: '/admin/login',
-      successTitle: 'تم تسجيل الخروج بنجاح',
-      onSuccess: () => setUserEmail(''),
-    });
-  };
-
-  const handleNavClick = () => {
+  const closeMobile = () => {
     setOpenMobile(false);
   };
 
-  const handleLogin = () => {
-    navigate('/admin/login');
+  const handleLogout = async () => {
+    if (!window.confirm("هل تريد تسجيل الخروج من لوحة التحكم؟")) return;
+
+    await logout({
+      redirectTo: "/admin/login",
+      successTitle: "تم تسجيل الخروج بنجاح",
+      onSuccess: () => setUserEmail(""),
+    });
   };
 
   return (
-    <Sidebar
- className="border-l border-border bg-background text-foreground shadow-[20px_0_60px_-38px_rgba(0,0,0,0.3)] font-admin" collapsible="icon"
-      side="right"
-    >
-      <SidebarHeader className="flex items-center justify-center border-b border-border px-4 py-5">
-        <div className="flex items-center justify-center">
-  <img
-    src="/icons/flamingo.jpeg"
-    alt="logo"
-    loading="lazy"
-    className="h-16 w-16 object-contain"
-  />
-</div>
-      </SidebarHeader>
+    <Sidebar side="right" collapsible="icon" style={{ "--sidebar-width": "258px", "--sidebar-width-icon": "66px" } as CSSProperties} className="h-[100dvh] !overflow-hidden border-l border-[#EEEEEC] bg-white font-admin text-[#242524] shadow-none">
+      <div className="flex h-full min-h-0 w-full flex-col !overflow-hidden bg-white">
+        <div className="flex h-[62px] shrink-0 items-center border-b border-[#F1F2F0] bg-white px-[12px]">
+          <div className={cn("flex w-full items-center", collapsed ? "justify-center" : "justify-between")}>
+            <div className="flex min-w-0 items-center gap-[9px]">
+              <motion.button type="button" onClick={() => navigate("/admin")} whileHover={{ scale: 1.035 }} whileTap={{ scale: 0.97 }} transition={activeSpring} className="flex h-[36px] w-[36px] shrink-0 items-center justify-center overflow-hidden rounded-[9px] border border-[#ECEEEC] bg-white">
+                <img src="/icons/flamingo.jpeg" alt="Flamingo" className="h-[29px] w-[29px] object-contain" />
+              </motion.button>
 
-      <SidebarContent className="hide-scrollbar gap-1 overflow-x-hidden overflow-y-auto py-3 overscroll-contain">
-        {groups.map((group) => {
-          const groupActive = group.items.some((i) => isActive(i.url));
-          const isOpen = collapsed ? true : openGroups[group.label] ?? true;
-          return (
-            <SidebarGroup key={group.label} className="mb-1 px-2 py-1">
-              {collapsed ? (
-                <GroupItems group={group} isActive={isActive} onNav={handleNavClick} collapsed />
-              ) : (
-                <Collapsible
-                  open={isOpen}
-                  onOpenChange={(v) => setOpenGroups((p) => ({ ...p, [group.label]: v }))}
-                >
-                  <CollapsibleTrigger
-  className="
-    w-full flex items-center justify-between
-    px-3 py-2.5
-    hover:bg-muted/70
-    transition-colors
-    group
-  "
->
-  <span className="text-[10px] tracking-[0.18em] font-semibold text-muted-foreground group-hover:text-foreground">
-    {group.label}
-  </span>
+              {!collapsed && (
+                <motion.div initial={{ opacity: 0, x: 3 }} animate={{ opacity: 1, x: 0 }} transition={fastEase} className="min-w-0">
+                  <div className="flex items-center gap-[6px]">
+                    <h1 className="truncate text-[15px] font-bold leading-none tracking-[-0.25px] text-[#181918]">Flamingo</h1>
 
-  <ChevronDown
-    className={cn(
-      "w-4 h-4 text-muted-foreground transition-transform duration-200",
-      isOpen && "rotate-180 text-primary"
-    )}
-  />
-</CollapsibleTrigger>
-                  <CollapsibleContent className="data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=open]:fade-in data-[state=closed]:fade-out duration-200 data-[state=closed]:animate-collapsible-up data-[state=open]:animate-collapsible-down overflow-hidden">
-                    <GroupItems group={group} isActive={isActive} onNav={handleNavClick} collapsed={false} />
-                  </CollapsibleContent>
-                </Collapsible>
+                    <span className="relative flex h-[6px] w-[6px] items-center justify-center">
+                      <motion.span animate={{ scale: [1, 1.7, 1], opacity: [0.16, 0, 0.16] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }} className="absolute h-[11px] w-[11px] rounded-full bg-[#5CC683]" />
+                      <span className="relative h-[6px] w-[6px] rounded-full bg-[#5CC683]" />
+                    </span>
+                  </div>
+
+                  <p className="mt-[5px] text-[9.5px] font-medium leading-none text-[#A0A29F]">إدارة متجر فلامنجو</p>
+                </motion.div>
               )}
-            </SidebarGroup>
-          );
-        })}
-      </SidebarContent>
+            </div>
 
-      <SidebarFooter className="p-3 border-t border-sidebar-border/60">
-        {!collapsed && userEmail && (
-          <div className="px-3 py-2 mb-2 rounded-xl bg-primary/5 border border-primary/10">
-            <p className="text-[10px] uppercase tracking-[0.08em] text-black/40 mb-1">حساب الأدمن</p>
-            <p className="text-[12px] font-medium text-black truncate" dir="ltr">{userEmail}</p>
+            {!collapsed && (
+              <div className="flex h-[27px] w-[27px] items-center justify-center rounded-full border border-[#EEEEEC]">
+                <span className="h-[6px] w-[6px] rounded-full bg-[#5CC683]" />
+              </div>
+            )}
           </div>
-        )}
-        {userEmail ? (
-          <button
-            onClick={handleLogout}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300",
-              "text-black/70 hover:text-white hover:bg-primary hover:shadow-md",
-              collapsed && "justify-center"
-            )}
-          >
-            <LogOut className="w-5 h-5" />
-            {!collapsed && (
-              <span className="text-[13px] font-medium">تسجيل الخروج</span>
-            )}
-          </button>
-        ) : (
-          <button
-            onClick={handleLogin}
-            className={cn(
-              "w-full flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all duration-300",
-              "text-black/70 hover:text-white hover:bg-primary hover:shadow-md",
-              collapsed && "justify-center"
-            )}
-          >
-            <LogIn className="w-5 h-5" />
-            {!collapsed && (
-              <span className="text-[13px] font-medium">تسجيل الدخول</span>
-            )}
-          </button>
-        )}
-      </SidebarFooter>
+        </div>
+
+        <div className="min-h-0 flex-1 !overflow-hidden bg-white px-[9px] py-[7px]">
+          <div className="space-y-[1px]">
+            {primaryItems.map((item) => (
+              <MainItem key={item.url} item={item} active={isActive(item)} collapsed={collapsed} onNavigate={closeMobile} />
+            ))}
+          </div>
+
+          <Divider />
+
+          <div className="space-y-[1px]">
+            {sections.map((section) => {
+              const Icon = section.icon;
+              const active = isSectionActive(section);
+              const open = openSection === section.id;
+
+              return (
+                <div key={section.id}>
+                  <motion.button type="button" whileTap={{ scale: 0.992 }} transition={activeSpring} onClick={() => setOpenSection((current) => current === section.id ? null : section.id)} title={collapsed ? section.title : undefined} className={cn("group relative flex h-[36px] w-full items-center overflow-hidden rounded-[9px] outline-none transition-colors duration-100", collapsed ? "justify-center px-0" : "gap-[9px] px-[9px]", active ? "text-[#171817]" : "text-[#5B5D5B] hover:bg-[#FAFAF9] hover:text-[#242624]")}>
+                    {active && <motion.span layoutId="admin-active-background" transition={activeSpring} className="absolute inset-0 rounded-[9px] bg-[#F6F8F6]" />}
+
+                    <span className={cn("relative z-[1] flex h-[22px] w-[22px] shrink-0 items-center justify-center transition-all duration-100", active ? "text-[#242624]" : "text-[#797B79] group-hover:scale-[1.05] group-hover:text-[#3F413F]")}>
+                      <Icon className="h-[15px] w-[15px] stroke-[1.75]" />
+                    </span>
+
+                    {!collapsed && (
+                      <>
+                        <span className={cn("relative z-[1] min-w-0 flex-1 truncate text-right text-[12.5px] leading-none", active ? "font-semibold" : "font-medium")}>{section.title}</span>
+
+                        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={fastEase} className="relative z-[1] flex h-[18px] w-[18px] shrink-0 items-center justify-center">
+                          <ChevronDown className="h-[12px] w-[12px] text-[#9EA09D]" />
+                        </motion.span>
+                      </>
+                    )}
+
+                    {active && <ActiveIndicator layoutId="admin-active-indicator" />}
+                  </motion.button>
+
+                  <AnimatePresence initial={false}>
+                    {!collapsed && open && (
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ height: { duration: 0.11, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.07 } }} className="overflow-hidden">
+                        <div className="mr-[26px] py-[2px]">
+                          {section.items.map((item) => (
+                            <SubItem key={item.url} item={item} active={isActive(item)} onNavigate={closeMobile} />
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                </div>
+              );
+            })}
+          </div>
+
+          <Divider />
+
+          <div className="space-y-[1px]">
+            {systemItems.map((item) => (
+              <MainItem key={item.url} item={item} active={isActive(item)} collapsed={collapsed} onNavigate={closeMobile} />
+            ))}
+          </div>
+        </div>
+
+        <div className="shrink-0 border-t border-[#F1F2F0] bg-white p-[8px]">
+          {userEmail ? (
+            <div>
+              <motion.button type="button" whileTap={{ scale: 0.99 }} transition={activeSpring} onClick={() => navigate("/admin/settings")} className={cn("group flex w-full items-center rounded-[9px] transition-colors duration-100 hover:bg-[#FAFAF9]", collapsed ? "h-[40px] justify-center" : "gap-[8px] px-[6px] py-[5px]")}>
+                <div className="relative flex h-[33px] w-[33px] shrink-0 items-center justify-center rounded-full border border-[#ECEEEC] bg-white text-[11.5px] font-bold uppercase text-[#343634]">
+                  {userEmail.charAt(0).toUpperCase()}
+                  <span className="absolute bottom-0 left-0 h-[9px] w-[9px] rounded-full border-2 border-white bg-[#5CC683]" />
+                </div>
+
+                {!collapsed && (
+                  <>
+                    <div className="min-w-0 flex-1 text-right">
+                      <p className="truncate text-[11.5px] font-semibold leading-none text-[#272827]">مدير المتجر</p>
+                      <p dir="ltr" className="mt-[4px] truncate text-left text-[8.5px] leading-none text-[#9A9C99]">{userEmail}</p>
+                    </div>
+
+                    <Settings className="h-[13px] w-[13px] shrink-0 text-[#A8AAA7] transition-all duration-150 group-hover:rotate-45 group-hover:text-[#666866]" />
+                  </>
+                )}
+              </motion.button>
+
+              <button type="button" onClick={handleLogout} className={cn("group mt-[1px] flex h-[29px] w-full items-center rounded-[7px] text-[#777977] transition-colors duration-100 hover:text-[#292A29]", collapsed ? "justify-center" : "gap-[8px] px-[8px]")}>
+                <LogOut className="h-[13px] w-[13px] stroke-[1.7] transition-transform duration-100 group-hover:-translate-x-[1px]" />
+                {!collapsed && <span className="text-[10.5px] font-medium">تسجيل الخروج</span>}
+              </button>
+            </div>
+          ) : (
+            <button type="button" onClick={() => navigate("/admin/login")} className="flex h-[36px] w-full items-center justify-center rounded-[8px] bg-[#5CC683] text-[11px] font-semibold text-white">تسجيل الدخول</button>
+          )}
+        </div>
+      </div>
     </Sidebar>
   );
 };
 
-const GroupItems = ({
-  group,
-  isActive,
-  onNav,
-  collapsed,
-}: {
-  group: { label: string; items: { title: string; url: string; icon: any }[] };
-  isActive: (url: string) => boolean;
-  onNav: () => void;
-  collapsed: boolean;
-}) => (
-  <SidebarGroupContent>
-    <SidebarMenu className="space-y-1 px-1">
-      {group.items.map((item) => {
-        const active = isActive(item.url);
-        return (
-          <SidebarMenuItem key={item.url}>
-            <SidebarMenuButton asChild className="h-auto p-0" tooltip={collapsed ? item.title : undefined}>
-              <NavLink
-                to={item.url}
-                end={item.url === '/admin'}
-                onClick={onNav}
-                className={cn(
-                  "group relative flex items-center gap-3 rounded-lg px-3 py-2.5 transition-colors",
-                  "focus:outline-none focus:ring-0 focus-visible:outline-none focus-visible:ring-0",
+const MainItem = ({ item, active, collapsed, onNavigate }: { item: NavItem; active: boolean; collapsed: boolean; onNavigate: () => void }) => {
+  const Icon = item.icon;
 
-                  active
-                    ? "bg-primary/10 text-primary font-medium"
-                    : "text-foreground/75 hover:bg-muted hover:text-foreground"
-                )}
-                style={{ 
-                  direction: "rtl",
-                  color: "inherit"
-                }}
-              >
-                {active && (
-                <span className="absolute right-0 top-1/2 h-6 w-0.5 -translate-y-1/2 bg-primary" />
-                )}
-                <item.icon
-                  className={cn(
-                    'shrink-0 w-5 h-5 transition-all duration-300 ease-out',
-                    active
-  ? "text-primary"
-  : "text-muted-foreground group-hover:text-foreground"
-                  )}
-                />
-                {!collapsed && (
-                  <span className="flex-1 text-right text-[13px] leading-none">
-                    {item.title}
-                  </span>
-                )}
-              </NavLink>
-            </SidebarMenuButton>
-          </SidebarMenuItem>
-        );
-      })}
-    </SidebarMenu>
-  </SidebarGroupContent>
-);
+  return (
+    <NavLink to={item.url} end={item.exact} onClick={onNavigate} title={collapsed ? item.title : undefined} className={cn("group relative flex h-[36px] w-full items-center overflow-hidden rounded-[9px] outline-none transition-colors duration-100", collapsed ? "justify-center px-0" : "gap-[9px] px-[9px]", active ? "text-[#171817]" : "text-[#5B5D5B] hover:bg-[#FAFAF9] hover:text-[#242624]")}>
+      {active && <motion.span layoutId="admin-active-background" transition={activeSpring} className="absolute inset-0 rounded-[9px] bg-[#F6F8F6]" />}
+
+      <span className={cn("relative z-[1] flex h-[22px] w-[22px] shrink-0 items-center justify-center transition-all duration-100", active ? "text-[#242624]" : "text-[#797B79] group-hover:scale-[1.05] group-hover:text-[#3F413F]")}>
+        <Icon className="h-[15px] w-[15px] stroke-[1.75]" />
+      </span>
+
+      {!collapsed && (
+        <>
+          <span className={cn("relative z-[1] min-w-0 flex-1 truncate text-right text-[12.5px] leading-none", active ? "font-semibold" : "font-medium")}>{item.title}</span>
+
+          {item.badge !== undefined && <span className="relative z-[1] flex min-w-[28px] items-center justify-center rounded-full bg-[#D1F7E1] px-[7px] py-[3px] text-[9.5px] font-bold leading-none text-[#299B5D]">{item.badge}</span>}
+        </>
+      )}
+
+      {active && <ActiveIndicator layoutId="admin-active-indicator" />}
+    </NavLink>
+  );
+};
+
+const SubItem = ({ item, active, onNavigate }: { item: NavItem; active: boolean; onNavigate: () => void }) => {
+  const Icon = item.icon;
+
+  return (
+    <NavLink to={item.url} end={item.exact} onClick={onNavigate} className={cn("group relative flex h-[26px] w-full items-center gap-[7px] rounded-[6px] px-[7px] outline-none transition-colors duration-100", active ? "font-semibold text-[#242624]" : "font-medium text-[#858784] hover:text-[#3E403E]")}>
+      <span className={cn("flex h-[17px] w-[17px] shrink-0 items-center justify-center transition-all duration-100", active ? "text-[#45AD70]" : "text-[#A3A5A2] group-hover:text-[#777977]")}>
+        <Icon className="h-[11.5px] w-[11.5px] stroke-[1.75]" />
+      </span>
+
+      <span className="min-w-0 flex-1 truncate text-[11px]">{item.title}</span>
+
+      {active && <ActiveIndicator layoutId="admin-sub-active-indicator" small />}
+    </NavLink>
+  );
+};
+
+const ActiveIndicator = ({ layoutId, small = false }: { layoutId: string; small?: boolean }) => {
+  return (
+    <span className="pointer-events-none absolute inset-y-0 left-[6px] z-[5] flex items-center justify-center">
+      <motion.span layoutId={layoutId} transition={activeSpring} className={cn("block rounded-full bg-[#5CC683]", small ? "h-[12px] w-[2px]" : "h-[18px] w-[3px]")} />
+    </span>
+  );
+};
+
+const Divider = () => {
+  return <div className="mx-[9px] my-[7px] h-px bg-[#F1F2F0]" />;
+};
 
 export default AdminSidebar;

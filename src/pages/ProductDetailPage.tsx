@@ -423,11 +423,15 @@ const ProductDetailPage = () => {
         MOBILE TOP BAR
     ================================= */}
     <header className="sticky top-0 z-50 flex h-[52px] items-center justify-between border-b border-[#F2DDE4] bg-white px-2.5 md:hidden">
-      <button onClick={() => navigate(-1)} aria-label="رجوع" className="flex h-10 w-10 items-center justify-center rounded-full text-[#252025] transition active:bg-[#FFF1F5]">
+      <button onClick={() => navigate(-1)} aria-label="رجوع" className="relative z-10 flex h-10 w-10 items-center justify-center rounded-full text-[#252025] transition active:bg-[#FFF1F5]">
         <ChevronRight className="h-[22px] w-[22px]" strokeWidth={1.6} />
       </button>
 
-      <div className="flex items-center">
+      <button onClick={() => navigate('/home')} aria-label="Flamingo Park" className="absolute left-1/2 top-1/2 flex -translate-x-1/2 -translate-y-1/2 items-center justify-center">
+        <img src="/icons/flamingo.jpeg" alt="Flamingo Park" className="h-[34px] w-auto max-w-[110px] object-contain" />
+      </button>
+
+      <div className="relative z-10 flex items-center">
         <button onClick={() => navigate('/cart')} aria-label="السلة" className="flex h-10 w-10 items-center justify-center rounded-full text-[#252025] transition active:bg-[#FFF1F5]">
           <ShoppingCart className="h-[20px] w-[20px]" strokeWidth={1.6} />
         </button>

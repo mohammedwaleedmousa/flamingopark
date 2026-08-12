@@ -1,182 +1,268 @@
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { ArrowLeft } from "lucide-react";
+import { ArrowUpLeft } from "lucide-react";
 
 const FlamingoServices = () => {
   return (
-    <section className="bg-white py-8 md:py-16" dir="rtl">
-      <div className="container mx-auto px-4 md:px-6">
+    <section className="bg-white py-10 md:py-24" dir="rtl">
+      <div className="mx-auto w-full max-w-[1500px] px-4 md:px-8">
 
         <motion.div
-          initial={{ opacity: 0, y: 18 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, amount: 0.25 }}
-          transition={{
-            duration: 0.85,
-            ease: [0.22, 1, 0.36, 1],
-          }}
-          className="
-            relative
-            overflow-hidden
-            bg-[#F6F1EE]
-            md:grid
-            md:grid-cols-[0.82fr_1.18fr]
-            md:min-h-[560px]
-          "
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true, amount: 0.2 }}
+          transition={{ duration: 0.9 }}
+          className="relative"
         >
 
-          {/* IMAGE */}
-          <div className="relative h-[430px] md:h-full md:order-2 overflow-hidden">
-
-            <img
-              src="/images/flamingo.png"
-              alt="Flamingo luxury handbag"
-              loading="lazy"
-              decoding="async"
-              className="
-                w-full
-                h-full
-                object-cover
-                object-center
-                transition-transform
-                duration-[1800ms]
-                hover:scale-[1.025]
-              "
-            />
-
-            {/* MOBILE OVERLAY */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/15 via-transparent to-transparent md:hidden" />
-
-            {/* SMALL EDITORIAL LABEL */}
+          {/* =========================
+              DESKTOP EDITORIAL INDEX
+          ========================= */}
+          <div className="mb-5 hidden items-center justify-between md:flex">
             <span
               dir="ltr"
+              className="text-[9px] tracking-[0.42em] text-[#A49DA0]"
+            >
+              FLAMINGO — 01
+            </span>
+
+            <span className="text-[10px] tracking-[0.08em] text-[#AAA2A5]">
+              مختارات فلامنجو
+            </span>
+          </div>
+
+          {/* =========================
+              MAIN VISUAL
+          ========================= */}
+          <div className="relative">
+
+            <motion.div
+              initial={{ clipPath: "inset(0 0 100% 0)" }}
+              whileInView={{ clipPath: "inset(0 0 0% 0)" }}
+              viewport={{ once: true }}
+              transition={{
+                duration: 1.15,
+                ease: [0.76, 0, 0.24, 1],
+              }}
               className="
-                absolute
-                top-5
-                left-5
-                text-[8px]
-                tracking-[0.34em]
-                text-white
-                drop-shadow
-                md:hidden
+                relative
+                h-[470px]
+                overflow-hidden
+                bg-[#E9E4DE]
+                sm:h-[560px]
+                md:h-[720px]
+                lg:h-[780px]
               "
             >
-              FLAMINGO / EDIT
-            </span>
+
+              <img
+                src="/images/flamingo.png"
+                alt="Flamingo luxury handbag"
+                loading="lazy"
+                decoding="async"
+                className="
+                  h-full
+                  w-full
+                  object-cover
+                  object-[50%_48%]
+                  scale-[1.01]
+                  transition-transform
+                  duration-[2200ms]
+                  ease-out
+                  md:hover:scale-[1.025]
+                "
+              />
+
+              {/* SOFT CINEMATIC FADE */}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/[0.20] via-transparent to-transparent" />
+
+              {/* MOBILE NUMBER */}
+              <span
+                dir="ltr"
+                className="
+                  absolute
+                  left-4
+                  top-4
+                  text-[8px]
+                  tracking-[0.38em]
+                  text-white/75
+                  md:hidden
+                "
+              >
+                01 / EDIT
+              </span>
+
+              {/* SMALL SIDE WORD */}
+              <span
+                dir="ltr"
+                className="
+                  absolute
+                  right-[-28px]
+                  top-1/2
+                  hidden
+                  -translate-y-1/2
+                  rotate-90
+                  text-[8px]
+                  tracking-[0.5em]
+                  text-white/70
+                  md:block
+                "
+              >
+                FLAMINGO PARK
+              </span>
+
+            </motion.div>
+
+            {/* =========================
+                FLOATING TYPOGRAPHY
+            ========================= */}
+            <motion.div
+              initial={{ opacity: 0, y: 28 }}
+              whileInView={{ opacity: 1, y: 0 }}
+              viewport={{ once: true }}
+              transition={{
+                delay: 0.3,
+                duration: 0.8,
+                ease: [0.22, 1, 0.36, 1],
+              }}
+              className="
+                relative
+                z-10
+                -mt-9
+                mr-4
+                max-w-[310px]
+                md:absolute
+                md:bottom-[-72px]
+                md:right-[6%]
+                md:m-0
+                md:max-w-[560px]
+              "
+            >
+
+              <h2
+                className="
+                  font-heading
+                  text-[30px]
+                  font-light
+                  leading-[1.5]
+                  tracking-[-0.035em]
+                  text-[#171416]
+
+                  md:text-[54px]
+                  lg:text-[64px]
+                  md:leading-[1.38]
+                "
+              >
+                ليست كل القطع
+                <br />
+                بحاجة إلى
+                <span className="relative mx-2 inline-block">
+                  تعريف.
+                  <span
+                    className="
+                      absolute
+                      bottom-[5px]
+                      left-0
+                      -z-10
+                      h-[7px]
+                      w-full
+                      bg-[#F7CBD8]
+                      md:bottom-[9px]
+                      md:h-[10px]
+                    "
+                  />
+                </span>
+              </h2>
+
+            </motion.div>
 
           </div>
 
-          {/* CONTENT */}
+          {/* =========================
+              BOTTOM INFORMATION
+          ========================= */}
           <div
             className="
-              relative
-              z-10
-              -mt-16
-              mx-4
-              bg-white
-              px-6
-              py-8
-              text-center
+              mt-8
+              flex
+              items-end
+              justify-between
+              gap-5
 
-              md:order-1
-              md:m-0
-              md:bg-transparent
-              md:px-12
-              md:py-16
-              md:text-right
-              md:flex
-              md:flex-col
-              md:justify-center
+              md:mt-28
+              md:grid
+              md:grid-cols-[1fr_auto]
+              md:items-end
             "
           >
 
             <p
-              dir="ltr"
               className="
-                hidden
-                md:block
-                text-[9px]
-                tracking-[0.36em]
-                text-[#A59A9E]
-                mb-8
+                max-w-[220px]
+                text-[10px]
+                leading-6
+                text-[#817A7D]
+
+                md:max-w-[360px]
+                md:text-[12px]
+                md:leading-7
               "
             >
-              FLAMINGO / EDIT
+              تفاصيل مختارة بهدوء، لتترك القطعة حضورها قبل أن تقول أي شيء.
             </p>
 
-            <div className="hidden md:block w-10 h-px bg-[#E8547C] mb-8" />
-
-            <h2
+            <Link
+              to="/new-arrivals"
               className="
-                font-heading
-                text-[27px]
-                md:text-[46px]
-                lg:text-[54px]
-                font-light
-                leading-[1.55]
-                tracking-[-0.02em]
-                text-[#211D1F]
+                group
+                flex
+                shrink-0
+                items-center
+                gap-3
+                text-[10px]
+                font-medium
+                text-[#181517]
+                md:text-[11px]
               "
             >
-              قطعة واحدة
-              <br />
-              قد تغيّر
-              <br />
+              <span className="relative pb-1">
+                شاهد المختارات
 
-              <span className="text-[#E8547C]">
-                الإطلالة كلها.
-              </span>
-            </h2>
-
-            <p
-              className="
-                max-w-sm
-                mx-auto
-                md:mx-0
-                mt-4
-                text-[11px]
-                md:text-[13px]
-                leading-7
-                text-[#8E8588]
-              "
-            >
-              اكتشف مختارات الموسم والقطع التي تستحق مكانًا في خزانتك.
-            </p>
-
-            <div className="mt-6 md:mt-8">
-              <Link
-                to="/new-arrivals"
-                className="
-                  group
-                  inline-flex
-                  items-center
-                  gap-2
-                  text-[10px]
-                  md:text-[11px]
-                  font-medium
-                  text-[#211D1F]
-                  border-b
-                  border-[#211D1F]
-                  pb-1.5
-                  transition-colors
-                  duration-300
-                  hover:text-[#E8547C]
-                  hover:border-[#E8547C]
-                "
-              >
-                اكتشف الجديد
-
-                <ArrowLeft
+                <span
                   className="
-                    w-3
-                    h-3
+                    absolute
+                    bottom-0
+                    right-0
+                    h-px
+                    w-full
+                    origin-right
+                    bg-[#181517]
                     transition-transform
-                    duration-300
-                    group-hover:-translate-x-1
+                    duration-500
+                    group-hover:scale-x-0
                   "
                 />
-              </Link>
-            </div>
+              </span>
+
+              <span
+                className="
+                  flex
+                  h-8
+                  w-8
+                  items-center
+                  justify-center
+                  rounded-full
+                  border
+                  border-black/15
+                  transition-all
+                  duration-500
+                  group-hover:-translate-x-1
+                  group-hover:border-black
+                "
+              >
+                <ArrowUpLeft className="h-3 w-3" strokeWidth={1.4} />
+              </span>
+            </Link>
 
           </div>
 

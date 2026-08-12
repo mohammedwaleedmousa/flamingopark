@@ -15,7 +15,6 @@ import { useNearViewport } from "@/hooks/useNearViewport";
 import { Swiper, SwiperSlide } from "swiper/react";
 import { FreeMode } from "swiper/modules";
 import FlamingoServices from "@/components/FlamingoServices";
-import FlamingoCollections from "@/components/FlamingoCollections";
 import { useCustomerExperience } from "@/hooks/useCustomerExperience";
 
 import "swiper/css";
@@ -464,6 +463,55 @@ const HomePage = () => {
           </div>
         )}
 
+        {showHomeSection("services") && (
+          <FlamingoServices />
+        )}
+
+        {showHomeSection("bestSellers") && (
+          <div
+            ref={bestSellersViewport.ref}
+            className={bestSellers.length > 0 ? "min-h-0" : "min-h-px"}
+          >
+            {bestSellers.length > 0 && (
+              <section className="py-12 md:py-20 bg-background">
+                <div className="container mx-auto px-4 md:px-6">
+
+                  <div className="flex items-end justify-between gap-6 mb-8 md:mb-12">
+                    <div>
+                      <p className="text-[10px] tracking-[0.02em] uppercase text-muted-foreground mb-2 md:mb-3">
+                        Best Sellers
+                      </p>
+
+                      <h2 className="font-heading text-2xl md:text-5xl text-foreground">
+                        الأكثر مبيعاً
+                      </h2>
+                    </div>
+
+                    <Link
+                      to="/top-selling"
+                      className="shrink-0 text-[11px] border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
+                    >
+                      عرض الكل
+                      <ArrowLeft className="w-3 h-3" />
+                    </Link>
+                  </div>
+
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-10">
+                    {bestSellers.slice(0, 8).map((product) => (
+                      <ProductCard
+                        key={product.id}
+                        product={product}
+                        badge="BEST SELLER"
+                      />
+                    ))}
+                  </div>
+
+                </div>
+              </section>
+            )}
+          </div>
+        )}
+
         {showHomeSection("editorial") && (
           <section className="py-16 md:py-28 bg-background overflow-hidden">
             <motion.div
@@ -524,55 +572,6 @@ const HomePage = () => {
               </div>
             </motion.div>
           </section>
-        )}
-
-        {showHomeSection("bestSellers") && (
-          <div
-            ref={bestSellersViewport.ref}
-            className={bestSellers.length > 0 ? "min-h-0" : "min-h-px"}
-          >
-            {bestSellers.length > 0 && (
-              <section className="py-12 md:py-20 bg-background">
-                <div className="container mx-auto px-4 md:px-6">
-
-                  <div className="flex items-end justify-between gap-6 mb-8 md:mb-12">
-                    <div>
-                      <p className="text-[10px] tracking-[0.02em] uppercase text-muted-foreground mb-2 md:mb-3">
-                        Best Sellers
-                      </p>
-
-                      <h2 className="font-heading text-2xl md:text-5xl text-foreground">
-                        الأكثر مبيعاً
-                      </h2>
-                    </div>
-
-                    <Link
-                      to="/top-selling"
-                      className="shrink-0 text-[11px] border-b border-foreground pb-1 hover:opacity-60 transition-opacity flex items-center gap-2"
-                    >
-                      عرض الكل
-                      <ArrowLeft className="w-3 h-3" />
-                    </Link>
-                  </div>
-
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-10">
-                    {bestSellers.slice(0, 8).map((product) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        badge="BEST SELLER"
-                      />
-                    ))}
-                  </div>
-
-                </div>
-              </section>
-            )}
-          </div>
-        )}
-        
-        {showHomeSection("services") && (
-          <FlamingoServices />
         )}
 
       </main>

@@ -409,477 +409,513 @@ const ProductDetailPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f6f6f6]" dir="rtl">
-      {/* ================================
-          DESKTOP NAVBAR
-      ================================= */}
-      <div className="hidden md:block">
-        <Navbar />
-      </div>
+  <div className="min-h-screen bg-[#FFF8FA]" dir="rtl">
+    {/* ================================
+        DESKTOP NAVBAR
+    ================================= */}
+    <div className="hidden md:block">
+      <Navbar />
+    </div>
 
-      <CartDrawer />
+    <CartDrawer />
 
-      {/* ================================
-          MOBILE TOP BAR
-      ================================= */}
-      <header className="sticky top-0 z-50 flex h-[52px] items-center justify-between border-b border-black/[0.055] bg-white px-2.5 md:hidden">
-        <button onClick={() => navigate(-1)} aria-label="رجوع" className="flex h-10 w-10 items-center justify-center rounded-full text-[#181818] active:bg-black/[0.05]">
-          <ChevronRight className="h-[22px] w-[22px]" strokeWidth={1.6} />
+    {/* ================================
+        MOBILE TOP BAR
+    ================================= */}
+    <header className="sticky top-0 z-50 flex h-[52px] items-center justify-between border-b border-[#F2DDE4] bg-white px-2.5 md:hidden">
+      <button onClick={() => navigate(-1)} aria-label="رجوع" className="flex h-10 w-10 items-center justify-center rounded-full text-[#252025] transition active:bg-[#FFF1F5]">
+        <ChevronRight className="h-[22px] w-[22px]" strokeWidth={1.6} />
+      </button>
+
+      <div className="flex items-center">
+        <button onClick={() => navigate('/cart')} aria-label="السلة" className="flex h-10 w-10 items-center justify-center rounded-full text-[#252025] transition active:bg-[#FFF1F5]">
+          <ShoppingCart className="h-[20px] w-[20px]" strokeWidth={1.6} />
         </button>
 
-        <div className="flex items-center">
-          <button onClick={() => navigate('/cart')} aria-label="السلة" className="flex h-10 w-10 items-center justify-center rounded-full text-[#181818] active:bg-black/[0.05]">
-            <ShoppingCart className="h-[20px] w-[20px]" strokeWidth={1.6} />
-          </button>
+        <button onClick={() => toggleFavorite(product as Product)} aria-label="المفضلة" className="flex h-10 w-10 items-center justify-center rounded-full text-[#252025] transition active:bg-[#FFF1F5]">
+          <Heart className={`h-[20px] w-[20px] ${isLiked ? 'fill-[#E8547C] text-[#E8547C]' : ''}`} strokeWidth={1.6} />
+        </button>
 
-          <button onClick={() => toggleFavorite(product as Product)} aria-label="المفضلة" className="flex h-10 w-10 items-center justify-center rounded-full text-[#181818] active:bg-black/[0.05]">
-            <Heart className={`h-[20px] w-[20px] ${isLiked ? 'fill-[#d35864] text-[#d35864]' : ''}`} strokeWidth={1.6} />
-          </button>
+        <button onClick={handleShare} aria-label="مشاركة المنتج" className="flex h-10 w-10 items-center justify-center rounded-full text-[#252025] transition active:bg-[#FFF1F5]">
+          <Share2 className="h-[19px] w-[19px]" strokeWidth={1.6} />
+        </button>
+      </div>
+    </header>
 
-          <button onClick={handleShare} aria-label="مشاركة المنتج" className="flex h-10 w-10 items-center justify-center rounded-full text-[#181818] active:bg-black/[0.05]">
-            <Share2 className="h-[19px] w-[19px]" strokeWidth={1.6} />
-          </button>
-        </div>
-      </header>
+    <main className="pb-[88px] md:pb-20 md:pt-20">
+      <div className="mx-auto w-full max-w-[1440px] md:px-6 md:pt-6">
+        {/* ================================
+            DESKTOP BREADCRUMB
+        ================================= */}
+        <nav className="mb-5 hidden items-center gap-2 text-[11px] text-[#9B8990] md:flex" aria-label="مسار التنقل">
+          <button onClick={() => navigate('/home')} className="transition hover:text-[#B93461]">الرئيسية</button>
+          <ChevronLeft className="h-3 w-3" strokeWidth={1.5} />
+          <button onClick={() => navigate(-1)} className="transition hover:text-[#B93461]">المنتجات</button>
+          <ChevronLeft className="h-3 w-3" strokeWidth={1.5} />
+          <span className="max-w-[300px] truncate text-[#332A2D]">{product.nameAr || product.name}</span>
+        </nav>
 
-      <main className="pb-[88px] md:pb-20 md:pt-20">
-        <div className="mx-auto w-full max-w-[1440px] md:px-6 md:pt-6">
+        {/* ================================
+            MAIN PRODUCT CARD
+        ================================= */}
+        <div className="grid grid-cols-1 bg-white md:overflow-hidden md:rounded-[18px] md:border md:border-[#F1DCE3] lg:grid-cols-[minmax(0,1.08fr)_minmax(390px,0.92fr)]">
           {/* ================================
-              DESKTOP BREADCRUMB
+              GALLERY
           ================================= */}
-          <nav className="mb-5 hidden items-center gap-2 text-[11px] text-[#888] md:flex" aria-label="مسار التنقل">
-            <button onClick={() => navigate('/home')} className="transition hover:text-[#222]">الرئيسية</button>
-            <ChevronLeft className="h-3 w-3" strokeWidth={1.5} />
-            <button onClick={() => navigate(-1)} className="transition hover:text-[#222]">المنتجات</button>
-            <ChevronLeft className="h-3 w-3" strokeWidth={1.5} />
-            <span className="max-w-[300px] truncate text-[#333]">{product.nameAr || product.name}</span>
-          </nav>
+          <section className="min-w-0 bg-white lg:border-l lg:border-[#F1DCE3]">
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }} className="lg:sticky lg:top-[92px]">
+              <div className="relative aspect-[1/1.05] w-full overflow-hidden bg-[#FFF3F6] sm:aspect-[1/0.9] md:aspect-[1/0.92] lg:aspect-[4/5]">
+                <motion.div
+                  key={`${activeColorVariant?.name || 'default'}-${selectedQualityIdx ?? 'default'}-${selectedImage}`}
+                  initial={{ opacity: 0.55 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.15 }}
+                  drag={displayImages.length > 1 ? 'x' : false}
+                  dragConstraints={{ left: 0, right: 0 }}
+                  dragElastic={0.12}
+                  dragMomentum={false}
+                  onDragEnd={(_, info) => {
+                    if (displayImages.length <= 1) return;
 
-          {/* ================================
-              MAIN PRODUCT CARD
-          ================================= */}
-          <div className="grid grid-cols-1 bg-white md:overflow-hidden md:rounded-[18px] md:border md:border-black/[0.06] lg:grid-cols-[minmax(0,1.08fr)_minmax(390px,0.92fr)]">
-            {/* ================================
-                GALLERY
-            ================================= */}
-            <section className="min-w-0 bg-white lg:border-l lg:border-black/[0.06]">
-              <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.25 }} className="lg:sticky lg:top-[92px]">
-                <div className="relative aspect-[1/1.05] w-full overflow-hidden bg-[#f2efeb] sm:aspect-[1/0.9] md:aspect-[1/0.92] lg:aspect-[4/5]">
-                  <motion.div key={`${activeColorVariant?.name || 'default'}-${selectedQualityIdx ?? 'default'}-${selectedImage}`} initial={{ opacity: 0.55 }} animate={{ opacity: 1 }} transition={{ duration: 0.15 }} className="h-full w-full">
-                    <TransformWrapper minScale={1} maxScale={4} centerOnInit centerZoomedOut limitToBounds panning={{ disabled: true }} wheel={{ disabled: true }} doubleClick={{ disabled: true }}>
-                      <TransformComponent wrapperClass="!h-full !w-full !overflow-hidden" contentClass="!h-full !w-full">
-                        <img src={optimizeImage(displayImages[selectedImage] || displayImages[0], 1400, 84)} alt={product.nameAr || product.name} fetchPriority="high" decoding="async" onError={handleImageError} className="h-full w-full select-none object-cover object-center" draggable={false} />
-                      </TransformComponent>
-                    </TransformWrapper>
-                  </motion.div>
+                    if (info.offset.x < -55 || info.velocity.x < -450) {
+                      nextImage();
+                      return;
+                    }
 
-                  {product.discount ? <span className="absolute right-3 top-3 rounded-[5px] bg-white/95 px-2 py-1 text-[10px] font-bold text-[#d44e57] shadow-sm md:right-5 md:top-5 md:text-[11px]">-{product.discount}%</span> : null}
+                    if (info.offset.x > 55 || info.velocity.x > 450) {
+                      prevImage();
+                    }
+                  }}
+                  style={{ touchAction: 'pan-y' }}
+                  className="h-full w-full cursor-grab active:cursor-grabbing"
+                >
+                  <TransformWrapper minScale={1} maxScale={4} centerOnInit centerZoomedOut limitToBounds panning={{ disabled: true }} wheel={{ disabled: true }} doubleClick={{ disabled: true }}>
+                    <TransformComponent wrapperClass="!h-full !w-full !overflow-hidden" contentClass="!h-full !w-full">
+                      <img src={optimizeImage(displayImages[selectedImage] || displayImages[0], 1400, 84)} alt={product.nameAr || product.name} fetchPriority="high" decoding="async" onError={handleImageError} className="h-full w-full select-none object-cover object-center" draggable={false} />
+                    </TransformComponent>
+                  </TransformWrapper>
+                </motion.div>
 
-                  <span className="absolute bottom-3 right-3 rounded-full bg-white/92 px-2.5 py-1 text-[10px] font-medium text-[#444] shadow-sm backdrop-blur-md md:bottom-5 md:right-5">{selectedImage + 1}/{displayImages.length}</span>
+                {/* DISCOUNT */}
+                {product.discount ? (
+                  <span className="absolute right-3 top-3 z-10 rounded-[5px] bg-[#E8547C] px-2 py-1 text-[10px] font-bold text-white shadow-sm md:right-5 md:top-5 md:text-[11px]">-{product.discount}%</span>
+                ) : null}
 
-                  <button onClick={() => toggleFavorite(product as Product)} aria-label="المفضلة" className="absolute bottom-3 left-3 flex h-9 w-9 items-center justify-center rounded-full bg-white/95 shadow-sm transition active:scale-95 md:bottom-5 md:left-5 md:h-10 md:w-10">
-                    <Heart className={`h-[18px] w-[18px] ${isLiked ? 'fill-[#d35864] text-[#d35864]' : 'text-[#222]'}`} strokeWidth={1.55} />
-                  </button>
+                {/* IMAGE COUNTER */}
+                <span className="pointer-events-none absolute bottom-3 right-3 z-10 rounded-full bg-white/94 px-2.5 py-1 text-[10px] font-semibold text-[#B93461] shadow-sm backdrop-blur-md md:bottom-5 md:right-5">
+                  {selectedImage + 1}/{displayImages.length}
+                </span>
 
-                  {displayImages.length > 1 && (
-                    <>
-                      <button onClick={prevImage} aria-label="السابق" className="absolute right-5 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-md transition hover:bg-white md:flex">
-                        <ChevronRight className="h-5 w-5" strokeWidth={1.5} />
-                      </button>
-
-                      <button onClick={nextImage} aria-label="التالي" className="absolute left-5 top-1/2 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full bg-white/90 shadow-md transition hover:bg-white md:flex">
-                        <ChevronLeft className="h-5 w-5" strokeWidth={1.5} />
-                      </button>
-                    </>
-                  )}
-                </div>
-
-                {/* THUMBNAILS */}
+                {/* DESKTOP ARROWS */}
                 {displayImages.length > 1 && (
-                  <div className="border-b border-black/[0.055] bg-white">
-                    <div className="flex gap-2 overflow-x-auto px-3 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:gap-2.5 md:px-5 md:py-4">
-                      {displayImages.map((image, index) => (
-                        <button key={`${image}-${index}`} onClick={() => goToImage(index)} aria-label={`عرض الصورة ${index + 1}`} className={`relative h-[58px] w-[58px] shrink-0 overflow-hidden rounded-[7px] bg-[#f3f1ee] transition md:h-[72px] md:w-[72px] ${selectedImage === index ? 'ring-1 ring-[#ae7b62] ring-offset-1' : 'opacity-70 hover:opacity-100'}`}>
-                          <img src={optimizeImage(image, 240, 80)} alt="" loading="lazy" decoding="async" onError={handleImageError} className="h-full w-full object-cover object-center" />
-                        </button>
-                      ))}
-                    </div>
+                  <>
+                    <button onClick={prevImage} aria-label="السابق" className="absolute right-5 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#F1DCE3] bg-white/95 text-[#B93461] shadow-md transition hover:bg-[#FFF1F5] md:flex">
+                      <ChevronRight className="h-5 w-5" strokeWidth={1.5} />
+                    </button>
+
+                    <button onClick={nextImage} aria-label="التالي" className="absolute left-5 top-1/2 z-20 hidden h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-[#F1DCE3] bg-white/95 text-[#B93461] shadow-md transition hover:bg-[#FFF1F5] md:flex">
+                      <ChevronLeft className="h-5 w-5" strokeWidth={1.5} />
+                    </button>
+                  </>
+                )}
+
+                {/* MOBILE DOTS */}
+                {displayImages.length > 1 && (
+                  <div className="pointer-events-none absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 gap-1 md:hidden">
+                    {displayImages.slice(0, 8).map((_, index) => (
+                      <span key={index} className={`h-1 rounded-full transition-all duration-200 ${selectedImage === index ? 'w-4 bg-[#E8547C]' : 'w-1 bg-white/80'}`} />
+                    ))}
                   </div>
                 )}
-              </motion.div>
-            </section>
-
-            {/* ================================
-                PRODUCT DETAILS
-            ================================= */}
-            <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="min-w-0 bg-white lg:px-6 lg:py-7">
-              {/* TITLE / RATING / PRICE */}
-              <div className="border-b border-black/[0.055] px-3.5 py-4 sm:px-5 lg:px-0 lg:pt-0">
-                {product.brand && <p className="mb-1 text-[10px] font-semibold text-[#936b57] md:text-[11px]">{product.brand}</p>}
-
-                <h1 className="text-[15px] font-semibold leading-[1.8] text-[#202020] sm:text-[16px] md:text-[19px] lg:text-[21px]">{product.nameAr || product.name}</h1>
-
-                <div className="mt-1.5 flex items-center gap-2">
-                  <div className="flex items-center gap-[1px]">
-                    {[1, 2, 3, 4, 5].map((star) => <Star key={star} className="h-[13px] w-[13px] fill-[#e8a82d] text-[#e8a82d]" strokeWidth={1} />)}
-                  </div>
-
-                  <span className="text-[10px] font-semibold text-[#555]">4.7</span>
-                  <span className="text-[10px] text-[#999]">(128 تقييم)</span>
-                </div>
-
-                <div className="mt-3 flex flex-wrap items-end gap-x-2 gap-y-1">
-                  <span className="text-[22px] font-bold leading-none text-[#cf4149] md:text-[25px]">{formatCurrency(totalPrice * quantity)}</span>
-
-                  {product.originalPrice && !activeQuality && <span className="text-[11px] text-[#999] line-through md:text-[12px]">{formatCurrency(product.originalPrice)}</span>}
-
-                  {product.discount ? <span className="rounded-[4px] border border-[#efb8bc] bg-[#fff6f6] px-1.5 py-[2px] text-[9px] font-bold text-[#ce4c54]">خصم {product.discount}%</span> : null}
-                </div>
-
-                <div className="mt-2 flex items-center gap-1.5">
-                  <span className={`h-1.5 w-1.5 rounded-full ${available ? lowStock ? 'bg-[#d8674d]' : 'bg-[#51936b]' : 'bg-[#d44949]'}`} />
-
-                  <p className={`text-[10px] font-medium ${available ? lowStock ? 'text-[#c25943]' : 'text-[#47785a]' : 'text-[#c64040]'}`}>
-                    {available ? typeof activeStock === 'number' ? `متوفر — ${activeStock} قطعة${lowStock ? ' فقط' : ''}` : 'متوفر الآن' : 'غير متوفر حالياً'}
-                  </p>
-                </div>
               </div>
 
-              {/* QUALITY */}
-              {product.hasQualityVariants && product.qualityVariants?.length > 0 && (
-                <div className="border-b border-black/[0.055] px-3.5 py-4 sm:px-5 lg:px-0">
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className="text-[12px] font-semibold text-[#222]">الجودة / الخامة</span>
-                    <span className="text-[10px] text-[#777]">{activeQuality?.name || 'اختر'}</span>
-                  </div>
-
-                  <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    {product.qualityVariants.map((variant, index) => {
-                      const active = selectedQualityIdx === index;
-
-                      return (
-                        <button key={variant.id || index} onClick={() => { setSelectedQualityIdx(active ? null : index); setSelectedImage(0); }} className={`flex min-w-[150px] items-center gap-2 rounded-[7px] border p-2 text-right transition ${active ? 'border-[#a97860] bg-[#fbf7f4]' : 'border-black/[0.11] bg-white'}`}>
-                          {variant.images?.[0] ? (
-                            <img src={optimizeImage(variant.images[0], 160, 80)} alt={variant.name} loading="lazy" decoding="async" onError={handleImageError} className="h-10 w-10 shrink-0 rounded-[5px] object-cover" />
-                          ) : (
-                            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[5px] bg-[#f4f4f4]">
-                              <Package className="h-4 w-4 text-[#777]" />
-                            </div>
-                          )}
-
-                          <div className="min-w-0 flex-1">
-                            <p className="truncate text-[10px] font-semibold text-[#333]">{variant.name}</p>
-                            <p className="mt-1 text-[10px] font-bold text-[#bc5055]">{formatCurrency(Number(variant.price))}</p>
-                          </div>
-
-                          {active && <Check className="h-4 w-4 shrink-0 text-[#8e6049]" strokeWidth={2} />}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              {/* COLORS */}
-              {product.colorVariants?.length > 0 && (
-                <div className="border-b border-black/[0.055] px-3.5 py-4 sm:px-5 lg:px-0">
-                  <div className="mb-3 flex items-center gap-1.5">
-                    <span className="text-[12px] font-semibold text-[#222]">اللون:</span>
-                    <span className="text-[11px] text-[#666]">{selectedColorIdx !== null ? product.colorVariants[selectedColorIdx]?.name : 'اختر اللون'}</span>
-                  </div>
-
-                  <div className="flex flex-wrap gap-3">
-                    {product.colorVariants.map((variant, index) => (
-                      <button key={`${variant.name}-${index}`} title={variant.name} aria-label={variant.name} onClick={() => { setSelectedColorIdx(index); setSelectedImage(0); setSelectedSize(null); }} className={`relative flex h-8 w-8 items-center justify-center rounded-full transition ${selectedColorIdx === index ? 'ring-1 ring-[#6f4b3c] ring-offset-[3px]' : 'ring-1 ring-black/[0.08]'}`}>
-                        <span className="h-full w-full rounded-full border border-black/[0.08]" style={variant.hex2 ? { background: `linear-gradient(135deg, ${variant.hex} 50%, ${variant.hex2} 50%)` } : { backgroundColor: variant.hex }} />
-                        {selectedColorIdx === index && <Check className="absolute h-3.5 w-3.5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]" strokeWidth={3} />}
+              {/* THUMBNAILS */}
+              {displayImages.length > 1 && (
+                <div className="border-b border-[#F1DCE3] bg-white">
+                  <div className="flex gap-2 overflow-x-auto px-3 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:gap-2.5 md:px-5 md:py-4">
+                    {displayImages.map((image, index) => (
+                      <button key={`${image}-${index}`} onClick={() => goToImage(index)} aria-label={`عرض الصورة ${index + 1}`} className={`relative h-[58px] w-[58px] shrink-0 overflow-hidden rounded-[7px] bg-[#FFF3F6] transition md:h-[72px] md:w-[72px] ${selectedImage === index ? 'ring-2 ring-[#E8547C] ring-offset-1' : 'opacity-70 hover:opacity-100'}`}>
+                        <img src={optimizeImage(image, 240, 80)} alt="" loading="lazy" decoding="async" onError={handleImageError} className="h-full w-full object-cover object-center" />
                       </button>
                     ))}
                   </div>
                 </div>
               )}
+            </motion.div>
+          </section>
 
-              {/* SIZES */}
-              {sizesToShow.length > 0 && (
-                <div className="border-b border-black/[0.055] px-3.5 py-4 sm:px-5 lg:px-0">
-                  <div className="mb-3 flex items-center justify-between">
-                    <span className="text-[12px] font-semibold text-[#222]">المقاس</span>
-                    {selectedSize && <span className="text-[10px] text-[#777]">المختار: {selectedSize}</span>}
-                  </div>
+          {/* ================================
+              PRODUCT DETAILS
+          ================================= */}
+          <motion.section initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }} className="min-w-0 bg-white lg:px-6 lg:py-7">
+            {/* TITLE / RATING / PRICE */}
+            <div className="border-b border-[#F1DCE3] px-3.5 py-4 sm:px-5 lg:px-0 lg:pt-0">
+              {product.brand && <p className="mb-1 text-[10px] font-semibold text-[#C34169] md:text-[11px]">{product.brand}</p>}
 
-                  <div className="flex flex-wrap gap-2">
-                    {sizesToShow.map((size: string) => (
-                      <button key={size} onClick={() => setSelectedSize(size)} className={`min-w-[64px] rounded-[5px] border px-3.5 py-2 text-[10px] font-semibold transition ${selectedSize === size ? 'border-[#a67962] bg-[#fbf7f4] text-[#6d4a3a]' : 'border-black/[0.12] bg-white text-[#444]'}`}>{size}</button>
-                    ))}
-                  </div>
+              <h1 className="text-[15px] font-semibold leading-[1.8] text-[#2D2528] sm:text-[16px] md:text-[19px] lg:text-[21px]">{product.nameAr || product.name}</h1>
+
+              <div className="mt-1.5 flex items-center gap-2">
+                <div className="flex items-center gap-[1px]">
+                  {[1, 2, 3, 4, 5].map((star) => <Star key={star} className="h-[13px] w-[13px] fill-[#EAA82D] text-[#EAA82D]" strokeWidth={1} />)}
                 </div>
-              )}
 
-              {/* QUANTITY */}
-              <div className="flex items-center justify-between border-b border-black/[0.055] px-3.5 py-3 sm:px-5 lg:px-0">
-                <span className="text-[12px] font-semibold text-[#222]">الكمية</span>
-
-                <div className="flex h-9 items-center overflow-hidden rounded-[5px] border border-black/[0.12]">
-                  <button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="إنقاص الكمية" className="flex h-full w-9 items-center justify-center active:bg-[#f3f3f3]">
-                    <Minus className="h-3.5 w-3.5" strokeWidth={1.7} />
-                  </button>
-
-                  <span className="flex h-full min-w-[38px] items-center justify-center border-x border-black/[0.08] text-[11px] font-semibold">{quantity}</span>
-
-                  <button onClick={() => { if (typeof activeStock === 'number' && quantity >= activeStock) { toast({ title: 'الكمية غير متوفرة', description: `المتاح: ${activeStock} فقط`, variant: 'destructive' }); return; } setQuantity((current) => current + 1); }} aria-label="زيادة الكمية" className="flex h-full w-9 items-center justify-center active:bg-[#f3f3f3]">
-                    <Plus className="h-3.5 w-3.5" strokeWidth={1.7} />
-                  </button>
-                </div>
+                <span className="text-[10px] font-semibold text-[#5E5055]">4.7</span>
+                <span className="text-[10px] text-[#A39197]">(128 تقييم)</span>
               </div>
 
-              {/* TRUST */}
-              <div className="grid grid-cols-3 border-b border-black/[0.055] bg-[#fffdfa]">
-                {features.map((feature, index) => {
-                  const Icon = getFeatureIcon(feature.icon);
+              <div className="mt-3 flex flex-wrap items-end gap-x-2 gap-y-1">
+                <span className="text-[22px] font-bold leading-none text-[#B93461] md:text-[25px]">{formatCurrency(totalPrice * quantity)}</span>
 
-                  return (
-                    <div key={`${feature.title}-${index}`} className={`flex min-h-[84px] flex-col items-center justify-center px-1.5 py-3 text-center ${index !== features.length - 1 ? 'border-l border-black/[0.05]' : ''}`}>
-                      <Icon className="mb-1.5 h-[17px] w-[17px] text-[#9c6c52]" strokeWidth={1.5} />
-                      <span className="text-[9px] font-bold leading-4 text-[#333] sm:text-[10px]">{feature.title}</span>
-                      <span className="mt-[1px] text-[8px] leading-4 text-[#777] sm:text-[9px]">{feature.desc}</span>
+                {product.originalPrice && !activeQuality && <span className="text-[11px] text-[#AA969D] line-through md:text-[12px]">{formatCurrency(product.originalPrice)}</span>}
+
+                {product.discount ? <span className="rounded-[4px] border border-[#F2C5D1] bg-[#FFF1F5] px-1.5 py-[2px] text-[9px] font-bold text-[#D2436D]">خصم {product.discount}%</span> : null}
+              </div>
+
+              <div className="mt-2 flex items-center gap-1.5">
+                <span className={`h-1.5 w-1.5 rounded-full ${available ? lowStock ? 'bg-[#EA7E4B]' : 'bg-[#4E9A68]' : 'bg-[#D94B58]'}`} />
+
+                <p className={`text-[10px] font-medium ${available ? lowStock ? 'text-[#C66A3E]' : 'text-[#477D59]' : 'text-[#C6404A]'}`}>
+                  {available ? typeof activeStock === 'number' ? `متوفر — ${activeStock} قطعة${lowStock ? ' فقط' : ''}` : 'متوفر الآن' : 'غير متوفر حالياً'}
+                </p>
+              </div>
+            </div>
+
+            {/* QUALITY */}
+            {product.hasQualityVariants && product.qualityVariants?.length > 0 && (
+              <div className="border-b border-[#F1DCE3] px-3.5 py-4 sm:px-5 lg:px-0">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-[#2D2528]">الجودة / الخامة</span>
+                  <span className="text-[10px] text-[#9A858D]">{activeQuality?.name || 'اختر'}</span>
+                </div>
+
+                <div className="flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                  {product.qualityVariants.map((variant, index) => {
+                    const active = selectedQualityIdx === index;
+
+                    return (
+                      <button key={variant.id || index} onClick={() => { setSelectedQualityIdx(active ? null : index); setSelectedImage(0); }} className={`flex min-w-[150px] items-center gap-2 rounded-[7px] border p-2 text-right transition ${active ? 'border-[#E8547C] bg-[#FFF4F7]' : 'border-[#F0DDE3] bg-white'}`}>
+                        {variant.images?.[0] ? (
+                          <img src={optimizeImage(variant.images[0], 160, 80)} alt={variant.name} loading="lazy" decoding="async" onError={handleImageError} className="h-10 w-10 shrink-0 rounded-[5px] object-cover" />
+                        ) : (
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[5px] bg-[#FFF1F5]">
+                            <Package className="h-4 w-4 text-[#B93461]" />
+                          </div>
+                        )}
+
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[10px] font-semibold text-[#403438]">{variant.name}</p>
+                          <p className="mt-1 text-[10px] font-bold text-[#B93461]">{formatCurrency(Number(variant.price))}</p>
+                        </div>
+
+                        {active && <Check className="h-4 w-4 shrink-0 text-[#E8547C]" strokeWidth={2} />}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* COLORS */}
+            {product.colorVariants?.length > 0 && (
+              <div className="border-b border-[#F1DCE3] px-3.5 py-4 sm:px-5 lg:px-0">
+                <div className="mb-3 flex items-center gap-1.5">
+                  <span className="text-[12px] font-semibold text-[#2D2528]">اللون:</span>
+                  <span className="text-[11px] text-[#806D74]">{selectedColorIdx !== null ? product.colorVariants[selectedColorIdx]?.name : 'اختر اللون'}</span>
+                </div>
+
+                <div className="flex flex-wrap gap-3">
+                  {product.colorVariants.map((variant, index) => (
+                    <button key={`${variant.name}-${index}`} title={variant.name} aria-label={variant.name} onClick={() => { setSelectedColorIdx(index); setSelectedImage(0); setSelectedSize(null); }} className={`relative flex h-8 w-8 items-center justify-center rounded-full transition ${selectedColorIdx === index ? 'ring-2 ring-[#E8547C] ring-offset-[3px]' : 'ring-1 ring-[#E9D5DC]'}`}>
+                      <span className="h-full w-full rounded-full border border-black/[0.06]" style={variant.hex2 ? { background: `linear-gradient(135deg, ${variant.hex} 50%, ${variant.hex2} 50%)` } : { backgroundColor: variant.hex }} />
+                      {selectedColorIdx === index && <Check className="absolute h-3.5 w-3.5 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.7)]" strokeWidth={3} />}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* SIZES */}
+            {sizesToShow.length > 0 && (
+              <div className="border-b border-[#F1DCE3] px-3.5 py-4 sm:px-5 lg:px-0">
+                <div className="mb-3 flex items-center justify-between">
+                  <span className="text-[12px] font-semibold text-[#2D2528]">المقاس</span>
+                  {selectedSize && <span className="text-[10px] text-[#927E85]">المختار: {selectedSize}</span>}
+                </div>
+
+                <div className="flex flex-wrap gap-2">
+                  {sizesToShow.map((size: string) => (
+                    <button key={size} onClick={() => setSelectedSize(size)} className={`min-w-[64px] rounded-[5px] border px-3.5 py-2 text-[10px] font-semibold transition ${selectedSize === size ? 'border-[#E8547C] bg-[#FFF1F5] text-[#B93461]' : 'border-[#EAD8DE] bg-white text-[#514449]'}`}>{size}</button>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* QUANTITY */}
+            <div className="flex items-center justify-between border-b border-[#F1DCE3] px-3.5 py-3 sm:px-5 lg:px-0">
+              <span className="text-[12px] font-semibold text-[#2D2528]">الكمية</span>
+
+              <div className="flex h-9 items-center overflow-hidden rounded-[5px] border border-[#EAD8DE]">
+                <button onClick={() => setQuantity(Math.max(1, quantity - 1))} aria-label="إنقاص الكمية" className="flex h-full w-9 items-center justify-center transition active:bg-[#FFF1F5]">
+                  <Minus className="h-3.5 w-3.5" strokeWidth={1.7} />
+                </button>
+
+                <span className="flex h-full min-w-[38px] items-center justify-center border-x border-[#F1DCE3] text-[11px] font-semibold text-[#B93461]">{quantity}</span>
+
+                <button onClick={() => { if (typeof activeStock === 'number' && quantity >= activeStock) { toast({ title: 'الكمية غير متوفرة', description: `المتاح: ${activeStock} فقط`, variant: 'destructive' }); return; } setQuantity((current) => current + 1); }} aria-label="زيادة الكمية" className="flex h-full w-9 items-center justify-center transition active:bg-[#FFF1F5]">
+                  <Plus className="h-3.5 w-3.5" strokeWidth={1.7} />
+                </button>
+              </div>
+            </div>
+
+            {/* TRUST */}
+            <div className="grid grid-cols-3 border-b border-[#F1DCE3] bg-[#FFF9FA]">
+              {features.map((feature, index) => {
+                const Icon = getFeatureIcon(feature.icon);
+
+                return (
+                  <div key={`${feature.title}-${index}`} className={`flex min-h-[84px] flex-col items-center justify-center px-1.5 py-3 text-center ${index !== features.length - 1 ? 'border-l border-[#F1DCE3]' : ''}`}>
+                    <Icon className="mb-1.5 h-[17px] w-[17px] text-[#E8547C]" strokeWidth={1.5} />
+                    <span className="text-[9px] font-bold leading-4 text-[#403438] sm:text-[10px]">{feature.title}</span>
+                    <span className="mt-[1px] text-[8px] leading-4 text-[#927E85] sm:text-[9px]">{feature.desc}</span>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ACCESSORIES */}
+            {product.accessories?.length > 0 && (
+              <div className="border-b border-[#F1DCE3] px-3.5 py-4 sm:px-5 lg:px-0">
+                <h2 className="mb-3 text-[12px] font-semibold text-[#2D2528]">إضافات اختيارية</h2>
+
+                <div className="space-y-2">
+                  {product.accessories.map((accessory, index) => {
+                    const key = `${index}-${accessory.name_ar}`;
+
+                    return <AccessoryCard key={key} accessory={accessory} quantity={accessoryQuantities[key] || 0} currency={currency} onQuantityChange={(delta) => updateAccessoryQuantity(key, delta)} />;
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* ACCORDIONS */}
+            <div className="divide-y divide-[#F1DCE3]">
+              <div>
+                <button onClick={() => setOpenSection(openSection === 'details' ? null : 'details')} className="flex w-full items-center justify-between px-3.5 py-4 text-right sm:px-5 lg:px-0">
+                  <span className="text-[12px] font-semibold text-[#2D2528]">تفاصيل المنتج</span>
+                  <ChevronDown className={`h-4 w-4 text-[#B93461] transition-transform ${openSection === 'details' ? 'rotate-180' : ''}`} strokeWidth={1.6} />
+                </button>
+
+                {openSection === 'details' && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden">
+                    <div className="px-3.5 pb-4 sm:px-5 lg:px-0">
+                      <p className="whitespace-pre-line text-[11px] leading-7 text-[#756269]">{effectiveDescription || 'منتج مختار بعناية من فلامنجو بارك.'}</p>
                     </div>
-                  );
-                })}
+                  </motion.div>
+                )}
               </div>
 
-              {/* ACCESSORIES */}
-              {product.accessories?.length > 0 && (
-                <div className="border-b border-black/[0.055] px-3.5 py-4 sm:px-5 lg:px-0">
-                  <h2 className="mb-3 text-[12px] font-semibold text-[#222]">إضافات اختيارية</h2>
+              {product.specs?.length > 0 && (
+                <div>
+                  <button onClick={() => setOpenSection(openSection === 'specs' ? null : 'specs')} className="flex w-full items-center justify-between px-3.5 py-4 text-right sm:px-5 lg:px-0">
+                    <span className="text-[12px] font-semibold text-[#2D2528]">المواصفات</span>
+                    <ChevronDown className={`h-4 w-4 text-[#B93461] transition-transform ${openSection === 'specs' ? 'rotate-180' : ''}`} strokeWidth={1.6} />
+                  </button>
 
-                  <div className="space-y-2">
-                    {product.accessories.map((accessory, index) => {
-                      const key = `${index}-${accessory.name_ar}`;
-
-                      return <AccessoryCard key={key} accessory={accessory} quantity={accessoryQuantities[key] || 0} currency={currency} onQuantityChange={(delta) => updateAccessoryQuantity(key, delta)} />;
-                    })}
-                  </div>
+                  {openSection === 'specs' && (
+                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden">
+                      <dl className="px-3.5 pb-4 sm:px-5 lg:px-0">
+                        {product.specs.map((spec, index) => (
+                          <div key={`${spec.label}-${index}`} className="flex items-start justify-between gap-4 border-b border-[#F7E9EE] py-2.5 last:border-0">
+                            <dt className="text-[10px] text-[#927E85]">{spec.label}</dt>
+                            <dd className="max-w-[65%] text-left text-[10px] font-semibold text-[#403438]">{spec.value}</dd>
+                          </div>
+                        ))}
+                      </dl>
+                    </motion.div>
+                  )}
                 </div>
               )}
 
-              {/* ACCORDIONS */}
-              <div className="divide-y divide-black/[0.055]">
+              <div>
+                <button onClick={() => setOpenSection(openSection === 'delivery' ? null : 'delivery')} className="flex w-full items-center justify-between px-3.5 py-4 text-right sm:px-5 lg:px-0">
+                  <div className="flex items-center gap-2">
+                    <Truck className="h-4 w-4 text-[#E8547C]" strokeWidth={1.5} />
+                    <span className="text-[12px] font-semibold text-[#2D2528]">الشحن والتوصيل</span>
+                  </div>
+
+                  <ChevronDown className={`h-4 w-4 text-[#B93461] transition-transform ${openSection === 'delivery' ? 'rotate-180' : ''}`} strokeWidth={1.6} />
+                </button>
+
+                {openSection === 'delivery' && (
+                  <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden">
+                    <div className="px-3.5 pb-4 text-[11px] leading-7 text-[#756269] sm:px-5 lg:px-0">
+                      <p>التوصيل داخل عدن يتم في نفس اليوم حسب توفر المنتج ووقت الطلب.</p>
+                      <p>التوصيل إلى بقية المحافظات يستغرق عادة من 2 إلى 7 أيام حسب المنطقة وإجراءات الشحن.</p>
+                    </div>
+                  </motion.div>
+                )}
+              </div>
+
+              {effectiveReturnPolicy && (
                 <div>
-                  <button onClick={() => setOpenSection(openSection === 'details' ? null : 'details')} className="flex w-full items-center justify-between px-3.5 py-4 text-right sm:px-5 lg:px-0">
-                    <span className="text-[12px] font-semibold text-[#222]">تفاصيل المنتج</span>
-                    <ChevronDown className={`h-4 w-4 text-[#777] transition-transform ${openSection === 'details' ? 'rotate-180' : ''}`} strokeWidth={1.6} />
+                  <button onClick={() => setOpenSection(openSection === 'return' ? null : 'return')} className="flex w-full items-center justify-between px-3.5 py-4 text-right sm:px-5 lg:px-0">
+                    <div className="flex items-center gap-2">
+                      <RotateCcw className="h-4 w-4 text-[#E8547C]" strokeWidth={1.5} />
+                      <span className="text-[12px] font-semibold text-[#2D2528]">الإرجاع والاستبدال</span>
+                    </div>
+
+                    <ChevronDown className={`h-4 w-4 text-[#B93461] transition-transform ${openSection === 'return' ? 'rotate-180' : ''}`} strokeWidth={1.6} />
                   </button>
 
-                  {openSection === 'details' && (
+                  {openSection === 'return' && (
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden">
                       <div className="px-3.5 pb-4 sm:px-5 lg:px-0">
-                        <p className="whitespace-pre-line text-[11px] leading-7 text-[#606060]">{effectiveDescription || 'منتج مختار بعناية من فلامنجو بارك.'}</p>
+                        <p className="whitespace-pre-line text-[11px] leading-7 text-[#756269]">{effectiveReturnPolicy}</p>
                       </div>
                     </motion.div>
                   )}
-                </div>
-
-                {product.specs?.length > 0 && (
-                  <div>
-                    <button onClick={() => setOpenSection(openSection === 'specs' ? null : 'specs')} className="flex w-full items-center justify-between px-3.5 py-4 text-right sm:px-5 lg:px-0">
-                      <span className="text-[12px] font-semibold text-[#222]">المواصفات</span>
-                      <ChevronDown className={`h-4 w-4 text-[#777] transition-transform ${openSection === 'specs' ? 'rotate-180' : ''}`} strokeWidth={1.6} />
-                    </button>
-
-                    {openSection === 'specs' && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden">
-                        <dl className="px-3.5 pb-4 sm:px-5 lg:px-0">
-                          {product.specs.map((spec, index) => (
-                            <div key={`${spec.label}-${index}`} className="flex items-start justify-between gap-4 border-b border-black/[0.04] py-2.5 last:border-0">
-                              <dt className="text-[10px] text-[#777]">{spec.label}</dt>
-                              <dd className="max-w-[65%] text-left text-[10px] font-semibold text-[#333]">{spec.value}</dd>
-                            </div>
-                          ))}
-                        </dl>
-                      </motion.div>
-                    )}
-                  </div>
-                )}
-
-                <div>
-                  <button onClick={() => setOpenSection(openSection === 'delivery' ? null : 'delivery')} className="flex w-full items-center justify-between px-3.5 py-4 text-right sm:px-5 lg:px-0">
-                    <div className="flex items-center gap-2">
-                      <Truck className="h-4 w-4 text-[#92634c]" strokeWidth={1.5} />
-                      <span className="text-[12px] font-semibold text-[#222]">الشحن والتوصيل</span>
-                    </div>
-
-                    <ChevronDown className={`h-4 w-4 text-[#777] transition-transform ${openSection === 'delivery' ? 'rotate-180' : ''}`} strokeWidth={1.6} />
-                  </button>
-
-                  {openSection === 'delivery' && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden">
-                      <div className="px-3.5 pb-4 text-[11px] leading-7 text-[#626262] sm:px-5 lg:px-0">
-                        <p>التوصيل داخل عدن يتم في نفس اليوم حسب توفر المنتج ووقت الطلب.</p>
-                        <p>التوصيل إلى بقية المحافظات يستغرق عادة من 2 إلى 7 أيام حسب المنطقة وإجراءات الشحن.</p>
-                      </div>
-                    </motion.div>
-                  )}
-                </div>
-
-                {effectiveReturnPolicy && (
-                  <div>
-                    <button onClick={() => setOpenSection(openSection === 'return' ? null : 'return')} className="flex w-full items-center justify-between px-3.5 py-4 text-right sm:px-5 lg:px-0">
-                      <div className="flex items-center gap-2">
-                        <RotateCcw className="h-4 w-4 text-[#92634c]" strokeWidth={1.5} />
-                        <span className="text-[12px] font-semibold text-[#222]">الإرجاع والاستبدال</span>
-                      </div>
-
-                      <ChevronDown className={`h-4 w-4 text-[#777] transition-transform ${openSection === 'return' ? 'rotate-180' : ''}`} strokeWidth={1.6} />
-                    </button>
-
-                    {openSection === 'return' && (
-                      <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} className="overflow-hidden">
-                        <div className="px-3.5 pb-4 sm:px-5 lg:px-0">
-                          <p className="whitespace-pre-line text-[11px] leading-7 text-[#626262]">{effectiveReturnPolicy}</p>
-                        </div>
-                      </motion.div>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              {/* ADDED SUCCESS */}
-              {justAdded && (
-                <div className="mx-3.5 mb-4 flex items-center justify-between gap-3 rounded-[8px] border border-[#8ebd9d]/40 bg-[#f1f8f3] px-3 py-2.5 sm:mx-5 lg:mx-0">
-                  <div className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-[#4b8660]" strokeWidth={2} />
-                    <div>
-                      <p className="text-[10px] font-bold text-[#396d4a]">تمت الإضافة إلى السلة</p>
-                      <p className="mt-[1px] text-[9px] text-[#60816a]">الكمية: {quantity}</p>
-                    </div>
-                  </div>
-
-                  <button onClick={() => navigate('/cart')} className="text-[10px] font-bold text-[#396d4a] underline underline-offset-2">عرض السلة</button>
                 </div>
               )}
+            </div>
 
-              {/* DESKTOP ACTIONS */}
-              <div className="hidden border-t border-black/[0.055] pt-5 lg:block">
-                <div className="flex gap-2">
-                  <button onClick={handleAddToCart} disabled={!available} className="flex h-[48px] flex-1 items-center justify-center gap-2 rounded-[7px] bg-[#b98368] px-5 text-[12px] font-bold text-white transition hover:bg-[#a9755c] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40">
-                    <ShoppingBag className="h-[17px] w-[17px]" strokeWidth={1.6} />
-                    أضف إلى السلة
-                  </button>
+            {/* ADDED SUCCESS */}
+            {justAdded && (
+              <div className="mx-3.5 mb-4 flex items-center justify-between gap-3 rounded-[8px] border border-[#F3BDD0] bg-[#FFF3F7] px-3 py-2.5 sm:mx-5 lg:mx-0">
+                <div className="flex items-center gap-2">
+                  <Check className="h-4 w-4 text-[#D64370]" strokeWidth={2} />
 
-                  <button onClick={handleBuyNow} disabled={!available} className="h-[48px] flex-1 rounded-[7px] bg-[#e5787e] px-5 text-[12px] font-bold text-white transition hover:bg-[#d96870] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40">
-                    اشتري الآن
-                  </button>
-
-                  <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" aria-label="واتساب" className="flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-[7px] border border-black/[0.1] bg-white text-[#398c58] transition hover:bg-[#f7f7f7]">
-                    <FaWhatsapp className="h-[19px] w-[19px]" />
-                  </a>
-                </div>
-              </div>
-            </motion.section>
-          </div>
-
-          {/* ================================
-              BELOW PRODUCT CONTENT
-          ================================= */}
-          <div className="mt-2 bg-white px-3.5 sm:px-5 md:mt-8 md:rounded-[18px] md:border md:border-black/[0.06] md:px-6">
-            {/* STORE CARD */}
-            <section className="flex items-center justify-between border-b border-black/[0.055] py-4">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#f3e9e4] text-[#8d604a]">
-                  <ShoppingBag className="h-[17px] w-[17px]" strokeWidth={1.5} />
-                </div>
-
-                <div className="min-w-0">
-                  <div className="flex items-center gap-1.5">
-                    <p className="truncate text-[12px] font-bold text-[#252525]">Flamingo Park</p>
-                    <Shield className="h-3.5 w-3.5 fill-[#a9775d]/10 text-[#a9775d]" strokeWidth={1.7} />
-                  </div>
-
-                  <div className="mt-1 flex items-center gap-1">
-                    <Star className="h-3 w-3 fill-[#e3a22e] text-[#e3a22e]" strokeWidth={1} />
-                    <span className="text-[9px] font-semibold text-[#555]">4.8</span>
-                    <span className="text-[9px] text-[#999]">متجر موثوق</span>
+                  <div>
+                    <p className="text-[10px] font-bold text-[#B93461]">تمت الإضافة إلى السلة</p>
+                    <p className="mt-[1px] text-[9px] text-[#A06077]">الكمية: {quantity}</p>
                   </div>
                 </div>
+
+                <button onClick={() => navigate('/cart')} className="text-[10px] font-bold text-[#B93461] underline underline-offset-2">عرض السلة</button>
+              </div>
+            )}
+
+            {/* DESKTOP ACTIONS */}
+            <div className="hidden border-t border-[#F1DCE3] pt-5 lg:block">
+              <div className="flex gap-2">
+                <button onClick={handleAddToCart} disabled={!available} className="flex h-[48px] flex-1 items-center justify-center gap-2 rounded-[7px] bg-[#B93461] px-5 text-[12px] font-bold text-white transition hover:bg-[#A72C57] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40">
+                  <ShoppingBag className="h-[17px] w-[17px]" strokeWidth={1.6} />
+                  أضف إلى السلة
+                </button>
+
+                <button onClick={handleBuyNow} disabled={!available} className="h-[48px] flex-1 rounded-[7px] bg-[#E8547C] px-5 text-[12px] font-bold text-white transition hover:bg-[#DA486F] active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40">
+                  اشتري الآن
+                </button>
+
+                <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" aria-label="واتساب" className="flex h-[48px] w-[48px] shrink-0 items-center justify-center rounded-[7px] border border-[#F1DCE3] bg-white text-[#398C58] transition hover:bg-[#FFF7F9]">
+                  <FaWhatsapp className="h-[19px] w-[19px]" />
+                </a>
+              </div>
+            </div>
+          </motion.section>
+        </div>
+
+        {/* ================================
+            BELOW PRODUCT CONTENT
+        ================================= */}
+        <div className="mt-2 bg-white px-3.5 sm:px-5 md:mt-8 md:rounded-[18px] md:border md:border-[#F1DCE3] md:px-6">
+          {/* STORE CARD */}
+          <section className="flex items-center justify-between border-b border-[#F1DCE3] py-4">
+            <div className="flex min-w-0 items-center gap-3">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FFF0F4] text-[#E8547C]">
+                <ShoppingBag className="h-[17px] w-[17px]" strokeWidth={1.5} />
               </div>
 
-              <button onClick={() => navigate('/products')} className="rounded-[5px] border border-[#b88b75] px-3 py-2 text-[9px] font-bold text-[#95664f] transition active:bg-[#faf4f1]">عرض المتجر</button>
-            </section>
-
-            {/* QA */}
-            <section className="py-5 md:py-8">
-              <ProductQA productId={product.id} />
-            </section>
-
-            {/* REVIEWS */}
-            <section className="border-t border-black/[0.055] py-5 md:py-8">
-              <ProductReviews productId={product.id} productName={product.nameAr || product.name} />
-            </section>
-          </div>
-
-          {/* ================================
-              RELATED PRODUCTS
-          ================================= */}
-          {relatedProducts.length > 0 && (
-            <section className="mt-2 bg-white px-3 py-5 md:mt-8 md:rounded-[18px] md:border md:border-black/[0.06] md:px-6 md:py-8">
-              <div className="mb-4 flex items-end justify-between md:mb-6">
-                <div>
-                  <p className="mb-1 text-[9px] font-bold tracking-[0.16em] text-[#aa755b]">FOR YOU</p>
-                  <h2 className="text-[16px] font-bold text-[#222] md:text-[22px]">قد يعجبك أيضاً</h2>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate text-[12px] font-bold text-[#2D2528]">Flamingo Park</p>
+                  <Shield className="h-3.5 w-3.5 fill-[#E8547C]/10 text-[#E8547C]" strokeWidth={1.7} />
                 </div>
 
-                <button onClick={() => navigate('/products')} className="text-[10px] font-semibold text-[#777]">عرض الكل</button>
+                <div className="mt-1 flex items-center gap-1">
+                  <Star className="h-3 w-3 fill-[#E6A52D] text-[#E6A52D]" strokeWidth={1} />
+                  <span className="text-[9px] font-semibold text-[#62545A]">4.8</span>
+                  <span className="text-[9px] text-[#A18C94]">متجر موثوق</span>
+                </div>
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-x-2 gap-y-5 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
-                {relatedProducts.map((item, index) => <ProductCard key={item.id} product={item} index={index} />)}
-              </div>
-            </section>
-          )}
+            <button onClick={() => navigate('/products')} className="rounded-[5px] border border-[#E8547C] px-3 py-2 text-[9px] font-bold text-[#B93461] transition active:bg-[#FFF1F5]">عرض المتجر</button>
+          </section>
 
-          {/* ================================
-              RECENT PRODUCTS
-          ================================= */}
-          {recentItems.filter((item) => item.id !== product.id).length > 0 && (
-            <section className="mt-2 bg-white px-3 py-5 md:mt-8 md:rounded-[18px] md:border md:border-black/[0.06] md:px-6 md:py-8">
-              <div className="mb-4 md:mb-6">
-                <p className="mb-1 text-[9px] font-bold tracking-[0.16em] text-[#aa755b]">RECENTLY VIEWED</p>
-                <h2 className="text-[16px] font-bold text-[#222] md:text-[22px]">شاهدت مؤخراً</h2>
-              </div>
+          {/* QA */}
+          <section className="py-5 md:py-8">
+            <ProductQA productId={product.id} />
+          </section>
 
-              <div className="grid grid-cols-2 gap-x-2 gap-y-5 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
-                {recentItems.filter((item) => item.id !== product.id).slice(0, 4).map((item) => <ProductCard key={item.id} product={item} />)}
-              </div>
-            </section>
-          )}
+          {/* REVIEWS */}
+          <section className="border-t border-[#F1DCE3] py-5 md:py-8">
+            <ProductReviews productId={product.id} productName={product.nameAr || product.name} />
+          </section>
         </div>
-      </main>
 
-      {/* ================================
-          MOBILE STICKY BUY BAR
-      ================================= */}
-      <div className="fixed inset-x-0 bottom-0 z-50 border-t border-black/[0.08] bg-white/95 px-2.5 pt-2 shadow-[0_-4px_18px_rgba(0,0,0,0.04)] backdrop-blur-xl lg:hidden" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>
-        <div className="flex h-[50px] gap-2">
-          <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" aria-label="واتساب" className="flex h-full w-[48px] shrink-0 items-center justify-center rounded-[6px] border border-black/[0.1] bg-white text-[#398e59] active:bg-[#f4f4f4]">
-            <FaWhatsapp className="h-[19px] w-[19px]" />
-          </a>
+        {/* ================================
+            RELATED PRODUCTS
+        ================================= */}
+        {relatedProducts.length > 0 && (
+          <section className="mt-2 bg-white px-3 py-5 md:mt-8 md:rounded-[18px] md:border md:border-[#F1DCE3] md:px-6 md:py-8">
+            <div className="mb-4 flex items-end justify-between md:mb-6">
+              <div>
+                <p className="mb-1 text-[9px] font-bold tracking-[0.16em] text-[#E8547C]">FOR YOU</p>
+                <h2 className="text-[16px] font-bold text-[#2D2528] md:text-[22px]">قد يعجبك أيضاً</h2>
+              </div>
 
-          <button onClick={handleAddToCart} disabled={!available} className="flex h-full flex-1 items-center justify-center gap-1.5 rounded-[6px] bg-[#c99578] px-2 text-[11px] font-bold text-white transition active:scale-[0.99] disabled:opacity-40">
-            <ShoppingBag className="h-[16px] w-[16px]" strokeWidth={1.7} />
-            <span>{available ? 'أضف للسلة' : 'غير متوفر'}</span>
-          </button>
+              <button onClick={() => navigate('/products')} className="text-[10px] font-semibold text-[#B93461]">عرض الكل</button>
+            </div>
 
-          <button onClick={handleBuyNow} disabled={!available} className="h-full flex-1 rounded-[6px] bg-[#e57980] px-2 text-[11px] font-bold text-white transition active:scale-[0.99] disabled:opacity-40">
-            اشتري الآن
-          </button>
-        </div>
+            <div className="grid grid-cols-2 gap-x-2 gap-y-5 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
+              {relatedProducts.map((item, index) => <ProductCard key={item.id} product={item} index={index} />)}
+            </div>
+          </section>
+        )}
+
+        {/* ================================
+            RECENT PRODUCTS
+        ================================= */}
+        {recentItems.filter((item) => item.id !== product.id).length > 0 && (
+          <section className="mt-2 bg-white px-3 py-5 md:mt-8 md:rounded-[18px] md:border md:border-[#F1DCE3] md:px-6 md:py-8">
+            <div className="mb-4 md:mb-6">
+              <p className="mb-1 text-[9px] font-bold tracking-[0.16em] text-[#E8547C]">RECENTLY VIEWED</p>
+              <h2 className="text-[16px] font-bold text-[#2D2528] md:text-[22px]">شاهدت مؤخراً</h2>
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-2 gap-y-5 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
+              {recentItems.filter((item) => item.id !== product.id).slice(0, 4).map((item) => <ProductCard key={item.id} product={item} />)}
+            </div>
+          </section>
+        )}
       </div>
+    </main>
 
-      <div className="hidden md:block">
-        <Footer />
+    {/* ================================
+        MOBILE STICKY BUY BAR
+    ================================= */}
+    <div className="fixed inset-x-0 bottom-0 z-50 border-t border-[#F1DCE3] bg-white/95 px-2.5 pt-2 shadow-[0_-5px_20px_rgba(185,52,97,0.06)] backdrop-blur-xl lg:hidden" style={{ paddingBottom: 'max(8px, env(safe-area-inset-bottom))' }}>
+      <div className="flex h-[50px] gap-2">
+        <a href={WHATSAPP_URL} target="_blank" rel="noopener noreferrer" aria-label="واتساب" className="flex h-full w-[48px] shrink-0 items-center justify-center rounded-[6px] border border-[#F1DCE3] bg-white text-[#398E59] transition active:bg-[#FFF7F9]">
+          <FaWhatsapp className="h-[19px] w-[19px]" />
+        </a>
+
+        <button onClick={handleAddToCart} disabled={!available} className="flex h-full flex-1 items-center justify-center gap-1.5 rounded-[6px] bg-[#B93461] px-2 text-[11px] font-bold text-white transition active:scale-[0.99] disabled:opacity-40">
+          <ShoppingBag className="h-[16px] w-[16px]" strokeWidth={1.7} />
+          <span>{available ? 'أضف للسلة' : 'غير متوفر'}</span>
+        </button>
+
+        <button onClick={handleBuyNow} disabled={!available} className="h-full flex-1 rounded-[6px] bg-[#E8547C] px-2 text-[11px] font-bold text-white transition active:scale-[0.99] disabled:opacity-40">
+          اشتري الآن
+        </button>
       </div>
     </div>
-  );
+
+    <div className="hidden md:block">
+      <Footer />
+    </div>
+  </div>
+);
 };
 
 export default ProductDetailPage;

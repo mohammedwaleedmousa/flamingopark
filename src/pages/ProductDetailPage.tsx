@@ -911,7 +911,7 @@ const ProductDetailPage = () => {
       </div>
     </div>
 
-    <div className="hidden md:block">
+    <div className=" md:block">
       <Footer />
     </div>
   </div>

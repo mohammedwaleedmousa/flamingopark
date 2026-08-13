@@ -31,8 +31,11 @@ interface ProductCardProps {
   onQuickView?: (product: DisplayProduct) => void;
 }
 
+type ImageFit = "cover" | "contain";
+
 const isHeicImage = (url: string) => {
   const cleanUrl = url.split("?")[0].toLowerCase();
+
   return cleanUrl.endsWith(".heic") || cleanUrl.endsWith(".heif");
 };
 
@@ -47,6 +50,8 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
   const [heartBeat, setHeartBeat] = useState(false);
   const [imageIndex, setImageIndex] = useState(0);
   const [allImagesFailed, setAllImagesFailed] = useState(false);
+  const [imageLoaded, setImageLoaded] = useState(false);
+  const [imageFit, setImageFit] = useState<ImageFit>("cover");
 
   const isLiked = isFavorite(product.id);
 
@@ -65,6 +70,7 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
   const imageCandidates = useMemo(() => {
     const variantImages = colors.flatMap((color) => {
       if (!Array.isArray(color.images)) return [];
+
       return color.images;
     });
 
@@ -78,10 +84,10 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
       ),
     );
 
-    const webSafeImages = uniqueImages.filter((image) => !isHeicImage(image));
+    const normalImages = uniqueImages.filter((image) => !isHeicImage(image));
     const heicImages = uniqueImages.filter((image) => isHeicImage(image));
 
-    return [...webSafeImages, ...heicImages];
+    return [...normalImages, ...heicImages];
   }, [colors, product.images]);
 
   /* =========================================================
@@ -89,11 +95,7 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
   ========================================================= */
 
   const primaryColor = useMemo(() => {
-    const colorWithImage = colors.find((color) => {
-      return Array.isArray(color.images) && color.images.some((image) => typeof image === "string" && image.trim().length > 0);
-    });
-
-    return colorWithImage || colors[0];
+    return colors.find((color) => Array.isArray(color.images) && color.images.some((image) => typeof image === "string" && image.trim().length > 0)) || colors[0];
   }, [colors]);
 
   const firstColorName = primaryColor?.name;
@@ -101,13 +103,68 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
   const mainImage = imageCandidates[imageIndex];
 
   /* =========================================================
-     RESET IMAGE STATE
+     OPTIMIZED IMAGE
+  ========================================================= */
+
+  const optimizedMainImage = useMemo(() => {
+    if (!mainImage) return "";
+
+    return optimizeImage(mainImage, 520, 76);
+  }, [mainImage]);
+
+  /* =========================================================
+     RESET
   ========================================================= */
 
   useEffect(() => {
     setImageIndex(0);
     setAllImagesFailed(false);
+    setImageLoaded(false);
+    setImageFit("cover");
   }, [product.id]);
+
+  useEffect(() => {
+    setImageLoaded(false);
+    setImageFit("cover");
+  }, [imageIndex]);
+
+  /* =========================================================
+     IMAGE LOAD
+     نحدد تلقائياً الطريقة المناسبة للصورة
+  ========================================================= */
+
+  const handleMainImageLoad = (event: SyntheticEvent<HTMLImageElement>) => {
+    const image = event.currentTarget;
+
+    const width = image.naturalWidth;
+    const height = image.naturalHeight;
+
+    if (!width || !height) {
+      setImageFit("cover");
+      setImageLoaded(true);
+      return;
+    }
+
+    const imageRatio = width / height;
+
+    /*
+      Card = 4 / 5 = 0.8
+
+      الصور القريبة من أبعاد الكارد:
+      cover -> تملأ الكارد.
+
+      الصور الطويلة جداً أو العريضة جداً:
+      contain -> نحافظ على المنتج كاملاً.
+    */
+
+    if (imageRatio >= 0.68 && imageRatio <= 1.05) {
+      setImageFit("cover");
+    } else {
+      setImageFit("contain");
+    }
+
+    setImageLoaded(true);
+  };
 
   /* =========================================================
      IMAGE ERROR
@@ -120,6 +177,7 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
     }
 
     setAllImagesFailed(true);
+    setImageLoaded(true);
   };
 
   /* =========================================================
@@ -144,7 +202,7 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
   };
 
   /* =========================================================
-     ADD TO CART
+     CART
   ========================================================= */
 
   const handleAdd = (event: MouseEvent<HTMLButtonElement>) => {
@@ -197,6 +255,7 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
   };
 
   const discount = Number(product.discount || 0);
+
   const cardBadge = badge || (discount > 0 ? `-${discount}%` : undefined);
 
   return (
@@ -204,12 +263,17 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
       <article className="relative w-full min-w-0 overflow-hidden rounded-[15px] border border-[#EEE6E2] bg-white transition-transform duration-150 active:scale-[0.985]">
         {/* IMAGE */}
 
-        <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#F4F2F0]">
-          {!allImagesFailed && mainImage ? (
-            <img key={`${product.id}-${imageIndex}-${mainImage}`} src={optimizeImage(mainImage, 560, 76)} alt={product.nameAr || product.name || "منتج فلامنجو"} loading={index < 2 ? "eager" : "lazy"} decoding="async" fetchPriority={index < 2 ? "high" : "auto"} onError={handleMainImageError} width={560} height={700} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className="absolute inset-0 h-full w-full select-none object-cover object-center" />
+        <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#F1F0EE]">
+          {!allImagesFailed && optimizedMainImage ? (
+            <>
+              {!imageLoaded && <div className="absolute inset-0 z-[2] animate-pulse bg-[#ECEAE8]" />}
+
+              <img key={`${product.id}-${imageIndex}-${mainImage}`} src={optimizedMainImage} alt={product.nameAr || product.name || "منتج فلامنجو"} loading={index < 4 ? "eager" : "lazy"} decoding="async" fetchPriority={index < 2 ? "high" : "auto"} onLoad={handleMainImageLoad} onError={handleMainImageError} width={520} height={650} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className={`absolute inset-0 h-full w-full select-none transition-opacity duration-150 ${imageLoaded ? "opacity-100" : "opacity-0"} ${imageFit === "cover" ? "object-cover object-center" : "scale-[1.035] object-contain object-center"}`} />
+            </>
           ) : (
-            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#F4F2F0]">
+            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#F1F0EE]">
               <ImageOff className="h-6 w-6 text-[#B8ACA7]" strokeWidth={1.3} />
+
               <span className="mt-2 text-[8px] text-[#A79A95]">الصورة غير متوفرة</span>
             </div>
           )}
@@ -240,11 +304,7 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
         {/* DETAILS */}
 
         <div className="relative h-[86px] bg-white px-[10px] pb-[9px] pt-[8px]">
-          {/* NAME */}
-
           <h3 className="overflow-hidden whitespace-nowrap pl-[36px] text-ellipsis text-[10.5px] font-semibold leading-[17px] text-[#3E3431]">{product.nameAr || product.name}</h3>
-
-          {/* BRAND + COLOR */}
 
           <p className="mt-[1px] overflow-hidden whitespace-nowrap pl-[36px] text-ellipsis text-[7.5px] leading-[14px] text-[#9E918C]">
             {product.brand || "Flamingo Park"}
@@ -257,13 +317,9 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
             )}
           </p>
 
-          {/* PRICE */}
-
           <div className="absolute bottom-[13px] left-[46px] right-[10px] flex min-w-0 items-center">
             <span className="block max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-[11px] font-bold leading-none text-[#B86168]">{getDisplayedPrice()}</span>
           </div>
-
-          {/* CART */}
 
           {product.inStock ? (
             <button type="button" aria-label="إضافة إلى السلة" onClick={handleAdd} className={`absolute bottom-[9px] left-[9px] flex h-[33px] w-[33px] items-center justify-center rounded-[9px] border border-[#E9CFCC] bg-[#FFF7F5] text-[#B86168] transition-all duration-200 active:bg-[#FAECE9] ${bagPop ? "scale-110" : "scale-100"}`}>

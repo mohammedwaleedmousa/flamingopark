@@ -1,23 +1,18 @@
-import { useState, useEffect, useMemo } from "react";
-import { motion, AnimatePresence } from "framer-motion";
+import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
+import { AlertCircle, Banknote, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, CreditCard, Loader2, MapPin, ShoppingBag, Ticket, Truck, User, X } from "lucide-react";
+
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
+
 import { useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import {
-  CreditCard, Banknote, Truck, Copy, Check, ChevronLeft, ChevronRight,
-  User, MapPin, ShoppingBag, Loader2, AlertCircle, Ticket, X,
-} from "lucide-react";
-import {
-  SavedAddress, migrateLegacyCheckoutInfo, upsertSavedAddress,
-} from "@/lib/savedAddresses";
+import { SavedAddress, migrateLegacyCheckoutInfo, upsertSavedAddress } from "@/lib/savedAddresses";
+import { optimizeImage, handleImageError } from "@/lib/imageUrl";
 
 const orderAccessorySchema = z.object({
   name: z.string().max(200).optional(),
@@ -26,6 +21,7 @@ const orderAccessorySchema = z.object({
   quantity: z.number().int().min(1).max(100),
   image_url: z.string().max(2000).optional(),
 });
+
 const orderItemSchema = z.object({
   product_id: z.string().uuid(),
   product_name: z.string().min(1).max(500),
@@ -36,11 +32,27 @@ const orderItemSchema = z.object({
   selected_color: z.string().max(100).nullable().optional(),
   selected_accessories: z.array(orderAccessorySchema).max(50),
 });
+
 const orderItemsSchema = z.array(orderItemSchema).min(1).max(100);
 
-interface DeliveryCompany { id: string; name: string; base_fee: number; delivery_days: string | null; }
-interface BankAccount { bank: string; account: string; name: string; }
-interface CODRegion { id: string; region_name: string; region_name_ar: string; }
+interface DeliveryCompany {
+  id: string;
+  name: string;
+  base_fee: number;
+  delivery_days: string | null;
+}
+
+interface BankAccount {
+  bank: string;
+  account: string;
+  name: string;
+}
+
+interface CODRegion {
+  id: string;
+  region_name: string;
+  region_name_ar: string;
+}
 
 const STEPS = [
   { key: "info", label: "المعلومات", icon: User },
@@ -51,15 +63,20 @@ const STEPS = [
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
+
   const { customer, cart, getCartTotal, clearCart, currencyMode } = useStore();
+
   const isGuestLike = !customer || customer.id === "guest";
+
   const subtotal = getCartTotal();
   const currency = "ر.ي";
 
   const [currentStep, setCurrentStep] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "bank">("cod");
+
   const [selectedDelivery, setSelectedDelivery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState(customer?.region || "");
+
   const [formData, setFormData] = useState({
     name: customer?.name || "",
     phone: customer?.phone || "",
@@ -68,72 +85,229 @@ const CheckoutPage = () => {
     city: "",
     notes: "",
   });
+
+  const [couponCode, setCouponCode] = useState("");
+  const [discountAmount, setDiscountAmount] = useState(0);
+  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
+
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const [addressOwnerKey, setAddressOwnerKey] = useState("guest");
+  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
+  const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [addressPickerOpen, setAddressPickerOpen] = useState(false);
+
+  /* =========================================================
+     CUSTOMER REGION
+  ========================================================= */
+
   useEffect(() => {
     if (customer?.region) {
       setSelectedRegion(customer.region);
     }
   }, [customer?.region]);
-  const [couponCode, setCouponCode] = useState("");
-  const [discountAmount, setDiscountAmount] = useState(0);
-  const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [addressOwnerKey, setAddressOwnerKey] = useState("guest");
-  const [savedAddresses, setSavedAddresses] = useState<SavedAddress[]>([]);
-  const [selectedAddressId, setSelectedAddressId] = useState("");
+
+  /* =========================================================
+     ADDRESS OWNER
+  ========================================================= */
 
   useEffect(() => {
     let mounted = true;
+
     supabase.auth.getUser().then(({ data }) => {
       if (!mounted) return;
+
       setAddressOwnerKey(data.user?.id || customer?.id || "guest");
     });
-    return () => { mounted = false; };
+
+    return () => {
+      mounted = false;
+    };
   }, [customer?.id]);
+
+  /* =========================================================
+     SAVED ADDRESSES
+  ========================================================= */
 
   useEffect(() => {
     const list = migrateLegacyCheckoutInfo(addressOwnerKey);
+
     setSavedAddresses(list);
-    const def = list.find((a) => a.isDefault) || list[0];
-    if (def) {
-      setSelectedAddressId(def.id);
-      setFormData((prev) => ({
-        ...prev,
-        name: isGuestLike ? String(def.name || prev.name || "") : prev.name,
-        phone: isGuestLike ? String(def.phone || prev.phone || "") : prev.phone,
-        city: def.city, address: def.address, notes: def.notes || "",
-      }));
-    }
+
+    const defaultAddress = list.find((address) => address.isDefault) || list[0];
+
+    if (!defaultAddress) return;
+
+    setSelectedAddressId(defaultAddress.id);
+
+    setFormData((current) => ({
+      ...current,
+      name: isGuestLike ? String(defaultAddress.name || current.name || "") : current.name,
+      phone: isGuestLike ? String(defaultAddress.phone || current.phone || "") : current.phone,
+      city: defaultAddress.city,
+      address: defaultAddress.address,
+      notes: defaultAddress.notes || "",
+    }));
   }, [addressOwnerKey, isGuestLike]);
 
-  const getCostPriceTotal = () => cart.reduce((total, item) => {
-    const costPrice = item.product.costPrice || item.product.price;
-    const accessoriesTotal = item.selectedAccessories?.reduce((sum, acc) => sum + acc.price * acc.quantity, 0) || 0;
-    return total + (costPrice + accessoriesTotal) * item.quantity;
-  }, 0);
+  /* =========================================================
+     DELIVERY COMPANIES
+  ========================================================= */
+
+  const { data: deliveryCompanies = [] } = useQuery({
+    queryKey: ["delivery-companies"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("delivery_companies").select("id,name,base_fee,delivery_days,is_active").eq("is_active", true).order("name");
+
+      if (error) throw error;
+
+      return (data || []) as DeliveryCompany[];
+    },
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+  });
+
+  /* =========================================================
+     SETTINGS
+  ========================================================= */
+
+  const { data: checkoutSettings = {} } = useQuery<Record<string, unknown>>({
+    queryKey: ["checkout-settings"],
+    queryFn: async () => {
+      const { data } = await supabase.from("site_settings").select("key,value").in("key", ["bank_accounts", "bank_accounts_ye", "bank_accounts_sa", "whatsapp", "whatsapp_ye", "whatsapp_sa"]);
+
+      return Object.fromEntries((data || []).map((setting) => [setting.key, setting.value]));
+    },
+    staleTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
+  });
+
+  const bankAccounts = useMemo(() => {
+    let value: any = checkoutSettings.bank_accounts ?? checkoutSettings.bank_accounts_ye ?? checkoutSettings.bank_accounts_sa;
+
+    if (typeof value === "string") {
+      try {
+        value = JSON.parse(value);
+      } catch {
+        return [] as BankAccount[];
+      }
+    }
+
+    if (!Array.isArray(value)) {
+      return [] as BankAccount[];
+    }
+
+    return value.map((item: any) => ({
+      bank: String(item?.bank || ""),
+      account: String(item?.account || ""),
+      name: String(item?.name || ""),
+    })) as BankAccount[];
+  }, [checkoutSettings]);
+
+  /* =========================================================
+     COD REGIONS
+  ========================================================= */
+
+  const { data: codRegions = [] } = useQuery({
+    queryKey: ["cod-regions"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("cod_regions").select("id,region_name,region_name_ar").eq("is_active", true).order("region_name_ar");
+
+      if (error) throw error;
+
+      return (data || []) as CODRegion[];
+    },
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
+  });
+
+  /* =========================================================
+     TOTALS
+  ========================================================= */
+
+  const selectedCompany = deliveryCompanies.find((company) => company.id === selectedDelivery);
+
+  const deliveryFee = selectedCompany?.base_fee || 0;
+
+  const total = Math.max(0, subtotal + deliveryFee - discountAmount);
+
+  /* =========================================================
+     COST TOTAL FOR COUPON
+  ========================================================= */
+
+  const getCostPriceTotal = () => {
+    return cart.reduce((totalCost, item) => {
+      const costPrice = item.product.costPrice || item.product.price;
+
+      const accessoriesTotal = item.selectedAccessories?.reduce((sum, accessory) => sum + accessory.price * accessory.quantity, 0) || 0;
+
+      return totalCost + (costPrice + accessoriesTotal) * item.quantity;
+    }, 0);
+  };
+
+  /* =========================================================
+     COUPON
+  ========================================================= */
 
   const applyCoupon = async () => {
     const normalized = couponCode.trim().toUpperCase();
-    if (!normalized) { toast({ title: "خطأ", description: "أدخل كود الخصم", variant: "destructive" }); return; }
+
+    if (!normalized) {
+      toast({
+        title: "أدخل كود الخصم",
+        variant: "destructive",
+      });
+
+      return;
+    }
+
     const costPriceTotal = getCostPriceTotal();
+
     try {
-      const { data: couponData } = await supabase.from("coupons").select("code, type, value").eq("is_active", true).limit(100);
-      const match = couponData?.find((c) => c.code?.trim().toUpperCase() === normalized);
-      if (match) {
-        const coupon = match as { type: "percentage" | "fixed"; value: number };
-        let discount = coupon.type === "percentage" ? (costPriceTotal * coupon.value) / 100 : coupon.value;
-        discount = Math.min(discount, subtotal);
-        setDiscountAmount(discount);
-        setAppliedCoupon(normalized);
-        toast({ title: "تم التطبيق", description: `خصم ${discount.toFixed(2)} ${currency}` });
+      const { data: couponData, error } = await supabase.from("coupons").select("code,type,value").eq("is_active", true).limit(100);
+
+      if (error) throw error;
+
+      const match = couponData?.find((coupon) => coupon.code?.trim().toUpperCase() === normalized);
+
+      if (!match) {
+        setDiscountAmount(0);
+        setAppliedCoupon(null);
+
+        toast({
+          title: "الكود غير صالح",
+          description: "كود الخصم غير موجود.",
+          variant: "destructive",
+        });
+
         return;
       }
-      setDiscountAmount(0);
-      setAppliedCoupon(null);
-      toast({ title: "غير صالح", description: "كود الخصم غير موجود", variant: "destructive" });
+
+      const coupon = match as {
+        type: "percentage" | "fixed";
+        value: number;
+      };
+
+      let discount = coupon.type === "percentage" ? (costPriceTotal * coupon.value) / 100 : coupon.value;
+
+      discount = Math.min(discount, subtotal);
+
+      setDiscountAmount(discount);
+      setAppliedCoupon(normalized);
+
+      toast({
+        title: "تم تطبيق الكوبون",
+        description: `خصم ${discount.toFixed(2)} ${currency}`,
+      });
     } catch {
       setDiscountAmount(0);
       setAppliedCoupon(null);
-      toast({ title: "خطأ", description: "فشل التحقق", variant: "destructive" });
+
+      toast({
+        title: "تعذر التحقق من الكوبون",
+        description: "حاول مرة أخرى.",
+        variant: "destructive",
+      });
     }
   };
 
@@ -141,483 +315,868 @@ const CheckoutPage = () => {
     setCouponCode("");
     setDiscountAmount(0);
     setAppliedCoupon(null);
-    toast({ title: "تمت إزالة الكوبون" });
+
+    toast({
+      title: "تمت إزالة الكوبون",
+    });
   };
 
-  const { data: deliveryCompanies = [] } = useQuery({
-    queryKey: ["delivery-companies"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("delivery_companies").select("id,name,base_fee,delivery_days,is_active").eq("is_active", true).order("name");
-      if (error) throw error;
-      return data as DeliveryCompany[];
-    },
-  });
+  /* =========================================================
+     ADDRESS PICKER
+  ========================================================= */
 
-  const { data: checkoutSettings = {} } = useQuery<Record<string, unknown>>({
-    queryKey: ["checkout-settings"],
-    queryFn: async () => {
-      const { data } = await supabase.from("site_settings").select("key, value").in("key", ["bank_accounts", "bank_accounts_ye", "bank_accounts_sa", "whatsapp", "whatsapp_ye", "whatsapp_sa"]);
-      return Object.fromEntries((data || []).map((setting) => [setting.key, setting.value]));
-    },
-  });
+  const selectedSavedAddress = savedAddresses.find((address) => address.id === selectedAddressId);
 
-  const bankAccounts = useMemo(() => {
-    let value: any = checkoutSettings.bank_accounts ?? checkoutSettings.bank_accounts_ye ?? checkoutSettings.bank_accounts_sa;
-    if (typeof value === "string") try { value = JSON.parse(value); } catch { return [] as BankAccount[]; }
-    if (Array.isArray(value)) return value.map((v: any) => ({ bank: String(v?.bank || ""), account: String(v?.account || ""), name: String(v?.name || "") })) as BankAccount[];
-    return [] as BankAccount[];
-  }, [checkoutSettings]);
+  const selectSavedAddress = (id: string) => {
+    setSelectedAddressId(id);
+    setAddressPickerOpen(false);
 
-  const whatsappNumber = (checkoutSettings.whatsapp as string) || (checkoutSettings.whatsapp_ye as string) || (checkoutSettings.whatsapp_sa as string) || "967773335065";
+    if (!id) {
+      setFormData((current) => ({
+        ...current,
+        city: "",
+        address: "",
+        notes: "",
+      }));
 
-  const { data: codRegions = [] } = useQuery({
-    queryKey: ["cod-regions"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("cod_regions").select("id, region_name, region_name_ar").eq("is_active", true).order("region_name_ar");
-      if (error) throw error;
-      return data as CODRegion[];
-    },
-  });
+      return;
+    }
 
-  const selectedCompany = deliveryCompanies.find((c) => c.id === selectedDelivery);
-  const deliveryFee = selectedCompany?.base_fee || 0;
-  const total = subtotal + deliveryFee - discountAmount;
+    const address = savedAddresses.find((item) => item.id === id);
+
+    if (!address) return;
+
+    setFormData((current) => ({
+      ...current,
+      name: isGuestLike ? String(address.name || current.name || "") : current.name,
+      phone: isGuestLike ? String(address.phone || current.phone || "") : current.phone,
+      city: address.city,
+      address: address.address,
+      notes: address.notes || "",
+    }));
+  };
+
+  /* =========================================================
+     SECURE ORDER
+  ========================================================= */
 
   const createSecureOrder = async (items: unknown[]) => {
-  const { data, error } = await (supabase as any).rpc("create_secure_order", {
-    p_customer_id: customer?.id === "guest" ? null : customer?.id || null,
-    p_customer_name: String(customer?.name || formData.name || "").trim(),
-    p_customer_phone: String(customer?.phone || formData.phone || "").trim(),
-    p_customer_address: formData.address.trim(),
-    p_customer_city: formData.city.trim(),
-    p_customer_region: customer?.region || selectedRegion || null,
-    p_customer_notes: formData.notes.trim() || null,
-    p_country: "YE",
-    p_items: items,
-    p_subtotal: subtotal,
-    p_delivery_fee: deliveryFee,
-    p_total: total,
-    p_payment_method: paymentMethod,
-    p_currency_mode: currencyMode,
-    p_currency_code: currencyMode,
-    p_exchange_rate_snapshot: 1,
-    p_total_base: total,
-    p_coupon_code: couponCode.trim() || null,
-    p_discount_amount: discountAmount,
-  });
+    const { data, error } = await (supabase as any).rpc("create_secure_order", {
+      p_customer_id: customer?.id === "guest" ? null : customer?.id || null,
+      p_customer_name: String(customer?.name || formData.name || "").trim(),
+      p_customer_phone: String(customer?.phone || formData.phone || "").trim(),
+      p_customer_address: formData.address.trim(),
+      p_customer_city: formData.city.trim(),
+      p_customer_region: customer?.region || selectedRegion || null,
+      p_customer_notes: formData.notes.trim() || null,
+      p_country: "YE",
+      p_items: items,
+      p_subtotal: subtotal,
+      p_delivery_fee: deliveryFee,
+      p_total: total,
+      p_payment_method: paymentMethod,
+      p_currency_mode: currencyMode,
+      p_currency_code: currencyMode,
+      p_exchange_rate_snapshot: 1,
+      p_total_base: total,
+      p_coupon_code: appliedCoupon || null,
+      p_discount_amount: discountAmount,
+    });
 
-  if (error) {
-    console.error("RPC ERROR FULL:", error);
-    throw error;
-  }
+    if (error) {
+      console.error("RPC ERROR FULL:", error);
+      throw error;
+    }
 
-  console.log("CREATED ORDER:", data);
+    return data;
+  };
 
-  return data;
-};
+  /* =========================================================
+     VALIDATION
+  ========================================================= */
 
-  const validateStep = (step: number): boolean => {
+  const validateStep = (step: number) => {
     if (step === 0) {
       const name = String(customer?.name || formData.name || "").trim();
       const phone = String(customer?.phone || formData.phone || "").trim();
+
       if (isGuestLike && (!name || !phone)) {
-        toast({ title: "الاسم ورقم الهاتف مطلوبان", variant: "destructive" });
+        toast({
+          title: "الاسم ورقم الهاتف مطلوبان",
+          variant: "destructive",
+        });
+
         return false;
       }
     }
+
     if (step === 1) {
       if (!formData.city.trim() || !formData.address.trim()) {
-        toast({ title: "المدينة والعنوان مطلوبان", variant: "destructive" });
+        toast({
+          title: "المدينة والعنوان مطلوبان",
+          variant: "destructive",
+        });
+
         return false;
       }
     }
+
     if (step === 2) {
-      if (!selectedDelivery) { toast({ title: "اختر شركة التوصيل", variant: "destructive" }); return false; }
+      if (!selectedDelivery) {
+        toast({
+          title: "اختر شركة التوصيل",
+          variant: "destructive",
+        });
+
+        return false;
+      }
+
       if (paymentMethod === "cod" && codRegions.length > 0 && !selectedRegion) {
-        toast({ title: "اختر منطقة الاستلام", variant: "destructive" }); return false;
+        toast({
+          title: "اختر منطقة الاستلام",
+          variant: "destructive",
+        });
+
+        return false;
       }
     }
+
     return true;
   };
 
-  const nextStep = () => { if (validateStep(currentStep)) setCurrentStep((s) => Math.min(s + 1, STEPS.length - 1)); };
-  const prevStep = () => setCurrentStep((s) => Math.max(s - 1, 0));
+  const nextStep = () => {
+    if (!validateStep(currentStep)) return;
+
+    setCurrentStep((current) => Math.min(current + 1, STEPS.length - 1));
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  const prevStep = () => {
+    setCurrentStep((current) => Math.max(current - 1, 0));
+
+    window.scrollTo({
+      top: 0,
+      behavior: "smooth",
+    });
+  };
+
+  /* =========================================================
+     SAVE ADDRESS
+  ========================================================= */
 
   const saveAddressToLocal = () => {
     upsertSavedAddress(addressOwnerKey, {
       id: selectedAddressId || `addr-${Date.now()}`,
-      label: `عنوان ${savedAddresses.length + 1}`,
-      name: formData.name.trim(), phone: formData.phone.trim(),
-      city: formData.city.trim(), address: formData.address.trim(),
-      notes: formData.notes.trim(), isDefault: true,
+      label: selectedSavedAddress?.label || `عنوان ${savedAddresses.length + 1}`,
+      name: String(customer?.name || formData.name || "").trim(),
+      phone: String(customer?.phone || formData.phone || "").trim(),
+      city: formData.city.trim(),
+      address: formData.address.trim(),
+      notes: formData.notes.trim(),
+      isDefault: true,
     });
   };
 
+  /* =========================================================
+     SUBMIT
+  ========================================================= */
+
   const handleSubmit = async () => {
-    const savedCustomer = JSON.parse(
-      localStorage.getItem("customer") || "null"
-    );
     if (isSubmitting) return;
-    if (!validateStep(0) || !validateStep(1) || !validateStep(2)) return;
+
+    if (!validateStep(0) || !validateStep(1) || !validateStep(2)) {
+      return;
+    }
+
     setIsSubmitting(true);
+
     const rawOrderItems = cart.map((item) => {
       const basePrice = item.product.discount ? item.product.price * (1 - item.product.discount / 100) : item.product.price;
-      const accessoriesTotal = item.selectedAccessories?.reduce((sum, acc) => sum + acc.price * acc.quantity, 0) || 0;
+
+      const accessoriesTotal = item.selectedAccessories?.reduce((sum, accessory) => sum + accessory.price * accessory.quantity, 0) || 0;
+
       return {
         product_id: item.product.id,
         product_name: item.product.nameAr,
         product_image: item.product.images?.[0] || "",
         quantity: item.quantity,
         price: basePrice + accessoriesTotal,
-
-        // المقاس
         selected_size: item.selectedSize || null,
-
-        // اللون من أي مصدر
-        selected_color:
-          item.selectedColor ||
-          item.variantColor ||
-          null,
-
-        selected_accessories: (item.selectedAccessories || []).map((acc) => ({
-          name: String((acc as any).name || ""),
-          name_ar: String((acc as any).name_ar || (acc as any).name || ""),
-          price: Number((acc as any).price) || 0,
-          quantity: Number((acc as any).quantity) || 1,
-          image_url: String((acc as any).image_url || ""),
+        selected_color: item.selectedColor || item.variantColor || null,
+        selected_accessories: (item.selectedAccessories || []).map((accessory) => ({
+          name: String((accessory as any).name || ""),
+          name_ar: String((accessory as any).name_ar || (accessory as any).name || ""),
+          price: Number((accessory as any).price) || 0,
+          quantity: Number((accessory as any).quantity) || 1,
+          image_url: String((accessory as any).image_url || ""),
         })),
       };
     });
+
     const validation = orderItemsSchema.safeParse(rawOrderItems);
+
     if (!validation.success) {
-      toast({ title: "خطأ", description: "بيانات الطلب غير صحيحة", variant: "destructive" });
-      setIsSubmitting(false); return;
+      console.error("ORDER VALIDATION:", validation.error);
+
+      toast({
+        title: "بيانات الطلب غير صحيحة",
+        description: "تحقق من المنتجات وحاول مرة أخرى.",
+        variant: "destructive",
+      });
+
+      setIsSubmitting(false);
+
+      return;
     }
+
     try {
       const customerName = String(customer?.name || formData.name || "").trim();
       const customerPhone = String(customer?.phone || formData.phone || "").trim();
+
       saveAddressToLocal();
 
       const createdOrder = await createSecureOrder(validation.data);
-      const regionData = codRegions.find((r) => r.id === selectedRegion);
+
+      const regionData = codRegions.find((region) => region.id === selectedRegion);
+
       const orderData = {
-        orderId: createdOrder.order_id, orderNumber: createdOrder.order_number, trackingToken: createdOrder.tracking_token,
-        customerName: customerName || "عميل", customerPhone,
-        customerAddress: formData.address || "-", customerCity: formData.city || "",
-        customerNotes: formData.notes || "", items: validation.data,
-        subtotal: Number(createdOrder.subtotal), deliveryFee: Number(createdOrder.delivery_fee),
+        orderId: createdOrder.order_id,
+        orderNumber: createdOrder.order_number,
+        trackingToken: createdOrder.tracking_token,
+        customerName: customerName || "عميل",
+        customerPhone,
+        customerAddress: formData.address || "-",
+        customerCity: formData.city || "",
+        customerNotes: formData.notes || "",
+        items: validation.data,
+        subtotal: Number(createdOrder.subtotal),
+        deliveryFee: Number(createdOrder.delivery_fee),
         discountAmount: Number(createdOrder.discount_amount),
-        couponCode: Number(createdOrder.discount_amount) > 0 ? couponCode.trim().toUpperCase() : null,
-        total: Number(createdOrder.total), paymentMethod,
+        couponCode: Number(createdOrder.discount_amount) > 0 ? appliedCoupon : null,
+        total: Number(createdOrder.total),
+        paymentMethod,
         deliveryCompany: createdOrder.delivery_company || selectedCompany?.name || "",
-        selectedRegion: paymentMethod === "cod" && regionData ? regionData.region_name_ar : null,
-        country: "GLOBAL", currencyMode: createdOrder.currency_mode || currencyMode,
+        selectedRegion: paymentMethod === "cod" && regionData ? regionData.region_name_ar : customer?.region || null,
+        country: "GLOBAL",
+        currencyMode: createdOrder.currency_mode || currencyMode,
         createdAt: createdOrder.created_at || new Date().toISOString(),
       };
+
       clearCart();
-      navigate("/order-confirmation", { state: { orderData } });
+
+      navigate("/order-confirmation", {
+        state: {
+          orderData,
+        },
+      });
     } catch (error) {
-      const msg = error instanceof Error ? error.message : "فشل إرسال الطلب";
-      toast({ title: "خطأ", description: msg, variant: "destructive" });
+      const message = error instanceof Error ? error.message : "فشل إرسال الطلب";
+
+      toast({
+        title: "تعذر إنشاء الطلب",
+        description: message,
+        variant: "destructive",
+      });
+
       setIsSubmitting(false);
     }
   };
 
-  if (cart.length === 0) return (
-    <div className="min-h-screen bg-background"><Navbar /><CartDrawer />
-      <main className="pt-32 pb-16"><div className="container mx-auto px-4 text-center">
-        <ShoppingBag className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-        <h1 className="font-heading text-2xl text-foreground mb-4">السلة فارغة</h1>
-        <Button onClick={() => navigate("/products")} className="btn-gold">تسوق الآن</Button>
-      </div></main><Footer /></div>
-  );
+  /* =========================================================
+     EMPTY CART
+  ========================================================= */
+
+  if (cart.length === 0) {
+    return (
+      <div className="min-h-screen bg-[#FFFDFC]" dir="rtl">
+        <Navbar />
+
+        <CartDrawer />
+
+        <main className="flex min-h-[65vh] items-center justify-center px-4 py-16">
+          <div className="text-center">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-[#FAECE9]">
+              <ShoppingBag className="h-5 w-5 text-[#C66C72]" strokeWidth={1.4} />
+            </span>
+
+            <h1 className="mt-4 text-[18px] font-semibold text-[#403633]">السلة فارغة</h1>
+
+            <p className="mt-1.5 text-[8px] text-[#9B8D88]">أضف بعض المنتجات قبل إتمام الطلب.</p>
+
+            <button type="button" onClick={() => navigate("/products")} className="mt-5 h-10 rounded-[10px] bg-[#D4777D] px-6 text-[9px] font-semibold text-white">
+              تصفح المنتجات
+            </button>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
-    <div className="min-h-screen bg-background" dir="rtl">
-      <Navbar /><CartDrawer />
-      <main className="pt-24 pb-16">
-        <div className="container mx-auto px-4 max-w-5xl">
-          <motion.h1 initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}
-            className="font-heading text-3xl md:text-4xl text-foreground mb-8 text-center">
-            إتمام <span className="text-gold">الطلب</span>
-          </motion.h1>
+    <div className="min-h-screen bg-[#FFFDFC]" dir="rtl">
+      <Navbar />
 
-          {/* Stepper */}
-          <div className="mb-10">
-            <div className="flex items-center justify-between max-w-2xl mx-auto pr-5">
-              {STEPS.map((step, i) => {
+      <CartDrawer />
+
+      <main className="pb-12 pt-5 md:pb-16 md:pt-7">
+        <div className="mx-auto w-full max-w-[1120px] px-3 md:px-6">
+          {/* =================================================
+              HEADER
+          ================================================= */}
+
+          <div className="mb-5 md:mb-7">
+            <div className="flex items-center gap-2">
+              <span className="h-[2px] w-4 rounded-full bg-[#D4777D]" />
+              <span className="font-serif text-[6px] tracking-[0.22em] text-[#B86168]">CHECKOUT</span>
+            </div>
+
+            <h1 className="mt-1.5 text-[19px] font-semibold tracking-[-0.025em] text-[#3E3431] md:text-[26px]">إتمام الطلب</h1>
+
+            <p className="mt-1 text-[8px] text-[#9D8F8A]">بقيت خطوات بسيطة لإتمام طلبك.</p>
+          </div>
+
+          {/* =================================================
+              STEPPER
+          ================================================= */}
+
+          <div className="mb-6 overflow-hidden rounded-[14px] border border-[#EAE0DC] bg-white px-2 py-3 md:px-5">
+            <div className="flex items-start">
+              {STEPS.map((step, index) => {
                 const Icon = step.icon;
-                const done = i < currentStep;
-                const active = i === currentStep;
+                const done = index < currentStep;
+                const active = index === currentStep;
+
                 return (
-                  <div key={step.key} className="flex items-center flex-1">
-                    <div className="flex flex-col items-center pr-3">
-                      <button
-                        onClick={() => { if (i < currentStep) setCurrentStep(i); }}
-                        disabled={i > currentStep}
-                        className={`w-11 h-11 rounded-full flex items-center justify-center transition-all ${
-                          done ? "bg-gold text-white" : active ? "bg-gold text-white ring-4 ring-gold/20" : "bg-muted text-muted-foreground"
-                        }`}
-                      >
-                        {done ? <Check className="w-5 h-5" /> : <Icon className="w-5 h-5" />}
+                  <div key={step.key} className="flex min-w-0 flex-1 items-start">
+                    <div className="flex min-w-[52px] flex-col items-center">
+                      <button type="button" onClick={() => { if (index < currentStep) setCurrentStep(index); }} disabled={index > currentStep} className={`flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${done ? "border-[#D4777D] bg-[#D4777D] text-white" : active ? "border-[#D4777D] bg-[#FFF5F3] text-[#B86168]" : "border-[#E8DEDA] bg-[#FAF8F7] text-[#B0A49F]"}`}>
+                        {done ? <Check className="h-3.5 w-3.5" strokeWidth={2} /> : <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />}
                       </button>
-                      <span className={`text-xs mt-2 font-medium ${active || done ? "text-foreground" : "text-muted-foreground"}`}>{step.label}</span>
+
+                      <span className={`mt-1.5 whitespace-nowrap text-[6px] font-medium md:text-[7px] ${active || done ? "text-[#685853]" : "text-[#A99B96]"}`}>{step.label}</span>
                     </div>
-                    {i < STEPS.length - 1 && (
-                      <div className={`flex-1 h-0.5 mx-2 -mt-6 transition-colors ${done ? "bg-gold" : "bg-muted"}`} />
-                    )}
+
+                    {index < STEPS.length - 1 && <div className={`mt-4 h-px flex-1 ${index < currentStep ? "bg-[#D9AAA7]" : "bg-[#EAE2DF]"}`} />}
                   </div>
                 );
               })}
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            {/* Step content */}
-            <div className="lg:col-span-2">
-              <AnimatePresence mode="wait">
-                <motion.div key={currentStep} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} transition={{ duration: 0.25 }}
-                  className="bg-card border border-border rounded-2xl p-6">
+          <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-5">
+            {/* =================================================
+                STEP CONTENT
+            ================================================= */}
 
-                  {/* STEP 1: Info */}
-                  {currentStep === 0 && (
-                    <div className="space-y-5">
-                      <h2 className="font-heading text-xl flex items-center gap-2"><User className="w-5 h-5 text-gold" /> معلوماتك الشخصية</h2>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm mb-2">الاسم الكامل *</label>
-                          <Input value={isGuestLike ? formData.name : (customer?.name || "")} onChange={(e) => isGuestLike && setFormData({ ...formData, name: e.target.value })} disabled={!isGuestLike} placeholder="أدخل اسمك" dir="rtl" />
-                        </div>
-                        <div>
-                          <label className="block text-sm mb-2">رقم الهاتف *</label>
-                          <Input value={isGuestLike ? formData.phone : (customer?.phone || "")} onChange={(e) => isGuestLike && setFormData({ ...formData, phone: e.target.value })} disabled={!isGuestLike} placeholder="05xxxxxxxx" dir="ltr" />
-                        </div>
-                      </div>
+            <div className="min-w-0">
+              <section className="overflow-hidden rounded-[16px] border border-[#EAE0DC] bg-white">
+                {/* =================================================
+                    STEP 1
+                ================================================= */}
+
+                {currentStep === 0 && (
+                  <div className="p-4 md:p-5">
+                    <div className="mb-5 flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FAECE9]">
+                        <User className="h-3.5 w-3.5 text-[#C66C72]" strokeWidth={1.5} />
+                      </span>
+
                       <div>
-                        <label className="block text-sm mb-2">البريد الإلكتروني (اختياري)</label>
-                        <Input value={formData.email} onChange={(e) => setFormData({ ...formData, email: e.target.value })} placeholder="you@example.com" dir="ltr" />
+                        <h2 className="text-[11px] font-semibold text-[#483C38]">معلوماتك الشخصية</h2>
+                        <p className="mt-0.5 text-[7px] text-[#A0938E]">بيانات التواصل الخاصة بالطلب.</p>
                       </div>
                     </div>
-                  )}
 
-                  {/* STEP 2: Address */}
-                  {currentStep === 1 && (
-                    <div className="space-y-5">
-                      <h2 className="font-heading text-xl flex items-center gap-2"><MapPin className="w-5 h-5 text-gold" /> عنوان التوصيل</h2>
-                      {savedAddresses.length > 0 && (
-                        <div>
-                          <label className="block text-sm mb-2">اختر عنواناً محفوظاً</label>
-                          <select value={selectedAddressId} onChange={(e) => {
-                            const id = e.target.value; setSelectedAddressId(id);
-                            const a = savedAddresses.find((x) => x.id === id);
-                            if (a) setFormData((p) => ({ ...p, city: a.city, address: a.address, notes: a.notes || "" }));
-                          }} className="w-full h-10 rounded-md border border-input bg-background px-3 text-sm">
-                            <option value="">— جديد —</option>
-                            {savedAddresses.map((a) => <option key={a.id} value={a.id}>{a.label} - {a.city}</option>)}
-                          </select>
-                        </div>
-                      )}
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                          <label className="block text-sm mb-2">المدينة *</label>
-                          <Input value={formData.city} onChange={(e) => setFormData({ ...formData, city: e.target.value })} placeholder="اختر مدينتك" dir="rtl" />
-                        </div>
-                        <div>
-                          <label className="block text-sm mb-2">العنوان بالتفصيل *</label>
-                          <Input value={formData.address} onChange={(e) => setFormData({ ...formData, address: e.target.value })} placeholder="الحي، الشارع، رقم المبنى" dir="rtl" />
-                        </div>
-                      </div>
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div>
-                        <label className="block text-sm mb-2">ملاحظات إضافية</label>
-                        <textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} rows={3} dir="rtl"
-                          placeholder="وقت التسليم المفضل، معلم قريب..." className="w-full px-4 py-2 bg-background border border-border rounded-lg resize-none focus:outline-none focus:ring-2 focus:ring-primary/50" />
+                        <label className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">الاسم الكامل *</label>
+
+                        <input value={isGuestLike ? formData.name : customer?.name || ""} onChange={(event) => { if (isGuestLike) setFormData((current) => ({ ...current, name: event.target.value })); }} disabled={!isGuestLike} placeholder="أدخل اسمك" className="h-11 w-full rounded-[10px] border border-[#E6DCD8] bg-white px-3 text-[9px] text-[#483C38] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA] disabled:bg-[#F7F4F2] disabled:text-[#8E817C]" />
+                      </div>
+
+                      <div>
+                        <label className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">رقم الهاتف *</label>
+
+                        <input value={isGuestLike ? formData.phone : customer?.phone || ""} onChange={(event) => { if (isGuestLike) setFormData((current) => ({ ...current, phone: event.target.value })); }} disabled={!isGuestLike} placeholder="رقم الهاتف" dir="ltr" inputMode="tel" className="h-11 w-full rounded-[10px] border border-[#E6DCD8] bg-white px-3 text-left text-[9px] text-[#483C38] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA] disabled:bg-[#F7F4F2] disabled:text-[#8E817C]" />
                       </div>
                     </div>
-                  )}
 
-                  {/* STEP 3: Payment */}
-                  {currentStep === 2 && (
-                    <div className="space-y-6">
-                      <h2 className="font-heading text-xl flex items-center gap-2"><CreditCard className="w-5 h-5 text-gold" /> الشحن والدفع</h2>
+                    <div className="mt-4">
+                      <label className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">البريد الإلكتروني <span className="font-normal text-[#AA9D98]">اختياري</span></label>
+
+                      <input value={formData.email} onChange={(event) => setFormData((current) => ({ ...current, email: event.target.value }))} placeholder="you@example.com" dir="ltr" inputMode="email" className="h-11 w-full rounded-[10px] border border-[#E6DCD8] bg-white px-3 text-left text-[9px] text-[#483C38] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA]" />
+                    </div>
+                  </div>
+                )}
+
+                {/* =================================================
+                    STEP 2
+                ================================================= */}
+
+                {currentStep === 1 && (
+                  <div className="p-4 md:p-5">
+                    <div className="mb-5 flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FAECE9]">
+                        <MapPin className="h-3.5 w-3.5 text-[#C66C72]" strokeWidth={1.5} />
+                      </span>
 
                       <div>
-                        <label className="block text-sm mb-3 items-center gap-2"><Truck className="w-4 h-4" /> شركة التوصيل *</label>
-                        {deliveryCompanies.length > 0 ? (
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {deliveryCompanies.map((c) => (
-                              <button key={c.id} onClick={() => setSelectedDelivery(c.id)}
-                                className={`p-4 border rounded-lg text-right transition-all ${selectedDelivery === c.id ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}>
-                                <h3 className="font-heading">{c.name}</h3>
-                                <p className="text-sm text-muted-foreground mt-1">{c.base_fee} {currency} {c.delivery_days && `• ${c.delivery_days}`}</p>
-                              </button>
-                            ))}
-                          </div>
-                        ) : <p className="text-sm text-muted-foreground">لا توجد شركات توصيل</p>}
+                        <h2 className="text-[11px] font-semibold text-[#483C38]">عنوان التوصيل</h2>
+                        <p className="mt-0.5 text-[7px] text-[#A0938E]">أدخل المكان الذي تريد استلام الطلب فيه.</p>
                       </div>
+                    </div>
 
-                      <div>
-                        <label className="block text-sm mb-3">طريقة الدفع *</label>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                          <button type="button" onClick={() => setPaymentMethod("cod")}
-                            className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${paymentMethod === "cod" ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}>
-                            <Banknote className="w-6 h-6 text-gold" />
-                            <div className="text-right"><h3 className="font-heading">الدفع عند الاستلام</h3><p className="text-xs text-muted-foreground">Cash on Delivery</p></div>
-                          </button>
-                          <button type="button" onClick={() => setPaymentMethod("bank")}
-                            className={`p-4 border rounded-lg flex items-center gap-3 transition-all ${paymentMethod === "bank" ? "border-gold bg-gold/5" : "border-border hover:border-gold/50"}`}>
-                            <CreditCard className="w-6 h-6 text-gold" />
-                            <div className="text-right"><h3 className="font-heading">تحويل بنكي</h3><p className="text-xs text-muted-foreground">Bank Transfer</p></div>
-                          </button>
-                        </div>
-                      </div>
+                    {/* SAVED ADDRESS */}
 
-                      {paymentMethod === "cod" && codRegions.length > 0 && !customer?.region && (
-                        <div className="bg-muted rounded-lg p-4 space-y-3">
-                          <p className="text-sm font-medium flex items-center gap-2"><MapPin className="w-4 h-4 text-gold" /> منطقة الاستلام *</p>
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-2">
-                            {codRegions.map((r) => (
-                              <button key={r.id} type="button" onClick={() => setSelectedRegion(r.id)}
-                                className={`px-3 py-2 rounded-lg text-sm font-medium transition-all ${selectedRegion === r.id ? "bg-gold text-white" : "bg-background border border-border hover:border-gold/50"}`}>
-                                {r.region_name_ar}
+                    {savedAddresses.length > 0 && (
+                      <div className="relative mb-4">
+                        <label className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">عنوان محفوظ</label>
+
+                        <button type="button" onClick={() => setAddressPickerOpen((current) => !current)} className={`flex h-11 w-full items-center justify-between rounded-[10px] border bg-white px-3 text-right text-[9px] ${addressPickerOpen ? "border-[#D9AEAA]" : "border-[#E6DCD8]"}`}>
+                          <div className="min-w-0">
+                            {selectedSavedAddress ? (
+                              <>
+                                <p className="truncate font-medium text-[#50433F]">{selectedSavedAddress.label}</p>
+                                <p className="mt-0.5 truncate text-[7px] text-[#A0938E]">{selectedSavedAddress.city} — {selectedSavedAddress.address}</p>
+                              </>
+                            ) : (
+                              <span className="text-[#A0938E]">إضافة عنوان جديد</span>
+                            )}
+                          </div>
+
+                          <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-[#9B8E89] transition-transform ${addressPickerOpen ? "rotate-180" : ""}`} strokeWidth={1.5} />
+                        </button>
+
+                        {addressPickerOpen && (
+                          <>
+                            <button type="button" onClick={() => setAddressPickerOpen(false)} aria-label="إغلاق قائمة العناوين" className="fixed inset-0 z-[60] cursor-default" />
+
+                            <div className="absolute inset-x-0 top-[68px] z-[70] overflow-hidden rounded-[12px] border border-[#E5DAD6] bg-white p-1.5 shadow-[0_12px_32px_rgba(50,35,30,0.10)]">
+                              <button type="button" onClick={() => selectSavedAddress("")} className={`flex min-h-[42px] w-full items-center justify-between rounded-[8px] px-3 text-right text-[8px] ${!selectedAddressId ? "bg-[#FFF5F3] text-[#A95B61]" : "text-[#625550]"}`}>
+                                <span>عنوان جديد</span>
+                                {!selectedAddressId && <Check className="h-3.5 w-3.5" />}
                               </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
 
-                      {paymentMethod === "bank" && bankAccounts.length > 0 && (
-                        <div className="bg-muted rounded-lg p-4 space-y-3">
-                          <p className="text-sm text-muted-foreground">التحويل إلى:</p>
-                          {bankAccounts.map((a, i) => (
-                            <div key={i} className="flex items-center justify-between p-3 bg-background rounded-md">
-                              <div><p className="font-heading text-sm">{a.bank}</p><p className="text-xs font-mono text-muted-foreground" dir="ltr">{a.account}</p></div>
-                              <button type="button" onClick={() => { navigator.clipboard.writeText(a.account); toast({ title: "تم النسخ" }); }} className="p-2 text-gold hover:bg-gold/10 rounded-md"><Copy className="w-4 h-4" /></button>
-                            </div>
-                          ))}
-                        </div>
-                      )}
+                              {savedAddresses.map((address) => {
+                                const active = selectedAddressId === address.id;
 
-                      <div>
-                        <label className="block text-sm mb-2 items-center gap-2"><Ticket className="w-4 h-4" /> كود الخصم (اختياري)</label>
-                        {appliedCoupon ? (
-                          <div className="flex items-center justify-between gap-2 p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-lg">
-                            <div className="flex items-center gap-2">
-                              <Check className="w-4 h-4 text-emerald-700" />
-                              <span className="text-sm font-medium text-emerald-800">{appliedCoupon}</span>
-                              <span className="text-xs text-emerald-700">- {discountAmount.toFixed(2)} {currency}</span>
+                                return (
+                                  <button key={address.id} type="button" onClick={() => selectSavedAddress(address.id)} className={`flex min-h-[50px] w-full items-center justify-between gap-3 rounded-[8px] px-3 text-right ${active ? "bg-[#FFF5F3]" : "active:bg-[#FAF7F5]"}`}>
+                                    <div className="min-w-0">
+                                      <p className={`truncate text-[8px] font-medium ${active ? "text-[#A95B61]" : "text-[#514540]"}`}>{address.label}</p>
+                                      <p className="mt-1 truncate text-[6px] text-[#A0938E]">{address.city} — {address.address}</p>
+                                    </div>
+
+                                    {active && <Check className="h-3.5 w-3.5 shrink-0 text-[#C96F79]" />}
+                                  </button>
+                                );
+                              })}
                             </div>
-                            <Button size="sm" variant="ghost" onClick={removeCoupon} className="h-8 gap-1 text-destructive"><X className="w-3.5 h-3.5" /> إزالة</Button>
-                          </div>
-                        ) : (
-                          <div className="flex gap-2">
-                            <Input value={couponCode} onChange={(e) => setCouponCode(e.target.value)} placeholder="أدخل الكود" />
-                            <Button onClick={applyCoupon} variant="outline">تطبيق</Button>
-                          </div>
+                          </>
                         )}
                       </div>
+                    )}
+
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                      <div>
+                        <label className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">المدينة *</label>
+
+                        <input value={formData.city} onChange={(event) => { setSelectedAddressId(""); setFormData((current) => ({ ...current, city: event.target.value })); }} placeholder="مثال: عدن" className="h-11 w-full rounded-[10px] border border-[#E6DCD8] bg-white px-3 text-[9px] text-[#483C38] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA]" />
+                      </div>
+
+                      <div>
+                        <label className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">العنوان بالتفصيل *</label>
+
+                        <input value={formData.address} onChange={(event) => { setSelectedAddressId(""); setFormData((current) => ({ ...current, address: event.target.value })); }} placeholder="الحي، الشارع، رقم المبنى" className="h-11 w-full rounded-[10px] border border-[#E6DCD8] bg-white px-3 text-[9px] text-[#483C38] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA]" />
+                      </div>
                     </div>
-                  )}
 
-                  {/* STEP 4: Review */}
-                  {currentStep === 3 && (
-                    <div className="space-y-5">
-                      <h2 className="font-heading text-xl flex items-center gap-2"><Check className="w-5 h-5 text-gold" /> مراجعة الطلب</h2>
+                    <div className="mt-4">
+                      <label className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">ملاحظات إضافية <span className="font-normal text-[#AA9D98]">اختياري</span></label>
 
-                      <div className="border border-border rounded-lg p-4 space-y-2">
-                        <p className="text-xs text-muted-foreground">معلوماتك</p>
-                        <p className="text-sm"><strong>{formData.name || customer?.name}</strong> — <span dir="ltr">{formData.phone || customer?.phone}</span></p>
+                      <textarea value={formData.notes} onChange={(event) => setFormData((current) => ({ ...current, notes: event.target.value }))} rows={3} placeholder="وقت التسليم المفضل، معلم قريب..." className="w-full resize-none rounded-[10px] border border-[#E6DCD8] bg-white px-3 py-3 text-[9px] leading-6 text-[#483C38] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA]" />
+                    </div>
+                  </div>
+                )}
+
+                {/* =================================================
+                    STEP 3
+                ================================================= */}
+
+                {currentStep === 2 && (
+                  <div className="p-4 md:p-5">
+                    <div className="mb-5 flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FAECE9]">
+                        <CreditCard className="h-3.5 w-3.5 text-[#C66C72]" strokeWidth={1.5} />
+                      </span>
+
+                      <div>
+                        <h2 className="text-[11px] font-semibold text-[#483C38]">الشحن والدفع</h2>
+                        <p className="mt-0.5 text-[7px] text-[#A0938E]">اختر شركة التوصيل وطريقة الدفع.</p>
+                      </div>
+                    </div>
+
+                    {/* DELIVERY */}
+
+                    <div>
+                      <div className="mb-2.5 flex items-center gap-1.5">
+                        <Truck className="h-3.5 w-3.5 text-[#A76A6D]" strokeWidth={1.5} />
+                        <span className="text-[8px] font-semibold text-[#574A45]">شركة التوصيل *</span>
                       </div>
 
-                      <div className="border border-border rounded-lg p-4 space-y-1">
-                        <p className="text-xs text-muted-foreground">عنوان التوصيل</p>
-                        <p className="text-sm">{formData.city} — {formData.address}</p>
-                        {formData.notes && <p className="text-xs text-muted-foreground">ملاحظات: {formData.notes}</p>}
-                      </div>
+                      {deliveryCompanies.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
+                          {deliveryCompanies.map((company) => {
+                            const active = selectedDelivery === company.id;
 
-                      <div className="border border-border rounded-lg p-4 space-y-1">
-                        <p className="text-xs text-muted-foreground">الشحن والدفع</p>
-                        <p className="text-sm">{selectedCompany?.name} • {paymentMethod === "cod" ? "الدفع عند الاستلام" : "تحويل بنكي"}</p>
-                        {appliedCoupon && (
-                          <p className="text-sm text-emerald-700">كوبون: <strong>{appliedCoupon}</strong> — خصم {discountAmount.toFixed(2)} {currency}</p>
-                        )}
-                      </div>
-
-                      <div className="border border-border rounded-lg p-4">
-                        <p className="text-xs text-muted-foreground mb-3">المنتجات</p>
-                        <div className="space-y-2">
-                          {cart.map((item, i) => {
-                            const price = item.product.discount ? item.product.price * (1 - item.product.discount / 100) : item.product.price;
-                            const accTotal = item.selectedAccessories?.reduce((s, a) => s + a.price * a.quantity, 0) || 0;
                             return (
-                              <div key={i} className="flex gap-3 items-center">
-                                <img loading="lazy" src={item.product.images?.[0] || "/placeholder.svg"} alt="" className="w-12 h-12 object-cover rounded border" />
-                                <div className="flex-1 min-w-0"><p className="text-sm truncate">{item.product.nameAr}</p><p className="text-xs text-muted-foreground">
-                                  {item.quantity} × {price.toFixed(0)}
+                              <button key={company.id} type="button" onClick={() => setSelectedDelivery(company.id)} className={`relative flex min-h-[68px] items-center justify-between rounded-[11px] border p-3 text-right ${active ? "border-[#D9A7A4] bg-[#FFF7F5]" : "border-[#E7DDD9] bg-white active:bg-[#FAF8F7]"}`}>
+                                <div>
+                                  <p className={`text-[9px] font-semibold ${active ? "text-[#A95B61]" : "text-[#514540]"}`}>{company.name}</p>
 
-                                  {item.selectedSize && (
-                                    <> • المقاس: {item.selectedSize}</>
-                                  )}
-
-                                  {(item.selectedColor || item.variantColor) && (
-                                    <> • اللون: {item.selectedColor || item.variantColor}</>
-                                  )}
-                                </p>
+                                  <p className="mt-1 text-[7px] text-[#9E918C]">
+                                    {company.base_fee.toFixed(0)} {currency}
+                                    {company.delivery_days ? ` • ${company.delivery_days}` : ""}
+                                  </p>
                                 </div>
-                                <span className="text-sm text-gold font-medium">{((price + accTotal) * item.quantity).toFixed(0)}</span>
-                              </div>
+
+                                <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${active ? "border-[#D4777D] bg-[#D4777D]" : "border-[#D8CECA]"}`}>
+                                  {active && <Check className="h-2.5 w-2.5 text-white" strokeWidth={2.2} />}
+                                </span>
+                              </button>
+                            );
+                          })}
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 rounded-[10px] bg-[#F8F5F3] px-3 py-3">
+                          <AlertCircle className="h-3.5 w-3.5 text-[#9B8982]" />
+                          <span className="text-[7px] text-[#887A75]">لا توجد شركات توصيل متاحة حالياً.</span>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* PAYMENT */}
+
+                    <div className="mt-5">
+                      <p className="mb-2.5 text-[8px] font-semibold text-[#574A45]">طريقة الدفع *</p>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button type="button" onClick={() => setPaymentMethod("cod")} className={`relative flex min-h-[72px] flex-col items-start justify-center rounded-[11px] border p-3 text-right ${paymentMethod === "cod" ? "border-[#D9A7A4] bg-[#FFF7F5]" : "border-[#E7DDD9] bg-white"}`}>
+                          <Banknote className={`h-4 w-4 ${paymentMethod === "cod" ? "text-[#C66C72]" : "text-[#8E817C]"}`} strokeWidth={1.5} />
+
+                          <p className="mt-2 text-[8px] font-semibold text-[#514540]">الدفع عند الاستلام</p>
+
+                          <p className="mt-0.5 text-[6px] text-[#A0938E]">Cash on Delivery</p>
+
+                          {paymentMethod === "cod" && <span className="absolute left-2.5 top-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#D4777D]"><Check className="h-2.5 w-2.5 text-white" /></span>}
+                        </button>
+
+                        <button type="button" onClick={() => setPaymentMethod("bank")} className={`relative flex min-h-[72px] flex-col items-start justify-center rounded-[11px] border p-3 text-right ${paymentMethod === "bank" ? "border-[#D9A7A4] bg-[#FFF7F5]" : "border-[#E7DDD9] bg-white"}`}>
+                          <CreditCard className={`h-4 w-4 ${paymentMethod === "bank" ? "text-[#C66C72]" : "text-[#8E817C]"}`} strokeWidth={1.5} />
+
+                          <p className="mt-2 text-[8px] font-semibold text-[#514540]">تحويل بنكي</p>
+
+                          <p className="mt-0.5 text-[6px] text-[#A0938E]">Bank Transfer</p>
+
+                          {paymentMethod === "bank" && <span className="absolute left-2.5 top-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#D4777D]"><Check className="h-2.5 w-2.5 text-white" /></span>}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* COD REGION */}
+
+                    {paymentMethod === "cod" && codRegions.length > 0 && !customer?.region && (
+                      <div className="mt-5 rounded-[12px] border border-[#EAE0DC] bg-[#FFFCFB] p-3">
+                        <div className="mb-3 flex items-center gap-2">
+                          <MapPin className="h-3.5 w-3.5 text-[#C66C72]" strokeWidth={1.5} />
+                          <span className="text-[8px] font-semibold text-[#574A45]">منطقة الاستلام *</span>
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                          {codRegions.map((region) => {
+                            const active = selectedRegion === region.id;
+
+                            return (
+                              <button key={region.id} type="button" onClick={() => setSelectedRegion(region.id)} className={`min-h-[36px] rounded-[8px] border px-2 text-[7px] font-medium ${active ? "border-[#D4777D] bg-[#D4777D] text-white" : "border-[#E4DAD6] bg-white text-[#625550] active:bg-[#FFF7F5]"}`}>
+                                {region.region_name_ar}
+                              </button>
                             );
                           })}
                         </div>
                       </div>
-                    </div>
-                  )}
-                </motion.div>
-              </AnimatePresence>
+                    )}
 
-              {/* Navigation buttons */}
-              <div className="flex justify-between items-center mt-6 gap-3">
-                <Button variant="outline" onClick={prevStep} disabled={currentStep === 0} className="gap-2">
-                  <ChevronRight className="w-4 h-4" /> السابق
-                </Button>
+                    {/* BANK */}
+
+                    {paymentMethod === "bank" && bankAccounts.length > 0 && (
+                      <div className="mt-5 rounded-[12px] border border-[#EAE0DC] bg-[#FFFCFB] p-3">
+                        <p className="mb-2.5 text-[7px] text-[#958781]">حول المبلغ إلى أحد الحسابات التالية:</p>
+
+                        <div className="space-y-2">
+                          {bankAccounts.map((account, index) => (
+                            <div key={`${account.account}-${index}`} className="flex items-center justify-between gap-3 rounded-[9px] border border-[#ECE3DF] bg-white p-3">
+                              <div className="min-w-0">
+                                <p className="truncate text-[8px] font-semibold text-[#514540]">{account.bank}</p>
+
+                                {account.name && <p className="mt-0.5 truncate text-[6px] text-[#A0938E]">{account.name}</p>}
+
+                                <p dir="ltr" className="mt-1 truncate text-left font-mono text-[7px] text-[#776A65]">{account.account}</p>
+                              </div>
+
+                              <button type="button" onClick={() => { navigator.clipboard.writeText(account.account); toast({ title: "تم نسخ رقم الحساب" }); }} aria-label="نسخ رقم الحساب" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-[#E5DAD6] bg-white text-[#A76A6D] active:bg-[#FFF6F4]">
+                                <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* COUPON */}
+
+                    <div className="mt-5 border-t border-[#EEE4E0] pt-4">
+                      <div className="mb-2 flex items-center gap-1.5">
+                        <Ticket className="h-3.5 w-3.5 text-[#A76A6D]" strokeWidth={1.5} />
+                        <span className="text-[8px] font-semibold text-[#574A45]">كود الخصم</span>
+                        <span className="text-[6px] text-[#A0938E]">اختياري</span>
+                      </div>
+
+                      {appliedCoupon ? (
+                        <div className="flex min-h-[46px] items-center justify-between gap-3 rounded-[10px] border border-[#CFE1D2] bg-[#F5FAF6] px-3">
+                          <div className="flex min-w-0 items-center gap-2">
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#6F9576]">
+                              <Check className="h-3 w-3 text-white" />
+                            </span>
+
+                            <div className="min-w-0">
+                              <p className="truncate text-[8px] font-semibold text-[#54745A]">{appliedCoupon}</p>
+                              <p className="mt-0.5 text-[6px] text-[#77907B]">خصم {discountAmount.toFixed(2)} {currency}</p>
+                            </div>
+                          </div>
+
+                          <button type="button" onClick={removeCoupon} className="flex h-7 items-center gap-1 rounded-[7px] px-2 text-[7px] font-medium text-[#A45D5D] active:bg-white">
+                            <X className="h-3 w-3" />
+                            إزالة
+                          </button>
+                        </div>
+                      ) : (
+                        <div className="flex gap-2">
+                          <input value={couponCode} onChange={(event) => setCouponCode(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void applyCoupon(); }} placeholder="أدخل الكود" dir="ltr" className="h-10 min-w-0 flex-1 rounded-[9px] border border-[#E6DCD8] bg-white px-3 text-left text-[8px] uppercase text-[#50433F] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA]" />
+
+                          <button type="button" onClick={applyCoupon} className="h-10 shrink-0 rounded-[9px] border border-[#D9AEAA] bg-white px-4 text-[8px] font-semibold text-[#A95B61] active:bg-[#FFF7F5]">
+                            تطبيق
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* =================================================
+                    STEP 4
+                ================================================= */}
+
+                {currentStep === 3 && (
+                  <div className="p-4 md:p-5">
+                    <div className="mb-5 flex items-center gap-2">
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FAECE9]">
+                        <Check className="h-3.5 w-3.5 text-[#C66C72]" strokeWidth={1.7} />
+                      </span>
+
+                      <div>
+                        <h2 className="text-[11px] font-semibold text-[#483C38]">مراجعة الطلب</h2>
+                        <p className="mt-0.5 text-[7px] text-[#A0938E]">راجع معلوماتك قبل التأكيد النهائي.</p>
+                      </div>
+                    </div>
+
+                    {/* CONTACT */}
+
+                    <div className="border-b border-[#EEE5E1] py-3 first:pt-0">
+                      <p className="text-[7px] font-medium text-[#A0938E]">معلومات التواصل</p>
+
+                      <p className="mt-1.5 text-[9px] font-medium text-[#514540]">{customer?.name || formData.name}</p>
+
+                      <p dir="ltr" className="mt-1 text-right text-[7px] text-[#847671]">{customer?.phone || formData.phone}</p>
+                    </div>
+
+                    {/* ADDRESS */}
+
+                    <div className="border-b border-[#EEE5E1] py-3">
+                      <p className="text-[7px] font-medium text-[#A0938E]">عنوان التوصيل</p>
+
+                      <p className="mt-1.5 text-[9px] leading-5 text-[#514540]">{formData.city} — {formData.address}</p>
+
+                      {formData.notes && <p className="mt-1 text-[7px] leading-5 text-[#948680]">ملاحظات: {formData.notes}</p>}
+                    </div>
+
+                    {/* SHIPPING */}
+
+                    <div className="border-b border-[#EEE5E1] py-3">
+                      <p className="text-[7px] font-medium text-[#A0938E]">الشحن والدفع</p>
+
+                      <p className="mt-1.5 text-[9px] text-[#514540]">{selectedCompany?.name || "—"} <span className="mx-1 text-[#C9BDB8]">•</span> {paymentMethod === "cod" ? "الدفع عند الاستلام" : "تحويل بنكي"}</p>
+
+                      {appliedCoupon && <p className="mt-1.5 text-[7px] font-medium text-[#5C8063]">كوبون {appliedCoupon} — خصم {discountAmount.toFixed(2)} {currency}</p>}
+                    </div>
+
+                    {/* PRODUCTS */}
+
+                    <div className="pt-3">
+                      <p className="mb-3 text-[7px] font-medium text-[#A0938E]">المنتجات</p>
+
+                      <div className="space-y-3">
+                        {cart.map((item, index) => {
+                          const price = item.product.discount ? item.product.price * (1 - item.product.discount / 100) : item.product.price;
+                          const accessoriesTotal = item.selectedAccessories?.reduce((sum, accessory) => sum + accessory.price * accessory.quantity, 0) || 0;
+                          const color = item.selectedColor || item.variantColor;
+
+                          return (
+                            <div key={`${item.product.id}-${index}`} className="flex items-start gap-3">
+                              <div className="h-[58px] w-[48px] shrink-0 overflow-hidden rounded-[8px] bg-[#F5F3F1]">
+                                <img src={optimizeImage(item.product.images?.[0] || "/placeholder.svg", 180, 78)} alt={item.product.nameAr || ""} loading="lazy" decoding="async" onError={handleImageError} className="h-full w-full object-cover object-bottom" />
+                              </div>
+
+                              <div className="min-w-0 flex-1">
+                                <p className="truncate text-[8px] font-medium text-[#514540]">{item.product.nameAr}</p>
+
+                                <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[6px] text-[#958781]">
+                                  <span>الكمية: {item.quantity}</span>
+
+                                  {item.selectedSize && <span>المقاس: {item.selectedSize}</span>}
+
+                                  {color && <span>اللون: {color}</span>}
+                                </div>
+                              </div>
+
+                              <span className="shrink-0 text-[8px] font-semibold text-[#A95B61]">{((price + accessoriesTotal) * item.quantity).toFixed(0)} {currency}</span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </section>
+
+              {/* =================================================
+                  NAVIGATION
+              ================================================= */}
+
+              <div className="mt-4 flex items-center justify-between gap-2">
+                <button type="button" onClick={prevStep} disabled={currentStep === 0} className="flex h-11 min-w-[88px] items-center justify-center gap-1.5 rounded-[10px] border border-[#E4DAD6] bg-white px-4 text-[8px] font-semibold text-[#625550] disabled:cursor-not-allowed disabled:opacity-35">
+                  <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  السابق
+                </button>
+
                 {currentStep < STEPS.length - 1 ? (
-                  <Button onClick={nextStep} className="btn-gold gap-2">
-                    التالي <ChevronLeft className="w-4 h-4" />
-                  </Button>
+                  <button type="button" onClick={nextStep} className="flex h-11 min-w-[110px] items-center justify-center gap-1.5 rounded-[10px] bg-[#D4777D] px-5 text-[8px] font-semibold text-white active:bg-[#C96B72]">
+                    التالي
+                    <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  </button>
                 ) : (
-                  <Button onClick={handleSubmit} disabled={isSubmitting} className="btn-gold gap-2">
-                    {isSubmitting && <Loader2 className="w-4 h-4 animate-spin" />}
-                    تأكيد الطلب النهائي
-                  </Button>
+                  <button type="button" onClick={handleSubmit} disabled={isSubmitting} className="flex h-11 min-w-[145px] items-center justify-center gap-2 rounded-[10px] bg-[#D4777D] px-5 text-[8px] font-semibold text-white active:bg-[#C96B72] disabled:cursor-not-allowed disabled:opacity-50">
+                    {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                    {isSubmitting ? "جارٍ إنشاء الطلب" : "تأكيد الطلب النهائي"}
+                  </button>
                 )}
               </div>
             </div>
 
-            {/* Sidebar summary */}
-            <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="lg:sticky lg:top-24 lg:self-start">
-              <div className="bg-card border border-border rounded-2xl p-6 space-y-3">
-                <h2 className="font-heading text-lg">ملخص الطلب</h2>
-                <div className="space-y-2 pb-3 border-b border-border max-h-64 overflow-y-auto">
-                  {cart.map((item, i) => {
+            {/* =================================================
+                SUMMARY
+            ================================================= */}
+
+            <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
+              <div className="overflow-hidden rounded-[16px] border border-[#EAE0DC] bg-white">
+                <div className="border-b border-[#EEE4E0] px-4 py-3.5">
+                  <div className="flex items-center justify-between">
+                    <h2 className="text-[10px] font-semibold text-[#483C38]">ملخص الطلب</h2>
+
+                    <span className="text-[6px] text-[#A0938E]">{cart.length} {cart.length === 1 ? "منتج" : "منتجات"}</span>
+                  </div>
+                </div>
+
+                {/* PRODUCTS */}
+
+                <div className="max-h-[260px] overflow-y-auto px-4 [scrollbar-width:thin]">
+                  {cart.map((item, index) => {
                     const price = item.product.discount ? item.product.price * (1 - item.product.discount / 100) : item.product.price;
-                    const accTotal = item.selectedAccessories?.reduce((s, a) => s + a.price * a.quantity, 0) || 0;
+
+                    const accessoriesTotal = item.selectedAccessories?.reduce((sum, accessory) => sum + accessory.price * accessory.quantity, 0) || 0;
+
                     return (
-                      <div key={i} className="flex gap-2 items-start text-xs">
-                        <img loading="lazy" src={item.product.images?.[0] || "/placeholder.svg"} alt="" className="w-10 h-10 object-cover rounded border" />
-                        <div className="flex-1 min-w-0"><p className="truncate">{item.product.nameAr}</p><p className="text-muted-foreground">{item.quantity}×</p></div>
-                        <span className="text-gold font-medium">{((price + accTotal) * item.quantity).toFixed(0)}</span>
+                      <div key={`${item.product.id}-${index}`} className={`flex items-center gap-2.5 py-3 ${index !== cart.length - 1 ? "border-b border-[#F0E8E5]" : ""}`}>
+                        <div className="h-[50px] w-[42px] shrink-0 overflow-hidden rounded-[7px] bg-[#F5F3F1]">
+                          <img src={optimizeImage(item.product.images?.[0] || "/placeholder.svg", 160, 76)} alt={item.product.nameAr || ""} loading="lazy" decoding="async" onError={handleImageError} className="h-full w-full object-cover object-bottom" />
+                        </div>
+
+                        <div className="min-w-0 flex-1">
+                          <p className="truncate text-[7px] font-medium text-[#514540]">{item.product.nameAr}</p>
+
+                          <p className="mt-1 text-[6px] text-[#9A8C87]">الكمية {item.quantity}</p>
+                        </div>
+
+                        <span className="shrink-0 text-[7px] font-semibold text-[#A95B61]">{((price + accessoriesTotal) * item.quantity).toFixed(0)}</span>
                       </div>
                     );
                   })}
                 </div>
-                <div className="flex justify-between text-sm"><span>المجموع الفرعي</span><span>{subtotal.toFixed(2)} {currency}</span></div>
-                <div className="flex justify-between text-sm"><span>رسوم التوصيل</span><span>{deliveryFee.toFixed(2)} {currency}</span></div>
-                {discountAmount > 0 && <div className="flex justify-between text-sm text-green-600"><span>خصم</span><span>-{discountAmount.toFixed(2)}</span></div>}
-                <div className="flex justify-between font-bold text-lg pt-2 border-t border-border"><span>الإجمالي</span><span className="text-gold">{total.toFixed(2)} {currency}</span></div>
+
+                {/* TOTALS */}
+
+                <div className="border-t border-[#EEE4E0] px-4 py-4">
+                  <div className="space-y-2.5">
+                    <div className="flex items-center justify-between text-[7px] text-[#746661]">
+                      <span>المجموع الفرعي</span>
+                      <span>{subtotal.toFixed(2)} {currency}</span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-[7px] text-[#746661]">
+                      <span>رسوم التوصيل</span>
+                      <span>{deliveryFee > 0 ? `${deliveryFee.toFixed(2)} ${currency}` : "—"}</span>
+                    </div>
+
+                    {discountAmount > 0 && (
+                      <div className="flex items-center justify-between text-[7px] font-medium text-[#63806A]">
+                        <span>الخصم</span>
+                        <span>-{discountAmount.toFixed(2)} {currency}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="mt-4 flex items-end justify-between border-t border-[#EEE4E0] pt-3">
+                    <div>
+                      <span className="block text-[7px] text-[#8F817C]">الإجمالي</span>
+                      <span className="mt-0.5 block text-[6px] text-[#B1A49F]">شامل رسوم التوصيل</span>
+                    </div>
+
+                    <span className="text-[15px] font-bold text-[#B86168]">{total.toFixed(2)} {currency}</span>
+                  </div>
+                </div>
               </div>
-            </motion.div>
+
+              {/* SECURITY */}
+
+              <div className="mt-2 flex items-center justify-center gap-2 py-2 text-[6px] text-[#A0938E]">
+                <Check className="h-3 w-3 text-[#6F9275]" strokeWidth={1.7} />
+                بيانات طلبك تُرسل بشكل آمن
+              </div>
+            </aside>
           </div>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 };

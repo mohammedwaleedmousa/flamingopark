@@ -29,7 +29,6 @@ const AllBrandsPage = lazy(() => import("./pages/AllBrandsPage"));
 const BrandSectionPage = lazy(() => import("./pages/BrandSectionPage"));
 const CheckoutPage = lazy(() => import("./pages/CheckoutPage"));
 const OrderConfirmationPage = lazy(() => import("./pages/OrderConfirmationPage"));
-const OffersPage = lazy(() => import("./pages/OffersPage"));
 const ReviewsPage = lazy(() => import("./pages/ReviewsPage"));
 const NotFound = lazy(() => import("./pages/NotFound"));
 const QRCodePage = lazy(() => import("./pages/QRCodePage"));
@@ -225,7 +224,6 @@ const App = () => {
             <Route path="/brand/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />
             <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
             <Route path="/order-confirmation" element={<ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>} />
-            <Route path="/offers" element={<ProtectedRoute><OffersPage /></ProtectedRoute>} />
             <Route path="/reviews" element={<ProtectedRoute><ReviewsPage /></ProtectedRoute>} />
             <Route path="/favorites" element={<ProtectedRoute><FavoritesPage /></ProtectedRoute>} />
             <Route path="/qr-code" element={<QRCodePage />} />

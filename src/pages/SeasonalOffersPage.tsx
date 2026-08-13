@@ -65,7 +65,7 @@ const SeasonalOffersPage = () => {
       <Navbar />
       <CartDrawer />
 
-      <main className="pb-20 md:pt-24">
+      <main className="md:pt-24">
         {/* =========================================================
             LIGHT HERO
         ========================================================= */}

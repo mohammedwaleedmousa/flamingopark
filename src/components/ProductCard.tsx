@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { useCurrency } from "@/lib/currency";
 import { useFavorites } from "@/hooks/useFavorites";
 import { saveCatalogScroll } from "@/lib/catalogScroll";
+import { optimizeImage } from "@/lib/imageUrl";
 
 type ColorVariant = {
   name?: string;
@@ -32,7 +33,6 @@ interface ProductCardProps {
 
 const isHeicImage = (url: string) => {
   const cleanUrl = url.split("?")[0].toLowerCase();
-
   return cleanUrl.endsWith(".heic") || cleanUrl.endsWith(".heif");
 };
 
@@ -59,18 +59,12 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
   }, [product.colorVariants, product.color_variants]);
 
   /* =========================================================
-     ALL AVAILABLE IMAGES
-
-     - يجمع صور كل الألوان
-     - يجمع product.images
-     - يمنع التكرار
-     - يؤخر HEIC للنهاية
+     IMAGE CANDIDATES
   ========================================================= */
 
   const imageCandidates = useMemo(() => {
     const variantImages = colors.flatMap((color) => {
       if (!Array.isArray(color.images)) return [];
-
       return color.images;
     });
 
@@ -84,10 +78,10 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
       ),
     );
 
-    const supportedImages = uniqueImages.filter((image) => !isHeicImage(image));
+    const webSafeImages = uniqueImages.filter((image) => !isHeicImage(image));
     const heicImages = uniqueImages.filter((image) => isHeicImage(image));
 
-    return [...supportedImages, ...heicImages];
+    return [...webSafeImages, ...heicImages];
   }, [colors, product.images]);
 
   /* =========================================================
@@ -107,7 +101,7 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
   const mainImage = imageCandidates[imageIndex];
 
   /* =========================================================
-     RESET IMAGE
+     RESET IMAGE STATE
   ========================================================= */
 
   useEffect(() => {
@@ -116,10 +110,7 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
   }, [product.id]);
 
   /* =========================================================
-     IMAGE FALLBACK
-
-     إذا فشلت الصورة الحالية:
-     جرب الصورة التالية تلقائياً.
+     IMAGE ERROR
   ========================================================= */
 
   const handleMainImageError = (_event: SyntheticEvent<HTMLImageElement>) => {
@@ -206,23 +197,19 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
   };
 
   const discount = Number(product.discount || 0);
-
   const cardBadge = badge || (discount > 0 ? `-${discount}%` : undefined);
 
   return (
     <Link to={`/product/${product.slug}`} dir="rtl" onClick={() => saveCatalogScroll(`${location.pathname}${location.search}`)} className="block w-full min-w-0">
       <article className="relative w-full min-w-0 overflow-hidden rounded-[15px] border border-[#EEE6E2] bg-white transition-transform duration-150 active:scale-[0.985]">
-        {/* =====================================================
-            IMAGE
-        ===================================================== */}
+        {/* IMAGE */}
 
         <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#F4F2F0]">
           {!allImagesFailed && mainImage ? (
-            <img key={`${product.id}-${imageIndex}-${mainImage}`} src={mainImage} alt={product.nameAr || product.name || "منتج فلامنجو"} loading={index < 4 ? "eager" : "lazy"} decoding="async" fetchPriority={index < 2 ? "high" : "auto"} onError={handleMainImageError} width={700} height={875} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className="absolute inset-0 h-full w-full select-none object-cover object-center" />
+            <img key={`${product.id}-${imageIndex}-${mainImage}`} src={optimizeImage(mainImage, 560, 76)} alt={product.nameAr || product.name || "منتج فلامنجو"} loading={index < 2 ? "eager" : "lazy"} decoding="async" fetchPriority={index < 2 ? "high" : "auto"} onError={handleMainImageError} width={560} height={700} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className="absolute inset-0 h-full w-full select-none object-cover object-center" />
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#F4F2F0]">
               <ImageOff className="h-6 w-6 text-[#B8ACA7]" strokeWidth={1.3} />
-
               <span className="mt-2 text-[8px] text-[#A79A95]">الصورة غير متوفرة</span>
             </div>
           )}
@@ -250,9 +237,7 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
           )}
         </div>
 
-        {/* =====================================================
-            DETAILS
-        ===================================================== */}
+        {/* DETAILS */}
 
         <div className="relative h-[86px] bg-white px-[10px] pb-[9px] pt-[8px]">
           {/* NAME */}

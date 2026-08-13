@@ -7,6 +7,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import ProductCard from "@/components/ProductCard";
+import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 
 import { supabase } from "@/integrations/supabase/client";
 import type { Product } from "@/store/useStore";
@@ -41,11 +42,11 @@ interface FilterableProduct extends Product {
 
 type SortType = "none" | "asc" | "desc" | "name";
 
-const SORT_OPTIONS: { value: SortType; label: string }[] = [
-  { value: "none", label: "الأحدث" },
-  { value: "asc", label: "السعر: الأقل أولاً" },
-  { value: "desc", label: "السعر: الأعلى أولاً" },
-  { value: "name", label: "الاسم" },
+const SORT_OPTIONS: { value: SortType; label: string; description: string }[] = [
+  { value: "none", label: "الأحدث", description: "المضاف حديثًا أولاً" },
+  { value: "asc", label: "السعر: الأقل أولاً", description: "من الأقل إلى الأعلى" },
+  { value: "desc", label: "السعر: الأعلى أولاً", description: "من الأعلى إلى الأقل" },
+  { value: "name", label: "الاسم", description: "ترتيب حسب اسم المنتج" },
 ];
 
 const normalizeFilterOptions = (options: any): string[] => {
@@ -54,29 +55,13 @@ const normalizeFilterOptions = (options: any): string[] => {
   return options
     .map((option: any) => {
       if (typeof option === "string") return option;
-
       return option?.value || option?.label || option?.name || "";
     })
     .filter(Boolean);
 };
 
 const createFilterText = (product: any) => {
-  return [
-    product.name,
-    product.name_ar,
-    product.description,
-    product.description_ar,
-    product.category,
-    product.brand,
-    ...(Array.isArray(product.sizes) ? product.sizes : []),
-    JSON.stringify(product.color_variants || []),
-    JSON.stringify(product.features || []),
-    JSON.stringify(product.specs || []),
-    JSON.stringify(product.quality_variants || []),
-  ]
-    .filter(Boolean)
-    .join(" ")
-    .toLowerCase();
+  return [product.name, product.name_ar, product.description, product.description_ar, product.category, product.brand, ...(Array.isArray(product.sizes) ? product.sizes : []), JSON.stringify(product.color_variants || []), JSON.stringify(product.features || []), JSON.stringify(product.specs || []), JSON.stringify(product.quality_variants || [])].filter(Boolean).join(" ").toLowerCase();
 };
 
 const mapProduct = (product: any): FilterableProduct => ({
@@ -118,7 +103,7 @@ const BrandSectionPage = () => {
   const [draftInStockOnly, setDraftInStockOnly] = useState(false);
 
   /* =========================================================
-     LOCK BACKGROUND
+     LOCK BACKGROUND SCROLL
   ========================================================= */
 
   useEffect(() => {
@@ -154,7 +139,7 @@ const BrandSectionPage = () => {
      BRAND
   ========================================================= */
 
-  const { data: brand } = useQuery({
+  const { data: brand, isLoading: brandLoading } = useQuery({
     queryKey: ["brand-by-slug-sec", slug],
     enabled: Boolean(slug),
     queryFn: async () => {
@@ -212,7 +197,7 @@ const BrandSectionPage = () => {
     queryKey: ["brand-section-products", section?.id],
     enabled: Boolean(section?.id),
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("brand_section_products").select(`product_id,products(*)`).eq("section_id", section!.id);
+      const { data, error } = await (supabase as any).from("brand_section_products").select("product_id,products(*)").eq("section_id", section!.id);
 
       if (error) throw error;
 
@@ -321,12 +306,10 @@ const BrandSectionPage = () => {
 
   const openFilters = () => {
     setSortOpen(false);
-
     setDraftFilters(activeFilters);
     setDraftMinPrice(minPrice);
     setDraftMaxPrice(maxPrice);
     setDraftInStockOnly(inStockOnly);
-
     setFilterOpen(true);
   };
 
@@ -356,197 +339,253 @@ const BrandSectionPage = () => {
     return <Navigate to="/home" replace />;
   }
 
+  /* =========================================================
+     LOADING
+  ========================================================= */
+
+  if (brandLoading || sectionLoading) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background" dir="rtl">
+        <Navbar />
+        <CartDrawer />
+
+        <main className="flex-1">
+          <div className="mx-auto w-full max-w-[1400px] px-3 pt-4 md:px-6 md:pt-6">
+            <div className="aspect-[16/7] w-full animate-pulse rounded-[16px] bg-muted/60 md:aspect-[21/7] md:rounded-[20px]" />
+
+            <div className="py-7">
+              <div className="h-4 w-20 animate-pulse rounded-full bg-muted" />
+              <div className="mt-3 h-7 w-40 animate-pulse rounded-full bg-muted" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-4 md:gap-x-5 md:gap-y-8">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <ProductCardSkeleton key={index} />
+              ))}
+            </div>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
+  /* =========================================================
+     NOT FOUND
+  ========================================================= */
+
+  if (!section || !brand) {
+    return (
+      <div className="flex min-h-screen flex-col bg-background" dir="rtl">
+        <Navbar />
+        <CartDrawer />
+
+        <main className="flex flex-1 items-center justify-center px-4">
+          <div className="text-center">
+            <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-muted/60">
+              <Package className="h-5 w-5 text-muted-foreground" strokeWidth={1.5} />
+            </div>
+
+            <h1 className="mt-4 text-[19px] font-semibold text-foreground">القسم غير موجود</h1>
+
+            <p className="mt-2 text-[11px] text-muted-foreground">قد يكون القسم غير متاح حاليًا.</p>
+
+            <Link to={`/brands/${slug}`} className="mt-5 inline-flex items-center gap-1.5 text-[11px] font-medium text-[#A95B61]">
+              <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.5} />
+              العودة إلى الماركة
+            </Link>
+          </div>
+        </main>
+
+        <Footer />
+      </div>
+    );
+  }
+
   return (
     <div className="flex min-h-screen flex-col bg-background" dir="rtl">
       <Navbar />
       <CartDrawer />
 
-      <main className="flex-1">
-        {sectionLoading ? (
-          <div className="flex h-[40vh] items-center justify-center text-[13px] text-muted-foreground">جاري التحميل...</div>
-        ) : !section ? (
-          <div className="mx-auto max-w-3xl px-4 py-24 text-center">
-            <h1 className="mb-3 text-2xl font-semibold text-foreground">القسم غير موجود</h1>
+      <main className="flex-1 pb-14">
+        {/* =====================================================
+            CLEAN SECTION IMAGE
+        ===================================================== */}
 
-            <Link to={`/brands/${slug}`} className="text-[12px] font-medium text-[#B86168] hover:text-[#A95B61]">العودة لصفحة الماركة</Link>
-          </div>
-        ) : (
-          <>
-            {/* =====================================================
-                HERO
-                نفس التصميم القديم
-            ===================================================== */}
-
-            <section className="relative h-[45vh] w-full overflow-hidden bg-[#F2EFED] md:h-[60vh]">
-              {section.image_url && <img loading="eager" decoding="async" fetchPriority="high" src={section.image_url} alt={section.name} className="absolute inset-0 h-full w-full object-cover object-center" />}
-
-              <div className="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-black/5" />
-
-              <div className="relative z-10 mx-auto flex h-full max-w-6xl flex-col items-center justify-end px-4 pb-10 text-center text-white">
-                <p className="mb-2 text-[11px] tracking-[0.18em] text-white/80">
-                  <Link to={`/brands/${slug}`} className="transition-colors hover:text-[#F2C7C5]">{brand?.name}</Link>
-                </p>
-
-                <h1 className="text-4xl font-semibold uppercase tracking-[0.18em] text-white drop-shadow-sm md:text-6xl md:tracking-[0.24em]">{section.name}</h1>
-
-                {section.description && <p className="mt-5 max-w-xl text-[13px] leading-7 text-white/85 md:text-[15px]">{section.description}</p>}
-
-                <p className="mt-3 text-[10px] tracking-widest text-white/65">{products.length} منتج</p>
+        {section.image_url && (
+          <section className="bg-background pt-3 md:pt-5">
+            <div className="mx-auto w-full max-w-[1400px] px-3 md:px-6">
+              <div className="relative aspect-[16/7] w-full overflow-hidden rounded-[16px] bg-[#F3F0ED] sm:aspect-[16/6] md:aspect-[21/7] md:rounded-[20px]">
+                <img src={section.image_url} alt={section.name} loading="eager" decoding="async" fetchPriority="high" className="absolute inset-0 h-full w-full object-cover object-center" />
               </div>
-            </section>
-
-            {/* =====================================================
-                CONTENT
-            ===================================================== */}
-
-            <section className="mx-auto max-w-6xl px-4 py-10 md:py-14">
-              {/* BACK */}
-
-              <div className="mb-6">
-                <Link to={`/brands/${slug}`} className="inline-flex items-center gap-1 text-[13px] text-[#82746F] transition-colors hover:text-[#B86168]">
-                  <ChevronRight className="h-4 w-4" strokeWidth={1.5} />
-                  العودة إلى {brand?.name}
-                </Link>
-              </div>
-
-              {/* =====================================================
-                  FILTER BAR
-              ===================================================== */}
-
-              {(brandFilters.length > 0 || products.length > 0) && (
-                <div className="mb-10 flex items-center justify-between gap-3 rounded-[18px] border border-[#E8DEDA] bg-[#FFFDFC] p-3 shadow-[0_4px_18px_rgba(54,42,37,0.035)] md:mb-12 md:p-4">
-                  {/* FILTER */}
-
-                  <button type="button" onClick={openFilters} className="flex h-[44px] items-center gap-2 rounded-[11px] border border-[#E3D9D5] bg-background px-4 text-[12px] font-medium text-[#554945] transition-colors hover:border-[#D6AAA6] hover:text-[#B86168]">
-                    <SlidersHorizontal className="h-4 w-4" strokeWidth={1.5} />
-
-                    <span>فلترة</span>
-
-                    {activeFilterCount > 0 && <span className="flex h-[19px] min-w-[19px] items-center justify-center rounded-full bg-[#D4777D] px-1 text-[9px] font-semibold text-white">{activeFilterCount}</span>}
-                  </button>
-
-                  {/* SORT */}
-
-                  <button type="button" onClick={() => { setFilterOpen(false); setSortOpen(true); }} className="flex h-[44px] min-w-[140px] items-center justify-between gap-3 rounded-[11px] border border-[#E3D9D5] bg-background px-4 text-[12px] font-medium text-[#554945] transition-colors hover:border-[#D6AAA6] hover:text-[#B86168]">
-                    <span>{sortLabel}</span>
-                    <ChevronDown className="h-4 w-4 text-[#998B86]" strokeWidth={1.5} />
-                  </button>
-                </div>
-              )}
-
-              {/* ACTIVE FILTERS */}
-
-              {activeFilterCount > 0 && (
-                <div className="-mt-7 mb-8 flex items-center gap-2 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:-mt-8 md:mb-10">
-                  {Object.entries(activeFilters).map(([key, value]) => {
-                    if (!value) return null;
-
-                    return (
-                      <button key={key} type="button" onClick={() => setActiveFilters((previous) => ({ ...previous, [key]: "" }))} className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-[#E5D5D1] bg-[#FFF7F5] px-3 text-[10px] text-[#9D6265]">
-                        {value}
-                        <X className="h-3 w-3" />
-                      </button>
-                    );
-                  })}
-
-                  {minPrice && (
-                    <button type="button" onClick={() => setMinPrice("")} className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-[#E5D5D1] bg-[#FFF7F5] px-3 text-[10px] text-[#9D6265]">
-                      من {minPrice}
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-
-                  {maxPrice && (
-                    <button type="button" onClick={() => setMaxPrice("")} className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-[#E5D5D1] bg-[#FFF7F5] px-3 text-[10px] text-[#9D6265]">
-                      إلى {maxPrice}
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-
-                  {inStockOnly && (
-                    <button type="button" onClick={() => setInStockOnly(false)} className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-[#E5D5D1] bg-[#FFF7F5] px-3 text-[10px] text-[#9D6265]">
-                      متوفر فقط
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
-
-                  <button type="button" onClick={resetFilters} className="flex h-8 shrink-0 items-center gap-1.5 px-1 text-[10px] text-muted-foreground transition-colors hover:text-[#B86168]">
-                    <RotateCcw className="h-3 w-3" strokeWidth={1.5} />
-                    مسح الكل
-                  </button>
-                </div>
-              )}
-
-              {/* =====================================================
-                  PRODUCTS
-              ===================================================== */}
-
-              {productsLoading ? (
-                <div className="flex min-h-[200px] items-center justify-center text-[13px] text-muted-foreground">جاري تحميل المنتجات...</div>
-              ) : visibleProducts.length === 0 ? (
-                <div className="flex min-h-[250px] items-center justify-center border-y border-[#E9E1DD]">
-                  <div className="text-center">
-                    <div className="mx-auto flex h-11 w-11 items-center justify-center rounded-full bg-[#F6F1EF]">
-                      <Package className="h-5 w-5 text-[#9B8E88]" strokeWidth={1.5} />
-                    </div>
-
-                    <h2 className="mt-3 text-[13px] font-semibold text-foreground">لا توجد منتجات مطابقة</h2>
-
-                    <p className="mt-1.5 text-[10px] text-muted-foreground">{products.length === 0 ? "لا توجد منتجات في هذا القسم بعد." : "جرّب تغيير خيارات الفلترة."}</p>
-
-                    {activeFilterCount > 0 && (
-                      <button type="button" onClick={resetFilters} className="mt-4 inline-flex h-9 items-center gap-1.5 rounded-[9px] border border-[#E3D9D5] px-3.5 text-[10px] font-medium text-[#A95B61]">
-                        <RotateCcw className="h-3.5 w-3.5" strokeWidth={1.5} />
-                        مسح الفلاتر
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : (
-                <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 md:gap-x-6 lg:grid-cols-4">
-                  {visibleProducts.map((product, index) => (
-                    <ProductCard key={product.id} product={product} index={index} />
-                  ))}
-                </div>
-              )}
-            </section>
-          </>
+            </div>
+          </section>
         )}
+
+        {/* =====================================================
+            TITLE
+        ===================================================== */}
+
+        <section className="mx-auto w-full max-w-[1400px] px-4 pb-5 pt-6 md:px-6 md:pb-7 md:pt-8">
+          <Link to={`/brands/${slug}`} className="inline-flex items-center gap-1 text-[10px] text-muted-foreground transition-colors hover:text-[#A95B61] md:text-[11px]">
+            <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.5} />
+            {brand.name}
+          </Link>
+
+          <div className="mt-4 flex items-end justify-between gap-4">
+            <div className="min-w-0">
+              <div className="mb-1.5 flex items-center gap-2">
+                <span className="h-[2px] w-4 rounded-full bg-[#D4777D]" />
+                <span className="font-serif text-[7px] uppercase tracking-[0.2em] text-[#B86168] md:text-[8px]">COLLECTION</span>
+              </div>
+
+              <h1 className="text-[25px] font-semibold tracking-[-0.035em] text-foreground md:text-[34px]">{section.name}</h1>
+
+              {section.description && <p className="mt-2 max-w-[560px] text-[11px] leading-6 text-muted-foreground md:text-[12px] md:leading-7">{section.description}</p>}
+            </div>
+
+            <span className="shrink-0 pb-1 text-[9px] text-muted-foreground md:text-[10px]">{visibleProducts.length} منتج</span>
+          </div>
+        </section>
+
+        {/* =====================================================
+            SIMPLE TOOLBAR
+        ===================================================== */}
+
+        {(brandFilters.length > 0 || products.length > 0) && (
+          <section className="border-y border-border/60 bg-background">
+            <div className="mx-auto flex h-[54px] w-full max-w-[1400px] items-center justify-between px-4 md:px-6">
+              <button type="button" onClick={openFilters} className="flex items-center gap-2 text-[11px] font-medium text-[#514641] transition-colors hover:text-[#B86168] md:text-[12px]">
+                <SlidersHorizontal className="h-4 w-4" strokeWidth={1.5} />
+                فلترة
+
+                {activeFilterCount > 0 && <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#D4777D] px-1 text-[8px] font-semibold text-white">{activeFilterCount}</span>}
+              </button>
+
+              <button type="button" onClick={() => { setFilterOpen(false); setSortOpen(true); }} className="flex items-center gap-1.5 text-[11px] font-medium text-[#514641] transition-colors hover:text-[#B86168] md:text-[12px]">
+                {sortLabel}
+                <ChevronDown className="h-3.5 w-3.5 text-muted-foreground" strokeWidth={1.5} />
+              </button>
+            </div>
+          </section>
+        )}
+
+        {/* =====================================================
+            ACTIVE FILTERS
+        ===================================================== */}
+
+        {activeFilterCount > 0 && (
+          <section className="mx-auto flex w-full max-w-[1400px] items-center gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:px-6">
+            {Object.entries(activeFilters).map(([key, value]) => {
+              if (!value) return null;
+
+              return (
+                <button key={key} type="button" onClick={() => setActiveFilters((previous) => ({ ...previous, [key]: "" }))} className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-[#E7D8D3] bg-[#FFF8F6] px-3 text-[9px] text-[#9E6265]">
+                  {value}
+                  <X className="h-3 w-3" />
+                </button>
+              );
+            })}
+
+            {minPrice && (
+              <button type="button" onClick={() => setMinPrice("")} className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-[#E7D8D3] bg-[#FFF8F6] px-3 text-[9px] text-[#9E6265]">
+                من {minPrice}
+                <X className="h-3 w-3" />
+              </button>
+            )}
+
+            {maxPrice && (
+              <button type="button" onClick={() => setMaxPrice("")} className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-[#E7D8D3] bg-[#FFF8F6] px-3 text-[9px] text-[#9E6265]">
+                إلى {maxPrice}
+                <X className="h-3 w-3" />
+              </button>
+            )}
+
+            {inStockOnly && (
+              <button type="button" onClick={() => setInStockOnly(false)} className="flex h-8 shrink-0 items-center gap-1.5 rounded-full border border-[#E7D8D3] bg-[#FFF8F6] px-3 text-[9px] text-[#9E6265]">
+                متوفر فقط
+                <X className="h-3 w-3" />
+              </button>
+            )}
+
+            <button type="button" onClick={resetFilters} className="flex h-8 shrink-0 items-center gap-1 text-[9px] text-muted-foreground transition-colors hover:text-[#B86168]">
+              <RotateCcw className="h-3 w-3" strokeWidth={1.5} />
+              مسح
+            </button>
+          </section>
+        )}
+
+        {/* =====================================================
+            PRODUCTS
+        ===================================================== */}
+
+        <section className="mx-auto mt-5 w-full max-w-[1400px] px-4 md:mt-7 md:px-6">
+          {productsLoading ? (
+            <div className="grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-4 md:gap-x-5 md:gap-y-8">
+              {Array.from({ length: 8 }).map((_, index) => (
+                <ProductCardSkeleton key={index} />
+              ))}
+            </div>
+          ) : visibleProducts.length === 0 ? (
+            <div className="flex min-h-[250px] items-center justify-center border-y border-border/60">
+              <div className="text-center">
+                <Package className="mx-auto h-5 w-5 text-muted-foreground" strokeWidth={1.4} />
+
+                <h2 className="mt-3 text-[12px] font-semibold text-foreground">لا توجد منتجات مطابقة</h2>
+
+                <p className="mt-1.5 text-[9px] text-muted-foreground">{products.length === 0 ? "لا توجد منتجات في هذا القسم بعد." : "جرّب تغيير خيارات الفلترة."}</p>
+
+                {activeFilterCount > 0 && (
+                  <button type="button" onClick={resetFilters} className="mt-4 text-[10px] font-medium text-[#A95B61]">
+                    مسح الفلاتر
+                  </button>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4">
+              {visibleProducts.map((product, index) => (
+                <ProductCard key={product.id} product={product} index={index} />
+              ))}
+            </div>
+          )}
+        </section>
       </main>
 
       <Footer />
 
       {/* =====================================================
-          SORT MENU
+          SORT SHEET
       ===================================================== */}
 
       {sortOpen && (
         <div className="fixed inset-0 z-[120]" dir="rtl">
-          <button type="button" onClick={() => setSortOpen(false)} aria-label="إغلاق الترتيب" className="absolute inset-0 touch-none bg-black/25" />
+          <button type="button" onClick={() => setSortOpen(false)} aria-label="إغلاق الترتيب" className="absolute inset-0 touch-none bg-black/20" />
 
-          <div className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[460px] rounded-t-[22px] bg-background px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 shadow-[0_-14px_45px_rgba(35,28,25,0.14)] md:bottom-5 md:rounded-[20px]">
-            <div className="mx-auto mb-4 h-1 w-10 rounded-full bg-[#DDD3CE] md:hidden" />
+          <div className="absolute inset-x-0 bottom-0 mx-auto w-full max-w-[460px] rounded-t-[20px] bg-background px-4 pb-[max(16px,env(safe-area-inset-bottom))] pt-3 md:bottom-5 md:rounded-[18px]">
+            <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-[#DDD4CF] md:hidden" />
 
-            <div className="mb-3 flex items-center justify-between">
-              <div>
-                <h2 className="text-[16px] font-semibold text-foreground">ترتيب المنتجات</h2>
-                <p className="mt-1 text-[10px] text-muted-foreground">اختر طريقة الترتيب</p>
-              </div>
+            <div className="mb-2 flex items-center justify-between">
+              <h2 className="text-[15px] font-semibold text-foreground">ترتيب حسب</h2>
 
-              <button type="button" onClick={() => setSortOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E4DBD7] text-[#82746F]">
+              <button type="button" onClick={() => setSortOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground">
                 <X className="h-4 w-4" strokeWidth={1.5} />
               </button>
             </div>
 
-            <div className="overflow-hidden rounded-[14px] border border-[#E7DEDA]">
+            <div>
               {SORT_OPTIONS.map((option, index) => {
                 const selected = priceSort === option.value;
 
                 return (
-                  <button key={option.value} type="button" onClick={() => { setPriceSort(option.value); setSortOpen(false); }} className={`flex w-full items-center justify-between gap-4 px-4 py-4 text-right ${index !== SORT_OPTIONS.length - 1 ? "border-b border-[#ECE4E1]" : ""} ${selected ? "bg-[#FFF7F5]" : "bg-background"}`}>
-                    <span className={`text-[13px] font-medium ${selected ? "text-[#A95B61]" : "text-[#4E433F]"}`}>{option.label}</span>
+                  <button key={option.value} type="button" onClick={() => { setPriceSort(option.value); setSortOpen(false); }} className={`flex w-full items-center justify-between gap-4 py-3.5 text-right ${index !== SORT_OPTIONS.length - 1 ? "border-b border-border/60" : ""}`}>
+                    <div>
+                      <p className={`text-[12px] font-medium ${selected ? "text-[#A95B61]" : "text-foreground"}`}>{option.label}</p>
+                      <p className="mt-0.5 text-[9px] text-muted-foreground">{option.description}</p>
+                    </div>
 
-                    <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${selected ? "border-[#D4777D] bg-[#D4777D]" : "border-[#D8CFCA]"}`}>{selected && <Check className="h-3 w-3 text-white" strokeWidth={2} />}</span>
+                    {selected && <Check className="h-4 w-4 text-[#D4777D]" strokeWidth={1.8} />}
                   </button>
                 );
               })}
@@ -561,22 +600,22 @@ const BrandSectionPage = () => {
 
       {filterOpen && (
         <div className="fixed inset-0 z-[120]" dir="rtl">
-          <button type="button" onClick={() => setFilterOpen(false)} aria-label="إغلاق الفلترة" className="absolute inset-0 touch-none bg-black/30" />
+          <button type="button" onClick={() => setFilterOpen(false)} aria-label="إغلاق الفلترة" className="absolute inset-0 touch-none bg-black/25" />
 
-          <div className="absolute bottom-0 right-0 flex max-h-[88svh] w-full flex-col overflow-hidden rounded-t-[24px] bg-background shadow-[0_-14px_45px_rgba(35,28,25,0.14)] md:bottom-auto md:top-0 md:h-full md:max-h-none md:w-[400px] md:rounded-none">
+          <div className="absolute bottom-0 right-0 flex max-h-[88svh] w-full flex-col overflow-hidden rounded-t-[22px] bg-background md:bottom-auto md:top-0 md:h-full md:max-h-none md:w-[390px] md:rounded-none">
             <div className="flex h-6 shrink-0 items-center justify-center md:hidden">
-              <span className="h-1 w-10 rounded-full bg-[#DDD3CE]" />
+              <span className="h-1 w-9 rounded-full bg-[#DDD4CF]" />
             </div>
 
             {/* HEADER */}
 
-            <div className="flex shrink-0 items-center justify-between border-b border-[#E8DFDB] px-4 pb-4 pt-2 md:pt-4">
+            <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-4 pb-4 pt-2 md:pt-4">
               <div>
-                <h2 className="text-[17px] font-semibold text-foreground">فلترة المنتجات</h2>
-                <p className="mt-1 text-[10px] text-muted-foreground">{draftResultCount} منتج مطابق</p>
+                <h2 className="text-[16px] font-semibold text-foreground">الفلترة</h2>
+                <p className="mt-1 text-[9px] text-muted-foreground">{draftResultCount} منتج</p>
               </div>
 
-              <button type="button" onClick={() => setFilterOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E4DBD7] text-[#82746F]">
+              <button type="button" onClick={() => setFilterOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-full text-muted-foreground">
                 <X className="h-4 w-4" strokeWidth={1.5} />
               </button>
             </div>
@@ -584,31 +623,23 @@ const BrandSectionPage = () => {
             {/* CONTENT */}
 
             <div className="flex-1 overscroll-contain overflow-y-auto px-4">
-              {/* DYNAMIC FILTERS */}
-
               {brandFilters.map((filter) => {
                 const options = normalizeFilterOptions(filter.options);
 
                 if (!options.length) return null;
 
                 return (
-                  <div key={filter.id} className="border-b border-[#E9E1DD] py-5">
-                    <h3 className="text-[13px] font-semibold text-[#4E433F]">{filter.name}</h3>
+                  <div key={filter.id} className="border-b border-border/60 py-5">
+                    <h3 className="text-[12px] font-semibold text-foreground">{filter.name}</h3>
 
-                    <div className="mt-3 grid grid-cols-2 gap-2">
-                      <button type="button" onClick={() => setDraftFilters((previous) => ({ ...previous, [filter.slug]: "" }))} className={`flex min-h-[43px] items-center justify-between gap-2 rounded-[10px] border px-3 text-[11px] ${!draftFilters[filter.slug] ? "border-[#D5AAA6] bg-[#FFF7F5] text-[#A95B61]" : "border-[#E5DDD9] bg-background text-[#554945]"}`}>
-                        <span>الكل</span>
-                        {!draftFilters[filter.slug] && <Check className="h-3.5 w-3.5" strokeWidth={1.8} />}
-                      </button>
+                    <div className="mt-3 flex flex-wrap gap-2">
+                      <button type="button" onClick={() => setDraftFilters((previous) => ({ ...previous, [filter.slug]: "" }))} className={`h-9 rounded-full border px-3 text-[10px] transition-colors ${!draftFilters[filter.slug] ? "border-[#D6AAA7] bg-[#FFF7F5] text-[#A95B61]" : "border-border text-[#675B56]"}`}>الكل</button>
 
                       {options.map((option) => {
                         const selected = draftFilters[filter.slug] === option;
 
                         return (
-                          <button key={option} type="button" onClick={() => setDraftFilters((previous) => ({ ...previous, [filter.slug]: option }))} className={`flex min-h-[43px] items-center justify-between gap-2 rounded-[10px] border px-3 text-[11px] ${selected ? "border-[#D5AAA6] bg-[#FFF7F5] text-[#A95B61]" : "border-[#E5DDD9] bg-background text-[#554945]"}`}>
-                            <span className="truncate">{option}</span>
-                            {selected && <Check className="h-3.5 w-3.5 shrink-0" strokeWidth={1.8} />}
-                          </button>
+                          <button key={option} type="button" onClick={() => setDraftFilters((previous) => ({ ...previous, [filter.slug]: option }))} className={`h-9 rounded-full border px-3 text-[10px] transition-colors ${selected ? "border-[#D6AAA7] bg-[#FFF7F5] text-[#A95B61]" : "border-border text-[#675B56]"}`}>{option}</button>
                         );
                       })}
                     </div>
@@ -618,25 +649,22 @@ const BrandSectionPage = () => {
 
               {/* PRICE */}
 
-              <div className="border-b border-[#E9E1DD] py-5">
-                <div className="flex items-end justify-between gap-3">
-                  <div>
-                    <h3 className="text-[13px] font-semibold text-[#4E433F]">السعر</h3>
-                    <p className="mt-1 text-[9px] text-muted-foreground">حدد نطاق السعر</p>
-                  </div>
+              <div className="border-b border-border/60 py-5">
+                <div className="flex items-end justify-between">
+                  <h3 className="text-[12px] font-semibold text-foreground">السعر</h3>
 
-                  {priceRange.max > 0 && <span className="text-[9px] text-muted-foreground">{priceRange.min} — {priceRange.max}</span>}
+                  {priceRange.max > 0 && <span className="text-[8px] text-muted-foreground">{priceRange.min} — {priceRange.max}</span>}
                 </div>
 
-                <div className="mt-4 grid grid-cols-2 gap-2.5">
+                <div className="mt-3 grid grid-cols-2 gap-2">
                   <label>
-                    <span className="mb-1.5 block text-[9px] text-muted-foreground">من</span>
-                    <input type="number" inputMode="decimal" min={0} value={draftMinPrice} onChange={(event) => setDraftMinPrice(event.target.value)} placeholder={String(priceRange.min || 0)} className="h-[46px] w-full rounded-[10px] border border-[#E4DBD7] bg-background px-3 text-[12px] text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-[#D5AAA6]" />
+                    <span className="mb-1.5 block text-[8px] text-muted-foreground">من</span>
+                    <input type="number" inputMode="decimal" min={0} value={draftMinPrice} onChange={(event) => setDraftMinPrice(event.target.value)} placeholder={String(priceRange.min || 0)} className="h-10 w-full rounded-[9px] border border-border bg-background px-3 text-[11px] outline-none focus:border-[#D6AAA7]" />
                   </label>
 
                   <label>
-                    <span className="mb-1.5 block text-[9px] text-muted-foreground">إلى</span>
-                    <input type="number" inputMode="decimal" min={0} value={draftMaxPrice} onChange={(event) => setDraftMaxPrice(event.target.value)} placeholder={String(priceRange.max || 0)} className="h-[46px] w-full rounded-[10px] border border-[#E4DBD7] bg-background px-3 text-[12px] text-foreground outline-none placeholder:text-muted-foreground/50 focus:border-[#D5AAA6]" />
+                    <span className="mb-1.5 block text-[8px] text-muted-foreground">إلى</span>
+                    <input type="number" inputMode="decimal" min={0} value={draftMaxPrice} onChange={(event) => setDraftMaxPrice(event.target.value)} placeholder={String(priceRange.max || 0)} className="h-10 w-full rounded-[9px] border border-border bg-background px-3 text-[11px] outline-none focus:border-[#D6AAA7]" />
                   </label>
                 </div>
               </div>
@@ -646,12 +674,12 @@ const BrandSectionPage = () => {
               <div className="py-5">
                 <button type="button" onClick={() => setDraftInStockOnly((value) => !value)} className="flex w-full items-center justify-between gap-4 text-right">
                   <div>
-                    <h3 className="text-[13px] font-semibold text-[#4E433F]">المتوفر فقط</h3>
-                    <p className="mt-1 text-[9px] text-muted-foreground">إخفاء المنتجات غير المتوفرة حاليًا</p>
+                    <h3 className="text-[12px] font-semibold text-foreground">المتوفر فقط</h3>
+                    <p className="mt-1 text-[8px] text-muted-foreground">إخفاء المنتجات غير المتوفرة</p>
                   </div>
 
-                  <span className={`relative h-[27px] w-[48px] shrink-0 rounded-full transition-colors ${draftInStockOnly ? "bg-[#D4777D]" : "bg-[#DDD5D1]"}`}>
-                    <span className={`absolute top-[3px] h-[21px] w-[21px] rounded-full bg-white shadow-sm transition-all ${draftInStockOnly ? "right-[24px]" : "right-[3px]"}`} />
+                  <span className={`relative h-[26px] w-[46px] shrink-0 rounded-full transition-colors ${draftInStockOnly ? "bg-[#D4777D]" : "bg-[#DDD5D1]"}`}>
+                    <span className={`absolute top-[3px] h-5 w-5 rounded-full bg-white shadow-sm transition-all ${draftInStockOnly ? "right-[23px]" : "right-[3px]"}`} />
                   </span>
                 </button>
               </div>
@@ -659,15 +687,10 @@ const BrandSectionPage = () => {
 
             {/* FOOTER */}
 
-            <div className="grid shrink-0 grid-cols-[0.72fr_1.28fr] gap-2 border-t border-[#E8DFDB] bg-background px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3">
-              <button type="button" onClick={resetDraftFilters} className="flex h-[46px] items-center justify-center gap-1.5 rounded-[11px] border border-[#E4DBD7] text-[11px] font-medium text-[#82746F]">
-                <RotateCcw className="h-3.5 w-3.5" strokeWidth={1.5} />
-                مسح
-              </button>
+            <div className="grid shrink-0 grid-cols-[0.7fr_1.3fr] gap-2 border-t border-border/60 bg-background px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3">
+              <button type="button" onClick={resetDraftFilters} className="h-11 rounded-[10px] border border-border text-[10px] font-medium text-muted-foreground">مسح</button>
 
-              <button type="button" onClick={applyFilters} className="h-[46px] rounded-[11px] bg-[#D4777D] px-4 text-[12px] font-semibold text-white transition-colors hover:bg-[#C96F79] active:bg-[#B86168]">
-                عرض {draftResultCount} منتج
-              </button>
+              <button type="button" onClick={applyFilters} className="h-11 rounded-[10px] bg-[#D4777D] text-[11px] font-semibold text-white active:bg-[#B86168]">عرض {draftResultCount} منتج</button>
             </div>
           </div>
         </div>

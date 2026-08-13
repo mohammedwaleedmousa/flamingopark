@@ -1,80 +1,101 @@
-const LoadingScreen = ({ label = "FLAMINGO" }: { label?: string }) => {
+const LoadingScreen = () => {
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden bg-background" dir="rtl" role="status" aria-live="polite" aria-label="جاري التحميل">
-      <div className="relative z-10 flex flex-col items-center">
-        <div className="mb-4 flex items-center gap-2">
-          <span className="h-px w-7 bg-[#D9C9C4]" />
-          <span className="h-[3px] w-[3px] rounded-full bg-[#D4777D]" />
-          <span className="h-px w-7 bg-[#D9C9C4]" />
+    <div className="flex min-h-[100svh] items-center justify-center overflow-hidden bg-background" dir="rtl" role="status" aria-live="polite" aria-label="جاري التحميل">
+      <div className="flex flex-col items-center">
+        <div className="relative h-[150px] w-[116px] sm:h-[170px] sm:w-[132px]">
+          {/* Flamingo الأساسي */}
+          <div className="absolute inset-0 bg-[#F0D7D6] [mask-image:url('/icons/flamingo-loader.png')] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] [-webkit-mask-image:url('/icons/flamingo-loader.png')] [-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain]" />
+
+          {/* اللون الغامق الذي يعيد رسم الطائر */}
+          <div className="flamingo-loader-reveal absolute inset-0 bg-[#C96F79] [mask-image:url('/icons/flamingo-loader.png')] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] [-webkit-mask-image:url('/icons/flamingo-loader.png')] [-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain]" />
+
+          {/* اللمعة التي تمر فوق الرسم */}
+          <div className="flamingo-loader-sweep absolute inset-0 [mask-image:url('/icons/flamingo-loader.png')] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] [-webkit-mask-image:url('/icons/flamingo-loader.png')] [-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain]" />
         </div>
 
-        <div className="relative overflow-hidden px-2 py-1">
-          <h1 className="select-none font-serif text-[20px] font-medium tracking-[0.34em] text-[#403633] sm:text-[23px] md:text-[28px]">{label}</h1>
-
-          <span className="flamingo-loading-sheen pointer-events-none absolute inset-y-0 -left-[35%] w-[25%] skew-x-[-18deg] bg-gradient-to-r from-transparent via-white/80 to-transparent" />
-        </div>
-
-        <p className="mt-2 font-serif text-[5px] uppercase tracking-[0.28em] text-[#A99C97]">FLAMINGO PARK</p>
-
-        <div className="mt-6 h-[2px] w-[72px] overflow-hidden rounded-full bg-[#E8E0DC]">
-          <span className="flamingo-loading-line block h-full w-[28px] rounded-full bg-[#D4777D]" />
-        </div>
-
-        <span className="mt-3 text-[6px] text-[#9D908A]">جاري التحميل...</span>
       </div>
 
       <style>{`
-        .flamingo-loading-sheen {
-          animation: flamingo-sheen 1.8s ease-in-out infinite;
+        .flamingo-loader-reveal {
+          clip-path: inset(0 0 100% 0);
+          animation: flamingoReveal 2.15s cubic-bezier(0.65, 0, 0.35, 1) infinite;
         }
 
-        .flamingo-loading-line {
-          animation: flamingo-line 1.35s ease-in-out infinite;
+        .flamingo-loader-sweep {
+          background: linear-gradient(
+            to bottom,
+            transparent 0%,
+            transparent 34%,
+            rgba(169, 91, 97, 0.15) 40%,
+            rgba(169, 91, 97, 0.95) 49%,
+            rgba(169, 91, 97, 0.95) 51%,
+            rgba(169, 91, 97, 0.15) 60%,
+            transparent 66%,
+            transparent 100%
+          );
+
+          background-size: 100% 55%;
+          background-repeat: no-repeat;
+          background-position: center -80%;
+          animation: flamingoSweep 2.15s cubic-bezier(0.65, 0, 0.35, 1) infinite;
         }
 
-        @keyframes flamingo-sheen {
+        @keyframes flamingoReveal {
           0% {
-            transform: translateX(0) skewX(-18deg);
-            opacity: 0;
+            clip-path: inset(0 0 100% 0);
+            opacity: 1;
           }
 
-          20% {
-            opacity: 0.75;
+          68% {
+            clip-path: inset(0 0 0% 0);
+            opacity: 1;
           }
 
-          75% {
-            opacity: 0.75;
+          82% {
+            clip-path: inset(0 0 0% 0);
+            opacity: 1;
           }
 
           100% {
-            transform: translateX(550%) skewX(-18deg);
+            clip-path: inset(0 0 0% 0);
             opacity: 0;
           }
         }
 
-        @keyframes flamingo-line {
+        @keyframes flamingoSweep {
           0% {
-            transform: translateX(46px);
+            background-position: center -80%;
+            opacity: 0;
           }
 
-          50% {
-            transform: translateX(-2px);
+          8% {
+            opacity: 1;
+          }
+
+          72% {
+            background-position: center 180%;
+            opacity: 1;
+          }
+
+          88% {
+            opacity: 0;
           }
 
           100% {
-            transform: translateX(46px);
+            background-position: center 180%;
+            opacity: 0;
           }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .flamingo-loading-sheen,
-          .flamingo-loading-line {
+          .flamingo-loader-reveal {
             animation: none;
+            clip-path: inset(0);
+            opacity: 1;
           }
 
-          .flamingo-loading-line {
-            width: 100%;
-            opacity: 0.5;
+          .flamingo-loader-sweep {
+            display: none;
           }
         }
       `}</style>

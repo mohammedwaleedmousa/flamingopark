@@ -7,244 +7,146 @@ const SplashScreen = ({ onDone }: { onDone: () => void }) => {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const mq = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const mediaQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
 
     const update = () => {
-      setReduceMotion(mq.matches);
+      setReduceMotion(mediaQuery.matches);
     };
 
     update();
-
-    mq.addEventListener("change", update);
+    mediaQuery.addEventListener("change", update);
 
     return () => {
-      mq.removeEventListener("change", update);
+      mediaQuery.removeEventListener("change", update);
     };
   }, []);
 
   useEffect(() => {
-    const leaveAt = reduceMotion ? 250 : 1250;
-    const doneAt = reduceMotion ? 400 : 1550;
+    const leaveAt = reduceMotion ? 450 : 1850;
+    const doneAt = reduceMotion ? 650 : 2150;
 
-    const t1 = setTimeout(() => {
+    const leaveTimer = window.setTimeout(() => {
       setLeaving(true);
     }, leaveAt);
 
-    const t2 = setTimeout(() => {
+    const doneTimer = window.setTimeout(() => {
       onDone();
     }, doneAt);
 
     return () => {
-      clearTimeout(t1);
-      clearTimeout(t2);
+      window.clearTimeout(leaveTimer);
+      window.clearTimeout(doneTimer);
     };
   }, [onDone, reduceMotion]);
 
   return (
-    <div className={`fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-[#FCFBFA] transition-opacity duration-300 ${leaving ? "pointer-events-none opacity-0" : "opacity-100"}`}>
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(236,198,201,0.18)_0%,rgba(255,255,255,0)_52%)]" />
+    <div className={`fixed inset-0 z-[100] flex items-center justify-center overflow-hidden bg-background transition-opacity duration-300 ${leaving ? "pointer-events-none opacity-0" : "opacity-100"}`} dir="rtl" role="status" aria-live="polite" aria-label="جاري فتح فلامنجو بارك">
+      <div className={`flex flex-col items-center ${reduceMotion ? "" : "flamingo-splash-enter"}`}>
+        <div className="relative h-[150px] w-[116px] sm:h-[170px] sm:w-[132px]">
+          {/* الشكل الأساسي الفاتح */}
+          <div className="absolute inset-0 bg-[#F0D7D6] [mask-image:url('/icons/flamingo-loader.png')] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] [-webkit-mask-image:url('/icons/flamingo-loader.png')] [-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain]" />
 
-      <div className={`relative flex items-center justify-center ${reduceMotion ? "" : "animate-logo-enter"}`}>
-        <svg className="h-[145px] w-[145px] sm:h-[165px] sm:w-[165px]" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <defs>
-            <filter id="soft-shadow" x="-30%" y="-30%" width="160%" height="160%">
-              <feDropShadow dx="0" dy="5" stdDeviation="6" floodColor="#D88A96" floodOpacity="0.10" />
-            </filter>
-          </defs>
+          {/* نفس الفلامنجو باللون الأغمق */}
+          <div className={`absolute inset-0 bg-[#C96F79] [mask-image:url('/icons/flamingo-loader.png')] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] [-webkit-mask-image:url('/icons/flamingo-loader.png')] [-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain] ${reduceMotion ? "" : "flamingo-splash-reveal"}`} />
 
-          <g filter="url(#soft-shadow)">
-            {/* =========================
-                BASE FLAMINGO DRAWING
-            ========================== */}
+          {/* خط اللون الذي يمر أثناء الرسم */}
+          {!reduceMotion && <div className="flamingo-splash-sweep absolute inset-0 [mask-image:url('/icons/flamingo-loader.png')] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] [-webkit-mask-image:url('/icons/flamingo-loader.png')] [-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain]" />}
+        </div>
 
-            <path
-              d="M122 43C108 39 95 44 88 55C80 67 83 80 95 87C106 94 118 90 125 81C132 72 130 59 121 54C113 49 103 52 99 59"
-              className="flamingo-base"
-            />
-
-            <path
-              d="M98 59C88 68 82 79 80 92C78 105 82 116 92 123"
-              className="flamingo-base"
-            />
-
-            <path
-              d="M92 123C104 134 121 136 136 129C148 123 154 112 152 101C150 91 141 84 129 84C120 84 112 89 108 98C104 107 107 117 116 122"
-              className="flamingo-base"
-            />
-
-            <path
-              d="M136 129C130 140 121 149 109 154"
-              className="flamingo-base"
-            />
-
-            <path
-              d="M113 152C103 155 95 155 87 152"
-              className="flamingo-base"
-            />
-
-            <path
-              d="M111 154L103 179"
-              className="flamingo-base"
-            />
-
-            <path
-              d="M103 179L95 188"
-              className="flamingo-base"
-            />
-
-            <path
-              d="M126 140L131 166"
-              className="flamingo-base"
-            />
-
-            <path
-              d="M131 166L138 181"
-              className="flamingo-base"
-            />
-
-            <path
-              d="M122 43C129 44 136 48 140 54L131 58"
-              className="flamingo-base"
-            />
-
-            <circle cx="117" cy="49" r="2.4" fill="#B85E6D" />
-
-            {/* =========================
-                MOVING DARK EDGE
-            ========================== */}
-
-            {!reduceMotion && (
-              <>
-                <path
-                  d="M122 43C108 39 95 44 88 55C80 67 83 80 95 87C106 94 118 90 125 81C132 72 130 59 121 54C113 49 103 52 99 59"
-                  className="flamingo-runner runner-1"
-                />
-
-                <path
-                  d="M98 59C88 68 82 79 80 92C78 105 82 116 92 123"
-                  className="flamingo-runner runner-2"
-                />
-
-                <path
-                  d="M92 123C104 134 121 136 136 129C148 123 154 112 152 101C150 91 141 84 129 84C120 84 112 89 108 98C104 107 107 117 116 122"
-                  className="flamingo-runner runner-3"
-                />
-
-                <path
-                  d="M136 129C130 140 121 149 109 154"
-                  className="flamingo-runner runner-4"
-                />
-
-                <path
-                  d="M113 152C103 155 95 155 87 152"
-                  className="flamingo-runner runner-5"
-                />
-
-                <path
-                  d="M111 154L103 179L95 188"
-                  className="flamingo-runner runner-6"
-                />
-
-                <path
-                  d="M126 140L131 166L138 181"
-                  className="flamingo-runner runner-7"
-                />
-
-                <path
-                  d="M122 43C129 44 136 48 140 54L131 58"
-                  className="flamingo-runner runner-8"
-                />
-              </>
-            )}
-          </g>
-        </svg>
       </div>
 
       <style>{`
-        .flamingo-base {
-          fill: none;
-          stroke: #E7A9B2;
-          stroke-width: 4.2;
-          stroke-linecap: round;
-          stroke-linejoin: round;
+        .flamingo-splash-enter {
+          animation: flamingo-splash-enter 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
         }
 
-        .flamingo-runner {
-          fill: none;
-          stroke: #A94F60;
-          stroke-width: 4.6;
-          stroke-linecap: round;
-          stroke-linejoin: round;
-
-          stroke-dasharray: 18 260;
-          stroke-dashoffset: 0;
-
-          animation: flamingo-edge-run 1.35s linear infinite;
+        .flamingo-splash-reveal {
+          clip-path: inset(0 0 100% 0);
+          animation: flamingo-splash-reveal 2.15s cubic-bezier(0.65, 0, 0.35, 1) both;
         }
 
-        .runner-2 {
-          animation-delay: -0.10s;
+        .flamingo-splash-sweep {
+          background: linear-gradient(
+            to bottom,
+            transparent 0%,
+            transparent 34%,
+            rgba(169, 91, 97, 0.12) 40%,
+            rgba(169, 91, 97, 0.95) 48%,
+            rgba(169, 91, 97, 1) 50%,
+            rgba(169, 91, 97, 0.95) 52%,
+            rgba(169, 91, 97, 0.12) 60%,
+            transparent 66%,
+            transparent 100%
+          );
+
+          background-size: 100% 52%;
+          background-repeat: no-repeat;
+          background-position: center -80%;
+
+          animation: flamingo-splash-sweep 2.15s cubic-bezier(0.65, 0, 0.35, 1) both;
         }
 
-        .runner-3 {
-          animation-delay: -0.20s;
-        }
-
-        .runner-4 {
-          animation-delay: -0.30s;
-        }
-
-        .runner-5 {
-          animation-delay: -0.40s;
-        }
-
-        .runner-6 {
-          animation-delay: -0.50s;
-        }
-
-        .runner-7 {
-          animation-delay: -0.60s;
-        }
-
-        .runner-8 {
-          animation-delay: -0.70s;
-        }
-
-        @keyframes flamingo-edge-run {
-          from {
-            stroke-dashoffset: 0;
-          }
-
-          to {
-            stroke-dashoffset: -278;
-          }
-        }
-
-        @keyframes logo-enter {
+        @keyframes flamingo-splash-enter {
           0% {
             opacity: 0;
-            transform: scale(0.9);
-            filter: blur(3px);
-          }
-
-          45% {
-            opacity: 1;
-            filter: blur(0);
-          }
-
-          75% {
-            transform: scale(1.025);
+            transform: scale(0.965);
           }
 
           100% {
             opacity: 1;
             transform: scale(1);
-            filter: blur(0);
           }
         }
 
-        .animate-logo-enter {
-          animation: logo-enter 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+        @keyframes flamingo-splash-reveal {
+          0% {
+            clip-path: inset(0 0 100% 0);
+          }
+
+          10% {
+            clip-path: inset(0 0 100% 0);
+          }
+
+          72% {
+            clip-path: inset(0 0 0% 0);
+          }
+
+          100% {
+            clip-path: inset(0 0 0% 0);
+          }
+        }
+
+        @keyframes flamingo-splash-sweep {
+          0% {
+            background-position: center -80%;
+            opacity: 0;
+          }
+
+          8% {
+            opacity: 1;
+          }
+
+          74% {
+            background-position: center 180%;
+            opacity: 1;
+          }
+
+          88% {
+            opacity: 0;
+          }
+
+          100% {
+            background-position: center 180%;
+            opacity: 0;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .flamingo-splash-enter,
+          .flamingo-splash-reveal,
+          .flamingo-splash-sweep {
+            animation: none;
+          }
         }
       `}</style>
     </div>

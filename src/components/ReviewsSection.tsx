@@ -1,11 +1,9 @@
-import { motion } from 'framer-motion';
-import { useQuery } from '@tanstack/react-query';
-import { Star, ArrowLeft, MessageSquare } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { supabase } from '@/integrations/supabase/client';
-import { useStore } from '@/store/useStore';
-import { useSiteContent, getSiteText } from '@/hooks/useSiteContent';
-import { Button } from '@/components/ui/button';
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, MessageSquare, Quote, Star } from "lucide-react";
+import { Link } from "react-router-dom";
+
+import { supabase } from "@/integrations/supabase/client";
+import { getSiteText, useSiteContent } from "@/hooks/useSiteContent";
 
 interface Review {
   id: string;
@@ -17,115 +15,105 @@ interface Review {
 }
 
 const ReviewsSection = () => {
-  const { data: content } = useSiteContent('reviews_section_');
+  const { data: content } = useSiteContent("reviews_section_");
 
   const { data: reviews = [] } = useQuery({
-    queryKey: ['reviews'],
+    queryKey: ["reviews"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from('reviews')
-        .select('id,customer_name,message,message_ar,rating,country')
-        .eq('is_approved', true)
-        .order('created_at', { ascending: false })
-        .limit(6);
+      const { data, error } = await supabase.from("reviews").select("id,customer_name,message,message_ar,rating,country").eq("is_approved", true).order("created_at", { ascending: false }).limit(6);
 
       if (error) throw error;
 
-      return data as Review[];
+      return (data || []) as Review[];
     },
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 15,
+    refetchOnWindowFocus: false,
   });
 
-  // Fetch total reviews count
   const { data: totalCount = 0 } = useQuery({
-    queryKey: ['reviews-count'],
+    queryKey: ["reviews-count"],
     queryFn: async () => {
-      const { count, error } = await supabase
-        .from('reviews')
-        .select('id', { count: 'exact', head: true })
-        .eq('is_approved', true);
+      const { count, error } = await supabase.from("reviews").select("id", { count: "exact", head: true }).eq("is_approved", true);
+
       if (error) throw error;
 
       return count || 0;
     },
+    staleTime: 1000 * 60 * 5,
+    gcTime: 1000 * 60 * 15,
+    refetchOnWindowFocus: false,
   });
 
   if (reviews.length === 0) return null;
 
   return (
-    <section className="section-beige">
-      <div className="container mx-auto px-4">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mb-12"
-        >
-          <h2 className="font-heading text-3xl md:text-4xl text-gold mb-4">
-            آراء عملائنا
-          </h2>
-          <div className="w-20 h-px bg-gold mx-auto mb-4" />
-          <p className="text-muted-foreground font-body">
-            {totalCount} تقييم من عملائنا الكرام
-          </p>
-        </motion.div>
+    <section className="border-y border-[#F0E6E2] bg-[#FFFDFC] py-7 md:py-12" dir="rtl">
+      <div className="mx-auto w-full max-w-[1200px] px-3 md:px-6">
+        {/* HEADER */}
+        <div className="mb-5 flex items-end justify-between gap-4 md:mb-7">
+          <div>
+            <div className="mb-1 flex items-center gap-2">
+              <span className="h-[2px] w-4 rounded-full bg-[#D4777D]" />
+              <span className="font-serif text-[6px] tracking-[0.22em] text-[#B86168]">CUSTOMER STORIES</span>
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-          {reviews.map((review, index) => (
-            <motion.div
-              key={review.id}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: index * 0.1 }}
-              className="bg-background p-6 rounded-lg shadow-card border border-border/50"
-            >
-              <div className="flex items-center gap-1 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star
-                    key={i}
-                    className={`w-4 h-4 ${
-                      i < review.rating ? 'text-gold fill-gold' : 'text-muted-foreground'
-                    }`}
-                  />
+            <h2 className="text-[17px] font-semibold tracking-[-0.025em] text-[#403633] md:text-[23px]">آراء عملائنا</h2>
+
+            <div className="mt-1.5 flex items-center gap-2">
+              <div className="flex items-center gap-[1px]" dir="ltr">
+                {[1, 2, 3, 4, 5].map((star) => (
+                  <Star key={star} className="h-2.5 w-2.5 fill-[#DCA653] text-[#DCA653]" strokeWidth={1} />
                 ))}
               </div>
-              <p className="text-foreground/80 font-body mb-4 leading-relaxed">
-                "{review.message_ar || review.message}"
-              </p>
-              <p className="font-heading text-sm text-gold">{review.customer_name}</p>
-            </motion.div>
+
+              <span className="text-[7px] text-[#9B8D88]">{totalCount} تقييم من عملائنا</span>
+            </div>
+          </div>
+
+          <Link to="/reviews" className="flex h-8 shrink-0 items-center gap-1 rounded-full border border-[#E2D6D2] bg-white px-3 text-[7px] font-semibold text-[#A95B61] active:bg-[#FFF7F5]">
+            عرض الكل
+            <ArrowLeft className="h-3 w-3" strokeWidth={1.5} />
+          </Link>
+        </div>
+
+        {/* REVIEWS */}
+        <div className="grid grid-cols-1 overflow-hidden rounded-[16px] border border-[#EAE0DC] bg-white sm:grid-cols-2 lg:grid-cols-3">
+          {reviews.map((review, index) => (
+            <article key={review.id} className={`relative flex min-h-[150px] flex-col px-4 py-4 md:min-h-[175px] md:px-5 md:py-5 ${index !== reviews.length - 1 ? "border-b border-[#F0E8E5] sm:border-b-0" : ""} ${index % 2 === 0 && index !== reviews.length - 1 ? "sm:border-l sm:border-[#F0E8E5]" : ""} ${index < 3 ? "lg:border-b lg:border-[#F0E8E5]" : ""} ${index % 3 !== 2 ? "lg:border-l lg:border-[#F0E8E5]" : "lg:border-l-0"}`}>
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-[1px]" dir="ltr">
+                  {[1, 2, 3, 4, 5].map((star) => (
+                    <Star key={star} className={`h-3 w-3 ${star <= review.rating ? "fill-[#DCA653] text-[#DCA653]" : "text-[#DDD4D0]"}`} strokeWidth={1.1} />
+                  ))}
+                </div>
+
+                <Quote className="h-4 w-4 rotate-180 stroke-[1.3] text-[#E4C9C5]" />
+              </div>
+
+              <p className="mt-3 line-clamp-4 flex-1 text-[9px] leading-6 text-[#62544F] md:text-[10px] md:leading-7">{review.message_ar || review.message}</p>
+
+              <div className="mt-3 border-t border-[#F1EAE7] pt-3">
+                <p className="truncate text-[8px] font-semibold text-[#4C403C] md:text-[9px]">{review.customer_name}</p>
+
+                {review.country && <p className="mt-0.5 text-[6px] uppercase tracking-[0.08em] text-[#AAA09B]">{review.country}</p>}
+              </div>
+            </article>
           ))}
         </div>
 
-        {/* View All Button */}
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className="text-center mt-10 space-y-4"
-        >
-          <Link to="/reviews">
-            <Button variant="outline" className="gap-2 border-gold text-gold hover:bg-gold hover:text-secondary">
-              عرض جميع التقييمات
-              <ArrowLeft className="w-4 h-4" />
-            </Button>
-          </Link>
-
-          <div>
-            <p className="text-muted-foreground mb-3">
-              {getSiteText(content, 'share_experience', 'شارك تجربتك معنا')}
-            </p>
-            <Link to="/reviews">
-              <Button 
-                variant="default"
-                className="gap-2 bg-gold hover:bg-gold/90 text-secondary"
-              >
-                <MessageSquare className="w-4 h-4" />
-                {getSiteText(content, 'write_review', 'اكتب تقييماً')}
-              </Button>
-            </Link>
+        {/* CTA */}
+        <div className="mt-5 flex flex-col items-center justify-between gap-3 border-t border-[#EEE4E0] pt-5 sm:flex-row">
+          <div className="text-center sm:text-right">
+            <p className="text-[10px] font-semibold text-[#4A3D39]">{getSiteText(content, "share_experience", "شارك تجربتك معنا")}</p>
+            <p className="mt-1 text-[7px] text-[#9E908B]">رأيك يساعد الآخرين على اختيار المنتج المناسب.</p>
           </div>
-        </motion.div>
+
+          <Link to="/reviews" className="flex h-[39px] w-full items-center justify-center gap-2 rounded-[10px] bg-[#D4777D] px-5 text-[8px] font-semibold text-white active:bg-[#C96B72] sm:w-auto">
+            <MessageSquare className="h-3.5 w-3.5" strokeWidth={1.5} />
+            {getSiteText(content, "write_review", "اكتب تقييماً")}
+          </Link>
+        </div>
       </div>
     </section>
   );

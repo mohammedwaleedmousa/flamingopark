@@ -44,11 +44,8 @@ type CatalogProduct = Product & {
 
 type CatalogMetaProduct = {
   id: string;
-  brand: string | null;
   price: number;
   discount: number | null;
-  in_stock: boolean | null;
-  category_id: string | null;
   color_variants: ColorVariant[] | string | null;
   created_at: string | null;
   is_best_seller: boolean | null;
@@ -104,7 +101,14 @@ const NAMED_COLOR_HEX: Record<string, string> = {
 
 const shimmerVariants = {
   hidden: { opacity: 0, y: 7 },
-  show: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: Math.min(i, 8) * 0.018, duration: 0.32 } }),
+  show: (i = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: Math.min(i, 8) * 0.018,
+      duration: 0.32,
+    },
+  }),
 };
 
 const parseVariants = (value: ColorVariant[] | string | null | undefined): ColorVariant[] => {
@@ -126,17 +130,27 @@ const getVariantColorName = (variant: ColorVariant) => {
   return (variant.colorName || variant.name || "").trim();
 };
 
-const getProductColors = (product: { color_variants?: ColorVariant[] | string | null }) => {
+const getProductColors = (product: { color_variants?: ColorVariant[] | string | null }): string[] => {
   return Array.from(new Set(parseVariants(product.color_variants).map(getVariantColorName).filter(Boolean)));
 };
 
-const getProductSizes = (product: { color_variants?: ColorVariant[] | string | null }) => {
-  return Array.from(new Set(parseVariants(product.color_variants).flatMap((variant) => (variant.sizes || []).map((size) => size?.size?.trim() || "")).filter(Boolean)));
+const getProductSizes = (product: { color_variants?: ColorVariant[] | string | null }): string[] => {
+  return Array.from(
+    new Set(
+      parseVariants(product.color_variants)
+        .flatMap((variant) => (variant.sizes || []).map((size) => size?.size?.trim() || ""))
+        .filter(Boolean)
+    )
+  );
 };
 
 const getFinalPrice = (product: { price: number; discount?: number | null }) => {
   return product.discount ? product.price * (1 - product.discount / 100) : product.price;
 };
+
+/* =========================================================
+   QUICK VIEW
+========================================================= */
 
 const QuickView = ({ product, onClose, isMobile }: { product: CatalogProduct | null; onClose: () => void; isMobile: boolean }) => {
   const { data: content } = useSiteContent("products_page_");
@@ -163,18 +177,22 @@ const QuickView = ({ product, onClose, isMobile }: { product: CatalogProduct | n
   const variants = parseVariants(product.color_variants);
   const currentVariantIndex = activeVariantIndex === null && variants.length ? 0 : activeVariantIndex;
   const activeVariant = currentVariantIndex !== null ? variants[currentVariantIndex] : undefined;
-
   const images = activeVariant?.images?.length ? activeVariant.images : product.images || [];
 
   const priceSource = activeVariant?.price ?? product.price;
   const discountSource = activeVariant?.discount ?? product.discount;
   const displayPrice = discountSource ? priceSource * (1 - discountSource / 100) : priceSource;
 
-  const fallbackSizes: VariantSize[] = (product.sizes || []).map((size) => ({ size, stock: product.inStock ? 999 : 0 }));
+  const fallbackSizes: VariantSize[] = (product.sizes || []).map((size) => ({
+    size,
+    stock: product.inStock ? 999 : 0,
+  }));
+
   const sizesForActiveVariant = activeVariant?.sizes || fallbackSizes;
 
   const stockForSize = (size?: string) => {
     if (!size) return product.inStock ? 999 : 0;
+
     return sizesForActiveVariant.find((item) => item.size === size)?.stock || 0;
   };
 
@@ -184,7 +202,7 @@ const QuickView = ({ product, onClose, isMobile }: { product: CatalogProduct | n
   };
 
   return (
-    <motion.aside initial={isMobile ? { y: "100%" } : { x: "100%" }} animate={isMobile ? { y: 0 } : { x: 0 }} exit={isMobile ? { y: "100%" } : { x: "100%" }} transition={{ type: "spring", stiffness: 320, damping: 34 }} className={`fixed inset-y-0 right-0 z-[90] w-full overflow-y-auto bg-[#FFFCFA] shadow-[0_0_50px_rgba(65,45,38,.16)] ${isMobile ? "p-4 pb-24" : "max-w-2xl border-l border-[#ECE3DF] p-6"}`}>
+    <motion.aside initial={isMobile ? { y: "100%" } : { x: "100%" }} animate={isMobile ? { y: 0 } : { x: 0 }} exit={isMobile ? { y: "100%" } : { x: "100%" }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }} className={`fixed inset-y-0 right-0 z-[90] w-full overflow-y-auto bg-[#FFFDFC] shadow-[0_0_50px_rgba(65,45,38,.16)] ${isMobile ? "p-4 pb-24" : "max-w-2xl border-l border-[#ECE3DF] p-6"}`}>
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <p className="mb-1 text-[9px] tracking-[0.22em] text-[#C5797D]">FLAMINGO</p>
@@ -267,6 +285,10 @@ const QuickView = ({ product, onClose, isMobile }: { product: CatalogProduct | n
   );
 };
 
+/* =========================================================
+   PRODUCTS PAGE
+========================================================= */
+
 const ProductsPage = () => {
   const { data: content } = useSiteContent("products_page_");
 
@@ -284,17 +306,46 @@ const ProductsPage = () => {
   const inStockOnly = searchParams.get("stock") === "1";
   const minPriceParam = Number(searchParams.get("min") || 0);
   const maxPriceParam = Number(searchParams.get("max") || 0);
-  const page = Math.max(1, Number(searchParams.get("page") || 1));
 
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [quickViewProd, setQuickViewProd] = useState<CatalogProduct | null>(null);
   const [isMobileViewport, setIsMobileViewport] = useState(false);
 
+  /*
+   * Load More محلي.
+   * لا نغير URL نهائياً.
+   */
+  const [loadedPage, setLoadedPage] = useState(1);
+
+  /*
+   * الفلاتر المؤقتة داخل Drawer.
+   * المنتجات الموجودة في الخلفية لن تتغير أثناء الاختيار.
+   */
+  const [draftFilters, setDraftFilters] = useState<URLSearchParams>(() => {
+    const params = new URLSearchParams(searchParams);
+    params.delete("page");
+    return params;
+  });
+
+  /*
+   * Metadata يبدأ بعد أول Paint بقليل.
+   * هذا يجعل أول Cards تظهر أسرع.
+   */
+  const [metadataWarm, setMetadataWarm] = useState(false);
+
   const previousCatalogSearch = useRef(location.search);
-  const pendingLoadMoreScroll = useRef<number | null>(null);
-  const previousProductsLength = useRef(0);
+  const loadMoreScrollRef = useRef<number | null>(null);
+  const previousProductsLengthRef = useRef(0);
   const restoredCatalogKey = useRef<string | null>(null);
+  const overlayScrollRef = useRef(0);
+
+  const draftCategorySlug = draftFilters.get("category") || "";
+  const draftBrandFilter = draftFilters.get("brand") || "all";
+  const draftColorFilter = draftFilters.get("color") || "all";
+  const draftSizeFilter = draftFilters.get("size") || "all";
+  const draftSaleOnly = draftFilters.get("sale") === "1";
+  const draftInStockOnly = draftFilters.get("stock") === "1";
 
   const catalogScrollKey = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -306,6 +357,10 @@ const ProductsPage = () => {
     return `${location.pathname}${query ? `?${query}` : ""}`;
   }, [location.pathname, location.search]);
 
+  /* =========================================================
+     VIEWPORT
+  ========================================================= */
+
   useEffect(() => {
     const update = () => setIsMobileViewport(window.innerWidth < 768);
 
@@ -315,6 +370,22 @@ const ProductsPage = () => {
 
     return () => window.removeEventListener("resize", update);
   }, []);
+
+  /* =========================================================
+     WARM METADATA AFTER INITIAL PAINT
+  ========================================================= */
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setMetadataWarm(true);
+    }, 450);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  /* =========================================================
+     NAVIGATION SCROLL
+  ========================================================= */
 
   useEffect(() => {
     const previous = new URLSearchParams(previousCatalogSearch.current);
@@ -327,8 +398,65 @@ const ProductsPage = () => {
 
     if (navType === "POP" || onlyPageChanged) return;
 
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    /*
+     * عند تغيير فلتر حقيقي نبدأ من الأعلى.
+     * Load More لا يصل لهذا effect لأنه لا يغير URL.
+     */
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
   }, [location.pathname, location.search, navType]);
+
+  /* =========================================================
+     FREEZE BACKGROUND WHILE OVERLAY IS OPEN
+  ========================================================= */
+
+  useLayoutEffect(() => {
+    const overlayOpen = filtersOpen || sortOpen || !!quickViewProd;
+
+    if (!overlayOpen) return;
+
+    const body = document.body;
+
+    overlayScrollRef.current = window.scrollY;
+
+    const previousPosition = body.style.position;
+    const previousTop = body.style.top;
+    const previousLeft = body.style.left;
+    const previousRight = body.style.right;
+    const previousWidth = body.style.width;
+    const previousOverflow = body.style.overflow;
+
+    body.style.position = "fixed";
+    body.style.top = `-${overlayScrollRef.current}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+
+    return () => {
+      const scrollY = overlayScrollRef.current;
+
+      body.style.position = previousPosition;
+      body.style.top = previousTop;
+      body.style.left = previousLeft;
+      body.style.right = previousRight;
+      body.style.width = previousWidth;
+      body.style.overflow = previousOverflow;
+
+      window.scrollTo({
+        top: scrollY,
+        left: 0,
+        behavior: "auto",
+      });
+    };
+  }, [filtersOpen, sortOpen, quickViewProd]);
+
+  /* =========================================================
+     CATEGORIES
+  ========================================================= */
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories-all-active"],
@@ -339,56 +467,144 @@ const ProductsPage = () => {
 
       return (data || []) as Category[];
     },
-    staleTime: 5 * 60 * 1000,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
-  const currentCategory = useMemo(() => categories.find((category) => category.slug === categorySlug) || null, [categories, categorySlug]);
+  const currentCategory = useMemo(() => {
+    return categories.find((category) => category.slug === categorySlug) || null;
+  }, [categories, categorySlug]);
 
   const subCategories = useMemo(() => {
     if (!currentCategory) return [];
+
     return categories.filter((category) => category.parent_id === currentCategory.id);
   }, [categories, currentCategory]);
 
   const leafCategoryIds = useMemo(() => {
     if (!currentCategory) return null;
 
-    if (subCategories.length) return [currentCategory.id, ...subCategories.map((category) => category.id)];
+    if (subCategories.length) {
+      return [
+        currentCategory.id,
+        ...subCategories.map((category) => category.id),
+      ];
+    }
 
     return [currentCategory.id];
   }, [currentCategory, subCategories]);
 
-  /*
-   * ============================================================
-   * CATALOG METADATA
-   * يجلب معلومات خفيفة لكل المنتجات.
-   *
-   * هذا هو السبب أن:
-   * 1. عدد المنتجات كامل.
-   * 2. كل الألوان تظهر.
-   * 3. كل المقاسات تظهر.
-   * 4. اللون والمقاس يعملان حتى على منتج لم يتم تحميل Card له.
-   * ============================================================
-   */
+  /* =========================================================
+     EXACT SERVER COUNT
+
+     سريع جداً لأنه head:true
+  ========================================================= */
+
+  const { data: exactServerCount = 0 } = useQuery({
+    queryKey: [
+      "products-exact-count",
+      leafCategoryIds?.join(",") || "all",
+      searchQuery,
+      brandFilter,
+      saleOnly,
+      inStockOnly,
+    ],
+
+    queryFn: async () => {
+      let query = supabase.from("products").select("id", {
+        count: "exact",
+        head: true,
+      }).eq("is_active", true);
+
+      if (leafCategoryIds?.length) {
+        query = query.in("category_id", leafCategoryIds);
+      }
+
+      if (searchQuery.trim()) {
+        const term = searchQuery.trim();
+
+        query = query.or(`name_ar.ilike.%${term}%,name.ilike.%${term}%,description_ar.ilike.%${term}%`);
+      }
+
+      if (brandFilter !== "all") {
+        query = query.eq("brand", brandFilter);
+      }
+
+      if (saleOnly) {
+        query = query.gt("discount", 0);
+      }
+
+      if (inStockOnly) {
+        query = query.eq("in_stock", true);
+      }
+
+      const { count, error } = await query;
+
+      if (error) throw error;
+
+      return count || 0;
+    },
+
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  /* =========================================================
+     CATALOG METADATA
+
+     هذه البيانات خفيفة ولا تحتوي صور المنتج.
+     نحتاجها للألوان والمقاسات والسعر النهائي.
+  ========================================================= */
+
+  const needsClientFiltering = colorFilter !== "all" || sizeFilter !== "all" || minPriceParam > 0 || maxPriceParam > 0;
+
+  const shouldLoadMetadata = metadataWarm || filtersOpen || needsClientFiltering;
+
   const { data: catalogMetadata = [], isLoading: metadataLoading } = useQuery({
-    queryKey: ["catalog-filter-metadata", leafCategoryIds?.join(",") || "all", searchQuery, brandFilter, saleOnly, inStockOnly],
+    queryKey: [
+      "catalog-filter-metadata",
+      leafCategoryIds?.join(",") || "all",
+      searchQuery,
+      brandFilter,
+      saleOnly,
+      inStockOnly,
+    ],
+
+    enabled: shouldLoadMetadata,
+
     queryFn: async () => {
       const rows: CatalogMetaProduct[] = [];
 
       let from = 0;
 
       while (true) {
-        let query = supabase.from("products").select("id,brand,price,discount,in_stock,category_id,color_variants,created_at,is_best_seller,is_featured").eq("is_active", true);
+        let query = supabase.from("products").select("id,price,discount,color_variants,created_at,is_best_seller,is_featured").eq("is_active", true);
 
-        if (leafCategoryIds?.length) query = query.in("category_id", leafCategoryIds);
+        if (leafCategoryIds?.length) {
+          query = query.in("category_id", leafCategoryIds);
+        }
 
         if (searchQuery.trim()) {
           const term = searchQuery.trim();
+
           query = query.or(`name_ar.ilike.%${term}%,name.ilike.%${term}%,description_ar.ilike.%${term}%`);
         }
 
-        if (brandFilter !== "all") query = query.eq("brand", brandFilter);
-        if (saleOnly) query = query.gt("discount", 0);
-        if (inStockOnly) query = query.eq("in_stock", true);
+        if (brandFilter !== "all") {
+          query = query.eq("brand", brandFilter);
+        }
+
+        if (saleOnly) {
+          query = query.gt("discount", 0);
+        }
+
+        if (inStockOnly) {
+          query = query.eq("in_stock", true);
+        }
 
         const { data, error } = await query.order("id", { ascending: true }).range(from, from + META_BATCH_SIZE - 1);
 
@@ -398,19 +614,26 @@ const ProductsPage = () => {
 
         rows.push(...batch);
 
-        if (batch.length < META_BATCH_SIZE) break;
+        if (batch.length < META_BATCH_SIZE) {
+          break;
+        }
 
         from += META_BATCH_SIZE;
       }
 
       return rows;
     },
-    staleTime: 5 * 60 * 1000,
+
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
-  /*
-   * جميع الألوان من كل المنتجات وليس فقط المنتجات المحملة.
-   */
+  /* =========================================================
+     COLORS
+  ========================================================= */
+
   const colorsAvailable = useMemo<ColorSwatch[]>(() => {
     const map = new Map<string, ColorSwatch>();
 
@@ -435,18 +658,33 @@ const ProductsPage = () => {
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "ar"));
   }, [catalogMetadata]);
 
+  /* =========================================================
+     SIZES
+  ========================================================= */
+
   const sizesAvailable = useMemo(() => {
     const sizes = new Set<string>();
 
     catalogMetadata.forEach((product) => {
-      getProductSizes(product).forEach((size) => sizes.add(size));
+      getProductSizes(product).forEach((size) => {
+        sizes.add(size);
+      });
     });
 
     return Array.from(sizes);
   }, [catalogMetadata]);
 
+  /* =========================================================
+     PRICE BOUNDS
+  ========================================================= */
+
   const priceBounds = useMemo(() => {
-    if (!catalogMetadata.length) return { min: 0, max: 1000 };
+    if (!catalogMetadata.length) {
+      return {
+        min: 0,
+        max: 1000,
+      };
+    }
 
     const prices = catalogMetadata.map(getFinalPrice);
 
@@ -459,701 +697,1151 @@ const ProductsPage = () => {
   const effectiveMin = minPriceParam || priceBounds.min;
   const effectiveMax = maxPriceParam || priceBounds.max;
 
-  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+  const [priceRange, setPriceRange] = useState<[number, number]>([
+    0,
+    1000,
+  ]);
 
   useEffect(() => {
-    setPriceRange([effectiveMin, effectiveMax]);
+    setPriceRange([
+      effectiveMin,
+      effectiveMax,
+    ]);
   }, [effectiveMin, effectiveMax]);
 
-  /*
-   * ============================================================
-   * النتائج الحقيقية للفلاتر.
-   *
-   * نحدد IDs لجميع المنتجات المطابقة أولاً.
-   * ثم نحمل Cards للعدد المطلوب فقط.
-   * ============================================================
-   */
+  /* =========================================================
+     MATCHING METADATA
+
+     فقط عند Color / Size / Price.
+  ========================================================= */
+
   const matchingMetadata = useMemo(() => {
+    if (!needsClientFiltering) {
+      return catalogMetadata;
+    }
+
     let result = catalogMetadata.filter((product) => {
       const finalPrice = getFinalPrice(product);
 
-      const colorMatch = colorFilter === "all" || getProductColors(product).some((color) => color.toLowerCase() === colorFilter.toLowerCase());
-      const sizeMatch = sizeFilter === "all" || getProductSizes(product).includes(sizeFilter);
-      const priceMatch = finalPrice >= effectiveMin && finalPrice <= effectiveMax;
+      const colorMatch =
+        colorFilter === "all" ||
+        getProductColors(product).some(
+          (color) =>
+            color.toLowerCase() ===
+            colorFilter.toLowerCase()
+        );
+
+      const sizeMatch =
+        sizeFilter === "all" ||
+        getProductSizes(product).includes(sizeFilter);
+
+      const priceMatch =
+        finalPrice >= effectiveMin &&
+        finalPrice <= effectiveMax;
 
       return colorMatch && sizeMatch && priceMatch;
     });
 
     if (sortBy === "price-asc") {
-      result = [...result].sort((a, b) => getFinalPrice(a) - getFinalPrice(b));
+      result = [...result].sort(
+        (a, b) => getFinalPrice(a) - getFinalPrice(b)
+      );
     } else if (sortBy === "price-desc") {
-      result = [...result].sort((a, b) => getFinalPrice(b) - getFinalPrice(a));
+      result = [...result].sort(
+        (a, b) => getFinalPrice(b) - getFinalPrice(a)
+      );
     } else if (sortBy === "best") {
       result = [...result].sort((a, b) => {
-        const bestDiff = Number(!!b.is_best_seller) - Number(!!a.is_best_seller);
+        const bestDifference =
+          Number(!!b.is_best_seller) -
+          Number(!!a.is_best_seller);
 
-        if (bestDiff !== 0) return bestDiff;
+        if (bestDifference !== 0) {
+          return bestDifference;
+        }
 
-        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        return (
+          new Date(b.created_at || 0).getTime() -
+          new Date(a.created_at || 0).getTime()
+        );
       });
     } else if (sortBy === "featured") {
       result = [...result].sort((a, b) => {
-        const featuredDiff = Number(!!b.is_featured) - Number(!!a.is_featured);
+        const featuredDifference =
+          Number(!!b.is_featured) -
+          Number(!!a.is_featured);
 
-        if (featuredDiff !== 0) return featuredDiff;
+        if (featuredDifference !== 0) {
+          return featuredDifference;
+        }
 
-        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        return (
+          new Date(b.created_at || 0).getTime() -
+          new Date(a.created_at || 0).getTime()
+        );
       });
     } else {
-      result = [...result].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+      result = [...result].sort(
+        (a, b) =>
+          new Date(b.created_at || 0).getTime() -
+          new Date(a.created_at || 0).getTime()
+      );
     }
 
     return result;
-  }, [catalogMetadata, colorFilter, sizeFilter, effectiveMin, effectiveMax, sortBy]);
-
-  const totalProductsCount = matchingMetadata.length;
+  }, [
+    catalogMetadata,
+    needsClientFiltering,
+    colorFilter,
+    sizeFilter,
+    effectiveMin,
+    effectiveMax,
+    sortBy,
+  ]);
 
   /*
-   * كل صفحة عبارة عن IDs معروفة مسبقاً.
-   * بهذا لا نضيع صفحات على منتجات لا تطابق اللون أو المقاس.
+   * العدد الكامل.
+   *
+   * بدون Color/Size/Price:
+   * نستخدم Supabase exact count السريع.
+   *
+   * معهم:
+   * نستخدم جميع Metadata وليس المنتجات المحملة فقط.
    */
-  const pageIdGroups = useMemo(() => {
-    return Array.from({ length: page }, (_, index) => {
-      const from = index * PAGE_SIZE;
-      const to = from + PAGE_SIZE;
+  const totalProductsCount = needsClientFiltering
+    ? matchingMetadata.length
+    : exactServerCount;
 
-      return matchingMetadata.slice(from, to).map((product) => product.id);
-    }).filter((ids) => ids.length > 0);
-  }, [matchingMetadata, page]);
+  /* =========================================================
+     NORMAL SERVER PAGES
 
-  const productQueries = useQueries({
-    queries: pageIdGroups.map((ids, index) => ({
-      queryKey: ["catalog-products-page", ids.join(","), index + 1],
-      queryFn: async () => {
-        const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).in("id", ids);
+     هذا المسار يعمل في البداية.
+     لا ينتظر Metadata.
+  ========================================================= */
 
-        if (error) throw error;
+  const normalProductQueries = useQueries({
+    queries: !needsClientFiltering
+      ? Array.from({ length: loadedPage }, (_, pageIndex) => ({
+          queryKey: [
+            "products-fast-page",
+            leafCategoryIds?.join(",") || "all",
+            searchQuery,
+            brandFilter,
+            sortBy,
+            saleOnly,
+            inStockOnly,
+            pageIndex + 1,
+          ],
 
-        const mapped = (data || []).map(mapProductCard) as CatalogProduct[];
-        const map = new Map(mapped.map((product) => [product.id, product]));
+          queryFn: async () => {
+            let query = supabase
+              .from("products")
+              .select(PRODUCT_CARD_SELECT)
+              .eq("is_active", true);
 
-        return ids.map((id) => map.get(id)).filter((product): product is CatalogProduct => Boolean(product));
-      },
-      staleTime: 60 * 1000,
-    })),
+            if (leafCategoryIds?.length) {
+              query = query.in(
+                "category_id",
+                leafCategoryIds
+              );
+            }
+
+            if (searchQuery.trim()) {
+              const term = searchQuery.trim();
+
+              query = query.or(
+                `name_ar.ilike.%${term}%,name.ilike.%${term}%,description_ar.ilike.%${term}%`
+              );
+            }
+
+            if (brandFilter !== "all") {
+              query = query.eq(
+                "brand",
+                brandFilter
+              );
+            }
+
+            if (saleOnly) {
+              query = query.gt("discount", 0);
+            }
+
+            if (inStockOnly) {
+              query = query.eq("in_stock", true);
+            }
+
+            if (sortBy === "price-asc") {
+              query = query.order("price", {
+                ascending: true,
+              });
+            } else if (sortBy === "price-desc") {
+              query = query.order("price", {
+                ascending: false,
+              });
+            } else if (sortBy === "best") {
+              query = query
+                .order("is_best_seller", {
+                  ascending: false,
+                })
+                .order("created_at", {
+                  ascending: false,
+                });
+            } else if (sortBy === "featured") {
+              query = query
+                .order("is_featured", {
+                  ascending: false,
+                })
+                .order("created_at", {
+                  ascending: false,
+                });
+            } else {
+              query = query.order("created_at", {
+                ascending: false,
+              });
+            }
+
+            const from =
+              pageIndex * PAGE_SIZE;
+
+            const { data, error } =
+              await query.range(
+                from,
+                from + PAGE_SIZE - 1
+              );
+
+            if (error) throw error;
+
+            return (data || []).map(
+              mapProductCard
+            ) as CatalogProduct[];
+          },
+
+          staleTime: 5 * 60 * 1000,
+          gcTime: 15 * 60 * 1000,
+          refetchOnWindowFocus: false,
+          refetchOnReconnect: false,
+        }))
+      : [],
   });
 
+  /* =========================================================
+     CLIENT FILTERED PAGES
+
+     يستخدم فقط عند Color / Size / Price.
+  ========================================================= */
+
+  const filteredPageIdGroups = useMemo(() => {
+    if (!needsClientFiltering) {
+      return [];
+    }
+
+    return Array.from(
+      { length: loadedPage },
+      (_, index) => {
+        const from = index * PAGE_SIZE;
+        const to = from + PAGE_SIZE;
+
+        return matchingMetadata
+          .slice(from, to)
+          .map((product) => product.id);
+      }
+    ).filter((ids) => ids.length > 0);
+  }, [
+    needsClientFiltering,
+    matchingMetadata,
+    loadedPage,
+  ]);
+
+  const filteredProductQueries = useQueries({
+    queries: needsClientFiltering
+      ? filteredPageIdGroups.map(
+          (ids, index) => ({
+            queryKey: [
+              "catalog-filtered-page",
+              ids.join(","),
+              index + 1,
+            ],
+
+            queryFn: async () => {
+              const { data, error } =
+                await supabase
+                  .from("products")
+                  .select(PRODUCT_CARD_SELECT)
+                  .in("id", ids);
+
+              if (error) throw error;
+
+              const mapped = (
+                data || []
+              ).map(
+                mapProductCard
+              ) as CatalogProduct[];
+
+              const mappedById = new Map(
+                mapped.map((product) => [
+                  product.id,
+                  product,
+                ])
+              );
+
+              return ids
+                .map((id) =>
+                  mappedById.get(id)
+                )
+                .filter(
+                  (
+                    product
+                  ): product is CatalogProduct =>
+                    Boolean(product)
+                );
+            },
+
+            staleTime: 5 * 60 * 1000,
+            gcTime: 15 * 60 * 1000,
+            refetchOnWindowFocus: false,
+            refetchOnReconnect: false,
+          })
+        )
+      : [],
+  });
+
+  /* =========================================================
+     PRODUCTS
+  ========================================================= */
+
   const products = useMemo(() => {
+    const sourceQueries = needsClientFiltering
+      ? filteredProductQueries
+      : normalProductQueries;
+
     const seen = new Set<string>();
 
-    return productQueries.flatMap((query) => query.data || []).filter((product) => {
-      if (seen.has(product.id)) return false;
+    return sourceQueries
+      .flatMap(
+        (query) => query.data || []
+      )
+      .filter((product) => {
+        if (seen.has(product.id)) {
+          return false;
+        }
 
-      seen.add(product.id);
+        seen.add(product.id);
 
-      return true;
-    });
-  }, [productQueries]);
+        return true;
+      });
+  }, [
+    needsClientFiltering,
+    normalProductQueries,
+    filteredProductQueries,
+  ]);
 
-  const isLoadingProducts = metadataLoading || productQueries.some((query) => query.isLoading || query.isFetching);
+  const isLoadingProducts = needsClientFiltering
+    ? metadataLoading ||
+      filteredProductQueries.some(
+        (query) =>
+          query.isLoading ||
+          query.isFetching
+      )
+    : normalProductQueries.some(
+        (query) =>
+          query.isLoading ||
+          query.isFetching
+      );
 
-  const hasMore = products.length < totalProductsCount;
+  const hasMore =
+    products.length < totalProductsCount;
 
-  /*
-   * ============================================================
-   * SCROLL RESTORATION
-   * ============================================================
-   */
+  /* =========================================================
+     BRANDS
+  ========================================================= */
+
+  const { data: brandsAvailable = [] } = useQuery({
+    queryKey: ["product-filter-brands"],
+
+    queryFn: async () => {
+      const { data, error } =
+        await supabase
+          .from("brands")
+          .select("name")
+          .eq("is_active", true)
+          .order("name");
+
+      if (error) throw error;
+
+      return (data || [])
+        .map((brand) => brand.name)
+        .filter(
+          (name): name is string =>
+            Boolean(name)
+        );
+    },
+
+    staleTime: 30 * 60 * 1000,
+    gcTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  /* =========================================================
+     RESET LOAD MORE ON REAL FILTER CHANGE
+  ========================================================= */
+
   useEffect(() => {
-    if (isLoadingProducts || !products.length) return;
-    if (pendingLoadMoreScroll.current !== null) return;
+    setLoadedPage(1);
+    loadMoreScrollRef.current = null;
+    previousProductsLengthRef.current = 0;
+  }, [
+    categorySlug,
+    searchQuery,
+    brandFilter,
+    colorFilter,
+    sizeFilter,
+    saleOnly,
+    inStockOnly,
+    minPriceParam,
+    maxPriceParam,
+    sortBy,
+  ]);
+
+  /* =========================================================
+     RESTORE CATALOG POSITION
+  ========================================================= */
+
+  useEffect(() => {
+    if (isLoadingProducts) return;
+    if (!products.length) return;
+    if (loadMoreScrollRef.current !== null) return;
     if (restoredCatalogKey.current === catalogScrollKey) return;
 
     restoreCatalogScroll(catalogScrollKey);
 
-    restoredCatalogKey.current = catalogScrollKey;
-  }, [isLoadingProducts, products.length, catalogScrollKey]);
+    restoredCatalogKey.current =
+      catalogScrollKey;
+  }, [
+    isLoadingProducts,
+    products.length,
+    catalogScrollKey,
+  ]);
 
-  /*
-   * يحافظ على نفس المكان حرفياً بعد عرض المزيد.
-   */
+  /* =========================================================
+     KEEP EXACT SCROLL AFTER LOAD MORE
+  ========================================================= */
+
   useLayoutEffect(() => {
-    const oldLength = previousProductsLength.current;
-    const newLength = products.length;
+    const previousLength =
+      previousProductsLengthRef.current;
 
-    if (pendingLoadMoreScroll.current !== null && !isLoadingProducts && newLength > oldLength) {
-      const savedScroll = pendingLoadMoreScroll.current;
+    const currentLength =
+      products.length;
 
-      pendingLoadMoreScroll.current = null;
-
-      window.scrollTo({
-        top: savedScroll,
-        left: 0,
-        behavior: "auto",
-      });
+    if (
+      loadMoreScrollRef.current !== null &&
+      !isLoadingProducts &&
+      currentLength > previousLength
+    ) {
+      const savedScrollY =
+        loadMoreScrollRef.current;
 
       requestAnimationFrame(() => {
         window.scrollTo({
-          top: savedScroll,
+          top: savedScrollY,
           left: 0,
           behavior: "auto",
+        });
+
+        requestAnimationFrame(() => {
+          window.scrollTo({
+            top: savedScrollY,
+            left: 0,
+            behavior: "auto",
+          });
+
+          loadMoreScrollRef.current =
+            null;
         });
       });
     }
 
-    previousProductsLength.current = newLength;
-  }, [products.length, isLoadingProducts]);
+    previousProductsLengthRef.current =
+      currentLength;
+  }, [
+    products.length,
+    isLoadingProducts,
+  ]);
 
-  const { data: brandsAvailable = [] } = useQuery({
-    queryKey: ["product-filter-brands"],
-    queryFn: async () => {
-      const { data, error } = await supabase.from("brands").select("name").eq("is_active", true).order("name");
-
-      if (error) throw error;
-
-      return (data || []).map((brand) => brand.name).filter((name): name is string => Boolean(name));
-    },
-    staleTime: 5 * 60 * 1000,
-  });
+  /* =========================================================
+     NORMAL PARAM SETTER
+  ========================================================= */
 
   const setParam = (key: string, value: string | null) => {
     clearCatalogScroll(catalogScrollKey);
 
     restoredCatalogKey.current = null;
 
-    const next = new URLSearchParams(searchParams);
+    setLoadedPage(1);
 
-    if (value === null || value === "" || value === "all") {
+    const next =
+      new URLSearchParams(searchParams);
+
+    if (
+      value === null ||
+      value === "" ||
+      value === "all"
+    ) {
       next.delete(key);
     } else {
       next.set(key, value);
     }
 
+    /*
+     * page لم يعد جزءاً من Load More.
+     */
     next.delete("page");
 
-    setSearchParams(next);
+    setSearchParams(next, {
+      replace: true,
+    });
   };
 
-  const handleLoadMore = () => {
-    if (isLoadingProducts || !hasMore) return;
+  /* =========================================================
+     FILTER DRAFT
+  ========================================================= */
 
-    pendingLoadMoreScroll.current = window.scrollY;
+  const openFilters = () => {
+    const draft =
+      new URLSearchParams(searchParams);
 
-    const next = new URLSearchParams(searchParams);
+    draft.delete("page");
 
-    next.set("page", String(page + 1));
+    setDraftFilters(draft);
+
+    setPriceRange([
+      effectiveMin,
+      effectiveMax,
+    ]);
 
     /*
-     * replace مهم جداً:
-     * لا ننشئ History entry جديدة عند كل ضغطة عرض المزيد.
+     * لو لم يبدأ Metadata بعد، ابدأه فوراً.
      */
-    setSearchParams(next, { replace: true });
+    setMetadataWarm(true);
+
+    setFiltersOpen(true);
   };
+
+  const setDraftParam = (key: string, value: string | null) => {
+    setDraftFilters((current) => {
+      const next =
+        new URLSearchParams(current);
+
+      if (
+        value === null ||
+        value === "" ||
+        value === "all"
+      ) {
+        next.delete(key);
+      } else {
+        next.set(key, value);
+      }
+
+      next.delete("page");
+
+      return next;
+    });
+  };
+
+  const resetDraftFilters = () => {
+    const next = new URLSearchParams();
+
+    if (categorySlug) {
+      next.set(
+        "category",
+        categorySlug
+      );
+    }
+
+    setDraftFilters(next);
+
+    setPriceRange([
+      priceBounds.min,
+      priceBounds.max,
+    ]);
+  };
+
+  const commitDraftPriceRange = (range: [number, number]) => {
+    const min = Math.round(range[0]);
+    const max = Math.round(range[1]);
+
+    setDraftFilters((current) => {
+      const next =
+        new URLSearchParams(current);
+
+      if (min <= priceBounds.min) {
+        next.delete("min");
+      } else {
+        next.set(
+          "min",
+          String(min)
+        );
+      }
+
+      if (max >= priceBounds.max) {
+        next.delete("max");
+      } else {
+        next.set(
+          "max",
+          String(max)
+        );
+      }
+
+      next.delete("page");
+
+      return next;
+    });
+  };
+
+  const applyDraftFilters = () => {
+    clearCatalogScroll(catalogScrollKey);
+
+    restoredCatalogKey.current = null;
+
+    setLoadedPage(1);
+
+    const next =
+      new URLSearchParams(draftFilters);
+
+    next.delete("page");
+
+    /*
+     * أغلق Drawer أولاً.
+     */
+    setFiltersOpen(false);
+
+    /*
+     * ثم غيّر المنتجات بعد انتهاء حركة الإغلاق.
+     * بهذا لن تراها تتبدل بالخلفية.
+     */
+    window.setTimeout(() => {
+      setSearchParams(next, {
+        replace: true,
+      });
+    }, 170);
+  };
+
+  /* =========================================================
+     SORT
+  ========================================================= */
+
+  const handleSortSelect = (value: string) => {
+    if (value === sortBy) {
+      setSortOpen(false);
+      return;
+    }
+
+    /*
+     * أغلق Sort أولاً.
+     */
+    setSortOpen(false);
+
+    /*
+     * ثم غيّر البيانات بعد الإغلاق.
+     */
+    window.setTimeout(() => {
+      setParam("sort", value);
+    }, 170);
+  };
+
+  /* =========================================================
+     LOAD MORE
+
+     لا URL
+     لا Navigation
+     لا page query param
+  ========================================================= */
+
+  const handleLoadMore = () => {
+    if (
+      isLoadingProducts ||
+      !hasMore
+    ) {
+      return;
+    }
+
+    loadMoreScrollRef.current =
+      window.scrollY;
+
+    setLoadedPage(
+      (current) => current + 1
+    );
+  };
+
+  /* =========================================================
+     CLEAR ALL
+  ========================================================= */
 
   const clearAllFilters = () => {
     clearCatalogScroll(catalogScrollKey);
 
     restoredCatalogKey.current = null;
 
-    const next = new URLSearchParams();
+    setLoadedPage(1);
 
-    if (categorySlug) next.set("category", categorySlug);
+    const next =
+      new URLSearchParams();
 
-    setSearchParams(next);
+    if (categorySlug) {
+      next.set(
+        "category",
+        categorySlug
+      );
+    }
+
+    setSearchParams(next, {
+      replace: true,
+    });
   };
 
-  const applyPriceRange = (range: [number, number]) => {
-    const next = new URLSearchParams(searchParams);
+  /* =========================================================
+     COUNTERS
+  ========================================================= */
 
-    const min = Math.round(range[0]);
-    const max = Math.round(range[1]);
+  const activeFilterCount =
+    (categorySlug ? 1 : 0) +
+    (brandFilter !== "all" ? 1 : 0) +
+    (colorFilter !== "all" ? 1 : 0) +
+    (sizeFilter !== "all" ? 1 : 0) +
+    (saleOnly ? 1 : 0) +
+    (inStockOnly ? 1 : 0) +
+    (minPriceParam || maxPriceParam ? 1 : 0);
 
-    if (min <= priceBounds.min) next.delete("min");
-    else next.set("min", String(min));
+  const currentSortLabel =
+    sortBy === "best"
+      ? "الأكثر مبيعًا"
+      : sortBy === "featured"
+        ? "مختارة"
+        : sortBy === "price-asc"
+          ? "الأقل سعرًا"
+          : sortBy === "price-desc"
+            ? "الأعلى سعرًا"
+            : "الأحدث";
 
-    if (max >= priceBounds.max) next.delete("max");
-    else next.set("max", String(max));
-
-    next.delete("page");
-
-    clearCatalogScroll(catalogScrollKey);
-
-    restoredCatalogKey.current = null;
-
-    setSearchParams(next);
-  };
-
-  const activeFilterCount = (categorySlug ? 1 : 0) + (brandFilter !== "all" ? 1 : 0) + (colorFilter !== "all" ? 1 : 0) + (sizeFilter !== "all" ? 1 : 0) + (saleOnly ? 1 : 0) + (inStockOnly ? 1 : 0) + (minPriceParam || maxPriceParam ? 1 : 0);
-
-  const currentSortLabel = sortBy === "best" ? "الأكثر مبيعًا" : sortBy === "featured" ? "مختارة" : sortBy === "price-asc" ? "الأقل سعرًا" : sortBy === "price-desc" ? "الأعلى سعرًا" : "الأحدث";
+  /* =========================================================
+     RENDER
+  ========================================================= */
 
   return (
-  <div className="min-h-screen bg-[#FFF9F7] text-[#35282A]" dir="rtl">
-    <Navbar />
-    <CartDrawer />
+    <div className="min-h-screen bg-[#FFFDFC] text-[#261F1D]" dir="rtl">
+      <Navbar />
+      <CartDrawer />
 
-    <main className="pb-36 md:pt-24 md:pb-20">
-      {/* =========================================================
-          FLAMINGO SIGNATURE HEADER
-      ========================================================= */}
-      <section className="relative overflow-hidden border-b border-[#EEDFDA] bg-[#FFF9F7]">
-        <div className="pointer-events-none absolute -left-16 -top-20 h-48 w-48 rounded-full bg-[#F4D8D7]/45 blur-3xl" />
-        <div className="pointer-events-none absolute -right-14 top-10 h-40 w-40 rounded-full bg-[#FCE8E3]/70 blur-3xl" />
-
-        <div className="relative mx-auto w-full max-w-[1600px] px-4 pt-7 pb-6 md:px-6 md:pt-12 md:pb-10">
-          <div className="flex items-end justify-between gap-6">
-            <div className="min-w-0">
-              <div className="mb-3 flex items-center gap-2.5">
-                <span className="h-[2px] w-5 rounded-full bg-[#C96F79]" />
-                <span className="font-serif text-[7px] font-medium tracking-[0.3em] text-[#A7535D] md:text-[8px]">FLAMINGO PARK</span>
-              </div>
-
-              <h1 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.045em] text-[#3A292B] md:text-[48px]">{currentCategory ? currentCategory.name_ar : getSiteText(content, "products_page_title", "جميع المنتجات")}</h1>
-
-              <p className="mt-3 max-w-[300px] text-[9px] leading-[1.9] text-[#9A7E7E] md:max-w-md md:text-[11px]">{currentCategory ? "اكتشف اختيارات فلامنجو المميزة من هذه المجموعة." : "مختارات أنيقة بعناية لتجربة تسوق تحمل توقيع فلامنجو."}</p>
-            </div>
-
-            <div className="hidden md:block">
-              <div className="flex items-end gap-2">
-                <span className="text-[32px] font-light leading-none tracking-[-0.055em] text-[#4A3436]">{metadataLoading ? "—" : totalProductsCount}</span>
-                <span className="pb-[3px] text-[7px] tracking-[0.14em] text-[#B38F8E]">PIECES</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
+      <main className=" pb-24 md:pt-24 md:pb-20">
         {/* =========================================================
-            FLAMINGO CATEGORY RAIL
+            HEADER
         ========================================================= */}
-        <div className="relative border-t border-[#F1E5E1] bg-[#FFFDFC]/90">
-          <div className="mx-auto w-full max-w-[1600px] px-3 md:px-6">
-            <div className="flex items-center gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:gap-2.5">
-              <button onClick={() => setParam("category", null)} className={`shrink-0 rounded-full px-4 py-[8px] text-[9px] font-medium transition-all md:px-5 md:text-[10px] ${!categorySlug ? "bg-[#C96F79] text-white shadow-[0_6px_18px_rgba(201,111,121,.23)]" : "border border-[#EBDAD5] bg-white text-[#826B6B] hover:border-[#D9B6B2] hover:text-[#A7535D]"}`}>الكل</button>
+        <section className="bg-[#FFFDFC]">
+          <div className="mx-auto w-full max-w-[1600px] px-4 pt-5 pb-3 text-center md:px-6 md:pt-8 md:pb-5">
+            <div className="mb-1.5 flex items-center justify-center gap-2.5">
+              <span className="h-px w-6 bg-gradient-to-l from-[#C9797E]/60 to-transparent" />
+              <span className="font-serif text-[8px] tracking-[0.34em] text-[#B96C72] md:text-[9px]">FLAMINGO</span>
+              <span className="h-px w-6 bg-gradient-to-r from-[#C9797E]/60 to-transparent" />
+            </div>
+
+            <h1 className="text-[21px] font-semibold leading-tight tracking-[-0.02em] text-[#261F1D] md:text-[30px]">{currentCategory ? currentCategory.name_ar : getSiteText(content, "products_page_title", "جميع المنتجات")}</h1>
+
+            <p className="mx-auto mt-1.5 max-w-lg text-[10px] leading-5 text-[#968A85] md:text-[12px]">{currentCategory ? "مختارات فلامنجو لهذه المجموعة" : "تشكيلة مختارة بعناية لتجربة تسوق أكثر أناقة"}</p>
+          </div>
+
+          {/* =========================================================
+              CATEGORIES
+          ========================================================= */}
+          <div className="mx-auto w-full max-w-[1600px] border-t border-[#F2ECE9] px-3 py-3 md:px-6">
+            <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <button onClick={() => setParam("category", null)} className={`shrink-0 rounded-full px-4 py-[7px] text-[10px] font-medium transition-all md:text-[11px] ${!categorySlug ? "bg-[#D4777D] text-white shadow-[0_5px_16px_rgba(212,119,125,.19)]" : "border border-[#E9DFDB] bg-white text-[#6D625D]"}`}>الكل</button>
 
               {categories.filter((category) => !category.parent_id).map((category) => (
-                <button key={category.id} onClick={() => setParam("category", category.slug)} className={`shrink-0 rounded-full px-4 py-[8px] text-[9px] font-medium transition-all md:px-5 md:text-[10px] ${categorySlug === category.slug ? "bg-[#C96F79] text-white shadow-[0_6px_18px_rgba(201,111,121,.23)]" : "border border-[#EBDAD5] bg-white text-[#826B6B] hover:border-[#D9B6B2] hover:text-[#A7535D]"}`}>{category.name_ar}</button>
+                <button key={category.id} onClick={() => setParam("category", category.slug)} className={`shrink-0 rounded-full px-4 py-[7px] text-[10px] font-medium transition-all md:text-[11px] ${categorySlug === category.slug ? "bg-[#D4777D] text-white shadow-[0_5px_16px_rgba(212,119,125,.19)]" : "border border-[#E9DFDB] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
               ))}
             </div>
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* =========================================================
-          DESKTOP FLAMINGO TOOLBAR
-      ========================================================= */}
-      <section className="sticky top-[76px] z-30 hidden border-b border-[#EEDFDA] bg-[#FFF9F7]/94 backdrop-blur-xl md:block">
-        <div className="mx-auto flex h-[58px] w-full max-w-[1600px] items-center justify-between px-6">
-          <div className="flex items-center gap-2">
-            <button onClick={() => setFiltersOpen(true)} className="flex h-10 items-center gap-2 rounded-full border border-[#E7D4CF] bg-white px-4 text-[10px] font-medium text-[#5C4143] shadow-[0_4px_14px_rgba(96,62,64,.04)] transition-all hover:border-[#D8AAA7] hover:text-[#A7535D]">
-              <SlidersHorizontal className="h-[14px] w-[14px] stroke-[1.6]" />
-              فلترة
-              {activeFilterCount > 0 && <span className="flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[#C96F79] px-1 text-[7px] font-semibold text-white">{activeFilterCount}</span>}
-            </button>
+        {/* =========================================================
+            PREMIUM TOOLBAR
+        ========================================================= */}
+        <section className="sticky top-[68px] z-30 bg-[#FFFDFC]/94 px-3 py-2 backdrop-blur-xl md:top-[76px] md:px-6">
+          <div className="mx-auto max-w-[1600px]">
+            <div className="flex h-[48px] items-center overflow-hidden rounded-[15px] border border-[#EAE0DC] bg-white shadow-[0_8px_28px_rgba(65,45,38,.055)]">
+              <button onClick={openFilters} className="group flex h-full min-w-0 flex-1 items-center justify-center gap-2 border-l border-[#EFE7E3] px-3 transition-colors active:bg-[#FBF5F3]">
+                <span className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${activeFilterCount > 0 ? "bg-[#F8E7E6] text-[#BE666C]" : "bg-[#F7F3F1] text-[#625752]"}`}>
+                  <SlidersHorizontal className="h-[14px] w-[14px] stroke-[1.7]" />
+                </span>
 
-            <button onClick={() => setSortOpen(true)} className="flex h-10 items-center gap-1.5 rounded-full border border-[#E7D4CF] bg-white px-4 text-[10px] font-medium text-[#5C4143] shadow-[0_4px_14px_rgba(96,62,64,.04)] transition-all hover:border-[#D8AAA7] hover:text-[#A7535D]">
-              {currentSortLabel}
-              <ChevronDown className="h-3 w-3 stroke-[1.5]" />
-            </button>
-          </div>
+                <span className="truncate text-[11px] font-medium text-[#3D3430]">فلترة</span>
 
-          <div className="flex items-center gap-2 rounded-full bg-[#F7E9E6] px-3.5 py-2">
-            <span className="text-[11px] font-semibold text-[#A7535D]">{metadataLoading ? "—" : totalProductsCount}</span>
-            <span className="text-[8px] text-[#9D7E7D]">منتج</span>
-          </div>
-        </div>
-      </section>
-
-      {/* =========================================================
-          ACTIVE FILTERS
-      ========================================================= */}
-      {activeFilterCount > 0 && (
-        <section className="border-b border-[#EEDFDA] bg-[#FFF4F1]">
-          <div className="mx-auto flex w-full max-w-[1600px] items-center gap-2 overflow-x-auto px-3 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:px-6">
-            {brandFilter !== "all" && <button onClick={() => setParam("brand", null)} className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#E9D3CE] bg-white px-2.5 py-1.5 text-[8px] font-medium text-[#8B5E61]">{brandFilter}<X className="h-2.5 w-2.5" /></button>}
-            {colorFilter !== "all" && <button onClick={() => setParam("color", null)} className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#E9D3CE] bg-white px-2.5 py-1.5 text-[8px] font-medium text-[#8B5E61]">{colorFilter}<X className="h-2.5 w-2.5" /></button>}
-            {sizeFilter !== "all" && <button onClick={() => setParam("size", null)} className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#E9D3CE] bg-white px-2.5 py-1.5 text-[8px] font-medium text-[#8B5E61]">{sizeFilter}<X className="h-2.5 w-2.5" /></button>}
-            {saleOnly && <button onClick={() => setParam("sale", null)} className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#E9D3CE] bg-white px-2.5 py-1.5 text-[8px] font-medium text-[#8B5E61]">العروض<X className="h-2.5 w-2.5" /></button>}
-            {inStockOnly && <button onClick={() => setParam("stock", null)} className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#E9D3CE] bg-white px-2.5 py-1.5 text-[8px] font-medium text-[#8B5E61]">متوفر<X className="h-2.5 w-2.5" /></button>}
-
-            {(minPriceParam > 0 || maxPriceParam > 0) && (
-              <button onClick={() => { const next = new URLSearchParams(searchParams); next.delete("min"); next.delete("max"); next.delete("page"); setSearchParams(next); }} className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#E9D3CE] bg-white px-2.5 py-1.5 text-[8px] font-medium text-[#8B5E61]">
-                {effectiveMin} — {effectiveMax}
-                <X className="h-2.5 w-2.5" />
+                {activeFilterCount > 0 && <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#D4777D] px-1 text-[8px] font-semibold text-white">{activeFilterCount}</span>}
               </button>
-            )}
 
-            <button onClick={clearAllFilters} className="shrink-0 px-2 text-[8px] font-semibold text-[#A7535D]">مسح الكل</button>
+              <button onClick={() => setSortOpen(true)} className="flex h-full min-w-0 flex-1 items-center justify-center gap-2 border-l border-[#EFE7E3] px-2 transition-colors active:bg-[#FBF5F3]">
+                <span className="min-w-0">
+                  <span className="block text-[8px] leading-none text-[#AAA09B]">ترتيب</span>
+                  <span className="mt-1 block max-w-[78px] truncate text-[10px] font-medium leading-none text-[#3D3430]">{currentSortLabel}</span>
+                </span>
+
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 stroke-[1.5] text-[#756A65]" />
+              </button>
+
+              <div className="flex h-full w-[72px] shrink-0 flex-col items-center justify-center bg-[#FDF9F7] sm:w-[82px]">
+                {metadataLoading && needsClientFiltering ? <span className="h-3 w-6 animate-pulse rounded bg-[#EDE4E0]" /> : <span className="text-[12px] font-semibold leading-none text-[#B86168]">{totalProductsCount}</span>}
+                <span className="mt-1 text-[8px] leading-none text-[#9D918B]">منتج</span>
+              </div>
+            </div>
           </div>
         </section>
-      )}
 
-      {/* =========================================================
-          PRODUCTS
-      ========================================================= */}
-      <section id="products-grid" className="mx-auto w-full max-w-[1600px] px-[6px] pt-[7px] sm:px-3 sm:pt-3 md:px-6 md:pt-6">
-        {isLoadingProducts && products.length === 0 ? (
-          <div className="grid grid-cols-2 gap-x-[6px] gap-y-6 sm:gap-x-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-5">
-            {Array.from({ length: 10 }).map((_, index) => (
-              <div key={index}>
-                <div className="aspect-[4/5] animate-pulse rounded-[14px] bg-[#F2E8E5]" />
-                <div className="mt-2.5 h-2 w-[67%] animate-pulse rounded-full bg-[#EFE2DE]" />
-                <div className="mt-2 h-2 w-[34%] animate-pulse rounded-full bg-[#EFE2DE]" />
-              </div>
-            ))}
-          </div>
-        ) : products.length === 0 ? (
-          <div className="flex min-h-[57vh] flex-col items-center justify-center px-6 text-center">
-            <div className="relative flex h-[70px] w-[70px] items-center justify-center">
-              <span className="absolute inset-0 rounded-full border border-[#E8D3CF]" />
-              <span className="absolute inset-[7px] rounded-full bg-[#F8E8E5]" />
-              <Heart className="relative h-5 w-5 stroke-[1.2] text-[#B76067]" />
+        {/* =========================================================
+            ACTIVE FILTERS
+        ========================================================= */}
+        {activeFilterCount > 0 && (
+          <section className="mx-auto w-full max-w-[1600px] px-3 pt-1 md:px-6">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {brandFilter !== "all" && <button onClick={() => setParam("brand", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">{brandFilter}<X className="h-2.5 w-2.5" /></button>}
+
+              {colorFilter !== "all" && <button onClick={() => setParam("color", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">{colorFilter}<X className="h-2.5 w-2.5" /></button>}
+
+              {sizeFilter !== "all" && <button onClick={() => setParam("size", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">{sizeFilter}<X className="h-2.5 w-2.5" /></button>}
+
+              {saleOnly && <button onClick={() => setParam("sale", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">العروض<X className="h-2.5 w-2.5" /></button>}
+
+              {inStockOnly && <button onClick={() => setParam("stock", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">متوفر<X className="h-2.5 w-2.5" /></button>}
+
+              {(minPriceParam > 0 || maxPriceParam > 0) && <button onClick={() => { const next = new URLSearchParams(searchParams); next.delete("min"); next.delete("max"); next.delete("page"); setLoadedPage(1); setSearchParams(next, { replace: true }); }} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">{effectiveMin} - {effectiveMax}<X className="h-2.5 w-2.5" /></button>}
+
+              <button onClick={clearAllFilters} className="shrink-0 px-2 py-1.5 text-[9px] font-medium text-[#B75F66]">مسح الكل</button>
             </div>
-
-            <p className="mt-5 font-serif text-[7px] tracking-[0.27em] text-[#A7535D]">FLAMINGO PARK</p>
-            <h3 className="mt-2 text-[19px] font-semibold tracking-[-0.03em] text-[#3B2B2D]">لم نجد نتائج مناسبة</h3>
-            <p className="mt-2 max-w-[260px] text-[9px] leading-5 text-[#9E8281]">جرّب تعديل خيارات الفلترة لتكتشف المزيد من القطع.</p>
-
-            <button onClick={clearAllFilters} className="mt-5 rounded-full border border-[#DAB8B4] bg-white px-5 py-2 text-[8px] font-medium text-[#9D565C]">إعادة تعيين</button>
-          </div>
-        ) : (
-          <div className="grid grid-cols-2 gap-x-[6px] gap-y-6 sm:gap-x-3 sm:gap-y-7 md:grid-cols-3 md:gap-x-5 md:gap-y-9 lg:grid-cols-4 xl:grid-cols-5">
-            {products.map((product, index) => (
-              <motion.div key={product.id} custom={index} initial={isMobileViewport ? false : "hidden"} animate={isMobileViewport ? false : "show"} variants={shimmerVariants} className="min-w-0">
-                <ProductCard product={product} onQuickView={(selectedProduct) => setQuickViewProd(selectedProduct)} />
-              </motion.div>
-            ))}
-          </div>
+          </section>
         )}
 
         {/* =========================================================
-            LOAD MORE
+            PRODUCTS
         ========================================================= */}
-        {hasMore && (
-          <div className="mx-auto flex max-w-[430px] flex-col items-center px-5 pb-6 pt-14 md:pt-16">
-            <div className="mb-5 w-full">
-              <div className="h-[2px] overflow-hidden rounded-full bg-[#F0DEDA]">
-                <div className="h-full rounded-full bg-[linear-gradient(90deg,#C96F79,#E5A0A3)] transition-all duration-500" style={{ width: `${Math.min(100, (products.length / Math.max(totalProductsCount, 1)) * 100)}%` }} />
-              </div>
-
-              <div className="mt-2 flex justify-between text-[7px] text-[#AD8D8B]">
-                <span>{products.length}</span>
-                <span>{totalProductsCount}</span>
-              </div>
-            </div>
-
-            <button onClick={handleLoadMore} disabled={isLoadingProducts} className="group flex h-[44px] min-w-[164px] items-center justify-center gap-2 rounded-full border border-[#D8B7B3] bg-white px-6 text-[9px] font-medium text-[#8B565A] shadow-[0_7px_20px_rgba(122,76,79,.06)] transition-all hover:border-[#C96F79] hover:text-[#A7535D] active:scale-[0.985] disabled:opacity-50">
-              {isLoadingProducts ? (
-                <>
-                  <span className="h-3 w-3 animate-spin rounded-full border border-[#E2CBC7] border-t-[#C96F79]" />
-                  جاري التحميل
-                </>
-              ) : (
-                <>
-                  عرض المزيد
-                  <ChevronDown className="h-3 w-3 stroke-[1.5]" />
-                </>
-              )}
-            </button>
-
-            <span className="mt-2.5 font-serif text-[6px] tracking-[0.14em] text-[#B28F8D]">FLAMINGO COLLECTION</span>
-          </div>
-        )}
-      </section>
-
-      {/* =========================================================
-          MOBILE FLAMINGO FLOATING DOCK
-      ========================================================= */}
-      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+14px)] left-1/2 z-40 w-[calc(100%-28px)] max-w-[370px] -translate-x-1/2 md:hidden">
-        <div className="relative overflow-hidden rounded-[20px] border border-[#E8CFCA]/90 bg-[#FFF8F5]/95 p-[5px] shadow-[0_16px_46px_rgba(105,58,62,.19)] backdrop-blur-2xl">
-          <div className="pointer-events-none absolute inset-x-12 -top-10 h-16 rounded-full bg-[#F2CBCD]/35 blur-xl" />
-
-          <div className="relative flex h-[50px] items-center rounded-[15px] bg-white/80">
-            <button onClick={() => setFiltersOpen(true)} className="flex h-full flex-1 items-center justify-center gap-2 text-[#5A3D40]">
-              <span className={`flex h-7 w-7 items-center justify-center rounded-full ${activeFilterCount > 0 ? "bg-[#F6DEDC] text-[#A7535D]" : "bg-[#F8EFEC] text-[#735B5C]"}`}>
-                <SlidersHorizontal className="h-[13px] w-[13px] stroke-[1.6]" />
-              </span>
-
-              <span className="text-[9px] font-semibold">فلترة</span>
-
-              {activeFilterCount > 0 && <span className="flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#C96F79] px-1 text-[7px] font-semibold text-white">{activeFilterCount}</span>}
-            </button>
-
-            <span className="h-6 w-px bg-[#E9D8D4]" />
-
-            <button onClick={() => setSortOpen(true)} className="flex h-full flex-1 items-center justify-center gap-1.5 text-[#5A3D40]">
-              <div className="min-w-0 text-center">
-                <span className="block text-[6px] leading-none text-[#B09291]">ترتيب</span>
-                <span className="mt-1 block max-w-[80px] truncate text-[8px] font-semibold leading-none">{currentSortLabel}</span>
-              </div>
-
-              <ChevronDown className="h-3 w-3 stroke-[1.4] text-[#9B7979]" />
-            </button>
-
-            <span className="h-6 w-px bg-[#E9D8D4]" />
-
-            <div className="flex h-full min-w-[58px] flex-col items-center justify-center">
-              <span className="text-[11px] font-semibold leading-none text-[#A7535D]">{metadataLoading ? "—" : totalProductsCount}</span>
-              <span className="mt-1 text-[6px] leading-none text-[#B09391]">منتج</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* =========================================================
-          SORT SHEET
-      ========================================================= */}
-      <AnimatePresence>
-        {sortOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] flex items-end justify-center bg-[#3A2729]/28 backdrop-blur-[3px] md:items-center" onClick={() => setSortOpen(false)}>
-            <motion.div initial={isMobileViewport ? { y: "100%" } : { opacity: 0, y: 10 }} animate={isMobileViewport ? { y: 0 } : { opacity: 1, y: 0 }} exit={isMobileViewport ? { y: "100%" } : { opacity: 0, y: 10 }} transition={{ type: "spring", stiffness: 350, damping: 37 }} onClick={(event) => event.stopPropagation()} className="w-full rounded-t-[26px] bg-[#FFF9F7] px-5 pb-[calc(env(safe-area-inset-bottom)+18px)] pt-3 shadow-[0_-18px_50px_rgba(75,43,46,.12)] md:max-w-[380px] md:rounded-[20px] md:p-6">
-              <div className="mx-auto mb-5 h-[3px] w-8 rounded-full bg-[#E2C7C4] md:hidden" />
-
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-serif text-[7px] tracking-[0.27em] text-[#A7535D]">FLAMINGO</p>
-                  <h3 className="mt-1.5 text-[22px] font-semibold tracking-[-0.04em] text-[#3B292B]">ترتيب المنتجات</h3>
-                  <p className="mt-1 text-[8px] text-[#AA8988]">اختر الطريقة المناسبة لعرض المجموعة</p>
+        <section id="products-grid" className="mx-auto w-full max-w-[1600px] px-2.5 pt-3 md:px-6 md:pt-5">
+          {isLoadingProducts && products.length === 0 ? (
+            <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-5">
+              {Array.from({ length: 10 }).map((_, index) => (
+                <div key={index}>
+                  <div className="aspect-[4/5] animate-pulse rounded-[15px] bg-[#F3EEEB]" />
+                  <div className="mt-2.5 h-2.5 w-[72%] animate-pulse rounded-full bg-[#F0E9E6]" />
+                  <div className="mt-2 h-2.5 w-[38%] animate-pulse rounded-full bg-[#F0E9E6]" />
                 </div>
-
-                <button onClick={() => setSortOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E8D1CC] bg-white text-[#6F5052]">
-                  <X className="h-4 w-4 stroke-[1.4]" />
-                </button>
+              ))}
+            </div>
+          ) : products.length === 0 ? (
+            <div className="flex min-h-[52vh] flex-col items-center justify-center px-6 text-center">
+              <div className="flex h-[74px] w-[74px] items-center justify-center rounded-full bg-[#FAF0EE]">
+                <Heart className="h-7 w-7 stroke-[1.25] text-[#CE7A7F]" />
               </div>
 
-              <div className="mt-6 overflow-hidden rounded-[18px] border border-[#EBDAD5] bg-white">
-                {[
-                  { value: "new", label: "الأحدث", desc: "أحدث القطع المضافة" },
-                  { value: "best", label: "الأكثر مبيعًا", desc: "الأكثر طلبًا من العملاء" },
-                  { value: "featured", label: "مختارات فلامنجو", desc: "اختياراتنا المميزة" },
-                  { value: "price-asc", label: "الأقل سعرًا", desc: "من الأقل إلى الأعلى" },
-                  { value: "price-desc", label: "الأعلى سعرًا", desc: "من الأعلى إلى الأقل" },
-                ].map((option) => (
-                  <button key={option.value} onClick={() => { setParam("sort", option.value); setSortOpen(false); }} className="flex min-h-[60px] w-full items-center justify-between border-b border-[#F2E6E2] px-4 text-right last:border-0">
-                    <div>
-                      <span className={`block text-[10px] font-semibold ${sortBy === option.value ? "text-[#A7535D]" : "text-[#554043]"}`}>{option.label}</span>
-                      <span className="mt-1 block text-[7px] text-[#AF9190]">{option.desc}</span>
-                    </div>
+              <h3 className="mt-5 text-[17px] font-semibold text-[#302724]">لا توجد منتجات مطابقة</h3>
+              <p className="mt-2 max-w-[280px] text-[11px] leading-5 text-[#948883]">جرّب إزالة أحد خيارات الفلترة أو اختيار مجموعة مختلفة.</p>
 
-                    <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${sortBy === option.value ? "border-[#C96F79] bg-[#C96F79]" : "border-[#E3D2CE] bg-white"}`}>
-                      {sortBy === option.value && <Check className="h-2.5 w-2.5 stroke-[2.2] text-white" />}
-                    </span>
-                  </button>
-                ))}
+              <button onClick={clearAllFilters} className="mt-5 rounded-full border border-[#DED2CD] bg-white px-6 py-2.5 text-[11px] font-medium text-[#594D48]">إعادة تعيين</button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 sm:gap-y-6 md:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4 xl:grid-cols-5">
+              {products.map((product, index) => (
+                <motion.div key={product.id} custom={index} initial={isMobileViewport ? false : "hidden"} animate={isMobileViewport ? false : "show"} variants={shimmerVariants} className="min-w-0">
+                  <ProductCard product={product} onQuickView={(selectedProduct) => setQuickViewProd(selectedProduct)} />
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {hasMore && (
+            <div className="flex flex-col items-center justify-center pb-5 pt-10 md:pt-14">
+              <button onClick={handleLoadMore} disabled={isLoadingProducts} className="group flex h-[46px] min-w-[178px] items-center justify-center rounded-full border border-[#DBCBC6] bg-white px-7 text-[11px] font-medium text-[#514540] shadow-[0_7px_24px_rgba(64,44,37,.055)] transition-all active:scale-[0.985] disabled:cursor-wait disabled:opacity-60">
+                {isLoadingProducts ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#E3D7D2] border-t-[#C66C72]" />
+                    جاري التحميل
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    عرض المزيد
+                    <ChevronDown className="h-3.5 w-3.5 stroke-[1.6]" />
+                  </span>
+                )}
+              </button>
+
+              <div className="mt-2.5 flex items-center gap-2">
+                <span className="h-px w-5 bg-[#E2D6D1]" />
+                <span className="text-[8px] tracking-[0.12em] text-[#AAA09B]">{products.length} / {totalProductsCount}</span>
+                <span className="h-px w-5 bg-[#E2D6D1]" />
               </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+            </div>
+          )}
+        </section>
 
-      {/* =========================================================
-          FLAMINGO FILTER DRAWER
-      ========================================================= */}
-      <AnimatePresence>
-        {filtersOpen && (
-          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] flex items-end bg-[#3A2729]/28 backdrop-blur-[3px] md:items-stretch">
-            <div className="absolute inset-0" onClick={() => setFiltersOpen(false)} />
+        {/* =========================================================
+            SORT
+        ========================================================= */}
+        <AnimatePresence>
+          {sortOpen && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="fixed inset-0 z-[80] flex items-end justify-center bg-[#211B19]/35 backdrop-blur-[2px] md:items-center" onClick={() => setSortOpen(false)}>
+              <motion.div initial={isMobileViewport ? { y: "100%" } : { opacity: 0, scale: 0.97 }} animate={isMobileViewport ? { y: 0 } : { opacity: 1, scale: 1 }} exit={isMobileViewport ? { y: "100%" } : { opacity: 0, scale: 0.97 }} transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }} onClick={(event) => event.stopPropagation()} className="w-full rounded-t-[26px] bg-[#FFFDFC] px-4 pb-[calc(env(safe-area-inset-bottom)+18px)] pt-3 shadow-[0_-20px_50px_rgba(55,37,31,.12)] md:max-w-[380px] md:rounded-[22px] md:p-5">
+                <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-[#DDD1CD] md:hidden" />
 
-            <motion.aside initial={isMobileViewport ? { y: "100%" } : { x: "100%" }} animate={isMobileViewport ? { y: 0 } : { x: 0 }} exit={isMobileViewport ? { y: "100%" } : { x: "100%" }} transition={{ type: "spring", stiffness: 330, damping: 37 }} className="relative mr-auto flex max-h-[94vh] w-full flex-col rounded-t-[28px] bg-[#FFF9F7] shadow-[0_-22px_60px_rgba(75,43,46,.14)] md:h-full md:max-h-none md:w-[420px] md:rounded-none">
-              {/* HEADER */}
-              <div className="shrink-0 px-5 pt-3 md:px-6 md:pt-6">
-                <div className="mx-auto mb-4 h-[3px] w-8 rounded-full bg-[#E2C7C4] md:hidden" />
-
-                <div className="flex items-start justify-between border-b border-[#EBDAD5] pb-5">
+                <div className="mb-2 flex items-center justify-between px-1">
                   <div>
-                    <div className="mb-1.5 flex items-center gap-2">
-                      <span className="h-[2px] w-4 rounded-full bg-[#C96F79]" />
-                      <p className="font-serif text-[7px] tracking-[0.25em] text-[#A7535D]">FLAMINGO REFINE</p>
-                    </div>
-
-                    <h3 className="text-[23px] font-semibold tracking-[-0.045em] text-[#3B292B]">اختياراتك</h3>
-                    <p className="mt-1 text-[8px] text-[#A78988]">{metadataLoading ? "جاري تجهيز الخيارات..." : `${totalProductsCount} منتج مطابق`}</p>
+                    <p className="text-[9px] text-[#B66A70]">FLAMINGO</p>
+                    <h3 className="mt-0.5 text-[16px] font-semibold text-[#302724]">ترتيب المنتجات</h3>
                   </div>
 
-                  <button onClick={() => setFiltersOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E6CEC9] bg-white text-[#745356]">
-                    <X className="h-4 w-4 stroke-[1.4]" />
+                  <button onClick={() => setSortOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-full border border-[#EAE0DC] bg-white">
+                    <X className="h-3.5 w-3.5" />
                   </button>
                 </div>
-              </div>
 
-              {/* CONTENT */}
-              <div className="flex-1 overflow-y-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:px-6">
-                {/* CATEGORY */}
-                <div className="border-b border-[#EDE0DC] py-5">
-                  <div className="mb-4 flex items-center justify-between">
+                <div className="mt-4 overflow-hidden rounded-[16px] border border-[#ECE2DE] bg-white">
+                  {[
+                    { value: "new", label: "الأحدث", desc: "أحدث المنتجات المضافة" },
+                    { value: "best", label: "الأكثر مبيعًا", desc: "القطع الأكثر طلبًا" },
+                    { value: "featured", label: "مختارات فلامنجو", desc: "منتجات مختارة بعناية" },
+                    { value: "price-asc", label: "السعر: الأقل أولًا", desc: "من الأقل إلى الأعلى" },
+                    { value: "price-desc", label: "السعر: الأعلى أولًا", desc: "من الأعلى إلى الأقل" },
+                  ].map((option) => (
+                    <button key={option.value} onClick={() => handleSortSelect(option.value)} className="flex min-h-[57px] w-full items-center justify-between border-b border-[#F0E9E6] px-3.5 text-right last:border-0">
+                      <div>
+                        <span className={`block text-[11px] ${sortBy === option.value ? "font-semibold text-[#B95F66]" : "font-medium text-[#4B403B]"}`}>{option.label}</span>
+                        <span className="mt-1 block text-[8px] text-[#A0958F]">{option.desc}</span>
+                      </div>
+
+                      <span className={`flex h-[22px] w-[22px] items-center justify-center rounded-full border transition-all ${sortBy === option.value ? "border-[#D4777D] bg-[#D4777D]" : "border-[#DDD2CE] bg-white"}`}>
+                        {sortBy === option.value && <Check className="h-3 w-3 stroke-[2.2] text-white" />}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* =========================================================
+            FILTER DRAWER
+        ========================================================= */}
+        <AnimatePresence>
+          {filtersOpen && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="fixed inset-0 z-[80] flex items-end bg-[#211B19]/35 backdrop-blur-[2px] md:items-stretch">
+              <div className="absolute inset-0" onClick={() => setFiltersOpen(false)} />
+
+              <motion.aside initial={isMobileViewport ? { y: "100%" } : { x: "100%" }} animate={isMobileViewport ? { y: 0 } : { x: 0 }} exit={isMobileViewport ? { y: "100%" } : { x: "100%" }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }} className="relative mr-auto flex max-h-[92vh] w-full flex-col rounded-t-[28px] bg-[#FFFDFC] shadow-[0_-20px_60px_rgba(55,37,31,.14)] md:h-full md:max-h-none md:w-[430px] md:rounded-none">
+                {/* HEADER */}
+                <div className="shrink-0 px-4 pt-3 md:px-6 md:pt-6">
+                  <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-[#DDD1CD] md:hidden" />
+
+                  <div className="flex items-center justify-between border-b border-[#EEE6E2] pb-4">
                     <div>
-                      <p className="text-[11px] font-semibold text-[#493537]">القسم</p>
-                      <p className="mt-1 text-[7px] text-[#B29391]">اختر القسم المناسب</p>
+                      <p className="text-[8px] tracking-[0.18em] text-[#B86A70]">FLAMINGO FILTER</p>
+                      <h3 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-[#302724]">فلترة المنتجات</h3>
+                      <p className="mt-1 text-[9px] text-[#9A8F89]">{metadataLoading ? "جاري تجهيز الخيارات..." : `${totalProductsCount} منتج مطابق لاختياراتك`}</p>
                     </div>
 
-                    {categorySlug && <button onClick={() => setParam("category", null)} className="text-[7px] font-medium text-[#A7535D]">مسح</button>}
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    <button onClick={() => setParam("category", null)} className={`rounded-full px-3.5 py-2 text-[8px] font-medium ${!categorySlug ? "bg-[#C96F79] text-white" : "border border-[#E6D3CE] bg-white text-[#776061]"}`}>الكل</button>
-
-                    {categories.filter((category) => !category.parent_id).map((category) => (
-                      <button key={category.id} onClick={() => setParam("category", category.slug)} className={`rounded-full px-3.5 py-2 text-[8px] font-medium ${categorySlug === category.slug ? "bg-[#C96F79] text-white" : "border border-[#E6D3CE] bg-white text-[#776061]"}`}>{category.name_ar}</button>
-                    ))}
+                    <button onClick={() => setFiltersOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E9DEDA] bg-white text-[#554944]">
+                      <X className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
 
-                {/* BRANDS */}
-                <div className="border-b border-[#EDE0DC] py-5">
-                  <div className="mb-4 flex items-end justify-between">
-                    <div>
-                      <p className="text-[11px] font-semibold text-[#493537]">الماركة</p>
-                      <p className="mt-1 text-[7px] text-[#B29391]">{brandsAvailable.length} ماركة متاحة</p>
-                    </div>
+                {/* CONTENT */}
+                <div className="flex-1 overflow-y-auto px-4 pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:px-6">
+                  {/* CATEGORY */}
+                  <div className="border-b border-[#F0E8E5] py-5">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-[12px] font-semibold text-[#403632]">الفئة</p>
+                        <p className="mt-0.5 text-[8px] text-[#AAA09A]">اختر القسم المناسب</p>
+                      </div>
 
-                    {brandFilter !== "all" && <button onClick={() => setParam("brand", null)} className="text-[7px] font-medium text-[#A7535D]">مسح</button>}
-                  </div>
-
-                  <div className="max-h-[116px] overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    <div className="grid grid-cols-2 gap-x-7 gap-y-3.5">
-                      <button onClick={() => setParam("brand", null)} className={`truncate text-right text-[8px] ${brandFilter === "all" ? "font-semibold text-[#A7535D]" : "text-[#7C6565]"}`}>جميع الماركات</button>
-
-                      {brandsAvailable.map((brand) => (
-                        <button key={brand} onClick={() => setParam("brand", brand)} className={`truncate text-right text-[8px] ${brandFilter === brand ? "font-semibold text-[#A7535D]" : "text-[#7C6565]"}`}>{brand}</button>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {/* COLORS */}
-                <div className="border-b border-[#EDE0DC] py-5">
-                  <div className="mb-4 flex items-end justify-between">
-                    <div>
-                      <p className="text-[11px] font-semibold text-[#493537]">اللون</p>
-                      <p className="mt-1 text-[7px] text-[#B29391]">{metadataLoading ? "..." : `${colorsAvailable.length} لون متاح`}</p>
-                    </div>
-
-                    {colorFilter !== "all" && <button onClick={() => setParam("color", null)} className="text-[7px] font-medium text-[#A7535D]">مسح</button>}
-                  </div>
-
-                  {/* 3 ROWS THEN HIDDEN SCROLL */}
-                  <div className="max-h-[151px] overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                    <div className="grid grid-cols-5 gap-x-3 gap-y-4">
-                      <button onClick={() => setParam("color", null)} className="flex min-w-0 flex-col items-center">
-                        <span className={`relative flex h-[33px] w-[33px] items-center justify-center rounded-full border-2 ${colorFilter === "all" ? "border-[#C96F79] ring-2 ring-[#C96F79]/10" : "border-[#E2D2CD]"}`} style={{ background: "conic-gradient(#C96F79,#E2A3A5,#C8A06A,#8A9D7A,#7E91A2,#9A769A,#C96F79)" }}>
-                          <span className="flex h-[24px] w-[24px] items-center justify-center rounded-full bg-[#FFF9F7] text-[6px] font-semibold text-[#6C5455]">كل</span>
-                        </span>
-                        <span className="mt-1.5 text-[7px] text-[#826B6B]">الكل</span>
-                      </button>
-
-                      {colorsAvailable.map((color) => {
-                        const active = colorFilter.toLowerCase() === color.name.toLowerCase();
-
-                        return (
-                          <button key={color.name} onClick={() => setParam("color", active ? null : color.name)} className="flex min-w-0 flex-col items-center">
-                            <span className={`relative h-[33px] w-[33px] rounded-full border-2 ${active ? "border-[#C96F79] ring-2 ring-[#C96F79]/10" : "border-[#E2D2CD]"}`} style={{ background: color.hex2 ? `linear-gradient(135deg, ${color.hex} 50%, ${color.hex2} 50%)` : color.hex }}>
-                              {active && <span className="absolute inset-0 flex items-center justify-center"><span className="flex h-[15px] w-[15px] items-center justify-center rounded-full bg-white/95 shadow-sm"><Check className="h-2 w-2 stroke-[2.5] text-[#5E494A]" /></span></span>}
-                            </span>
-
-                            <span className={`mt-1.5 max-w-full truncate text-[7px] ${active ? "font-semibold text-[#A7535D]" : "text-[#826B6B]"}`}>{color.name}</span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-
-                  {colorsAvailable.length > 14 && (
-                    <div className="mt-3 flex items-center justify-center gap-2">
-                      <span className="h-px w-6 bg-[#E4D3CF]" />
-                      <span className="text-[6px] text-[#B39492]">اسحب لعرض المزيد</span>
-                      <span className="h-px w-6 bg-[#E4D3CF]" />
-                    </div>
-                  )}
-                </div>
-
-                {/* SIZES */}
-                {sizesAvailable.length > 0 && (
-                  <div className="border-b border-[#EDE0DC] py-5">
-                    <div className="mb-4 flex items-center justify-between">
-                      <p className="text-[11px] font-semibold text-[#493537]">المقاس</p>
-                      {sizeFilter !== "all" && <button onClick={() => setParam("size", null)} className="text-[7px] font-medium text-[#A7535D]">مسح</button>}
+                      {draftCategorySlug && <button onClick={() => setDraftParam("category", null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <button onClick={() => setParam("size", null)} className={`flex h-8 min-w-[42px] items-center justify-center rounded-[10px] border px-2.5 text-[8px] font-medium ${sizeFilter === "all" ? "border-[#C96F79] bg-[#F7E4E2] text-[#A7535D]" : "border-[#E2D2CD] bg-white text-[#756060]"}`}>الكل</button>
+                      <button onClick={() => setDraftParam("category", null)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${!draftCategorySlug ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>الكل</button>
 
-                      {sizesAvailable.map((size) => (
-                        <button key={size} onClick={() => setParam("size", size)} className={`flex h-8 min-w-[42px] items-center justify-center rounded-[10px] border px-2.5 text-[8px] font-medium ${sizeFilter === size ? "border-[#C96F79] bg-[#F7E4E2] text-[#A7535D]" : "border-[#E2D2CD] bg-white text-[#756060]"}`}>{size}</button>
+                      {categories.filter((category) => !category.parent_id).map((category) => (
+                        <button key={category.id} onClick={() => setDraftParam("category", category.slug)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${draftCategorySlug === category.slug ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
                       ))}
                     </div>
                   </div>
-                )}
 
-                {/* PRICE */}
-                <div className="border-b border-[#EDE0DC] py-5">
-                  <div className="mb-5 flex items-end justify-between">
-                    <div>
-                      <p className="text-[11px] font-semibold text-[#493537]">السعر</p>
-                      <p className="mt-1 text-[7px] text-[#B29391]">حدد النطاق المناسب</p>
+                  {/* BRANDS */}
+                  <div className="border-b border-[#F0E8E5] py-5">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-[12px] font-semibold text-[#403632]">الماركة</p>
+                        <p className="mt-0.5 text-[8px] text-[#AAA09A]">{brandsAvailable.length} ماركة متاحة</p>
+                      </div>
+
+                      {draftBrandFilter !== "all" && <button onClick={() => setDraftParam("brand", null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
                     </div>
 
-                    <span className="rounded-full bg-[#F5E5E2] px-3 py-1.5 text-[8px] font-semibold text-[#9D5A5F]">{Math.round(priceRange[0])} — {Math.round(priceRange[1])}</span>
+                    <div className="max-h-[126px] overflow-y-auto overscroll-contain pr-[1px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => setDraftParam("brand", null)} className={`rounded-full px-3.5 py-2 text-[9px] font-medium transition-all ${draftBrandFilter === "all" ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E6DCD8] bg-white text-[#6C615C]"}`}>جميع الماركات</button>
+
+                        {brandsAvailable.map((brand) => (
+                          <button key={brand} onClick={() => setDraftParam("brand", brand)} className={`rounded-full px-3.5 py-2 text-[9px] font-medium transition-all ${draftBrandFilter === brand ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E6DCD8] bg-white text-[#6C615C]"}`}>{brand}</button>
+                        ))}
+                      </div>
+                    </div>
                   </div>
 
-                  <div className="rounded-[16px] border border-[#E9D8D3] bg-white px-4 py-5">
-                    <Slider value={[priceRange[0], priceRange[1]]} min={priceBounds.min} max={priceBounds.max} step={1} onValueChange={(values) => { if (values.length === 2) setPriceRange([values[0], values[1]]); }} onValueCommit={(values) => { if (values.length === 2) applyPriceRange([values[0], values[1]]); }} />
+                  {/* COLORS - 3 ROWS THEN HIDDEN SCROLL */}
+                  <div className="border-b border-[#F0E8E5] py-5">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-[12px] font-semibold text-[#403632]">اللون</p>
+                        <p className="mt-0.5 text-[8px] text-[#AAA09A]">{metadataLoading ? "جاري تحميل الألوان" : `${colorsAvailable.length} لون متاح`}</p>
+                      </div>
 
-                    <div className="mt-4 flex justify-between text-[6px] text-[#B29A97]">
-                      <span>{priceBounds.min}</span>
-                      <span>{priceBounds.max}</span>
+                      {draftColorFilter !== "all" && <button onClick={() => setDraftParam("color", null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
+                    </div>
+
+                    <div className="max-h-[178px] overflow-y-auto overscroll-contain px-[1px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      <div className="grid grid-cols-4 gap-x-2 gap-y-3">
+                        <button onClick={() => setDraftParam("color", null)} className="group flex min-w-0 flex-col items-center">
+                          <span className={`relative flex h-[38px] w-[38px] items-center justify-center rounded-full border-2 transition-all ${draftColorFilter === "all" ? "border-[#C96B71] ring-2 ring-[#C96B71]/12" : "border-[#E2D9D5]"}`} style={{ background: "conic-gradient(#D4777D,#D4AB62,#6D9779,#6D8DA8,#8970A8,#D4777D)" }}>
+                            <span className="flex h-[29px] w-[29px] items-center justify-center rounded-full bg-[#FFFDFC] text-[8px] font-semibold text-[#5F544F]">كل</span>
+                          </span>
+
+                          <span className={`mt-1.5 max-w-full truncate text-[8px] ${draftColorFilter === "all" ? "font-semibold text-[#B65E65]" : "text-[#786D67]"}`}>الكل</span>
+                        </button>
+
+                        {colorsAvailable.map((color) => {
+                          const active = draftColorFilter.toLowerCase() === color.name.toLowerCase();
+
+                          return (
+                            <button key={color.name} onClick={() => setDraftParam("color", active ? null : color.name)} className="group flex min-w-0 flex-col items-center">
+                              <span className={`relative block h-[38px] w-[38px] rounded-full border-2 transition-all ${active ? "border-[#C96B71] ring-2 ring-[#C96B71]/12" : "border-[#E2D9D5]"}`} style={{ background: color.hex2 ? `linear-gradient(135deg, ${color.hex} 0%, ${color.hex} 50%, ${color.hex2} 50%, ${color.hex2} 100%)` : color.hex }}>
+                                {active && (
+                                  <span className="absolute inset-0 flex items-center justify-center">
+                                    <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-white/95 shadow-[0_2px_7px_rgba(30,20,18,.16)]">
+                                      <Check className="h-2.5 w-2.5 stroke-[2.4] text-[#4F4540]" />
+                                    </span>
+                                  </span>
+                                )}
+                              </span>
+
+                              <span className={`mt-1.5 max-w-full truncate px-1 text-[8px] ${active ? "font-semibold text-[#B65E65]" : "text-[#786D67]"}`}>{color.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {colorsAvailable.length > 11 && (
+                      <div className="mt-3 flex items-center justify-center gap-2">
+                        <span className="h-px w-7 bg-[#E8DEDA]" />
+                        <span className="text-[7px] text-[#ADA39E]">اسحب لعرض المزيد</span>
+                        <span className="h-px w-7 bg-[#E8DEDA]" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* SIZES */}
+                  {sizesAvailable.length > 0 && (
+                    <div className="border-b border-[#F0E8E5] py-5">
+                      <div className="mb-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-[12px] font-semibold text-[#403632]">المقاس</p>
+                          <p className="mt-0.5 text-[8px] text-[#AAA09A]">اختر المقاس المطلوب</p>
+                        </div>
+
+                        {draftSizeFilter !== "all" && <button onClick={() => setDraftParam("size", null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => setDraftParam("size", null)} className={`min-w-[44px] rounded-xl px-3 py-2 text-[9px] font-medium ${draftSizeFilter === "all" ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E4DAD6] bg-white text-[#655A55]"}`}>الكل</button>
+
+                        {sizesAvailable.map((size) => (
+                          <button key={size} onClick={() => setDraftParam("size", size)} className={`min-w-[44px] rounded-xl px-3 py-2 text-[9px] font-medium ${draftSizeFilter === size ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E4DAD6] bg-white text-[#655A55]"}`}>{size}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PRICE */}
+                  <div className="border-b border-[#F0E8E5] py-5">
+                    <div className="mb-4 flex items-end justify-between">
+                      <div>
+                        <p className="text-[12px] font-semibold text-[#403632]">نطاق السعر</p>
+                        <p className="mt-0.5 text-[8px] text-[#AAA09A]">حدد ميزانيتك</p>
+                      </div>
+
+                      <div className="rounded-full bg-[#F8F2EF] px-3 py-1.5 text-[9px] font-medium text-[#8B6967]">
+                        {Math.round(priceRange[0])} — {Math.round(priceRange[1])}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[18px] border border-[#EAE0DC] bg-white px-4 py-5 shadow-[0_5px_18px_rgba(60,42,36,.025)]">
+                      <Slider value={[priceRange[0], priceRange[1]]} min={priceBounds.min} max={priceBounds.max} step={1} onValueChange={(values) => { if (values.length === 2) setPriceRange([values[0], values[1]]); }} onValueCommit={(values) => { if (values.length === 2) commitDraftPriceRange([values[0], values[1]]); }} />
+
+                      <div className="mt-4 flex items-center justify-between text-[8px] text-[#A19792]">
+                        <span>{priceBounds.min}</span>
+                        <span>{priceBounds.max}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* STATUS */}
+                  <div className="py-5">
+                    <div className="mb-3">
+                      <p className="text-[12px] font-semibold text-[#403632]">الحالة</p>
+                      <p className="mt-0.5 text-[8px] text-[#AAA09A]">خيارات إضافية</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button onClick={() => setDraftParam("sale", draftSaleOnly ? null : "1")} className={`relative min-h-[54px] overflow-hidden rounded-[15px] border px-3 text-right transition-all ${draftSaleOnly ? "border-[#D4777D] bg-[#FAEDEC]" : "border-[#E7DDD9] bg-white"}`}>
+                        <span className={`block text-[10px] font-semibold ${draftSaleOnly ? "text-[#B85E65]" : "text-[#554A45]"}`}>العروض فقط</span>
+                        <span className="mt-1 block text-[7px] text-[#A29892]">المنتجات المخفضة</span>
+
+                        {draftSaleOnly && <Check className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#C6666D]" />}
+                      </button>
+
+                      <button onClick={() => setDraftParam("stock", draftInStockOnly ? null : "1")} className={`relative min-h-[54px] overflow-hidden rounded-[15px] border px-3 text-right transition-all ${draftInStockOnly ? "border-[#D4777D] bg-[#FAEDEC]" : "border-[#E7DDD9] bg-white"}`}>
+                        <span className={`block text-[10px] font-semibold ${draftInStockOnly ? "text-[#B85E65]" : "text-[#554A45]"}`}>المتوفر فقط</span>
+                        <span className="mt-1 block text-[7px] text-[#A29892]">جاهز للطلب</span>
+
+                        {draftInStockOnly && <Check className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#C6666D]" />}
+                      </button>
                     </div>
                   </div>
                 </div>
 
-                {/* STATUS */}
-                <div className="py-5">
-                  <p className="mb-3 text-[11px] font-semibold text-[#493537]">الحالة</p>
-
-                  <div className="space-y-2">
-                    <button onClick={() => setParam("sale", saleOnly ? null : "1")} className={`flex h-[48px] w-full items-center justify-between rounded-[14px] border px-3.5 ${saleOnly ? "border-[#D9A4A2] bg-[#F9E9E6]" : "border-[#E7D8D4] bg-white"}`}>
-                      <span className={`text-[8px] font-medium ${saleOnly ? "text-[#A7535D]" : "text-[#6F595A]"}`}>العروض فقط</span>
-
-                      <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${saleOnly ? "border-[#C96F79] bg-[#C96F79]" : "border-[#E0CECA] bg-white"}`}>
-                        {saleOnly && <Check className="h-2.5 w-2.5 text-white" />}
-                      </span>
+                {/* BOTTOM */}
+                <div className="shrink-0 border-t border-[#EDE4E0] bg-[#FFFDFC]/96 px-4 pb-[calc(env(safe-area-inset-bottom)+13px)] pt-3 backdrop-blur-xl md:px-6 md:pb-5">
+                  <div className="grid grid-cols-[.85fr_1.45fr] gap-2.5">
+                    <button onClick={resetDraftFilters} className="flex h-[47px] items-center justify-center gap-1.5 rounded-[14px] border border-[#DFD4CF] bg-white text-[10px] font-medium text-[#6B5F59]">
+                      <RotateCcw className="h-3.5 w-3.5 stroke-[1.6]" />
+                      إعادة تعيين
                     </button>
 
-                    <button onClick={() => setParam("stock", inStockOnly ? null : "1")} className={`flex h-[48px] w-full items-center justify-between rounded-[14px] border px-3.5 ${inStockOnly ? "border-[#D9A4A2] bg-[#F9E9E6]" : "border-[#E7D8D4] bg-white"}`}>
-                      <span className={`text-[8px] font-medium ${inStockOnly ? "text-[#A7535D]" : "text-[#6F595A]"}`}>المتوفر فقط</span>
-
-                      <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${inStockOnly ? "border-[#C96F79] bg-[#C96F79]" : "border-[#E0CECA] bg-white"}`}>
-                        {inStockOnly && <Check className="h-2.5 w-2.5 text-white" />}
-                      </span>
+                    <button onClick={applyDraftFilters} className="h-[47px] rounded-[14px] bg-[#D4777D] text-[11px] font-semibold text-white shadow-[0_7px_22px_rgba(212,119,125,.23)]">
+                      {metadataLoading ? "تطبيق الفلاتر" : `عرض ${totalProductsCount} منتج`}
                     </button>
                   </div>
                 </div>
-              </div>
+              </motion.aside>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
-              {/* ACTIONS */}
-              <div className="shrink-0 border-t border-[#E8D8D3] bg-[#FFF9F7]/97 px-5 pb-[calc(env(safe-area-inset-bottom)+14px)] pt-3 backdrop-blur-xl md:px-6 md:pb-5">
-                <div className="grid grid-cols-[.82fr_1.65fr] gap-2.5">
-                  <button onClick={clearAllFilters} className="flex h-[46px] items-center justify-center gap-1.5 rounded-[14px] border border-[#DCC4BF] bg-white text-[8px] font-medium text-[#775D5E]">
-                    <RotateCcw className="h-3 w-3 stroke-[1.5]" />
-                    إعادة تعيين
-                  </button>
+        <AnimatePresence>
+          {quickViewProd && <QuickView product={quickViewProd} isMobile={isMobileViewport} onClose={() => setQuickViewProd(null)} />}
+        </AnimatePresence>
+      </main>
 
-                  <button onClick={() => setFiltersOpen(false)} className="h-[46px] rounded-[14px] bg-[linear-gradient(135deg,#C96F79,#B65E67)] text-[9px] font-semibold text-white shadow-[0_9px_24px_rgba(185,94,103,.23)]">
-                    {metadataLoading ? "عرض المنتجات" : `عرض ${totalProductsCount} منتج`}
-                  </button>
-                </div>
-              </div>
-            </motion.aside>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      <AnimatePresence>
-        {quickViewProd && <QuickView product={quickViewProd} isMobile={isMobileViewport} onClose={() => setQuickViewProd(null)} />}
-      </AnimatePresence>
-    </main>
-
-    <Footer />
-  </div>
-);
+      <Footer />
+    </div>
+  );
 };
 
 export default ProductsPage;

@@ -1,28 +1,59 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Link, useSearchParams } from "react-router-dom";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useLocation, useNavigationType, useSearchParams } from "react-router-dom";
 import { useQueries, useQuery } from "@tanstack/react-query";
-import { motion, AnimatePresence } from "framer-motion";
+import { AnimatePresence, motion } from "framer-motion";
+import { Check, ChevronDown, Heart, RotateCcw, SlidersHorizontal, X } from "lucide-react";
+
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import ProductCard from "@/components/ProductCard";
-import { Product, VariantSize } from "@/store/useStore";
-import { useStore } from "@/store/useStore";
+import { Slider } from "@/components/ui/slider";
+
+import { Product, VariantSize, useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
-import { SlidersHorizontal, X, Heart } from "lucide-react";
-import { Slider } from "@/components/ui/slider";
-import { useLocation, useNavigationType } from "react-router-dom";
 import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
 import { clearCatalogScroll, restoreCatalogScroll } from "@/lib/catalogScroll";
+
 if ("scrollRestoration" in window.history) {
-  // Let the browser restore scroll on back/forward so we return to the same product row.
   window.history.scrollRestoration = "auto";
 }
 
-type ColorVariant = { id?: string; name?: string; colorName?: string; images?: string[]; price?: number; discount?: number; sizes?: VariantSize[] };
-type ColorSwatch = { name: string; hex: string; hex2?: string };
-type CatalogProduct = Product & { color_variants?: ColorVariant[] | string };
+type ColorVariant = {
+  id?: string;
+  name?: string;
+  colorName?: string;
+  hex?: string;
+  hex2?: string;
+  images?: string[];
+  price?: number;
+  discount?: number;
+  sizes?: VariantSize[];
+};
+
+type ColorSwatch = {
+  name: string;
+  hex: string;
+  hex2?: string;
+};
+
+type CatalogProduct = Product & {
+  color_variants?: ColorVariant[] | string;
+};
+
+type CatalogMetaProduct = {
+  id: string;
+  brand: string | null;
+  price: number;
+  discount: number | null;
+  in_stock: boolean | null;
+  category_id: string | null;
+  color_variants: ColorVariant[] | string | null;
+  created_at: string | null;
+  is_best_seller: boolean | null;
+  is_featured: boolean | null;
+};
 
 interface Category {
   id: string;
@@ -34,24 +65,83 @@ interface Category {
   sort_order: number;
 }
 
-const FALLBACK_IMG: Record<string, string> = {
-  women: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=640&q=65",
-  men: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=640&q=65",
-  kids: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=640&q=65",
-  bags: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=640&q=65",
-  shoes: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=640&q=65",
-  beauty: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=640&q=65",
+const PAGE_SIZE = 12;
+const META_BATCH_SIZE = 500;
+
+const NAMED_COLOR_HEX: Record<string, string> = {
+  أسود: "#111111",
+  black: "#111111",
+  أبيض: "#FFFFFF",
+  white: "#FFFFFF",
+  أحمر: "#D84343",
+  red: "#D84343",
+  أزرق: "#3765B0",
+  blue: "#3765B0",
+  أخضر: "#4D8A64",
+  green: "#4D8A64",
+  أصفر: "#D7AA32",
+  yellow: "#D7AA32",
+  وردي: "#DC7C87",
+  pink: "#DC7C87",
+  بني: "#76533E",
+  brown: "#76533E",
+  رمادي: "#77736F",
+  gray: "#77736F",
+  grey: "#77736F",
+  بيج: "#DECBB0",
+  beige: "#DECBB0",
+  ذهبي: "#C6A15C",
+  gold: "#C6A15C",
+  فضي: "#BFC0C2",
+  silver: "#BFC0C2",
+  بنفسجي: "#8567A5",
+  purple: "#8567A5",
+  برتقالي: "#DD8750",
+  orange: "#DD8750",
+  كحلي: "#273754",
+  navy: "#273754",
 };
 
 const shimmerVariants = {
-  hidden: { opacity: 0, y: 8 },
-  show: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: i * 0.04, duration: 0.45 } }),
+  hidden: { opacity: 0, y: 7 },
+  show: (i = 0) => ({ opacity: 1, y: 0, transition: { delay: Math.min(i, 8) * 0.018, duration: 0.32 } }),
+};
+
+const parseVariants = (value: ColorVariant[] | string | null | undefined): ColorVariant[] => {
+  if (Array.isArray(value)) return value;
+
+  if (typeof value === "string") {
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed) ? parsed : [];
+    } catch {
+      return [];
+    }
+  }
+
+  return [];
+};
+
+const getVariantColorName = (variant: ColorVariant) => {
+  return (variant.colorName || variant.name || "").trim();
+};
+
+const getProductColors = (product: { color_variants?: ColorVariant[] | string | null }) => {
+  return Array.from(new Set(parseVariants(product.color_variants).map(getVariantColorName).filter(Boolean)));
+};
+
+const getProductSizes = (product: { color_variants?: ColorVariant[] | string | null }) => {
+  return Array.from(new Set(parseVariants(product.color_variants).flatMap((variant) => (variant.sizes || []).map((size) => size?.size?.trim() || "")).filter(Boolean)));
+};
+
+const getFinalPrice = (product: { price: number; discount?: number | null }) => {
+  return product.discount ? product.price * (1 - product.discount / 100) : product.price;
 };
 
 const QuickView = ({ product, onClose, isMobile }: { product: CatalogProduct | null; onClose: () => void; isMobile: boolean }) => {
   const { data: content } = useSiteContent("products_page_");
-  const store = useStore();
-  const { addToCart } = store;
+  const { addToCart } = useStore();
+
   const [qty, setQty] = useState(1);
   const [activeImage, setActiveImage] = useState(0);
   const [activeVariantIndex, setActiveVariantIndex] = useState<number | null>(null);
@@ -60,175 +150,116 @@ const QuickView = ({ product, onClose, isMobile }: { product: CatalogProduct | n
   useEffect(() => {
     if (!product) return;
 
+    const variants = parseVariants(product.color_variants);
+
     setQty(1);
     setActiveImage(0);
     setSelectedSize(null);
-
-    let variants = product.color_variants;
-
-    if (typeof variants === "string") {
-      try {
-        variants = JSON.parse(variants);
-      } catch {
-        variants = [];
-      }
-    }
-
-    if (Array.isArray(variants) && variants.length > 0) {
-      setActiveVariantIndex(0);
-    } else {
-      setActiveVariantIndex(null);
-    }
-
+    setActiveVariantIndex(variants.length ? 0 : null);
   }, [product]);
 
   if (!product) return null;
 
-  const variants = (() => {
-    let data = product.color_variants;
-    if (typeof data === "string") {
-      try {
-        data = JSON.parse(data);
-      } catch {
-        data = [];
-      }
-    }
-    return Array.isArray(data) ? data : [];
-  })();
-  const currentVariantIndex =
-    activeVariantIndex === null && variants.length > 0
-      ? 0
-      : activeVariantIndex;
-  const activeVariant =
-    currentVariantIndex !== null
-      ? variants[currentVariantIndex]
-      : undefined;
-  const images =
-    activeVariant?.images?.length
-      ? activeVariant.images
-      : product.images;
+  const variants = parseVariants(product.color_variants);
+  const currentVariantIndex = activeVariantIndex === null && variants.length ? 0 : activeVariantIndex;
+  const activeVariant = currentVariantIndex !== null ? variants[currentVariantIndex] : undefined;
+
+  const images = activeVariant?.images?.length ? activeVariant.images : product.images || [];
 
   const priceSource = activeVariant?.price ?? product.price;
   const discountSource = activeVariant?.discount ?? product.discount;
   const displayPrice = discountSource ? priceSource * (1 - discountSource / 100) : priceSource;
 
-  const productSizes: VariantSize[] = (product.sizes || []).map((size) => ({
-    size,
-    stock: product.inStock ? 999 : 0,
-  }));
-  const sizesForActiveVariant = activeVariant?.sizes || productSizes;
+  const fallbackSizes: VariantSize[] = (product.sizes || []).map((size) => ({ size, stock: product.inStock ? 999 : 0 }));
+  const sizesForActiveVariant = activeVariant?.sizes || fallbackSizes;
+
   const stockForSize = (size?: string) => {
     if (!size) return product.inStock ? 999 : 0;
-    const s = sizesForActiveVariant.find((x) => x.size === size);
-    return s ? s.stock : 0;
+    return sizesForActiveVariant.find((item) => item.size === size)?.stock || 0;
   };
 
   const handleAdd = () => {
-    addToCart(
-      product,
-      qty,
-      selectedSize ?? undefined,
-      undefined,
-      activeVariant?.id,
-      activeVariant?.colorName || activeVariant?.name
-    );    
+    addToCart(product, qty, selectedSize ?? undefined, undefined, activeVariant?.id, activeVariant?.colorName || activeVariant?.name);
     onClose();
   };
 
   return (
-    <motion.aside
-      initial={isMobile ? { y: "100%" } : { x: "100%" }}
-      animate={isMobile ? { y: 0 } : { x: 0 }}
-      exit={isMobile ? { y: "100%" } : { x: "100%" }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className={`fixed top-0 right-0 bottom-0 w-full bg-background z-50 shadow-2xl overflow-y-auto ${isMobile ? 'max-w-none p-4 pb-24' : 'max-w-2xl border-l border-border p-6'}`}
-    >
-      <div className="flex items-start justify-between mb-4 gap-4">
-        <div className="flex-1">
-          <h3 className="font-heading text-2xl">{product.nameAr}</h3>
-          <p className="text-sm text-muted-foreground">{product.brand}</p>
+    <motion.aside initial={isMobile ? { y: "100%" } : { x: "100%" }} animate={isMobile ? { y: 0 } : { x: 0 }} exit={isMobile ? { y: "100%" } : { x: "100%" }} transition={{ type: "spring", stiffness: 320, damping: 34 }} className={`fixed inset-y-0 right-0 z-[90] w-full overflow-y-auto bg-[#FFFCFA] shadow-[0_0_50px_rgba(65,45,38,.16)] ${isMobile ? "p-4 pb-24" : "max-w-2xl border-l border-[#ECE3DF] p-6"}`}>
+      <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="min-w-0 flex-1">
+          <p className="mb-1 text-[9px] tracking-[0.22em] text-[#C5797D]">FLAMINGO</p>
+          <h3 className="truncate text-xl font-semibold text-[#27201D]">{product.nameAr}</h3>
+          <p className="mt-1 text-[11px] text-[#928680]">{product.brand}</p>
         </div>
-        <div className="flex items-center gap-2">
-          <button onClick={() => onClose()} className="p-2 hover:bg-muted rounded-md"><X className="w-5 h-5"/></button>
-        </div>
+
+        <button onClick={onClose} className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-[#EAE0DC] bg-white text-[#554945]">
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
         <div className="space-y-3">
-          <div className="w-full aspect-[4/3] bg-muted rounded-xl overflow-hidden flex items-center justify-center">
-            {images?.[activeImage] ? (
-              <img loading="lazy" decoding="async" width={1200} height={900} sizes="(max-width: 768px) 100vw, 50vw" src={images[activeImage]} alt={product.nameAr} className="w-full h-full object-cover" />
-            ) : (
-              <div className="text-muted-foreground">No image</div>
-            )}
+          <div className="aspect-[4/5] w-full overflow-hidden rounded-[20px] bg-[#F4F0ED]">
+            {images[activeImage] ? <img src={images[activeImage]} alt={product.nameAr} className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-xs text-[#9A8E88]">لا توجد صورة</div>}
           </div>
 
-          <div className="flex items-center gap-2 overflow-x-auto no-scrollbar">
-            {(images || []).map((img, idx) => (
-              <button key={idx} onClick={() => setActiveImage(idx)} className={`w-20 h-14 rounded-md overflow-hidden border ${activeImage===idx ? 'ring-2 ring-foreground' : ''}`}>
-                <img loading="lazy" src={img} className="w-full h-full object-cover" />
+          <div className="flex gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {images.map((image, index) => (
+              <button key={`${image}-${index}`} onClick={() => setActiveImage(index)} className={`h-[66px] w-[54px] shrink-0 overflow-hidden rounded-xl border transition-all ${activeImage === index ? "border-[#C86D73] ring-1 ring-[#C86D73]/20" : "border-[#E7DDD9]"}`}>
+                <img src={image} alt="" className="h-full w-full object-cover" />
               </button>
             ))}
           </div>
         </div>
 
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div className="font-heading text-2xl">{Math.round(displayPrice)}</div>
-            {discountSource && <div className="text-sm text-muted-foreground">خصم {discountSource}%</div>}
+        <div className="space-y-5">
+          <div className="flex items-end justify-between border-b border-[#EEE6E2] pb-4">
+            <span className="text-2xl font-semibold text-[#29211E]">{Math.round(displayPrice)}</span>
+            {!!discountSource && <span className="rounded-full bg-[#F9E8E6] px-2.5 py-1 text-[10px] font-medium text-[#BD666C]">خصم {discountSource}%</span>}
           </div>
 
-          <p className="text-sm text-foreground/70">{product.descriptionAr || product.description}</p>
+          <p className="text-xs leading-6 text-[#786D67]">{product.descriptionAr || product.description}</p>
 
-          {/* Colors */}
           {variants.length > 0 && (
             <div>
-              <p className="text-xs text-muted-foreground mb-2">الألوان</p>
-              <div className="flex items-center gap-3">
-                {variants.map((v, idx) => (
-                  <button key={v.id || idx} 
-                  onClick={() => {
-                    setActiveVariantIndex(idx);
-                    setActiveImage(0);
-                    setSelectedSize(null);
-                    setQty(1);
-                  }}
-                  title={v.name} className={`w-9 h-9 rounded-full border ${currentVariantIndex===idx ? 'ring-2 ring-foreground' : ''}`} style={{background: v.hex || "#eee"}} />
-                ))}
-              </div>
-            </div>
-          )}
+              <p className="mb-3 text-[11px] font-medium text-[#4C413D]">اللون</p>
 
-          {/* Sizes */}
-          {sizesForActiveVariant.length > 0 && (
-            <div>
-              <p className="text-xs text-muted-foreground mb-2">{getSiteText(content, "products_page_quick_sizes", "المقاسات")}</p>
-              <div className="flex flex-wrap gap-2">
-                {sizesForActiveVariant.map((s) => {
-                  const stock = s.stock;
-                  const disabled = stock <= 0;
-                  return (
-                    <button key={s.size} onClick={() => setSelectedSize(s.size)} disabled={disabled} className={`px-3 py-2 rounded-md border ${selectedSize===s.size ? 'bg-foreground text-background' : 'bg-transparent'} ${disabled ? 'opacity-40 cursor-not-allowed' : ''}`}>
-                      {s.size}
-                    </button>
-                  );
+              <div className="flex flex-wrap gap-3">
+                {variants.map((variant, index) => {
+                  const name = getVariantColorName(variant);
+                  const active = currentVariantIndex === index;
+                  const hex = variant.hex || NAMED_COLOR_HEX[name] || NAMED_COLOR_HEX[name.toLowerCase()] || "#E6E2DF";
+
+                  return <button key={variant.id || index} onClick={() => { setActiveVariantIndex(index); setActiveImage(0); setSelectedSize(null); setQty(1); }} title={name} className={`h-9 w-9 rounded-full border-2 transition-all ${active ? "border-[#C86D73] ring-2 ring-[#C86D73]/15" : "border-[#DED4D0]"}`} style={{ background: variant.hex2 ? `linear-gradient(135deg, ${hex} 50%, ${variant.hex2} 50%)` : hex }} />;
                 })}
               </div>
             </div>
           )}
 
-          {/* Stock indicator + qty + add */}
-          <div className="flex items-center gap-3">
-            <div className="text-sm text-muted-foreground">{getSiteText(content, "products_page_quick_status_label", "الحالة:")} <span className="text-foreground">{(selectedSize ? (stockForSize(selectedSize) > 5 ? getSiteText(content, "products_page_quick_status_available", "متاح") : stockForSize(selectedSize) > 0 ? getSiteText(content, "products_page_quick_status_low", "كمية قليلة") : getSiteText(content, "products_page_quick_status_unavailable", "غير متوفر")) : (product.inStock ? getSiteText(content, "products_page_quick_status_available", "متاح") : getSiteText(content, "products_page_quick_status_unavailable", "غير متوفر")))}</span></div>
-          </div>
+          {sizesForActiveVariant.length > 0 && (
+            <div>
+              <p className="mb-3 text-[11px] font-medium text-[#4C413D]">{getSiteText(content, "products_page_quick_sizes", "المقاسات")}</p>
 
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-2">
-              <button onClick={() => setQty(Math.max(1, qty - 1))} className="px-3 py-2 bg-muted rounded">-</button>
-              <div className="px-3">{qty}</div>
-              <button onClick={() => setQty(qty + 1)} className="px-3 py-2 bg-muted rounded">+</button>
+              <div className="flex flex-wrap gap-2">
+                {sizesForActiveVariant.map((size) => {
+                  const disabled = size.stock <= 0;
+
+                  return <button key={size.size} onClick={() => setSelectedSize(size.size)} disabled={disabled} className={`min-w-[44px] rounded-xl border px-3 py-2 text-[11px] transition-all ${selectedSize === size.size ? "border-[#D4777D] bg-[#D4777D] text-white" : "border-[#E4DAD6] bg-white text-[#594E49]"} ${disabled ? "cursor-not-allowed opacity-30" : ""}`}>{size.size}</button>;
+                })}
+              </div>
             </div>
-            <button onClick={handleAdd} className="flex-1 py-3 bg-foreground text-background rounded-2xl">{getSiteText(content, "products_page_quick_add_to_cart", "إضافة للسلة")}</button>
+          )}
+
+          <p className="text-[11px] text-[#897D77]">الحالة: <span className="font-medium text-[#3B312D]">{selectedSize ? stockForSize(selectedSize) > 5 ? "متاح" : stockForSize(selectedSize) > 0 ? "كمية قليلة" : "غير متوفر" : product.inStock ? "متاح" : "غير متوفر"}</span></p>
+
+          <div className="flex gap-2.5 pt-1">
+            <div className="flex h-[46px] items-center rounded-xl border border-[#E5DBD7] bg-white">
+              <button onClick={() => setQty(Math.max(1, qty - 1))} className="h-full w-10 text-lg">−</button>
+              <span className="w-7 text-center text-xs">{qty}</span>
+              <button onClick={() => setQty(qty + 1)} className="h-full w-10 text-lg">+</button>
+            </div>
+
+            <button onClick={handleAdd} className="flex-1 rounded-xl bg-[#D4777D] text-[12px] font-semibold text-white shadow-[0_8px_24px_rgba(212,119,125,.20)]">إضافة للسلة</button>
           </div>
         </div>
       </div>
@@ -238,8 +269,11 @@ const QuickView = ({ product, onClose, isMobile }: { product: CatalogProduct | n
 
 const ProductsPage = () => {
   const { data: content } = useSiteContent("products_page_");
+
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
+  const navType = useNavigationType();
+
   const categorySlug = searchParams.get("category") || "";
   const searchQuery = searchParams.get("search") || "";
   const brandFilter = searchParams.get("brand") || "all";
@@ -250,473 +284,819 @@ const ProductsPage = () => {
   const inStockOnly = searchParams.get("stock") === "1";
   const minPriceParam = Number(searchParams.get("min") || 0);
   const maxPriceParam = Number(searchParams.get("max") || 0);
-  const [filtersOpen, setFiltersOpen] = useState(false);
-  const [toolbarShrunk, setToolbarShrunk] = useState(false);
   const page = Math.max(1, Number(searchParams.get("page") || 1));
+
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const [sortOpen, setSortOpen] = useState(false);
   const [quickViewProd, setQuickViewProd] = useState<CatalogProduct | null>(null);
-  const PAGE_SIZE = 12;
   const [isMobileViewport, setIsMobileViewport] = useState(false);
 
-  const navType = useNavigationType();
   const previousCatalogSearch = useRef(location.search);
+  const pendingLoadMoreScroll = useRef<number | null>(null);
+  const previousProductsLength = useRef(0);
+  const restoredCatalogKey = useRef<string | null>(null);
+
+  const catalogScrollKey = useMemo(() => {
+    const params = new URLSearchParams(location.search);
+
+    params.delete("page");
+
+    const query = params.toString();
+
+    return `${location.pathname}${query ? `?${query}` : ""}`;
+  }, [location.pathname, location.search]);
+
+  useEffect(() => {
+    const update = () => setIsMobileViewport(window.innerWidth < 768);
+
+    update();
+
+    window.addEventListener("resize", update);
+
+    return () => window.removeEventListener("resize", update);
+  }, []);
+
   useEffect(() => {
     const previous = new URLSearchParams(previousCatalogSearch.current);
     const current = new URLSearchParams(location.search);
+
     previousCatalogSearch.current = location.search;
-    const onlyPageChanged = [...new Set([...previous.keys(), ...current.keys()])]
-      .every((key) => key === "page" || previous.get(key) === current.get(key));
+
+    const keys = [...new Set([...previous.keys(), ...current.keys()])];
+    const onlyPageChanged = keys.every((key) => key === "page" || previous.get(key) === current.get(key));
+
     if (navType === "POP" || onlyPageChanged) return;
+
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [location.pathname, location.search, navType]);
-
-  useEffect(() => {
-    const onScroll = () => {
-      try { setToolbarShrunk(window.scrollY > 72); } catch (e) { /* ignore */ }
-    };
-    window.addEventListener('scroll', onScroll, { passive: true });
-    onScroll();
-    return () => window.removeEventListener('scroll', onScroll);
-  }, []);
-
-  useEffect(() => {
-    const calc = () => setIsMobileViewport(window.innerWidth < 768);
-    calc();
-    window.addEventListener('resize', calc);
-    return () => window.removeEventListener('resize', calc);
-  }, []);
 
   const { data: categories = [] } = useQuery({
     queryKey: ["categories-all-active"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order");
-      if (error) throw error; return data as unknown as Category[];
+      const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order", { ascending: true });
+
+      if (error) throw error;
+
+      return (data || []) as Category[];
     },
+    staleTime: 5 * 60 * 1000,
   });
 
-  const currentCategory = categories.find((c) => c.slug === categorySlug) || null;
-  const subCategories = useMemo(() => categories.filter((c) => currentCategory && c.parent_id === currentCategory.id), [categories, currentCategory]);
-  const isParent = subCategories.length > 0;
+  const currentCategory = useMemo(() => categories.find((category) => category.slug === categorySlug) || null, [categories, categorySlug]);
+
+  const subCategories = useMemo(() => {
+    if (!currentCategory) return [];
+    return categories.filter((category) => category.parent_id === currentCategory.id);
+  }, [categories, currentCategory]);
 
   const leafCategoryIds = useMemo(() => {
     if (!currentCategory) return null;
-    // A parent route deliberately shows its own products plus all children.
-    // A child route always receives only that child's ID.
-    return isParent ? [currentCategory.id, ...subCategories.map((category) => category.id)] : [currentCategory.id];
-  }, [currentCategory, isParent, subCategories]);
 
-  const productQueries = useQueries({
-    queries: Array.from({ length: page }, (_, pageIndex) => ({
-      queryKey: ["products-list", leafCategoryIds?.join(",") || "all", searchQuery, brandFilter, sortBy, saleOnly, inStockOnly, minPriceParam, maxPriceParam, pageIndex + 1],
-      queryFn: async () => {
-      let query = supabase
-        .from("products")
-        .select(PRODUCT_CARD_SELECT)
-        .eq("is_active", true);
+    if (subCategories.length) return [currentCategory.id, ...subCategories.map((category) => category.id)];
 
-      if (leafCategoryIds?.length) query = query.in("category_id", leafCategoryIds);
-      if (searchQuery.trim()) {
-        const term = searchQuery.trim();
-        query = query.or(`name_ar.ilike.%${term}%,name.ilike.%${term}%,description_ar.ilike.%${term}%`);
-      }
-      if (brandFilter !== "all") query = query.eq("brand", brandFilter);
-      if (saleOnly) query = query.gt("discount", 0);
-      if (inStockOnly) query = query.eq("in_stock", true);
-      if (minPriceParam > 0) query = query.gte("price", minPriceParam);
-      if (maxPriceParam > 0) query = query.lte("price", maxPriceParam);
+    return [currentCategory.id];
+  }, [currentCategory, subCategories]);
 
-      if (sortBy === "price-asc") query = query.order("price", { ascending: true });
-      else if (sortBy === "price-desc") query = query.order("price", { ascending: false });
-      else if (sortBy === "best") query = query.order("is_best_seller", { ascending: false }).order("created_at", { ascending: false });
-      else if (sortBy === "featured") query = query.order("is_featured", { ascending: false }).order("created_at", { ascending: false });
-      else query = query.order("created_at", { ascending: false });
-
-      const from = pageIndex * PAGE_SIZE;
-      const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
-      if (error) throw error;
-      return (data || []).map(mapProductCard);
-      },
-    })),
-  });
-
-  const products = useMemo(() => {
-    const seen = new Set<string>();
-    return productQueries.flatMap((query) => (query.data || []) as CatalogProduct[]).filter((product) => {
-      if (seen.has(product.id)) return false;
-      seen.add(product.id);
-      return true;
-    });
-  }, [productQueries]);
-  const isLoading = productQueries.some((query) => query.isLoading);
-  const fetchedProducts = productQueries[productQueries.length - 1]?.data || [];
-
-  useEffect(() => {
-    if (!isLoading && products.length > 0) restoreCatalogScroll(`${location.pathname}${location.search}`);
-  }, [isLoading, products.length, location.pathname, location.search]);
-
-  const { data: brandsAvailable = [] } = useQuery({
-    queryKey: ["product-filter-brands"],
+  /*
+   * ============================================================
+   * CATALOG METADATA
+   * يجلب معلومات خفيفة لكل المنتجات.
+   *
+   * هذا هو السبب أن:
+   * 1. عدد المنتجات كامل.
+   * 2. كل الألوان تظهر.
+   * 3. كل المقاسات تظهر.
+   * 4. اللون والمقاس يعملان حتى على منتج لم يتم تحميل Card له.
+   * ============================================================
+   */
+  const { data: catalogMetadata = [], isLoading: metadataLoading } = useQuery({
+    queryKey: ["catalog-filter-metadata", leafCategoryIds?.join(",") || "all", searchQuery, brandFilter, saleOnly, inStockOnly],
     queryFn: async () => {
-      const { data, error } = await supabase.from("brands").select("name").eq("is_active", true).order("name");
-      if (error) throw error;
-      return (data || []).map((brand) => brand.name).filter((name): name is string => Boolean(name));
+      const rows: CatalogMetaProduct[] = [];
+
+      let from = 0;
+
+      while (true) {
+        let query = supabase.from("products").select("id,brand,price,discount,in_stock,category_id,color_variants,created_at,is_best_seller,is_featured").eq("is_active", true);
+
+        if (leafCategoryIds?.length) query = query.in("category_id", leafCategoryIds);
+
+        if (searchQuery.trim()) {
+          const term = searchQuery.trim();
+          query = query.or(`name_ar.ilike.%${term}%,name.ilike.%${term}%,description_ar.ilike.%${term}%`);
+        }
+
+        if (brandFilter !== "all") query = query.eq("brand", brandFilter);
+        if (saleOnly) query = query.gt("discount", 0);
+        if (inStockOnly) query = query.eq("in_stock", true);
+
+        const { data, error } = await query.order("id", { ascending: true }).range(from, from + META_BATCH_SIZE - 1);
+
+        if (error) throw error;
+
+        const batch = (data || []) as CatalogMetaProduct[];
+
+        rows.push(...batch);
+
+        if (batch.length < META_BATCH_SIZE) break;
+
+        from += META_BATCH_SIZE;
+      }
+
+      return rows;
     },
+    staleTime: 5 * 60 * 1000,
   });
 
-  const getProductColors = (p: CatalogProduct): string[] => {
-    const fromVariants = (Array.isArray(p.color_variants) ? p.color_variants : [])
-      .map((variant) => (variant.name || "").trim())
-      .filter(Boolean);
-      return Array.from(new Set(fromVariants));
-  };
-
-  const getProductColorSwatches = (p: CatalogProduct): ColorSwatch[] => {
-    return (Array.isArray(p.color_variants) ? p.color_variants : [])
-      .map((v) => ({
-        name: (v.name || "").trim(),
-        hex: ((v as { hex?: string }).hex || "").trim(),
-        hex2: ((v as { hex2?: string }).hex2 || "").trim() || undefined,
-      }))
-      .filter((c) => c.name);
-  };
-
-  const NAMED_COLOR_HEX: Record<string, string> = {
-    "أسود": "#111", "black": "#111",
-    "أبيض": "#fff", "white": "#fff",
-    "أحمر": "#d33", "red": "#d33",
-    "أزرق": "#2563eb", "blue": "#2563eb",
-    "أخضر": "#16a34a", "green": "#16a34a",
-    "أصفر": "#eab308", "yellow": "#eab308",
-    "وردي": "#ec4899", "pink": "#ec4899",
-    "بني": "#78350f", "brown": "#78350f",
-    "رمادي": "#6b7280", "gray": "#6b7280", "grey": "#6b7280",
-    "بيج": "#e6d3b3", "beige": "#e6d3b3",
-    "ذهبي": "#c9a962", "gold": "#c9a962",
-    "فضي": "#c0c0c0", "silver": "#c0c0c0",
-    "بنفسجي": "#7c3aed", "purple": "#7c3aed",
-    "برتقالي": "#f97316", "orange": "#f97316",
-  };
-
-  const colorsAvailable = useMemo(() => {
+  /*
+   * جميع الألوان من كل المنتجات وليس فقط المنتجات المحملة.
+   */
+  const colorsAvailable = useMemo<ColorSwatch[]>(() => {
     const map = new Map<string, ColorSwatch>();
-    products.forEach((p) => getProductColorSwatches(p).forEach((c) => {
-      const key = c.name.toLowerCase();
-      if (!map.has(key)) {
-        map.set(key, {
-          name: c.name,
-          hex: c.hex || NAMED_COLOR_HEX[c.name] || NAMED_COLOR_HEX[key] || "#e5e5e5",
-          hex2: c.hex2,
-        });
-      }
-    }));
-    return Array.from(map.values());
-  }, [products]);
 
-  const getProductSizes = (p: CatalogProduct): string[] => {
-    const sizes = (Array.isArray(p.color_variants) ? p.color_variants : [])
-      .flatMap((variant) =>
-        (variant.sizes || []).map((size) => (size?.size || "").trim())
-      );
-    return Array.from(new Set(sizes.filter(Boolean)));
-  };
+    catalogMetadata.forEach((product) => {
+      parseVariants(product.color_variants).forEach((variant) => {
+        const name = getVariantColorName(variant);
+
+        if (!name) return;
+
+        const key = name.toLowerCase();
+
+        if (map.has(key)) return;
+
+        map.set(key, {
+          name,
+          hex: variant.hex || NAMED_COLOR_HEX[name] || NAMED_COLOR_HEX[key] || "#E5E2DF",
+          hex2: variant.hex2 || undefined,
+        });
+      });
+    });
+
+    return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "ar"));
+  }, [catalogMetadata]);
 
   const sizesAvailable = useMemo(() => {
-    const set = new Set<string>();
-    products.forEach((p) => getProductSizes(p).forEach((s) => set.add(s)));
-    return Array.from(set);
-  }, [products]);
+    const sizes = new Set<string>();
+
+    catalogMetadata.forEach((product) => {
+      getProductSizes(product).forEach((size) => sizes.add(size));
+    });
+
+    return Array.from(sizes);
+  }, [catalogMetadata]);
 
   const priceBounds = useMemo(() => {
-    if (products.length === 0) return { min: 0, max: 1000 };
-    const prices = products.map((p) => (p.discount ? p.price * (1 - p.discount / 100) : p.price));
-    return { min: Math.floor(Math.min(...prices)), max: Math.ceil(Math.max(...prices)) };
-  }, [products]);
+    if (!catalogMetadata.length) return { min: 0, max: 1000 };
+
+    const prices = catalogMetadata.map(getFinalPrice);
+
+    return {
+      min: Math.floor(Math.min(...prices)),
+      max: Math.ceil(Math.max(...prices)),
+    };
+  }, [catalogMetadata]);
 
   const effectiveMin = minPriceParam || priceBounds.min;
   const effectiveMax = maxPriceParam || priceBounds.max;
-  const [priceRange, setPriceRange] = useState<[number, number]>([effectiveMin, effectiveMax]);
+
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
 
   useEffect(() => {
     setPriceRange([effectiveMin, effectiveMax]);
   }, [effectiveMin, effectiveMax]);
 
-  const visibleProducts = useMemo(() => {
-    let arr = products.filter((p) => {
-      const okBrand = brandFilter === "all" || p.brand?.trim() === brandFilter;
-      const pColors = getProductColors(p);
-      const okColor = colorFilter === "all" || pColors.some((c) => c.toLowerCase() === colorFilter.toLowerCase());
-      const pSizes = getProductSizes(p);
-      const okSize = sizeFilter === "all" || pSizes.includes(sizeFilter);
-      const finalPrice = p.discount ? p.price * (1 - p.discount / 100) : p.price;
-      const okPrice = finalPrice >= effectiveMin && finalPrice <= effectiveMax;
-      const okSale = !saleOnly || !!p.discount;
-      const okStock = !inStockOnly || p.inStock;
-      return okBrand && okColor && okSize && okPrice && okSale && okStock;
-    });
-    if (sortBy === "price-asc") arr = [...arr].sort((a, b) => a.price - b.price);
-    if (sortBy === "price-desc") arr = [...arr].sort((a, b) => b.price - a.price);
-    if (sortBy === "best") arr = [...arr].sort((a, b) => Number(!!b.isBestSeller) - Number(!!a.isBestSeller));
-    if (sortBy === "featured") arr = [...arr].sort((a, b) => Number(!!b.isFeatured) - Number(!!a.isFeatured));
-    return arr;
-  }, [products, brandFilter, colorFilter, sizeFilter, sortBy, saleOnly, inStockOnly, effectiveMin, effectiveMax]);
+  /*
+   * ============================================================
+   * النتائج الحقيقية للفلاتر.
+   *
+   * نحدد IDs لجميع المنتجات المطابقة أولاً.
+   * ثم نحمل Cards للعدد المطلوب فقط.
+   * ============================================================
+   */
+  const matchingMetadata = useMemo(() => {
+    let result = catalogMetadata.filter((product) => {
+      const finalPrice = getFinalPrice(product);
 
-  const setParam = (k: string, v: string | null) => {
-    if (k !== "page") clearCatalogScroll(`${location.pathname}${location.search}`);
+      const colorMatch = colorFilter === "all" || getProductColors(product).some((color) => color.toLowerCase() === colorFilter.toLowerCase());
+      const sizeMatch = sizeFilter === "all" || getProductSizes(product).includes(sizeFilter);
+      const priceMatch = finalPrice >= effectiveMin && finalPrice <= effectiveMax;
+
+      return colorMatch && sizeMatch && priceMatch;
+    });
+
+    if (sortBy === "price-asc") {
+      result = [...result].sort((a, b) => getFinalPrice(a) - getFinalPrice(b));
+    } else if (sortBy === "price-desc") {
+      result = [...result].sort((a, b) => getFinalPrice(b) - getFinalPrice(a));
+    } else if (sortBy === "best") {
+      result = [...result].sort((a, b) => {
+        const bestDiff = Number(!!b.is_best_seller) - Number(!!a.is_best_seller);
+
+        if (bestDiff !== 0) return bestDiff;
+
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      });
+    } else if (sortBy === "featured") {
+      result = [...result].sort((a, b) => {
+        const featuredDiff = Number(!!b.is_featured) - Number(!!a.is_featured);
+
+        if (featuredDiff !== 0) return featuredDiff;
+
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      });
+    } else {
+      result = [...result].sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
+    }
+
+    return result;
+  }, [catalogMetadata, colorFilter, sizeFilter, effectiveMin, effectiveMax, sortBy]);
+
+  const totalProductsCount = matchingMetadata.length;
+
+  /*
+   * كل صفحة عبارة عن IDs معروفة مسبقاً.
+   * بهذا لا نضيع صفحات على منتجات لا تطابق اللون أو المقاس.
+   */
+  const pageIdGroups = useMemo(() => {
+    return Array.from({ length: page }, (_, index) => {
+      const from = index * PAGE_SIZE;
+      const to = from + PAGE_SIZE;
+
+      return matchingMetadata.slice(from, to).map((product) => product.id);
+    }).filter((ids) => ids.length > 0);
+  }, [matchingMetadata, page]);
+
+  const productQueries = useQueries({
+    queries: pageIdGroups.map((ids, index) => ({
+      queryKey: ["catalog-products-page", ids.join(","), index + 1],
+      queryFn: async () => {
+        const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).in("id", ids);
+
+        if (error) throw error;
+
+        const mapped = (data || []).map(mapProductCard) as CatalogProduct[];
+        const map = new Map(mapped.map((product) => [product.id, product]));
+
+        return ids.map((id) => map.get(id)).filter((product): product is CatalogProduct => Boolean(product));
+      },
+      staleTime: 60 * 1000,
+    })),
+  });
+
+  const products = useMemo(() => {
+    const seen = new Set<string>();
+
+    return productQueries.flatMap((query) => query.data || []).filter((product) => {
+      if (seen.has(product.id)) return false;
+
+      seen.add(product.id);
+
+      return true;
+    });
+  }, [productQueries]);
+
+  const isLoadingProducts = metadataLoading || productQueries.some((query) => query.isLoading || query.isFetching);
+
+  const hasMore = products.length < totalProductsCount;
+
+  /*
+   * ============================================================
+   * SCROLL RESTORATION
+   * ============================================================
+   */
+  useEffect(() => {
+    if (isLoadingProducts || !products.length) return;
+    if (pendingLoadMoreScroll.current !== null) return;
+    if (restoredCatalogKey.current === catalogScrollKey) return;
+
+    restoreCatalogScroll(catalogScrollKey);
+
+    restoredCatalogKey.current = catalogScrollKey;
+  }, [isLoadingProducts, products.length, catalogScrollKey]);
+
+  /*
+   * يحافظ على نفس المكان حرفياً بعد عرض المزيد.
+   */
+  useLayoutEffect(() => {
+    const oldLength = previousProductsLength.current;
+    const newLength = products.length;
+
+    if (pendingLoadMoreScroll.current !== null && !isLoadingProducts && newLength > oldLength) {
+      const savedScroll = pendingLoadMoreScroll.current;
+
+      pendingLoadMoreScroll.current = null;
+
+      window.scrollTo({
+        top: savedScroll,
+        left: 0,
+        behavior: "auto",
+      });
+
+      requestAnimationFrame(() => {
+        window.scrollTo({
+          top: savedScroll,
+          left: 0,
+          behavior: "auto",
+        });
+      });
+    }
+
+    previousProductsLength.current = newLength;
+  }, [products.length, isLoadingProducts]);
+
+  const { data: brandsAvailable = [] } = useQuery({
+    queryKey: ["product-filter-brands"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("brands").select("name").eq("is_active", true).order("name");
+
+      if (error) throw error;
+
+      return (data || []).map((brand) => brand.name).filter((name): name is string => Boolean(name));
+    },
+    staleTime: 5 * 60 * 1000,
+  });
+
+  const setParam = (key: string, value: string | null) => {
+    clearCatalogScroll(catalogScrollKey);
+
+    restoredCatalogKey.current = null;
+
     const next = new URLSearchParams(searchParams);
-    if (v === null || v === "" || v === "all") next.delete(k); else next.set(k, v);
-    // A changed filter defines a new result set; preserve `page` only for Load More itself.
-    if (k !== "page") next.delete("page");
+
+    if (value === null || value === "" || value === "all") {
+      next.delete(key);
+    } else {
+      next.set(key, value);
+    }
+
+    next.delete("page");
+
     setSearchParams(next);
   };
 
-  const activeFilterCount =
-    (categorySlug ? 1 : 0) +
-    (brandFilter !== "all" ? 1 : 0) +
-    (colorFilter !== "all" ? 1 : 0) +
-    (sizeFilter !== "all" ? 1 : 0) +
-    (saleOnly ? 1 : 0) +
-    (inStockOnly ? 1 : 0) +
-    (minPriceParam || maxPriceParam ? 1 : 0);
+  const handleLoadMore = () => {
+    if (isLoadingProducts || !hasMore) return;
 
-  const paginatedProducts = visibleProducts;
-  const hasMore = fetchedProducts.length === PAGE_SIZE;
+    pendingLoadMoreScroll.current = window.scrollY;
+
+    const next = new URLSearchParams(searchParams);
+
+    next.set("page", String(page + 1));
+
+    /*
+     * replace مهم جداً:
+     * لا ننشئ History entry جديدة عند كل ضغطة عرض المزيد.
+     */
+    setSearchParams(next, { replace: true });
+  };
 
   const clearAllFilters = () => {
+    clearCatalogScroll(catalogScrollKey);
+
+    restoredCatalogKey.current = null;
+
     const next = new URLSearchParams();
+
     if (categorySlug) next.set("category", categorySlug);
+
     setSearchParams(next);
   };
 
   const applyPriceRange = (range: [number, number]) => {
-    const [minV, maxV] = range;
     const next = new URLSearchParams(searchParams);
-    const roundedMin = Math.round(minV);
-    const roundedMax = Math.round(maxV);
 
-    if (roundedMin <= priceBounds.min) next.delete("min");
-    else next.set("min", String(roundedMin));
+    const min = Math.round(range[0]);
+    const max = Math.round(range[1]);
 
-    if (roundedMax >= priceBounds.max) next.delete("max");
-    else next.set("max", String(roundedMax));
+    if (min <= priceBounds.min) next.delete("min");
+    else next.set("min", String(min));
+
+    if (max >= priceBounds.max) next.delete("max");
+    else next.set("max", String(max));
+
+    next.delete("page");
+
+    clearCatalogScroll(catalogScrollKey);
+
+    restoredCatalogKey.current = null;
 
     setSearchParams(next);
   };
 
+  const activeFilterCount = (categorySlug ? 1 : 0) + (brandFilter !== "all" ? 1 : 0) + (colorFilter !== "all" ? 1 : 0) + (sizeFilter !== "all" ? 1 : 0) + (saleOnly ? 1 : 0) + (inStockOnly ? 1 : 0) + (minPriceParam || maxPriceParam ? 1 : 0);
+
+  const currentSortLabel = sortBy === "best" ? "الأكثر مبيعًا" : sortBy === "featured" ? "مختارة" : sortBy === "price-asc" ? "الأقل سعرًا" : sortBy === "price-desc" ? "الأعلى سعرًا" : "الأحدث";
+
   return (
-    <div className="min-h-screen bg-background text-foreground" dir="rtl">
+    <div className="min-h-screen bg-[#FFFDFC] text-[#261F1D]" dir="rtl">
       <Navbar />
       <CartDrawer />
 
-      <main className="pt-20 pb-28 md:pb-20">
-        <section className="container mx-auto px-6 pt-8">
-          <div className="grid md:grid-cols-[1.15fr_0.85fr] rounded-3xl overflow-hidden bg-card border border-border">
-            <div className="p-3 md:p-10 lg:p-12">
-              <h1 className="font-heading text-3xl md:text-5xl mt-3 text-foreground leading-tight">{currentCategory ? currentCategory.name_ar : getSiteText(content, "products_page_title", "مجموعة الموسم")}</h1>
-              <p className="text-sm md:text-base text-muted-foreground mt-4 max-w-xl">{getSiteText(content, "products_page_subtitle", "تصميم متناسق مع بقية صفحات الموقع يركّز على وضوح العرض وسهولة الوصول للفلاتر.")}</p>
-              <div className="mt-7 flex flex-wrap gap-3">
-                <button onClick={() => setFiltersOpen(true)} className="h-10 px-5 rounded-lg bg-foreground text-background text-sm hover:opacity-90 transition-colors">{getSiteText(content, "products_page_filter_cta", "ابدأ الفلترة")}</button>
-                <button onClick={clearAllFilters} className="h-10 px-5 rounded-lg border border-border text-foreground bg-background hover:bg-muted text-sm transition-colors">{getSiteText(content, "products_page_reset_cta", "تصفير الاختيارات")}</button>
-              </div>
-              <div className="mt-8 grid grid-cols-3 gap-3">
-                <div className="rounded-xl bg-muted/60 p-3">
-                  <p className="text-[10px] text-muted-foreground">{getSiteText(content, "products_page_stat_products", "المنتجات")}</p>
-                  <p className="text-lg font-semibold text-foreground">{visibleProducts.length}</p>
-                </div>
-                <div className="rounded-xl bg-muted/60 p-3">
-                  <p className="text-[10px] text-muted-foreground">{getSiteText(content, "products_page_stat_filters", "الفلاتر")}</p>
-                  <p className="text-lg font-semibold text-foreground">{activeFilterCount}</p>
-                </div>
-                <div className="rounded-xl bg-muted/60 p-3">
-                  <p className="text-[10px] text-muted-foreground">{getSiteText(content, "products_page_stat_page", "الصفحة")}</p>
-                  <p className="text-lg font-semibold text-foreground">{page}</p>
-                </div>
-              </div>
+      <main className=" pb-24 md:pt-24 md:pb-20">
+        {/* =========================================================
+            HEADER
+        ========================================================= */}
+        <section className="bg-[#FFFDFC]">
+          <div className="mx-auto w-full max-w-[1600px] px-4 pt-5 pb-3 text-center md:px-6 md:pt-8 md:pb-5">
+            <div className="mb-1.5 flex items-center justify-center gap-2.5">
+              <span className="h-px w-6 bg-gradient-to-l from-[#C9797E]/60 to-transparent" />
+              <span className="font-serif text-[8px] tracking-[0.34em] text-[#B96C72] md:text-[9px]">FLAMINGO</span>
+              <span className="h-px w-6 bg-gradient-to-r from-[#C9797E]/60 to-transparent" />
             </div>
-            <div className="relative min-h-[260px] md:min-h-full">
-              <img
-                loading="lazy"
-                src={(currentCategory && currentCategory.image_url) || FALLBACK_IMG[categorySlug] || FALLBACK_IMG.women}
-                alt={currentCategory ? currentCategory.name_ar : getSiteText(content, "products_page_hero_alt", "عرض خاص")}
-                className="absolute inset-0 w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-[#1d1f27]/45 via-transparent to-transparent" />
-            </div>
+
+            <h1 className="text-[21px] font-semibold leading-tight tracking-[-0.02em] text-[#261F1D] md:text-[30px]">{currentCategory ? currentCategory.name_ar : getSiteText(content, "products_page_title", "جميع المنتجات")}</h1>
+
+            <p className="mx-auto mt-1.5 max-w-lg text-[10px] leading-5 text-[#968A85] md:text-[12px]">{currentCategory ? "مختارات فلامنجو لهذه المجموعة" : "تشكيلة مختارة بعناية لتجربة تسوق أكثر أناقة"}</p>
           </div>
-        </section>
 
-       
+          {/* =========================================================
+              CATEGORIES
+          ========================================================= */}
+          <div className="mx-auto w-full max-w-[1600px] border-t border-[#F2ECE9] px-3 py-3 md:px-6">
+            <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <button onClick={() => setParam("category", null)} className={`shrink-0 rounded-full px-4 py-[7px] text-[10px] font-medium transition-all md:text-[11px] ${!categorySlug ? "bg-[#D4777D] text-white shadow-[0_5px_16px_rgba(212,119,125,.19)]" : "border border-[#E9DFDB] bg-white text-[#6D625D]"}`}>الكل</button>
 
-        <section id="products-grid" className="container mx-auto px-6 py-8">
-          <div>
-              <div className="flex flex-wrap items-center gap-2 mb-4">
-                {brandFilter !== "all" && <button onClick={() => setParam("brand", null)} className="px-3 py-1 rounded-lg text-xs bg-muted text-muted-foreground border border-border">{brandFilter} <X className="inline w-3 h-3" /></button>}
-                {colorFilter !== "all" && <button onClick={() => setParam("color", null)} className="px-3 py-1 rounded-lg text-xs bg-muted text-muted-foreground border border-border">{colorFilter} <X className="inline w-3 h-3" /></button>}
-                {sizeFilter !== "all" && <button onClick={() => setParam("size", null)} className="px-3 py-1 rounded-lg text-xs bg-muted text-muted-foreground border border-border">{sizeFilter} <X className="inline w-3 h-3" /></button>}
-                {saleOnly && <button onClick={() => setParam("sale", null)} className="px-3 py-1 rounded-lg text-xs bg-muted text-muted-foreground border border-border">{getSiteText(content, "products_page_chip_sale", "عروض")} <X className="inline w-3 h-3" /></button>}
-                {inStockOnly && <button onClick={() => setParam("stock", null)} className="px-3 py-1 rounded-lg text-xs bg-muted text-muted-foreground border border-border">{getSiteText(content, "products_page_chip_stock", "متوفر")} <X className="inline w-3 h-3" /></button>}
-                {(minPriceParam || maxPriceParam) && <button onClick={() => { const next = new URLSearchParams(searchParams); next.delete("min"); next.delete("max"); setSearchParams(next); }} className="px-3 py-1 rounded-lg text-xs bg-muted text-muted-foreground border border-border">{effectiveMin} - {effectiveMax} <X className="inline w-3 h-3" /></button>}
-                <div className="mr-auto text-sm text-muted-foreground">{visibleProducts.length} {getSiteText(content, "products_page_count_label", "منتج")}</div>
-              </div>
-
-          {isLoading && products.length === 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6">
-              {Array.from({length:8}).map((_,i)=> (
-                <motion.div key={i} custom={i} initial="hidden" animate="show" variants={shimmerVariants} className="rounded-2xl bg-gradient-to-r from-muted/50 via-muted to-muted/50 h-64" />
+              {categories.filter((category) => !category.parent_id).map((category) => (
+                <button key={category.id} onClick={() => setParam("category", category.slug)} className={`shrink-0 rounded-full px-4 py-[7px] text-[10px] font-medium transition-all md:text-[11px] ${categorySlug === category.slug ? "bg-[#D4777D] text-white shadow-[0_5px_16px_rgba(212,119,125,.19)]" : "border border-[#E9DFDB] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
               ))}
             </div>
-          ) : visibleProducts.length===0 ? (
-            <div className="py-24 flex flex-col items-center gap-6">
-              <div className="w-56 h-44 rounded-3xl bg-muted/50 flex items-center justify-center">
-                <Heart className="w-12 h-12 text-muted-foreground/40" />
-              </div>
-              <h3 className="font-heading text-2xl">{getSiteText(content, "products_page_empty_title", "لم يتم العثور على منتجات")}</h3>
-              <p className="text-muted-foreground">{getSiteText(content, "products_page_empty_desc", "غير الفلاتر أو استكشف مجموعاتنا المختارة.")}</p>
-              <div className="flex gap-3">
-                <button onClick={() => setSearchParams(new URLSearchParams())} className="px-4 py-2 border rounded-2xl">{getSiteText(content, "products_page_empty_reset", "إعادة تعيين")}</button>
-                <Link to="/products" className="px-4 py-2 bg-foreground text-background rounded-2xl">{getSiteText(content, "products_page_empty_cta", "استكشف الأقسام")}</Link>
-              </div>
-            </div>
-          ) : (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-                {paginatedProducts.map((p, i) => (
-                  <motion.div key={p.id} custom={i} initial={isMobileViewport ? false : "hidden"} animate={isMobileViewport ? false : "show"} variants={shimmerVariants}>
-                    <ProductCard product={p} onQuickView={(prod) => setQuickViewProd(prod)} />
-                  </motion.div>
-                ))}
-                {isLoading && products.length > 0 && Array.from({ length: 4 }).map((_, i) => (
-                  <div key={`sk-${i}`} className="rounded-2xl bg-gradient-to-r from-muted/50 via-muted to-muted/50 h-64 animate-pulse" />
-                ))}
-              </div>
-            </>
-          )}
-
-          {hasMore && !isLoading && (
-            <div className="flex items-center justify-center mt-10">
-              <button onClick={() => setParam("page", String(page + 1))} className="btn-unified px-8 py-3">{getSiteText(content, "products_page_load_more", "عرض المزيد")}</button>
-            </div>
-          )}
           </div>
         </section>
 
-        {/* Filters Drawer (mobile) */}
+        {/* =========================================================
+            PREMIUM TOOLBAR
+        ========================================================= */}
+        <section className="sticky top-[68px] z-30 bg-[#FFFDFC]/94 px-3 py-2 backdrop-blur-xl md:top-[76px] md:px-6">
+          <div className="mx-auto max-w-[1600px]">
+            <div className="flex h-[48px] items-center overflow-hidden rounded-[15px] border border-[#EAE0DC] bg-white shadow-[0_8px_28px_rgba(65,45,38,.055)]">
+              <button onClick={() => setFiltersOpen(true)} className="group flex h-full min-w-0 flex-1 items-center justify-center gap-2 border-l border-[#EFE7E3] px-3 transition-colors active:bg-[#FBF5F3]">
+                <span className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${activeFilterCount > 0 ? "bg-[#F8E7E6] text-[#BE666C]" : "bg-[#F7F3F1] text-[#625752]"}`}>
+                  <SlidersHorizontal className="h-[14px] w-[14px] stroke-[1.7]" />
+                </span>
+
+                <span className="truncate text-[11px] font-medium text-[#3D3430]">فلترة</span>
+
+                {activeFilterCount > 0 && <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#D4777D] px-1 text-[8px] font-semibold text-white">{activeFilterCount}</span>}
+              </button>
+
+              <button onClick={() => setSortOpen(true)} className="flex h-full min-w-0 flex-1 items-center justify-center gap-2 border-l border-[#EFE7E3] px-2 transition-colors active:bg-[#FBF5F3]">
+                <span className="min-w-0">
+                  <span className="block text-[8px] leading-none text-[#AAA09B]">ترتيب</span>
+                  <span className="mt-1 block max-w-[78px] truncate text-[10px] font-medium leading-none text-[#3D3430]">{currentSortLabel}</span>
+                </span>
+
+                <ChevronDown className="h-3.5 w-3.5 shrink-0 stroke-[1.5] text-[#756A65]" />
+              </button>
+
+              <div className="flex h-full w-[72px] shrink-0 flex-col items-center justify-center bg-[#FDF9F7] sm:w-[82px]">
+                {metadataLoading ? <span className="h-3 w-6 animate-pulse rounded bg-[#EDE4E0]" /> : <span className="text-[12px] font-semibold leading-none text-[#B86168]">{totalProductsCount}</span>}
+                <span className="mt-1 text-[8px] leading-none text-[#9D918B]">منتج</span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* =========================================================
+            ACTIVE FILTERS
+        ========================================================= */}
+        {activeFilterCount > 0 && (
+          <section className="mx-auto w-full max-w-[1600px] px-3 pt-1 md:px-6">
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {brandFilter !== "all" && <button onClick={() => setParam("brand", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">{brandFilter}<X className="h-2.5 w-2.5" /></button>}
+
+              {colorFilter !== "all" && <button onClick={() => setParam("color", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">{colorFilter}<X className="h-2.5 w-2.5" /></button>}
+
+              {sizeFilter !== "all" && <button onClick={() => setParam("size", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">{sizeFilter}<X className="h-2.5 w-2.5" /></button>}
+
+              {saleOnly && <button onClick={() => setParam("sale", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">العروض<X className="h-2.5 w-2.5" /></button>}
+
+              {inStockOnly && <button onClick={() => setParam("stock", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">متوفر<X className="h-2.5 w-2.5" /></button>}
+
+              {(minPriceParam > 0 || maxPriceParam > 0) && <button onClick={() => { const next = new URLSearchParams(searchParams); next.delete("min"); next.delete("max"); next.delete("page"); setSearchParams(next); }} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">{effectiveMin} - {effectiveMax}<X className="h-2.5 w-2.5" /></button>}
+
+              <button onClick={clearAllFilters} className="shrink-0 px-2 py-1.5 text-[9px] font-medium text-[#B75F66]">مسح الكل</button>
+            </div>
+          </section>
+        )}
+
+        {/* =========================================================
+            PRODUCTS
+        ========================================================= */}
+        <section id="products-grid" className="mx-auto w-full max-w-[1600px] px-2.5 pt-3 md:px-6 md:pt-5">
+          {isLoadingProducts && products.length === 0 ? (
+            <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-5">
+              {Array.from({ length: 10 }).map((_, index) => (
+                <div key={index}>
+                  <div className="aspect-[4/5] animate-pulse rounded-[15px] bg-[#F3EEEB]" />
+                  <div className="mt-2.5 h-2.5 w-[72%] animate-pulse rounded-full bg-[#F0E9E6]" />
+                  <div className="mt-2 h-2.5 w-[38%] animate-pulse rounded-full bg-[#F0E9E6]" />
+                </div>
+              ))}
+            </div>
+          ) : products.length === 0 ? (
+            <div className="flex min-h-[52vh] flex-col items-center justify-center px-6 text-center">
+              <div className="flex h-[74px] w-[74px] items-center justify-center rounded-full bg-[#FAF0EE]">
+                <Heart className="h-7 w-7 stroke-[1.25] text-[#CE7A7F]" />
+              </div>
+
+              <h3 className="mt-5 text-[17px] font-semibold text-[#302724]">لا توجد منتجات مطابقة</h3>
+              <p className="mt-2 max-w-[280px] text-[11px] leading-5 text-[#948883]">جرّب إزالة أحد خيارات الفلترة أو اختيار مجموعة مختلفة.</p>
+
+              <button onClick={clearAllFilters} className="mt-5 rounded-full border border-[#DED2CD] bg-white px-6 py-2.5 text-[11px] font-medium text-[#594D48]">إعادة تعيين</button>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 sm:gap-y-6 md:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4 xl:grid-cols-5">
+              {products.map((product, index) => (
+                <motion.div key={product.id} custom={index} initial={isMobileViewport ? false : "hidden"} animate={isMobileViewport ? false : "show"} variants={shimmerVariants} className="min-w-0">
+                  <ProductCard product={product} onQuickView={(selectedProduct) => setQuickViewProd(selectedProduct)} />
+                </motion.div>
+              ))}
+            </div>
+          )}
+
+          {hasMore && (
+            <div className="flex flex-col items-center justify-center pb-5 pt-10 md:pt-14">
+              <button onClick={handleLoadMore} disabled={isLoadingProducts} className="group flex h-[46px] min-w-[178px] items-center justify-center rounded-full border border-[#DBCBC6] bg-white px-7 text-[11px] font-medium text-[#514540] shadow-[0_7px_24px_rgba(64,44,37,.055)] transition-all active:scale-[0.985] disabled:cursor-wait disabled:opacity-60">
+                {isLoadingProducts ? (
+                  <span className="flex items-center gap-2">
+                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#E3D7D2] border-t-[#C66C72]" />
+                    جاري التحميل
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    عرض المزيد
+                    <ChevronDown className="h-3.5 w-3.5 stroke-[1.6]" />
+                  </span>
+                )}
+              </button>
+
+              <div className="mt-2.5 flex items-center gap-2">
+                <span className="h-px w-5 bg-[#E2D6D1]" />
+                <span className="text-[8px] tracking-[0.12em] text-[#AAA09B]">{products.length} / {totalProductsCount}</span>
+                <span className="h-px w-5 bg-[#E2D6D1]" />
+              </div>
+            </div>
+          )}
+        </section>
+
+        {/* =========================================================
+            SORT
+        ========================================================= */}
         <AnimatePresence>
-          {filtersOpen && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-50 flex">
-              <div className="flex-1 bg-black/40 backdrop-blur-sm" onClick={() => setFiltersOpen(false)} />
-              <motion.aside initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', stiffness: 280, damping: 32 }} className="w-[94vw] max-w-md bg-background h-full overflow-y-auto p-6 shadow-2xl border-l border-border">
-                  <div className="relative mb-6 pr-12 pb-4 border-b border-border">
-                    <button onClick={() => setFiltersOpen(false)} className="absolute right-0 top-0 h-9 w-9 rounded-full bg-card inline-flex items-center justify-center text-foreground hover:bg-muted transition-colors"><X className="w-5 h-5" /></button>
-                    <div>
-                      <h3 className="font-heading text-xl text-foreground tracking-wide">{getSiteText(content, "products_page_drawer_title", "فلترة المنتجات")}</h3>
-                      <p className="text-xs text-muted-foreground mt-1">{getSiteText(content, "products_page_drawer_subtitle", "اختيار أدق للوصول للقطعة المناسبة")}</p>
-                    </div>
-                  </div>
-                  <div className="space-y-6 pb-24">
-                    <div>
-                      <p className="text-[10px] tracking-[0.35em] uppercase text-muted-foreground mb-3">{getSiteText(content, "products_page_filter_category", "الفئة")}</p>
-                      <div className="flex flex-wrap gap-3">
-                        <button onClick={() => setParam('category', null)} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${!categorySlug ? 'bg-foreground text-background' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>الكل</button>
-                        {categories.filter((c) => !c.parent_id).map((c) => (
-                          <button key={c.id} onClick={() => setParam('category', c.slug)} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${categorySlug === c.slug ? 'bg-foreground text-background' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>{c.name_ar}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[10px] tracking-[0.35em] uppercase text-muted-foreground mb-3">{getSiteText(content, "products_page_filter_brand", "الماركة")}</p>
-                      <div className="flex flex-wrap gap-3">
-                        <button onClick={() => setParam('brand', null)} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${brandFilter === 'all' ? 'bg-foreground text-background' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>جميع الماركات</button>
-                        {brandsAvailable.map((b) => (
-                          <button key={b} onClick={() => setParam('brand', b)} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${brandFilter === b ? 'bg-foreground text-background' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>{b}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[10px] tracking-[0.35em] uppercase text-muted-foreground mb-3">{getSiteText(content, "products_page_filter_color", "اللون")}</p>
-                      <div className="flex flex-wrap items-center gap-3">
-                        <button
-                          onClick={() => setParam('color', null)}
-                          title="كل الألوان"
-                          className={`relative w-9 h-9 rounded-full border-2 flex items-center justify-center text-[10px] font-medium transition-all ${colorFilter === 'all' ? 'border-foreground ring-2 ring-foreground/20' : 'border-border hover:border-foreground/50'}`}
-                          style={{ background: 'conic-gradient(#ec4899,#eab308,#16a34a,#2563eb,#7c3aed,#ec4899)' }}
-                        >
-                          <span className="absolute inset-1 rounded-full bg-background flex items-center justify-center text-foreground">كل</span>
-                        </button>
-                        {colorsAvailable.map((c) => {
-                          const active = colorFilter.toLowerCase() === c.name.toLowerCase();
-                          return (
-                            <button
-                              key={c.name}
-                              onClick={() => setParam('color', active ? null : c.name)}
-                              title={c.name}
-                              aria-label={c.name}
-                              className={`w-9 h-9 rounded-full border-2 transition-all ${active ? 'border-foreground ring-2 ring-foreground/20 scale-110' : 'border-border hover:border-foreground/50'}`}
-                              style={{
-                                background: c.hex2
-                                  ? `linear-gradient(135deg, ${c.hex} 50%, ${c.hex2} 50%)`
-                                  : c.hex,
-                              }}
-                            />
-                          );
-                        })}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[10px] tracking-[0.35em] uppercase text-muted-foreground mb-3">{getSiteText(content, "products_page_filter_size", "المقاس")}</p>
-                      <div className="flex flex-wrap gap-3">
-                        <button onClick={() => setParam('size', null)} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${sizeFilter === 'all' ? 'bg-foreground text-background' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>كل المقاسات</button>
-                        {sizesAvailable.map((s) => (
-                          <button key={s} onClick={() => setParam('size', s)} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${sizeFilter === s ? 'bg-foreground text-background' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>{s}</button>
-                        ))}
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[10px] tracking-[0.35em] uppercase text-muted-foreground mb-3">{getSiteText(content, "products_page_filter_price", "السعر")}</p>
-                      <div className="rounded-xl bg-card border border-border px-4 py-4">
-                        <Slider
-                          value={[priceRange[0], priceRange[1]]}
-                          min={priceBounds.min}
-                          max={priceBounds.max}
-                          step={1}
-                          onValueChange={(vals) => {
-                            if (vals.length === 2) {
-                              setPriceRange([vals[0], vals[1]]);
-                            }
-                          }}
-                          onValueCommit={(vals) => {
-                            if (vals.length === 2) {
-                              applyPriceRange([vals[0], vals[1]]);
-                            }
-                          }}
-                        />
-                        <div className="mt-3 flex items-center justify-between text-sm text-muted-foreground">
-                          <span>من {Math.round(priceRange[0])}</span>
-                          <span>إلى {Math.round(priceRange[1])}</span>
-                        </div>
-                      </div>
-                    </div>
-                    <div>
-                      <p className="text-[10px] tracking-[0.35em] uppercase text-muted-foreground mb-3">{getSiteText(content, "products_page_filter_state", "الحالة")}</p>
-                      <div className="flex flex-wrap gap-3">
-                        <button onClick={() => setParam('sale', saleOnly ? null : '1')} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${saleOnly ? 'bg-foreground text-background' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>عروض</button>
-                        <button onClick={() => setParam('stock', inStockOnly ? null : '1')} className={`px-3 py-1.5 rounded-lg text-sm transition-colors ${inStockOnly ? 'bg-foreground text-background' : 'bg-card text-muted-foreground border border-border hover:bg-muted'}`}>متوفر</button>
-                      </div>
-                    </div>
+          {sortOpen && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] flex items-end justify-center bg-[#211B19]/35 backdrop-blur-[2px] md:items-center" onClick={() => setSortOpen(false)}>
+              <motion.div initial={isMobileViewport ? { y: "100%" } : { opacity: 0, scale: 0.97 }} animate={isMobileViewport ? { y: 0 } : { opacity: 1, scale: 1 }} exit={isMobileViewport ? { y: "100%" } : { opacity: 0, scale: 0.97 }} transition={{ type: "spring", stiffness: 340, damping: 34 }} onClick={(event) => event.stopPropagation()} className="w-full rounded-t-[26px] bg-[#FFFDFC] px-4 pb-[calc(env(safe-area-inset-bottom)+18px)] pt-3 shadow-[0_-20px_50px_rgba(55,37,31,.12)] md:max-w-[380px] md:rounded-[22px] md:p-5">
+                <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-[#DDD1CD] md:hidden" />
+
+                <div className="mb-2 flex items-center justify-between px-1">
+                  <div>
+                    <p className="text-[9px] text-[#B66A70]">FLAMINGO</p>
+                    <h3 className="mt-0.5 text-[16px] font-semibold text-[#302724]">ترتيب المنتجات</h3>
                   </div>
 
-                  <div className="sticky bottom-0 left-0 right-0 py-4 bg-background/95 backdrop-blur-sm border-t border-border">
-                    <div className="flex gap-3">
-                      <button onClick={() => clearAllFilters()} className="flex-1 py-3 rounded-full bg-card border border-border text-muted-foreground hover:bg-muted transition-colors">{getSiteText(content, "products_page_drawer_reset", "إعادة تعيين")}</button>
-                      <button onClick={() => setFiltersOpen(false)} className="flex-1 py-3 rounded-full bg-foreground text-background hover:opacity-90 transition-colors">{getSiteText(content, "products_page_drawer_apply", "تطبيق")}</button>
-                    </div>
-                  </div>
-                </motion.aside>
+                  <button onClick={() => setSortOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-full border border-[#EAE0DC] bg-white">
+                    <X className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                <div className="mt-4 overflow-hidden rounded-[16px] border border-[#ECE2DE] bg-white">
+                  {[
+                    { value: "new", label: "الأحدث", desc: "أحدث المنتجات المضافة" },
+                    { value: "best", label: "الأكثر مبيعًا", desc: "القطع الأكثر طلبًا" },
+                    { value: "featured", label: "مختارات فلامنجو", desc: "منتجات مختارة بعناية" },
+                    { value: "price-asc", label: "السعر: الأقل أولًا", desc: "من الأقل إلى الأعلى" },
+                    { value: "price-desc", label: "السعر: الأعلى أولًا", desc: "من الأعلى إلى الأقل" },
+                  ].map((option) => (
+                    <button key={option.value} onClick={() => { setParam("sort", option.value); setSortOpen(false); }} className="flex min-h-[57px] w-full items-center justify-between border-b border-[#F0E9E6] px-3.5 text-right last:border-0">
+                      <div>
+                        <span className={`block text-[11px] ${sortBy === option.value ? "font-semibold text-[#B95F66]" : "font-medium text-[#4B403B]"}`}>{option.label}</span>
+                        <span className="mt-1 block text-[8px] text-[#A0958F]">{option.desc}</span>
+                      </div>
+
+                      <span className={`flex h-[22px] w-[22px] items-center justify-center rounded-full border transition-all ${sortBy === option.value ? "border-[#D4777D] bg-[#D4777D]" : "border-[#DDD2CE] bg-white"}`}>
+                        {sortBy === option.value && <Check className="h-3 w-3 stroke-[2.2] text-white" />}
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
 
-        {/* Quick View Drawer */}
-        <AnimatePresence>{quickViewProd && <QuickView product={quickViewProd} isMobile={isMobileViewport} onClose={() => setQuickViewProd(null)} />}</AnimatePresence>
+        {/* =========================================================
+            FILTER DRAWER
+        ========================================================= */}
+        <AnimatePresence>
+          {filtersOpen && (
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] flex items-end bg-[#211B19]/35 backdrop-blur-[2px] md:items-stretch">
+              <div className="absolute inset-0" onClick={() => setFiltersOpen(false)} />
 
+              <motion.aside initial={isMobileViewport ? { y: "100%" } : { x: "100%" }} animate={isMobileViewport ? { y: 0 } : { x: 0 }} exit={isMobileViewport ? { y: "100%" } : { x: "100%" }} transition={{ type: "spring", stiffness: 320, damping: 34 }} className="relative mr-auto flex max-h-[92vh] w-full flex-col rounded-t-[28px] bg-[#FFFDFC] shadow-[0_-20px_60px_rgba(55,37,31,.14)] md:h-full md:max-h-none md:w-[430px] md:rounded-none">
+                {/* HEADER */}
+                <div className="shrink-0 px-4 pt-3 md:px-6 md:pt-6">
+                  <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-[#DDD1CD] md:hidden" />
+
+                  <div className="flex items-center justify-between border-b border-[#EEE6E2] pb-4">
+                    <div>
+                      <p className="text-[8px] tracking-[0.18em] text-[#B86A70]">FLAMINGO FILTER</p>
+                      <h3 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-[#302724]">فلترة المنتجات</h3>
+                      <p className="mt-1 text-[9px] text-[#9A8F89]">{metadataLoading ? "جاري تجهيز الخيارات..." : `${totalProductsCount} منتج مطابق لاختياراتك`}</p>
+                    </div>
+
+                    <button onClick={() => setFiltersOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E9DEDA] bg-white text-[#554944]">
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+
+                {/* CONTENT */}
+                <div className="flex-1 overflow-y-auto px-4 pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:px-6">
+                  {/* CATEGORY */}
+                  <div className="border-b border-[#F0E8E5] py-5">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-[12px] font-semibold text-[#403632]">الفئة</p>
+                        <p className="mt-0.5 text-[8px] text-[#AAA09A]">اختر القسم المناسب</p>
+                      </div>
+
+                      {categorySlug && <button onClick={() => setParam("category", null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      <button onClick={() => setParam("category", null)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${!categorySlug ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>الكل</button>
+
+                      {categories.filter((category) => !category.parent_id).map((category) => (
+                        <button key={category.id} onClick={() => setParam("category", category.slug)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${categorySlug === category.slug ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* BRANDS */}
+                  <div className="border-b border-[#F0E8E5] py-5">
+                    <div className="mb-3 flex items-center justify-between">
+                      <div>
+                        <p className="text-[12px] font-semibold text-[#403632]">الماركة</p>
+                        <p className="mt-0.5 text-[8px] text-[#AAA09A]">{brandsAvailable.length} ماركة متاحة</p>
+                      </div>
+
+                      {brandFilter !== "all" && <button onClick={() => setParam("brand", null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
+                    </div>
+
+                    <div className="max-h-[126px] overflow-y-auto overscroll-contain pr-[1px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => setParam("brand", null)} className={`rounded-full px-3.5 py-2 text-[9px] font-medium transition-all ${brandFilter === "all" ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E6DCD8] bg-white text-[#6C615C]"}`}>جميع الماركات</button>
+
+                        {brandsAvailable.map((brand) => (
+                          <button key={brand} onClick={() => setParam("brand", brand)} className={`rounded-full px-3.5 py-2 text-[9px] font-medium transition-all ${brandFilter === brand ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E6DCD8] bg-white text-[#6C615C]"}`}>{brand}</button>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* COLORS - 3 ROWS THEN HIDDEN SCROLL */}
+                  <div className="border-b border-[#F0E8E5] py-5">
+                    <div className="mb-4 flex items-center justify-between">
+                      <div>
+                        <p className="text-[12px] font-semibold text-[#403632]">اللون</p>
+                        <p className="mt-0.5 text-[8px] text-[#AAA09A]">{metadataLoading ? "جاري تحميل الألوان" : `${colorsAvailable.length} لون متاح`}</p>
+                      </div>
+
+                      {colorFilter !== "all" && <button onClick={() => setParam("color", null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
+                    </div>
+
+                    <div className="max-h-[178px] overflow-y-auto overscroll-contain px-[1px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                      <div className="grid grid-cols-4 gap-x-2 gap-y-3">
+                        <button onClick={() => setParam("color", null)} className="group flex min-w-0 flex-col items-center">
+                          <span className={`relative flex h-[38px] w-[38px] items-center justify-center rounded-full border-2 transition-all ${colorFilter === "all" ? "border-[#C96B71] ring-2 ring-[#C96B71]/12" : "border-[#E2D9D5]"}`} style={{ background: "conic-gradient(#D4777D,#D4AB62,#6D9779,#6D8DA8,#8970A8,#D4777D)" }}>
+                            <span className="flex h-[29px] w-[29px] items-center justify-center rounded-full bg-[#FFFDFC] text-[8px] font-semibold text-[#5F544F]">كل</span>
+                          </span>
+
+                          <span className={`mt-1.5 max-w-full truncate text-[8px] ${colorFilter === "all" ? "font-semibold text-[#B65E65]" : "text-[#786D67]"}`}>الكل</span>
+                        </button>
+
+                        {colorsAvailable.map((color) => {
+                          const active = colorFilter.toLowerCase() === color.name.toLowerCase();
+
+                          return (
+                            <button key={color.name} onClick={() => setParam("color", active ? null : color.name)} className="group flex min-w-0 flex-col items-center">
+                              <span className={`relative block h-[38px] w-[38px] rounded-full border-2 transition-all ${active ? "border-[#C96B71] ring-2 ring-[#C96B71]/12" : "border-[#E2D9D5]"}`} style={{ background: color.hex2 ? `linear-gradient(135deg, ${color.hex} 0%, ${color.hex} 50%, ${color.hex2} 50%, ${color.hex2} 100%)` : color.hex }}>
+                                {active && (
+                                  <span className="absolute inset-0 flex items-center justify-center">
+                                    <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-white/95 shadow-[0_2px_7px_rgba(30,20,18,.16)]">
+                                      <Check className="h-2.5 w-2.5 stroke-[2.4] text-[#4F4540]" />
+                                    </span>
+                                  </span>
+                                )}
+                              </span>
+
+                              <span className={`mt-1.5 max-w-full truncate px-1 text-[8px] ${active ? "font-semibold text-[#B65E65]" : "text-[#786D67]"}`}>{color.name}</span>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    {colorsAvailable.length > 11 && (
+                      <div className="mt-3 flex items-center justify-center gap-2">
+                        <span className="h-px w-7 bg-[#E8DEDA]" />
+                        <span className="text-[7px] text-[#ADA39E]">اسحب لعرض المزيد</span>
+                        <span className="h-px w-7 bg-[#E8DEDA]" />
+                      </div>
+                    )}
+                  </div>
+
+                  {/* SIZES */}
+                  {sizesAvailable.length > 0 && (
+                    <div className="border-b border-[#F0E8E5] py-5">
+                      <div className="mb-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-[12px] font-semibold text-[#403632]">المقاس</p>
+                          <p className="mt-0.5 text-[8px] text-[#AAA09A]">اختر المقاس المطلوب</p>
+                        </div>
+
+                        {sizeFilter !== "all" && <button onClick={() => setParam("size", null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        <button onClick={() => setParam("size", null)} className={`min-w-[44px] rounded-xl px-3 py-2 text-[9px] font-medium ${sizeFilter === "all" ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E4DAD6] bg-white text-[#655A55]"}`}>الكل</button>
+
+                        {sizesAvailable.map((size) => (
+                          <button key={size} onClick={() => setParam("size", size)} className={`min-w-[44px] rounded-xl px-3 py-2 text-[9px] font-medium ${sizeFilter === size ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E4DAD6] bg-white text-[#655A55]"}`}>{size}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* PRICE */}
+                  <div className="border-b border-[#F0E8E5] py-5">
+                    <div className="mb-4 flex items-end justify-between">
+                      <div>
+                        <p className="text-[12px] font-semibold text-[#403632]">نطاق السعر</p>
+                        <p className="mt-0.5 text-[8px] text-[#AAA09A]">حدد ميزانيتك</p>
+                      </div>
+
+                      <div className="rounded-full bg-[#F8F2EF] px-3 py-1.5 text-[9px] font-medium text-[#8B6967]">
+                        {Math.round(priceRange[0])} — {Math.round(priceRange[1])}
+                      </div>
+                    </div>
+
+                    <div className="rounded-[18px] border border-[#EAE0DC] bg-white px-4 py-5 shadow-[0_5px_18px_rgba(60,42,36,.025)]">
+                      <Slider value={[priceRange[0], priceRange[1]]} min={priceBounds.min} max={priceBounds.max} step={1} onValueChange={(values) => { if (values.length === 2) setPriceRange([values[0], values[1]]); }} onValueCommit={(values) => { if (values.length === 2) applyPriceRange([values[0], values[1]]); }} />
+
+                      <div className="mt-4 flex items-center justify-between text-[8px] text-[#A19792]">
+                        <span>{priceBounds.min}</span>
+                        <span>{priceBounds.max}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* STATUS */}
+                  <div className="py-5">
+                    <div className="mb-3">
+                      <p className="text-[12px] font-semibold text-[#403632]">الحالة</p>
+                      <p className="mt-0.5 text-[8px] text-[#AAA09A]">خيارات إضافية</p>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <button onClick={() => setParam("sale", saleOnly ? null : "1")} className={`relative min-h-[54px] overflow-hidden rounded-[15px] border px-3 text-right transition-all ${saleOnly ? "border-[#D4777D] bg-[#FAEDEC]" : "border-[#E7DDD9] bg-white"}`}>
+                        <span className={`block text-[10px] font-semibold ${saleOnly ? "text-[#B85E65]" : "text-[#554A45]"}`}>العروض فقط</span>
+                        <span className="mt-1 block text-[7px] text-[#A29892]">المنتجات المخفضة</span>
+
+                        {saleOnly && <Check className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#C6666D]" />}
+                      </button>
+
+                      <button onClick={() => setParam("stock", inStockOnly ? null : "1")} className={`relative min-h-[54px] overflow-hidden rounded-[15px] border px-3 text-right transition-all ${inStockOnly ? "border-[#D4777D] bg-[#FAEDEC]" : "border-[#E7DDD9] bg-white"}`}>
+                        <span className={`block text-[10px] font-semibold ${inStockOnly ? "text-[#B85E65]" : "text-[#554A45]"}`}>المتوفر فقط</span>
+                        <span className="mt-1 block text-[7px] text-[#A29892]">جاهز للطلب</span>
+
+                        {inStockOnly && <Check className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#C6666D]" />}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {/* BOTTOM */}
+                <div className="shrink-0 border-t border-[#EDE4E0] bg-[#FFFDFC]/96 px-4 pb-[calc(env(safe-area-inset-bottom)+13px)] pt-3 backdrop-blur-xl md:px-6 md:pb-5">
+                  <div className="grid grid-cols-[.85fr_1.45fr] gap-2.5">
+                    <button onClick={clearAllFilters} className="flex h-[47px] items-center justify-center gap-1.5 rounded-[14px] border border-[#DFD4CF] bg-white text-[10px] font-medium text-[#6B5F59]">
+                      <RotateCcw className="h-3.5 w-3.5 stroke-[1.6]" />
+                      إعادة تعيين
+                    </button>
+
+                    <button onClick={() => setFiltersOpen(false)} className="h-[47px] rounded-[14px] bg-[#D4777D] text-[11px] font-semibold text-white shadow-[0_7px_22px_rgba(212,119,125,.23)]">
+                      {metadataLoading ? "تطبيق الفلاتر" : `عرض ${totalProductsCount} منتج`}
+                    </button>
+                  </div>
+                </div>
+              </motion.aside>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        <AnimatePresence>
+          {quickViewProd && <QuickView product={quickViewProd} isMobile={isMobileViewport} onClose={() => setQuickViewProd(null)} />}
+        </AnimatePresence>
       </main>
 
       <Footer />

@@ -23,6 +23,15 @@ interface BrandRow {
   is_active: boolean | null;
 }
 
+interface BrandPageRow {
+  id: string;
+  brand_id: string;
+  hero_image: string | null;
+  title: string | null;
+  description: string | null;
+  is_active: boolean | null;
+}
+
 interface BrandSectionRow {
   id: string;
   name: string;
@@ -53,6 +62,25 @@ const BrandPage = () => {
       if (error) throw error;
 
       return data as BrandRow | null;
+    },
+    staleTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
+  });
+
+  /* =========================================================
+     BRAND PAGE
+     البانر الذي يتم رفعه من الأدمن موجود هنا
+  ========================================================= */
+
+  const { data: brandPage, isLoading: brandPageLoading } = useQuery({
+    queryKey: ["brand-page", brand?.id],
+    enabled: Boolean(brand?.id),
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("brand_pages").select("id,brand_id,hero_image,title,description,is_active").eq("brand_id", brand!.id).eq("is_active", true).maybeSingle();
+
+      if (error) throw error;
+
+      return data as BrandPageRow | null;
     },
     staleTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
@@ -131,7 +159,21 @@ const BrandPage = () => {
     }));
   }, [sections, sectionProducts]);
 
-  const productCount = products.length;
+  /* =========================================================
+     BANNER
+     الأولوية للصورة المرفوعة من صفحة الماركة في الأدمن
+     ثم fallback للصورة القديمة لو وجدت
+  ========================================================= */
+
+  const bannerImage = useMemo(() => {
+    const pageBanner = brandPage?.hero_image?.trim();
+    const oldBanner = brand?.hero_image?.trim();
+
+    if (pageBanner) return pageBanner;
+    if (oldBanner) return oldBanner;
+
+    return null;
+  }, [brandPage?.hero_image, brand?.hero_image]);
 
   if (!slug) {
     return <Navigate to="/home" replace />;
@@ -141,17 +183,33 @@ const BrandPage = () => {
      LOADING
   ========================================================= */
 
-  if (brandLoading) {
+  if (brandLoading || (brand && brandPageLoading)) {
     return (
       <div className="min-h-screen bg-background" dir="rtl">
         <Navbar />
         <CartDrawer />
 
-        <main className="pb-16">
-          <div className="h-[260px] w-full animate-pulse bg-muted/60 sm:h-[300px] md:h-[360px]" />
+        <main className="pb-14">
+          <div className="mx-auto w-full max-w-[1400px] px-3 pt-3 md:px-6 md:pt-5">
+            <div className="aspect-[16/6] w-full animate-pulse rounded-[16px] bg-muted/60 sm:aspect-[16/5] md:rounded-[22px]" />
+          </div>
 
-          <div className="mx-auto max-w-[1400px] px-3 py-7 md:px-6 md:py-10">
-            <div className="mb-5 h-5 w-32 animate-pulse rounded-full bg-muted" />
+          <div className="mx-auto w-full max-w-[1400px] px-3 py-7 md:px-6 md:py-10">
+            <div className="mb-5">
+              <div className="h-2 w-20 animate-pulse rounded-full bg-muted" />
+              <div className="mt-2 h-6 w-40 animate-pulse rounded-full bg-muted" />
+            </div>
+
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 md:gap-4">
+              {Array.from({ length: 4 }).map((_, index) => (
+                <div key={index} className="aspect-[4/4.6] animate-pulse rounded-[15px] bg-muted md:rounded-[18px]" />
+              ))}
+            </div>
+
+            <div className="mb-5 mt-10">
+              <div className="h-2 w-20 animate-pulse rounded-full bg-muted" />
+              <div className="mt-2 h-6 w-40 animate-pulse rounded-full bg-muted" />
+            </div>
 
             <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 md:grid-cols-4 md:gap-x-5 md:gap-y-7">
               {Array.from({ length: 8 }).map((_, index) => (
@@ -178,15 +236,19 @@ const BrandPage = () => {
 
         <main className="flex min-h-[65vh] items-center justify-center px-4">
           <div className="text-center">
-            <p className="font-serif text-[6px] uppercase tracking-[0.24em] text-[#B86168]">BRAND</p>
+            <div className="mb-2 flex items-center justify-center gap-2">
+              <span className="h-[2px] w-4 rounded-full bg-[#D4777D]" />
+              <span className="font-serif text-[8px] uppercase tracking-[0.22em] text-[#B86168]">BRAND</span>
+              <span className="h-[2px] w-4 rounded-full bg-[#D4777D]" />
+            </div>
 
-            <h1 className="mt-2 text-[20px] font-semibold text-foreground">الماركة غير موجودة</h1>
+            <h1 className="text-[22px] font-semibold text-foreground">الماركة غير موجودة</h1>
 
-            <p className="mt-1.5 text-[8px] text-muted-foreground">قد تكون الماركة غير متاحة أو تم تغيير الرابط.</p>
+            <p className="mt-2 text-[12px] text-muted-foreground">قد تكون الماركة غير متاحة أو تم تغيير الرابط.</p>
 
-            <Link to="/brands" className="mt-5 inline-flex h-10 items-center gap-1.5 rounded-[9px] border border-border bg-white px-4 text-[8px] font-semibold text-[#A95B61]">
+            <Link to="/brands" className="mt-5 inline-flex h-11 items-center gap-2 rounded-[10px] border border-border bg-background px-5 text-[12px] font-semibold text-[#A95B61]">
               العودة للماركات
-              <ArrowLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+              <ArrowLeft className="h-4 w-4" strokeWidth={1.5} />
             </Link>
           </div>
         </main>
@@ -196,6 +258,8 @@ const BrandPage = () => {
     );
   }
 
+  const brandSlug = brand.slug || slug;
+
   return (
     <div className="flex min-h-screen flex-col bg-background" dir="rtl">
       <Navbar />
@@ -203,40 +267,18 @@ const BrandPage = () => {
 
       <main className="flex-1">
         {/* =====================================================
-            HERO
+            BRAND BANNER
         ===================================================== */}
 
-        <section className="bg-background px-3 pt-3 md:px-6 md:pt-5">
-          <div className="relative mx-auto h-[255px] w-full max-w-[1400px] overflow-hidden rounded-[18px] border border-border/60 bg-[#F4F1EE] sm:h-[300px] md:h-[360px] md:rounded-[22px] lg:h-[400px]">
-            {brand.hero_image ? (
-              <img src={optimizeImage(brand.hero_image, 1800, 82)} alt={brand.name} loading="eager" decoding="async" fetchPriority="high" sizes="100vw" onError={handleImageError} className="absolute inset-0 h-full w-full object-cover object-center" />
-            ) : (
-              <div className="absolute inset-0 bg-[linear-gradient(135deg,#F7F4F1_0%,#EEE8E4_100%)]" />
-            )}
-
-            {brand.hero_image && <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/10 to-black/5" />}
-
-            <div className={`absolute inset-0 flex flex-col items-center justify-end px-4 pb-7 text-center md:pb-9 ${brand.hero_image ? "text-white" : "text-foreground"}`}>
-              {brand.logo_url && (
-                <div className="mb-3 flex min-h-[58px] min-w-[110px] max-w-[180px] items-center justify-center rounded-[10px] bg-white/95 px-4 py-2 shadow-[0_4px_16px_rgba(0,0,0,0.05)] md:min-h-[66px] md:min-w-[130px] md:max-w-[210px]">
-                  <img src={brand.logo_url} alt={`${brand.name} logo`} loading="eager" decoding="async" onError={handleImageError} className="block max-h-[46px] max-w-full object-contain object-center md:max-h-[52px]" />
-                </div>
-              )}
-
-              <h1 className="text-[22px] font-semibold tracking-[-0.025em] md:text-[32px]">{brand.name}</h1>
-
-              {brand.description && <p className={`mt-2 line-clamp-2 max-w-[560px] text-[8px] leading-5 md:text-[10px] md:leading-6 ${brand.hero_image ? "text-white/80" : "text-muted-foreground"}`}>{brand.description}</p>}
-
-              <div className={`mt-3 flex items-center gap-2 text-[6px] md:text-[7px] ${brand.hero_image ? "text-white/70" : "text-muted-foreground"}`}>
-                <span>{productCount} منتج</span>
-
-                <span className={`h-1 w-1 rounded-full ${brand.hero_image ? "bg-white/50" : "bg-[#D4777D]"}`} />
-
-                <span>Flamingo Park</span>
+        {bannerImage && (
+          <section className="bg-background pt-3 md:pt-5">
+            <div className="mx-auto w-full max-w-[1400px] px-3 md:px-6">
+              <div className="w-full overflow-hidden rounded-[16px] bg-muted/30 md:rounded-[22px]">
+                <img src={bannerImage} alt={`${brand.name} banner`} loading="eager" decoding="async" fetchPriority="high" onError={handleImageError} className="block h-auto w-full object-contain object-center" />
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+        )}
 
         {/* =====================================================
             SECTIONS
@@ -247,31 +289,31 @@ const BrandPage = () => {
             <div className="mx-auto w-full max-w-[1400px] px-3 md:px-6">
               <div className="mb-4 flex items-end justify-between gap-3 md:mb-6">
                 <div>
-                  <div className="mb-1 flex items-center gap-2">
+                  <div className="mb-1.5 flex items-center gap-2">
                     <span className="h-[2px] w-4 rounded-full bg-[#D4777D]" />
-                    <span className="font-serif text-[6px] uppercase tracking-[0.2em] text-[#B86168] md:text-[7px]">COLLECTIONS</span>
+                    <span className="font-serif text-[8px] uppercase tracking-[0.2em] text-[#B86168] md:text-[9px]">COLLECTIONS</span>
                   </div>
 
-                  <h2 className="text-[17px] font-semibold tracking-[-0.025em] text-foreground md:text-[24px]">أقسام {brand.name}</h2>
+                  <h1 className="text-[20px] font-semibold tracking-[-0.025em] text-foreground md:text-[26px]">أقسام {brand.name}</h1>
                 </div>
               </div>
 
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
                 {sectionsWithCount.map((section) => (
-                  <Link key={section.id} to={`/brands/${brand.slug || slug}/sections/${encodeURIComponent(section.slug)}`} className="group block min-w-0">
+                  <Link key={section.id} to={`/brands/${brandSlug}/sections/${encodeURIComponent(section.slug)}`} className="group block min-w-0">
                     <div className="relative aspect-[4/4.6] overflow-hidden rounded-[15px] border border-border/60 bg-muted/40 md:rounded-[18px]">
                       {section.image_url ? (
-                        <img src={optimizeImage(section.image_url, 800, 80)} alt={section.name} loading="lazy" decoding="async" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" onError={handleImageError} className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.025]" />
+                        <img src={optimizeImage(section.image_url, 800, 82)} alt={section.name} loading="lazy" decoding="async" sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" onError={handleImageError} className="absolute inset-0 h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.025]" />
                       ) : (
                         <div className="absolute inset-0 bg-[#F3F0ED]" />
                       )}
 
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-black/5 to-transparent" />
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/5 to-transparent" />
 
                       <div className="absolute inset-x-0 bottom-0 p-3 md:p-4">
-                        <h3 className="truncate text-[10px] font-semibold text-white md:text-[12px]">{section.name}</h3>
+                        <h2 className="truncate text-[13px] font-semibold text-white md:text-[15px]">{section.name}</h2>
 
-                        <p className="mt-1 text-[6px] text-white/70 md:text-[7px]">{section.count} منتج</p>
+                        <p className="mt-1 text-[10px] text-white/75 md:text-[11px]">{section.count} منتج</p>
                       </div>
                     </div>
                   </Link>
@@ -285,22 +327,22 @@ const BrandPage = () => {
             PRODUCTS
         ===================================================== */}
 
-        <section className="bg-background py-7 md:py-11">
+        <section className="bg-background pb-10 pt-3 md:pb-14 md:pt-5">
           <div className="mx-auto w-full max-w-[1400px] px-3 md:px-6">
             <div className="mb-4 flex items-end justify-between gap-3 md:mb-6">
               <div>
-                <div className="mb-1 flex items-center gap-2">
+                <div className="mb-1.5 flex items-center gap-2">
                   <span className="h-[2px] w-4 rounded-full bg-[#D4777D]" />
-                  <span className="font-serif text-[6px] uppercase tracking-[0.2em] text-[#B86168] md:text-[7px]">PRODUCTS</span>
+                  <span className="font-serif text-[8px] uppercase tracking-[0.2em] text-[#B86168] md:text-[9px]">PRODUCTS</span>
                 </div>
 
-                <h2 className="text-[17px] font-semibold tracking-[-0.025em] text-foreground md:text-[24px]">منتجات {brand.name}</h2>
+                <h2 className="text-[20px] font-semibold tracking-[-0.025em] text-foreground md:text-[26px]">منتجات {brand.name}</h2>
               </div>
 
               {products.length > 0 && (
-                <Link to={`/brands/${brand.slug || slug}/products`} className="flex shrink-0 items-center gap-1 border-b border-border pb-0.5 text-[7px] font-medium text-[#A95B61] transition-opacity active:opacity-60 md:text-[8px]">
+                <Link to={`/brands/${brandSlug}/products`} className="flex shrink-0 items-center gap-1 border-b border-border pb-0.5 text-[11px] font-medium text-[#A95B61] transition-colors hover:text-[#B86168] md:text-[12px]">
                   عرض الكل
-                  <ChevronLeft className="h-3 w-3" strokeWidth={1.5} />
+                  <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
                 </Link>
               )}
             </div>
@@ -312,11 +354,10 @@ const BrandPage = () => {
                 ))}
               </div>
             ) : products.length === 0 ? (
-              <div className="flex min-h-[200px] items-center justify-center rounded-[14px] border border-border/60 bg-white">
+              <div className="flex min-h-[190px] items-center justify-center rounded-[15px] border border-border/60 bg-background">
                 <div className="text-center">
-                  <p className="text-[10px] font-medium text-foreground">لا توجد منتجات حالياً</p>
-
-                  <p className="mt-1 text-[7px] text-muted-foreground">سيتم إضافة منتجات هذه الماركة قريبًا.</p>
+                  <p className="text-[13px] font-medium text-foreground">لا توجد منتجات حالياً</p>
+                  <p className="mt-1.5 text-[10px] text-muted-foreground">سيتم إضافة منتجات هذه الماركة قريبًا.</p>
                 </div>
               </div>
             ) : (

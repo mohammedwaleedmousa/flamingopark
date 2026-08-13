@@ -1,5 +1,5 @@
-import { Link, useLocation, useSearchParams } from "react-router-dom";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronLeft } from "lucide-react";
 
@@ -7,26 +7,11 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import ProductCard from "@/components/ProductCard";
-import ProductListFilters, {
-  type ProductListFilterValues,
-} from "@/components/ProductListFilters";
+import ProductListFilters, { type ProductListFilterValues } from "@/components/ProductListFilters";
 
 import { supabase } from "@/integrations/supabase/client";
-import {
-  useSiteContent,
-  getSiteText,
-} from "@/hooks/useSiteContent";
-
-import { Button } from "@/components/ui/button";
-
-import {
-  PRODUCT_CARD_SELECT,
-  mapProductCard,
-} from "@/lib/productCardData";
-
-import {
-  restoreCatalogScroll,
-} from "@/lib/catalogScroll";
+import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
+import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
 
 interface Category {
   id: string;
@@ -38,635 +23,393 @@ interface Category {
   sort_order: number;
 }
 
+const PAGE_SIZE = 24;
+
 const FALLBACK: Record<string, string> = {
-  women:
-    "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=640&q=65",
-
-  men:
-    "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=640&q=65",
-
-  kids:
-    "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=640&q=65",
-
-  bags:
-    "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=640&q=65",
-
-  shoes:
-    "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=640&q=65",
-
-  beauty:
-    "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=640&q=65",
+  women: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=640&q=65",
+  men: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=640&q=65",
+  kids: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=640&q=65",
+  bags: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=640&q=65",
+  shoes: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=640&q=65",
+  beauty: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=640&q=65",
 };
 
 const CategoriesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
+  const { data: content } = useSiteContent("categories_page_");
 
-  const location = useLocation();
+  const [brandOpen, setBrandOpen] = useState(false);
+  const [loadedPage, setLoadedPage] = useState(1);
 
-  const { data: content } =
-    useSiteContent("categories_page_");
+  const previousScopeRef = useRef("");
 
-  const { data: categories = [] } = useQuery({
+  /* =========================================================
+     PARAMS
+  ========================================================= */
+
+  const parentSlug = searchParams.get("parent") || "";
+  const subSlug = searchParams.get("sub") || "";
+  const brandFilter = searchParams.get("brand") || "all";
+  const productQuery = searchParams.get("q") || "";
+  const productSort = (searchParams.get("sort") || "new") as ProductListFilterValues["sort"];
+  const inStockOnly = searchParams.get("stock") === "1";
+  const minPrice = searchParams.get("min") || "";
+  const maxPrice = searchParams.get("max") || "";
+
+  /* =========================================================
+     CATEGORIES
+  ========================================================= */
+
+  const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ["categories-all-active"],
-
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("categories")
-        .select(
-          "id,slug,name,name_ar,parent_id,image_url,sort_order"
-        )
-        .eq("is_active", true)
-        .order("sort_order");
+      const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order", { ascending: true });
 
       if (error) throw error;
 
-      return data as unknown as Category[];
+      return (data || []) as Category[];
     },
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
-  const parentSlug =
-    searchParams.get("parent") || "";
+  const parents = useMemo(() => categories.filter((category) => !category.parent_id), [categories]);
 
-  const subSlug =
-    searchParams.get("sub") || "";
+  const selectedParent = useMemo(() => parents.find((parent) => parent.slug === parentSlug) || null, [parents, parentSlug]);
 
-  const brandFilter =
-    searchParams.get("brand") || "all";
+  const subCategories = useMemo(() => {
+    if (!selectedParent) return [];
 
-  const productQuery =
-    searchParams.get("q") || "";
+    return categories.filter((category) => category.parent_id === selectedParent.id);
+  }, [categories, selectedParent]);
 
-  const productSort = (
-    searchParams.get("sort") || "new"
-  ) as ProductListFilterValues["sort"];
+  const selectedSub = useMemo(() => subCategories.find((sub) => sub.slug === subSlug) || null, [subCategories, subSlug]);
 
-  const inStockOnly =
-    searchParams.get("stock") === "1";
-
-  const minPrice =
-    searchParams.get("min") || "";
-
-  const maxPrice =
-    searchParams.get("max") || "";
-
-  const [brandOpen, setBrandOpen] =
-    useState(false);
-
-  const parents = useMemo(
-    () =>
-      categories.filter(
-        (category) => !category.parent_id
-      ),
-    [categories]
-  );
-
-  const selectedParent = useMemo(
-    () =>
-      parents.find(
-        (parent) =>
-          parent.slug === parentSlug
-      ) || null,
-    [parents, parentSlug]
-  );
-
-  const subCategories = useMemo(
-    () =>
-      categories.filter(
-        (category) =>
-          selectedParent &&
-          category.parent_id ===
-            selectedParent.id
-      ),
-    [categories, selectedParent]
-  );
-
-  const selectedSub = useMemo(
-    () =>
-      subCategories.find(
-        (sub) => sub.slug === subSlug
-      ) || null,
-    [subCategories, subSlug]
-  );
-
-  const activeProductCategory =
-    selectedSub ||
-    (selectedParent &&
-    subCategories.length === 0
-      ? selectedParent
-      : null);
-
-  const page = Math.max(
-    1,
-    Number(
-      searchParams.get("page") || 1
-    )
-  );
-
-  const PAGE_SIZE = 24;
+  const activeProductCategory = selectedSub || (selectedParent && subCategories.length === 0 ? selectedParent : null);
 
   const scopedCategoryIds = useMemo(() => {
-    if (!activeProductCategory) {
-      return [] as string[];
-    }
+    if (!activeProductCategory) return [];
 
     return [activeProductCategory.id];
   }, [activeProductCategory]);
 
+  /* =========================================================
+     INVALID SUB CATEGORY
+  ========================================================= */
+
   useEffect(() => {
-    if (subSlug && !selectedSub) {
-      setSearchParams(
-        (current) => {
-          const next =
-            new URLSearchParams(current);
+    if (!subSlug || selectedSub || categoriesLoading) return;
 
-          next.delete("sub");
-          next.delete("brand");
-          next.delete("page");
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
 
-          return next;
-        },
-        { replace: true }
-      );
+      next.delete("sub");
+      next.delete("brand");
+      next.delete("page");
+
+      return next;
+    }, { replace: true });
+  }, [subSlug, selectedSub, categoriesLoading, setSearchParams]);
+
+  /* =========================================================
+     RESET LOCAL PAGINATION
+  ========================================================= */
+
+  const productScopeKey = useMemo(() => {
+    return [
+      scopedCategoryIds.join(","),
+      brandFilter,
+      productQuery,
+      productSort,
+      inStockOnly ? "1" : "0",
+      minPrice,
+      maxPrice,
+    ].join("|");
+  }, [scopedCategoryIds, brandFilter, productQuery, productSort, inStockOnly, minPrice, maxPrice]);
+
+  useEffect(() => {
+    if (previousScopeRef.current && previousScopeRef.current !== productScopeKey) {
+      setLoadedPage(1);
     }
-  }, [
-    selectedSub,
-    setSearchParams,
-    subSlug,
-  ]);
 
-  const productQueries = useQueries({
-    queries: Array.from(
-      { length: page },
-      (_, pageIndex) => ({
-        queryKey: [
-          "categories-leaf-products",
-          scopedCategoryIds.join(","),
-          brandFilter,
-          productQuery,
-          productSort,
-          inStockOnly,
-          minPrice,
-          maxPrice,
-          pageIndex + 1,
-        ],
+    previousScopeRef.current = productScopeKey;
+  }, [productScopeKey]);
 
-        enabled:
-          scopedCategoryIds.length > 0,
+  /* =========================================================
+     EXACT PRODUCT COUNT
+  ========================================================= */
 
-        queryFn: async () => {
-          const from =
-            pageIndex * PAGE_SIZE;
+  const { data: totalProductCount = 0 } = useQuery({
+    queryKey: ["category-products-count", productScopeKey],
+    enabled: scopedCategoryIds.length > 0,
+    queryFn: async () => {
+      let query = supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", true).in("category_id", scopedCategoryIds);
 
-          let query = supabase
-            .from("products")
-            .select(PRODUCT_CARD_SELECT)
-            .eq("is_active", true)
-            .in(
-              "category_id",
-              scopedCategoryIds
-            );
+      if (brandFilter !== "all") {
+        query = query.eq("brand", brandFilter);
+      }
 
-          if (brandFilter !== "all") {
-            query = query.eq(
-              "brand",
-              brandFilter
-            );
-          }
+      if (productQuery.trim()) {
+        const term = productQuery.trim();
 
-          if (productQuery.trim()) {
-            query = query.or(
-              `name_ar.ilike.%${productQuery.trim()}%,name.ilike.%${productQuery.trim()}%,description_ar.ilike.%${productQuery.trim()}%`
-            );
-          }
+        query = query.or(`name_ar.ilike.%${term}%,name.ilike.%${term}%,description_ar.ilike.%${term}%`);
+      }
 
-          if (inStockOnly) {
-            query = query.eq(
-              "in_stock",
-              true
-            );
-          }
+      if (inStockOnly) {
+        query = query.eq("in_stock", true);
+      }
 
-          if (Number(minPrice) > 0) {
-            query = query.gte(
-              "price",
-              Number(minPrice)
-            );
-          }
+      if (Number(minPrice) > 0) {
+        query = query.gte("price", Number(minPrice));
+      }
 
-          if (Number(maxPrice) > 0) {
-            query = query.lte(
-              "price",
-              Number(maxPrice)
-            );
-          }
+      if (Number(maxPrice) > 0) {
+        query = query.lte("price", Number(maxPrice));
+      }
 
-          if (
-            productSort === "price-asc"
-          ) {
-            query = query.order(
-              "price",
-              { ascending: true }
-            );
-          } else if (
-            productSort === "price-desc"
-          ) {
-            query = query.order(
-              "price",
-              { ascending: false }
-            );
-          } else if (
-            productSort === "name"
-          ) {
-            query = query.order(
-              "name_ar",
-              { ascending: true }
-            );
-          } else {
-            query = query.order(
-              "created_at",
-              { ascending: false }
-            );
-          }
+      const { count, error } = await query;
 
-          const { data, error } =
-            await query.range(
-              from,
-              from + PAGE_SIZE - 1
-            );
+      if (error) throw error;
 
-          if (error) throw error;
-
-          return (data || []).map(
-            mapProductCard
-          );
-        },
-      })
-    ),
+      return count || 0;
+    },
+    staleTime: 60 * 1000,
+    gcTime: 10 * 60 * 1000,
+    refetchOnWindowFocus: false,
   });
 
-  const leafProducts = useMemo(() => {
-    const seen = new Set<string>();
+  /* =========================================================
+     PRODUCTS
+  ========================================================= */
 
-    return productQueries
-      .flatMap(
-        (query) => query.data || []
-      )
-      .filter((product) => {
-        if (seen.has(product.id)) {
-          return false;
+  const productQueries = useQueries({
+    queries: Array.from({ length: loadedPage }, (_, pageIndex) => ({
+      queryKey: ["categories-products", productScopeKey, pageIndex + 1],
+      enabled: scopedCategoryIds.length > 0,
+
+      queryFn: async () => {
+        const from = pageIndex * PAGE_SIZE;
+
+        let query = supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).in("category_id", scopedCategoryIds);
+
+        if (brandFilter !== "all") {
+          query = query.eq("brand", brandFilter);
         }
 
-        seen.add(product.id);
+        if (productQuery.trim()) {
+          const term = productQuery.trim();
 
-        return true;
-      });
+          query = query.or(`name_ar.ilike.%${term}%,name.ilike.%${term}%,description_ar.ilike.%${term}%`);
+        }
+
+        if (inStockOnly) {
+          query = query.eq("in_stock", true);
+        }
+
+        if (Number(minPrice) > 0) {
+          query = query.gte("price", Number(minPrice));
+        }
+
+        if (Number(maxPrice) > 0) {
+          query = query.lte("price", Number(maxPrice));
+        }
+
+        if (productSort === "price-asc") {
+          query = query.order("price", { ascending: true });
+        } else if (productSort === "price-desc") {
+          query = query.order("price", { ascending: false });
+        } else if (productSort === "name") {
+          query = query.order("name_ar", { ascending: true });
+        } else {
+          query = query.order("created_at", { ascending: false });
+        }
+
+        const { data, error } = await query.range(from, from + PAGE_SIZE - 1);
+
+        if (error) throw error;
+
+        return (data || []).map(mapProductCard);
+      },
+
+      staleTime: 5 * 60 * 1000,
+      gcTime: 20 * 60 * 1000,
+      refetchOnWindowFocus: false,
+      refetchOnReconnect: false,
+    })),
+  });
+
+  const products = useMemo(() => {
+    const seen = new Set<string>();
+
+    return productQueries.flatMap((query) => query.data || []).filter((product) => {
+      if (seen.has(product.id)) return false;
+
+      seen.add(product.id);
+
+      return true;
+    });
   }, [productQueries]);
 
-  const productsLoading =
-    productQueries.some(
-      (query) => query.isLoading
-    );
+  const productsLoading = productQueries.some((query) => query.isLoading || query.isFetching);
 
-  const leafPage =
-    productQueries[
-      productQueries.length - 1
-    ]?.data || [];
+  const initialProductsLoading = productsLoading && products.length === 0;
 
-  const hasMore =
-    leafPage.length === PAGE_SIZE;
+  const hasMore = products.length < totalProductCount;
 
-  useEffect(() => {
-    if (
-      !productsLoading &&
-      leafProducts.length > 0
-    ) {
-      restoreCatalogScroll(
-        `${location.pathname}${location.search}`
-      );
-    }
-  }, [
-    productsLoading,
-    leafProducts.length,
-    location.pathname,
-    location.search,
-  ]);
+  /* =========================================================
+     AVAILABLE BRANDS
 
-  const brands = useMemo(
-    () =>
-      Array.from(
-        new Set(
-          leafProducts
-            .map((product) =>
-              product.brand?.trim()
-            )
-            .filter(Boolean)
-        )
-      ) as string[],
-    [leafProducts]
-  );
+     يعتمد على المنتجات المحملة الحالية، بدون طلب ثقيل إضافي.
+  ========================================================= */
 
-  const availableBrands = brands;
+  const availableBrands = useMemo(() => {
+    return Array.from(new Set(products.map((product) => product.brand?.trim()).filter((brand): brand is string => Boolean(brand)))).sort((a, b) => a.localeCompare(b, "ar"));
+  }, [products]);
 
-  const visibleProducts = useMemo(() => {
-    if (brandFilter === "all") {
-      return leafProducts;
-    }
-
-    return leafProducts.filter(
-      (product) =>
-        product.brand?.trim() ===
-        brandFilter
-    );
-  }, [leafProducts, brandFilter]);
-
-  useEffect(() => {
-    window.scrollTo({
-      top: 0,
-      behavior: "instant",
-    });
-  }, [subSlug, parentSlug]);
+  /* =========================================================
+     CLOSE BRAND MENU
+  ========================================================= */
 
   useEffect(() => {
     setBrandOpen(false);
   }, [parentSlug, subSlug]);
 
-  const setStepParams = (
-    next: Record<string, string | null>
-  ) => {
-    const params =
-      new URLSearchParams(
-        searchParams
-      );
+  /* =========================================================
+     TOP ON CATEGORY CHANGE
+  ========================================================= */
 
-    Object.entries(next).forEach(
-      ([key, value]) => {
-        if (!value) {
-          params.delete(key);
-        } else {
-          params.set(key, value);
-        }
+  useEffect(() => {
+    window.scrollTo({
+      top: 0,
+      left: 0,
+      behavior: "auto",
+    });
+  }, [parentSlug, subSlug]);
+
+  /* =========================================================
+     PARAMS
+  ========================================================= */
+
+  const setStepParams = (nextValues: Record<string, string | null>) => {
+    const params = new URLSearchParams(searchParams);
+
+    Object.entries(nextValues).forEach(([key, value]) => {
+      if (!value) {
+        params.delete(key);
+      } else {
+        params.set(key, value);
       }
-    );
+    });
 
-    if (!("page" in next)) {
-      params.delete("page");
-    }
+    params.delete("page");
 
-    setSearchParams(params);
+    setLoadedPage(1);
 
-    if (!("page" in next)) {
-      requestAnimationFrame(() =>
-        window.scrollTo({
-          top: 0,
-          left: 0,
-          behavior: "auto",
-        })
-      );
-    }
-  };
+    setSearchParams(params, { replace: true });
 
-  const updateProductFilters = (
-    values: ProductListFilterValues
-  ) => {
-    setStepParams({
-      brand:
-        values.brand === "all"
-          ? null
-          : values.brand,
-
-      q:
-        values.query || null,
-
-      sort:
-        values.sort === "new"
-          ? null
-          : values.sort,
-
-      stock:
-        values.inStockOnly
-          ? "1"
-          : null,
-
-      min:
-        values.minPrice || null,
-
-      max:
-        values.maxPrice || null,
+    requestAnimationFrame(() => {
+      window.scrollTo({
+        top: 0,
+        left: 0,
+        behavior: "auto",
+      });
     });
   };
 
-  return (
-    <div
-      className="min-h-screen bg-white"
-      dir="rtl"
-    >
-      <Navbar />
+  const updateProductFilters = (values: ProductListFilterValues) => {
+    setStepParams({
+      brand: values.brand === "all" ? null : values.brand,
+      q: values.query || null,
+      sort: values.sort === "new" ? null : values.sort,
+      stock: values.inStockOnly ? "1" : null,
+      min: values.minPrice || null,
+      max: values.maxPrice || null,
+    });
+  };
 
+  /* =========================================================
+     LOAD MORE
+
+     لا URL
+     لا Navigation
+     لا Scroll Jump
+  ========================================================= */
+
+  const handleLoadMore = () => {
+    if (productsLoading || !hasMore) return;
+
+    setLoadedPage((current) => current + 1);
+  };
+
+  /* =========================================================
+     RENDER
+  ========================================================= */
+
+  return (
+    <div className="min-h-screen bg-[#FFFDFC] text-[#302725]" dir="rtl">
+      <Navbar />
       <CartDrawer />
 
-      <main className="pb-20">
+      <main className="pb-20 md:pt-24">
+        {/* =========================================================
+            MAIN INTRO
+        ========================================================= */}
 
-        {/* PAGE INTRO */}
-        {!activeProductCategory && (
-          <section className="container mx-auto px-4 pt-8 md:px-8 md:pt-12">
-            <div className="mx-auto max-w-xl text-center">
+        {!selectedParent && (
+          <section className="border-b border-[#F0E7E3] bg-[#FFF8F6]">
+            <div className="mx-auto w-full max-w-[1500px] px-4 pb-5 pt-6 md:px-6 md:pb-8 md:pt-9">
+              <div>
+                <div className="mb-2 flex items-center gap-2">
+                  <span className="h-[2px] w-4 rounded-full bg-[#D4777D]" />
+                  <span className="font-serif text-[7px] tracking-[0.24em] text-[#B86168]">{getSiteText(content, "categories_page_eyebrow", "FLAMINGO")}</span>
+                </div>
 
-              <span className="mb-3 inline-block text-[10px] font-semibold tracking-[0.16em] text-[#E85A91]">
-                {getSiteText(
-                  content,
-                  "categories_page_eyebrow",
-                  "FLAMINGO"
-                )}
-              </span>
+                <h1 className="text-[26px] font-semibold leading-tight tracking-[-0.04em] text-[#403132] md:text-[38px]">{getSiteText(content, "categories_page_title", "تسوّقي حسب القسم")}</h1>
 
-              <h1 className="text-[30px] font-bold leading-tight tracking-[-0.03em] text-[#2A2024] md:text-5xl">
-                {getSiteText(
-                  content,
-                  "categories_page_title",
-                  "تسوّقي حسب القسم"
-                )}
-              </h1>
-
-              <p className="mx-auto mt-3 max-w-sm text-[12px] leading-6 text-black/45 md:text-sm">
-                {getSiteText(
-                  content,
-                  "categories_page_subtitle",
-                  "اكتشفي ما يناسبك من مجموعات مختارة بعناية"
-                )}
-              </p>
+                <p className="mt-1.5 max-w-[280px] text-[9px] leading-5 text-[#9B8984] md:max-w-md md:text-[11px]">{getSiteText(content, "categories_page_subtitle", "اكتشفي ما يناسبك من مجموعات فلامنجو المختارة بعناية")}</p>
+              </div>
             </div>
           </section>
         )}
 
-        {/* BREADCRUMB + BRAND */}
-        {activeProductCategory && (
-          <section className="container mx-auto px-4 pt-6 md:px-8">
-            <div className="flex items-center justify-between gap-3">
+        {/* =========================================================
+            BREADCRUMB
+        ========================================================= */}
 
-              {/* BREADCRUMB */}
-              <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-[11px] text-black/40">
+        {selectedParent && (
+          <section className="border-b border-[#F0E7E3] bg-[#FFFDFC]">
+            <div className="mx-auto flex h-[46px] w-full max-w-[1500px] items-center justify-between gap-3 px-3 md:h-[50px] md:px-6">
+              <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-[9px] text-[#A0938E] md:text-[10px]">
+                <button type="button" onClick={() => setStepParams({ parent: null, sub: null, brand: null })} className="shrink-0 transition-colors hover:text-[#B86168]">الأقسام</button>
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    setStepParams({
-                      parent: null,
-                      sub: null,
-                      brand: null,
-                    })
-                  }
-                  className="shrink-0 hover:text-[#E85A91]"
-                >
-                  الأقسام
-                </button>
+                <ChevronLeft className="h-3 w-3 shrink-0 stroke-[1.4] text-[#C9BBB6]" />
 
-                {selectedParent && (
+                {selectedSub ? (
                   <>
-                    <ChevronLeft
-                      size={12}
-                      className="shrink-0 text-black/20"
-                    />
+                    <button type="button" onClick={() => setStepParams({ sub: null, brand: null })} className="max-w-[100px] truncate text-[#756763] transition-colors hover:text-[#B86168] md:max-w-[180px]">{selectedParent.name_ar}</button>
 
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setStepParams({
-                          sub: null,
-                          brand: null,
-                        })
-                      }
-                      className="max-w-[110px] truncate text-black/60 hover:text-[#E85A91]"
-                    >
-                      {selectedParent.name_ar}
-                    </button>
+                    <ChevronLeft className="h-3 w-3 shrink-0 stroke-[1.4] text-[#C9BBB6]" />
+
+                    <span className="max-w-[110px] truncate font-semibold text-[#473A38] md:max-w-[200px]">{selectedSub.name_ar}</span>
                   </>
-                )}
-
-                {selectedSub && (
-                  <>
-                    <ChevronLeft
-                      size={12}
-                      className="shrink-0 text-black/20"
-                    />
-
-                    <span className="max-w-[110px] truncate font-semibold text-[#282023]">
-                      {selectedSub.name_ar}
-                    </span>
-                  </>
+                ) : (
+                  <span className="max-w-[150px] truncate font-semibold text-[#473A38]">{selectedParent.name_ar}</span>
                 )}
               </div>
 
-              {/* BRAND */}
-              {availableBrands.length > 0 && (
+              {!!activeProductCategory && availableBrands.length > 0 && (
                 <div className="relative shrink-0">
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setBrandOpen(
-                        (current) =>
-                          !current
-                      )
-                    }
-                    className="
-                      flex h-9 items-center gap-1.5
-                      rounded-xl
-                      border border-[#EEE8EB]
-                      bg-white
-                      px-3
-                      text-[11px] font-semibold
-                      text-[#40363A]
-                      hover:border-[#F1C8D8]
-                    "
-                  >
-                    <span>
-                      {brandFilter === "all"
-                        ? "الماركات"
-                        : brandFilter}
-                    </span>
-
-                    <ChevronDown
-                      size={14}
-                      className={`text-[#E85A91] ${
-                        brandOpen
-                          ? "rotate-180"
-                          : ""
-                      }`}
-                    />
-                  </button>
-
                   {brandOpen && (
-                    <div
-                      className="
-                        absolute left-0 top-11 z-50
-                        w-52
-                        overflow-hidden
-                        rounded-2xl
-                        border border-[#EFEAEC]
-                        bg-white
-                        shadow-[0_16px_40px_-20px_rgba(0,0,0,0.22)]
-                      "
-                    >
-                      <div className="max-h-64 overflow-y-auto p-2">
+                    <div className="absolute left-0 top-10 z-50 w-48 overflow-hidden rounded-[14px] border border-[#EDE3DF] bg-white shadow-[0_12px_30px_rgba(60,40,35,.09)]">
+                      <div className="max-h-56 overflow-y-auto p-1.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        <button type="button" onClick={() => { setStepParams({ brand: null }); setBrandOpen(false); }} className={`w-full rounded-[10px] px-3 py-2 text-right text-[9px] ${brandFilter === "all" ? "bg-[#FAECE9] font-semibold text-[#B86168]" : "text-[#6B5D59]"}`}>كل الماركات</button>
 
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setStepParams({
-                              brand: null,
-                            });
-
-                            setBrandOpen(false);
-                          }}
-                          className={`
-                            w-full
-                            rounded-xl
-                            px-3 py-2.5
-                            text-right
-                            text-xs
-                            ${
-                              brandFilter ===
-                              "all"
-                                ? "bg-[#FFF3F7] font-semibold text-[#E85A91]"
-                                : "text-black/65 hover:bg-[#FAFAFA]"
-                            }
-                          `}
-                        >
-                          كل الماركات
-                        </button>
-
-                        {availableBrands.map(
-                          (brand) => (
-                            <button
-                              key={brand}
-                              type="button"
-                              onClick={() => {
-                                setStepParams({
-                                  brand,
-                                });
-
-                                setBrandOpen(
-                                  false
-                                );
-                              }}
-                              className={`
-                                w-full
-                                rounded-xl
-                                px-3 py-2.5
-                                text-right
-                                text-xs
-                                ${
-                                  brandFilter ===
-                                  brand
-                                    ? "bg-[#FFF3F7] font-semibold text-[#E85A91]"
-                                    : "text-black/65 hover:bg-[#FAFAFA]"
-                                }
-                              `}
-                            >
-                              {brand}
-                            </button>
-                          )
-                        )}
+                        {availableBrands.map((brand) => (
+                          <button key={brand} type="button" onClick={() => { setStepParams({ brand }); setBrandOpen(false); }} className={`w-full rounded-[10px] px-3 py-2 text-right text-[9px] ${brandFilter === brand ? "bg-[#FAECE9] font-semibold text-[#B86168]" : "text-[#6B5D59]"}`}>{brand}</button>
+                        ))}
                       </div>
                     </div>
                   )}
@@ -676,321 +419,168 @@ const CategoriesPage = () => {
           </section>
         )}
 
-        {/* PARENT CATEGORIES */}
+        {/* =========================================================
+            PARENT CATEGORIES
+        ========================================================= */}
+
         {!selectedParent && (
-          <section className="container mx-auto px-4 pb-6 pt-8 md:px-8 md:pt-10">
-            <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5">
-
-              {parents.map(
-                (category, index) => (
-                  <Link
-                    key={category.id}
-                    to={`/categories?parent=${category.slug}`}
-                    className="
-                      group
-                      relative
-                      overflow-hidden
-                      rounded-[22px]
-                      bg-[#F7F7F7]
-                      aspect-[4/5]
-                    "
-                  >
-                    <img
-                      src={
-                        category.image_url ||
-                        FALLBACK[
-                          category.slug
-                        ] ||
-                        FALLBACK.women
-                      }
-                      alt={
-                        category.name_ar
-                      }
-                      loading={
-                        index < 2
-                          ? "eager"
-                          : "lazy"
-                      }
-                      fetchPriority={
-                        index < 2
-                          ? "high"
-                          : "auto"
-                      }
-                      decoding="async"
-                      className="
-                        h-full w-full
-                        object-cover
-                        md:group-hover:scale-[1.025]
-                        md:transition-transform
-                        md:duration-300
-                      "
-                    />
-
-                    {/* Soft readable overlay */}
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/5 to-transparent" />
-
-                    {/* LABEL */}
-                    <div className="absolute inset-x-0 bottom-0 p-4 text-right md:p-5">
-
-                      {category.name && (
-                        <p className="mb-1 text-[9px] font-medium tracking-[0.12em] text-white/65">
-                          {category.name}
-                        </p>
-                      )}
-
-                      <div className="flex items-end justify-between gap-2">
-
-                        <h3 className="text-[19px] font-bold leading-tight text-white md:text-2xl">
-                          {category.name_ar}
-                        </h3>
-
-                        <span
-                          className="
-                            flex h-8 w-8 shrink-0
-                            items-center justify-center
-                            rounded-full
-                            bg-white/95
-                            text-[#E85A91]
-                          "
-                        >
-                          <ChevronLeft
-                            size={16}
-                            strokeWidth={2}
-                          />
-                        </span>
-                      </div>
-                    </div>
-                  </Link>
-                )
-              )}
-            </div>
-          </section>
-        )}
-
-        {/* SUB CATEGORIES */}
-        {selectedParent &&
-          !selectedSub &&
-          subCategories.length > 0 && (
-            <section className="container mx-auto px-4 pb-8 pt-6 md:px-8">
-
-              <div className="mb-5">
-                <p className="text-[10px] font-semibold text-[#E85A91]">
-                  {selectedParent.name}
-                </p>
-
-                <h2 className="mt-1 text-2xl font-bold tracking-[-0.02em] text-[#282023]">
-                  {selectedParent.name_ar}
-                </h2>
-              </div>
-
-              <div className="grid grid-cols-2 gap-3 md:grid-cols-4 md:gap-5">
-
-                {subCategories.map(
-                  (category, index) => (
-                    <Link
-                      key={category.id}
-                      to={`/categories?parent=${selectedParent.slug}&sub=${category.slug}`}
-                      onClick={() => {
-                        window.scrollTo({
-                          top: 0,
-                          behavior:
-                            "instant",
-                        });
-                      }}
-                      className="
-                        group
-                        overflow-hidden
-                        rounded-[20px]
-                        border border-black/[0.045]
-                        bg-white
-                      "
-                    >
-                      {/* IMAGE */}
-                      <div className="aspect-square overflow-hidden bg-[#F7F7F7]">
-
-                        <img
-                          src={
-                            category.image_url ||
-                            FALLBACK[
-                              category.slug
-                            ] ||
-                            FALLBACK.women
-                          }
-                          alt={
-                            category.name_ar
-                          }
-                          loading={
-                            index < 2
-                              ? "eager"
-                              : "lazy"
-                          }
-                          decoding="async"
-                          className="
-                            h-full w-full
-                            object-cover
-                            md:group-hover:scale-[1.025]
-                            md:transition-transform
-                            md:duration-300
-                          "
-                        />
-                      </div>
-
-                      {/* CONTENT */}
-                      <div className="flex items-center justify-between gap-2 px-3 py-3">
-
-                        <div className="min-w-0">
-                          <h3 className="truncate text-[13px] font-semibold text-[#30272B] md:text-sm">
-                            {
-                              category.name_ar
-                            }
-                          </h3>
-
-                          {category.name && (
-                            <p className="mt-0.5 truncate text-[9px] text-black/35">
-                              {
-                                category.name
-                              }
-                            </p>
-                          )}
-                        </div>
-
-                        <ChevronLeft
-                          size={15}
-                          className="shrink-0 text-[#E85A91]"
-                        />
-                      </div>
-                    </Link>
-                  )
-                )}
-              </div>
-            </section>
-          )}
-
-        {/* PRODUCTS */}
-        {!!activeProductCategory && (
-          <section className="container mx-auto space-y-5 px-4 pb-8 pt-5 md:px-8">
-
-            {/* CATEGORY TITLE */}
-            <div>
-              <p className="text-[10px] font-semibold text-[#E85A91]">
-                منتجات
-              </p>
-
-              <h1 className="mt-1 text-[24px] font-bold tracking-[-0.02em] text-[#282023] md:text-3xl">
-                {
-                  activeProductCategory.name_ar
-                }
-              </h1>
-
-              <p className="mt-1 text-[11px] text-black/40">
-                {visibleProducts.length} منتج
-              </p>
-            </div>
-
-            <ProductListFilters
-              values={{
-                query: productQuery,
-                brand: brandFilter,
-                sort: productSort,
-                inStockOnly,
-                minPrice,
-                maxPrice,
-              }}
-              brands={availableBrands}
-              resultCount={
-                visibleProducts.length
-              }
-              onChange={
-                updateProductFilters
-              }
-            />
-
-            {productsLoading ? (
-              <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-4">
-
-                {Array.from({
-                  length: 8,
-                }).map((_, index) => (
-                  <div
-                    key={index}
-                    className="overflow-hidden rounded-2xl"
-                  >
-                    <div className="aspect-[3/4] animate-pulse rounded-2xl bg-[#F4F4F4]" />
-
-                    <div className="mt-3 h-3 w-3/4 animate-pulse rounded bg-[#F2F2F2]" />
-
-                    <div className="mt-2 h-3 w-1/2 animate-pulse rounded bg-[#F2F2F2]" />
-                  </div>
+          <section className="mx-auto w-full max-w-[1500px] px-2.5 pb-8 pt-3 md:px-6 md:pb-12 md:pt-6">
+            {categoriesLoading ? (
+              <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-5">
+                {Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} className="aspect-[4/5] animate-pulse rounded-[17px] bg-[#F2ECE9]" />
                 ))}
               </div>
-            ) : visibleProducts.length ===
-              0 ? (
-              <div
-                className="
-                  rounded-[24px]
-                  border border-[#EFEAEC]
-                  bg-[#FCFBFC]
-                  px-5 py-14
-                  text-center
-                "
-              >
-                <p className="text-sm font-semibold text-[#342B2F]">
-                  لا توجد منتجات حالياً
-                </p>
-
-                <p className="mt-2 text-xs text-black/40">
-                  جرّبي تغيير الفلاتر أو اختيار ماركة أخرى
-                </p>
-              </div>
             ) : (
-              <>
-                <div className="grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-3 md:gap-5 xl:grid-cols-4">
-                  {visibleProducts.map(
-                    (
-                      product,
-                      index
-                    ) => (
-                      <ProductCard
-                        key={product.id}
-                        product={product}
-                        index={index}
-                      />
-                    )
-                  )}
+              <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-5">
+                {parents.map((category, index) => (
+                  <Link key={category.id} to={`/categories?parent=${category.slug}`} className="group relative aspect-[4/5] overflow-hidden rounded-[17px] bg-[#F4F1EF] md:rounded-[20px]">
+                    <img src={category.image_url || FALLBACK[category.slug] || FALLBACK.women} alt={category.name_ar} loading={index < 2 ? "eager" : "lazy"} fetchPriority={index < 2 ? "high" : "auto"} decoding="async" className="h-full w-full object-cover md:transition-transform md:duration-300 md:group-hover:scale-[1.02]" />
+
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
+
+                    <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-2 p-3 md:p-4">
+                      <div className="min-w-0">
+                        {category.name && <p className="mb-0.5 truncate text-[7px] tracking-[0.11em] text-white/65 md:text-[8px]">{category.name}</p>}
+
+                        <h2 className="truncate text-[17px] font-semibold text-white md:text-[22px]">{category.name_ar}</h2>
+                      </div>
+
+                      <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-white text-[#C96F79] md:h-8 md:w-8">
+                        <ChevronLeft className="h-3.5 w-3.5 stroke-[1.7]" />
+                      </span>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </section>
+        )}
+
+        {/* =========================================================
+            SUB CATEGORIES
+        ========================================================= */}
+
+        {selectedParent && !selectedSub && subCategories.length > 0 && (
+          <>
+            <section className="mx-auto w-full max-w-[1500px] px-4 pb-3 pt-5 md:px-6 md:pb-5 md:pt-7">
+              <div className="flex items-end justify-between">
+                <div>
+                  <div className="mb-1.5 flex items-center gap-2">
+                    <span className="h-[2px] w-4 rounded-full bg-[#D4777D]" />
+                    <span className="font-serif text-[6px] tracking-[0.22em] text-[#B86168]">FLAMINGO</span>
+                  </div>
+
+                  <h1 className="text-[22px] font-semibold tracking-[-0.035em] text-[#403132] md:text-[30px]">{selectedParent.name_ar}</h1>
+
+                  <p className="mt-1 text-[8px] text-[#9C8D88] md:text-[10px]">اختاري المجموعة التي تريدين استكشافها</p>
                 </div>
 
-                {hasMore && (
-                  <div className="flex justify-center pt-5">
+                <span className="text-[8px] font-medium text-[#B96B70]">{subCategories.length} أقسام</span>
+              </div>
+            </section>
 
-                    <Button
-                      variant="outline"
-                      onClick={() => {
-                        setStepParams({
-                          page: String(
-                            page + 1
-                          ),
-                        });
-                      }}
-                      className="
-                        h-11
-                        rounded-xl
-                        border-[#EBDDE3]
-                        bg-white
-                        px-8
-                        text-xs
-                        font-semibold
-                        text-[#44373D]
-                        hover:border-[#E85A91]/40
-                        hover:bg-[#FFF7FA]
-                        hover:text-[#E85A91]
-                      "
-                    >
-                      عرض المزيد
-                    </Button>
+            <section className="mx-auto w-full max-w-[1500px] px-2.5 pb-9 md:px-6 md:pb-12">
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 md:gap-5">
+                {subCategories.map((category, index) => (
+                  <Link key={category.id} to={`/categories?parent=${selectedParent.slug}&sub=${category.slug}`} className="group overflow-hidden rounded-[16px] border border-[#EEE5E1] bg-white">
+                    <div className="aspect-square overflow-hidden bg-[#F4F1EF]">
+                      <img src={category.image_url || FALLBACK[category.slug] || FALLBACK.women} alt={category.name_ar} loading={index < 2 ? "eager" : "lazy"} decoding="async" className="h-full w-full object-cover md:transition-transform md:duration-300 md:group-hover:scale-[1.02]" />
+                    </div>
+
+                    <div className="flex min-h-[52px] items-center justify-between gap-2 px-3 py-2.5">
+                      <div className="min-w-0">
+                        <h2 className="truncate text-[11px] font-semibold text-[#453937] md:text-[13px]">{category.name_ar}</h2>
+
+                        {category.name && <p className="mt-0.5 truncate text-[7px] text-[#A0938E] md:text-[8px]">{category.name}</p>}
+                      </div>
+
+                      <ChevronLeft className="h-3.5 w-3.5 shrink-0 stroke-[1.5] text-[#C96F79]" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </section>
+          </>
+        )}
+
+        {/* =========================================================
+            PRODUCTS
+        ========================================================= */}
+
+        {!!activeProductCategory && (
+          <section className="mx-auto w-full max-w-[1500px] pb-9">
+            {/* CATEGORY TITLE */}
+
+            <div className="px-3 pb-3 pt-5 md:px-6 md:pb-5 md:pt-7">
+              <div className="flex items-end justify-between">
+                <div>
+                  <div className="mb-1 flex items-center gap-2">
+                    <span className="h-[2px] w-4 rounded-full bg-[#D4777D]" />
+                    <span className="font-serif text-[6px] tracking-[0.21em] text-[#B86168]">FLAMINGO EDIT</span>
                   </div>
-                )}
-              </>
-            )}
+
+                  <h1 className="text-[20px] font-semibold tracking-[-0.03em] text-[#403132] md:text-[28px]">{activeProductCategory.name_ar}</h1>
+                </div>
+
+                <div className="text-left">
+                  <span className="block text-[12px] font-semibold leading-none text-[#B86168]">{totalProductCount}</span>
+                  <span className="mt-1 block text-[6px] text-[#A99A94]">منتج</span>
+                </div>
+              </div>
+            </div>
+
+            {/* FILTERS */}
+
+            <div className="px-3 md:px-6">
+              <ProductListFilters values={{ query: productQuery, brand: brandFilter, sort: productSort, inStockOnly, minPrice, maxPrice }} brands={availableBrands} resultCount={totalProductCount} onChange={updateProductFilters} />
+            </div>
+
+            {/* PRODUCT GRID */}
+
+            <div className="px-2.5 pt-4 md:px-6 md:pt-6">
+              {initialProductsLoading ? (
+                <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-5">
+                  {Array.from({ length: 10 }).map((_, index) => (
+                    <div key={index}>
+                      <div className="aspect-[4/5] animate-pulse rounded-[14px] bg-[#F2ECE9]" />
+                      <div className="mt-2.5 h-2.5 w-[70%] animate-pulse rounded-full bg-[#EFE8E5]" />
+                      <div className="mt-2 h-2.5 w-[36%] animate-pulse rounded-full bg-[#EFE8E5]" />
+                    </div>
+                  ))}
+                </div>
+              ) : products.length === 0 ? (
+                <div className="flex min-h-[42vh] flex-col items-center justify-center px-5 text-center">
+                  <div className="flex h-[62px] w-[62px] items-center justify-center rounded-full bg-[#F9ECE9]">
+                    <span className="text-[20px] font-light text-[#C96F79]">F</span>
+                  </div>
+
+                  <h2 className="mt-4 text-[14px] font-semibold text-[#453837]">لا توجد منتجات حالياً</h2>
+
+                  <p className="mt-1.5 max-w-[260px] text-[8px] leading-5 text-[#9D8E89]">جرّبي تغيير الفلاتر أو اختيار ماركة أخرى.</p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 sm:gap-y-6 md:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4 xl:grid-cols-5">
+                    {products.map((product, index) => (
+                      <div key={product.id} className="min-w-0">
+                        <ProductCard product={product} index={index} />
+                      </div>
+                    ))}
+                  </div>
+
+                  {hasMore && (
+                    <div className="flex flex-col items-center pb-2 pt-10 md:pt-12">
+                      <button type="button" onClick={handleLoadMore} disabled={productsLoading} className="flex h-[43px] min-w-[160px] items-center justify-center rounded-full border border-[#DDCBC6] bg-white px-6 text-[9px] font-medium text-[#594B47] transition-colors active:bg-[#FFF7F5] disabled:opacity-50">
+                        {productsLoading ? "جاري التحميل..." : "عرض المزيد"}
+                      </button>
+
+                      <span className="mt-2 text-[7px] text-[#A99A94]">{products.length} / {totalProductCount}</span>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
           </section>
         )}
       </main>

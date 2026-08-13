@@ -473,7 +473,6 @@ const OrderConfirmationPage = () => {
       </main>
 
       <div className="print:hidden">
-        <Footer />
       </div>
     </div>
   );

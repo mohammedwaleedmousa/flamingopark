@@ -63,17 +63,14 @@ const STEPS = [
 
 const CheckoutPage = () => {
   const navigate = useNavigate();
-
   const { customer, cart, getCartTotal, clearCart, currencyMode } = useStore();
 
   const isGuestLike = !customer || customer.id === "guest";
-
   const subtotal = getCartTotal();
   const currency = "ر.ي";
 
   const [currentStep, setCurrentStep] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "bank">("cod");
-
   const [selectedDelivery, setSelectedDelivery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState(customer?.region || "");
 
@@ -89,7 +86,6 @@ const CheckoutPage = () => {
   const [couponCode, setCouponCode] = useState("");
   const [discountAmount, setDiscountAmount] = useState(0);
   const [appliedCoupon, setAppliedCoupon] = useState<string | null>(null);
-
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const [addressOwnerKey, setAddressOwnerKey] = useState("guest");
@@ -168,13 +164,13 @@ const CheckoutPage = () => {
   });
 
   /* =========================================================
-     SETTINGS
+     CHECKOUT SETTINGS
   ========================================================= */
 
   const { data: checkoutSettings = {} } = useQuery<Record<string, unknown>>({
     queryKey: ["checkout-settings"],
     queryFn: async () => {
-      const { data } = await supabase.from("site_settings").select("key,value").in("key", ["bank_accounts", "bank_accounts_ye", "bank_accounts_sa", "whatsapp", "whatsapp_ye", "whatsapp_sa"]);
+      const { data } = await supabase.from("site_settings").select("key,value").in("key", ["bank_accounts", "bank_accounts_ye", "bank_accounts_sa"]);
 
       return Object.fromEntries((data || []).map((setting) => [setting.key, setting.value]));
     },
@@ -226,19 +222,16 @@ const CheckoutPage = () => {
   ========================================================= */
 
   const selectedCompany = deliveryCompanies.find((company) => company.id === selectedDelivery);
-
   const deliveryFee = selectedCompany?.base_fee || 0;
-
   const total = Math.max(0, subtotal + deliveryFee - discountAmount);
 
   /* =========================================================
-     COST TOTAL FOR COUPON
+     COST TOTAL
   ========================================================= */
 
   const getCostPriceTotal = () => {
     return cart.reduce((totalCost, item) => {
       const costPrice = item.product.costPrice || item.product.price;
-
       const accessoriesTotal = item.selectedAccessories?.reduce((sum, accessory) => sum + accessory.price * accessory.quantity, 0) || 0;
 
       return totalCost + (costPrice + accessoriesTotal) * item.quantity;
@@ -496,7 +489,6 @@ const CheckoutPage = () => {
 
     const rawOrderItems = cart.map((item) => {
       const basePrice = item.product.discount ? item.product.price * (1 - item.product.discount / 100) : item.product.price;
-
       const accessoriesTotal = item.selectedAccessories?.reduce((sum, accessory) => sum + accessory.price * accessory.quantity, 0) || 0;
 
       return {
@@ -540,7 +532,6 @@ const CheckoutPage = () => {
       saveAddressToLocal();
 
       const createdOrder = await createSecureOrder(validation.data);
-
       const regionData = codRegions.find((region) => region.id === selectedRegion);
 
       const orderData = {
@@ -594,7 +585,6 @@ const CheckoutPage = () => {
     return (
       <div className="min-h-screen bg-[#FFFDFC]" dir="rtl">
         <Navbar />
-
         <CartDrawer />
 
         <main className="flex min-h-[65vh] items-center justify-center px-4 py-16">
@@ -618,14 +608,9 @@ const CheckoutPage = () => {
     );
   }
 
-  /* =========================================================
-     RENDER
-  ========================================================= */
-
   return (
     <div className="min-h-screen bg-[#FFFDFC]" dir="rtl">
       <Navbar />
-
       <CartDrawer />
 
       <main className="pb-12 pt-5 md:pb-16 md:pt-7">
@@ -646,30 +631,34 @@ const CheckoutPage = () => {
           </div>
 
           {/* =================================================
-              STEPPER
+              STEPPER - PERFECTLY CENTERED
           ================================================= */}
 
-          <div className="mb-6 overflow-hidden rounded-[14px] border border-[#EAE0DC] bg-white px-2 py-3 md:px-5">
-            <div className="flex items-start">
-              {STEPS.map((step, index) => {
-                const Icon = step.icon;
-                const done = index < currentStep;
-                const active = index === currentStep;
+          <div className="mb-6 overflow-hidden rounded-[14px] border border-[#EAE0DC] bg-white px-2 py-4 md:px-5">
+            <div className="relative mx-auto w-full max-w-[580px]">
+              {/* BASE CONNECTING LINE */}
+              <div className="pointer-events-none absolute left-[12.5%] right-[12.5%] top-[16px] h-px bg-[#EAE2DF]" />
 
-                return (
-                  <div key={step.key} className="flex min-w-0 flex-1 items-start">
-                    <div className="flex min-w-[52px] flex-col items-center">
-                      <button type="button" onClick={() => { if (index < currentStep) setCurrentStep(index); }} disabled={index > currentStep} className={`flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${done ? "border-[#D4777D] bg-[#D4777D] text-white" : active ? "border-[#D4777D] bg-[#FFF5F3] text-[#B86168]" : "border-[#E8DEDA] bg-[#FAF8F7] text-[#B0A49F]"}`}>
+              {/* COMPLETED CONNECTING LINE */}
+              <div className="pointer-events-none absolute right-[12.5%] top-[16px] h-px bg-[#D9AAA7] transition-[width] duration-300" style={{ width: `${(currentStep / (STEPS.length - 1)) * 75}%` }} />
+
+              <div className="relative grid grid-cols-4">
+                {STEPS.map((step, index) => {
+                  const Icon = step.icon;
+                  const done = index < currentStep;
+                  const active = index === currentStep;
+
+                  return (
+                    <div key={step.key} className="flex min-w-0 flex-col items-center justify-start text-center">
+                      <button type="button" onClick={() => { if (index < currentStep) setCurrentStep(index); }} disabled={index > currentStep} className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${done ? "border-[#D4777D] bg-[#D4777D] text-white" : active ? "border-[#D4777D] bg-[#FFF5F3] text-[#B86168]" : "border-[#E8DEDA] bg-[#FAF8F7] text-[#B0A49F]"}`}>
                         {done ? <Check className="h-3.5 w-3.5" strokeWidth={2} /> : <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />}
                       </button>
 
-                      <span className={`mt-1.5 whitespace-nowrap text-[6px] font-medium md:text-[7px] ${active || done ? "text-[#685853]" : "text-[#A99B96]"}`}>{step.label}</span>
+                      <span className={`mt-2 block w-full text-center text-[6px] font-medium leading-none md:text-[7px] ${active || done ? "text-[#685853]" : "text-[#A99B96]"}`}>{step.label}</span>
                     </div>
-
-                    {index < STEPS.length - 1 && <div className={`mt-4 h-px flex-1 ${index < currentStep ? "bg-[#D9AAA7]" : "bg-[#EAE2DF]"}`} />}
-                  </div>
-                );
-              })}
+                  );
+                })}
+              </div>
             </div>
           </div>
 
@@ -681,7 +670,7 @@ const CheckoutPage = () => {
             <div className="min-w-0">
               <section className="overflow-hidden rounded-[16px] border border-[#EAE0DC] bg-white">
                 {/* =================================================
-                    STEP 1
+                    STEP 1 - INFO
                 ================================================= */}
 
                 {currentStep === 0 && (
@@ -720,7 +709,7 @@ const CheckoutPage = () => {
                 )}
 
                 {/* =================================================
-                    STEP 2
+                    STEP 2 - ADDRESS
                 ================================================= */}
 
                 {currentStep === 1 && (
@@ -735,8 +724,6 @@ const CheckoutPage = () => {
                         <p className="mt-0.5 text-[7px] text-[#A0938E]">أدخل المكان الذي تريد استلام الطلب فيه.</p>
                       </div>
                     </div>
-
-                    {/* SAVED ADDRESS */}
 
                     {savedAddresses.length > 0 && (
                       <div className="relative mb-4">
@@ -810,7 +797,7 @@ const CheckoutPage = () => {
                 )}
 
                 {/* =================================================
-                    STEP 3
+                    STEP 3 - PAYMENT
                 ================================================= */}
 
                 {currentStep === 2 && (
@@ -865,7 +852,7 @@ const CheckoutPage = () => {
                       )}
                     </div>
 
-                    {/* PAYMENT */}
+                    {/* PAYMENT METHOD */}
 
                     <div className="mt-5">
                       <p className="mb-2.5 text-[8px] font-semibold text-[#574A45]">طريقة الدفع *</p>
@@ -916,7 +903,7 @@ const CheckoutPage = () => {
                       </div>
                     )}
 
-                    {/* BANK */}
+                    {/* BANK ACCOUNTS */}
 
                     {paymentMethod === "bank" && bankAccounts.length > 0 && (
                       <div className="mt-5 rounded-[12px] border border-[#EAE0DC] bg-[#FFFCFB] p-3">
@@ -983,7 +970,7 @@ const CheckoutPage = () => {
                 )}
 
                 {/* =================================================
-                    STEP 4
+                    STEP 4 - REVIEW
                 ================================================= */}
 
                 {currentStep === 3 && (
@@ -1041,9 +1028,10 @@ const CheckoutPage = () => {
                           const color = item.selectedColor || item.variantColor;
 
                           return (
-                            <div key={`${item.product.id}-${index}`} className="flex items-start gap-3">
-                              <div className="h-[58px] w-[48px] shrink-0 overflow-hidden rounded-[8px] bg-[#F5F3F1]">
-                                <img src={optimizeImage(item.product.images?.[0] || "/placeholder.svg", 180, 78)} alt={item.product.nameAr || ""} loading="lazy" decoding="async" onError={handleImageError} className="h-full w-full object-cover object-bottom" />
+                            <div key={`${item.product.id}-${index}`} className="flex items-center gap-3">
+                              {/* PRODUCT IMAGE - FULL IMAGE WITHOUT CROPPING */}
+                              <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center overflow-hidden rounded-[9px] border border-[#EEE7E4] bg-[#F7F5F3] p-1">
+                                <img src={optimizeImage(item.product.images?.[0] || "/placeholder.svg", 200, 80)} alt={item.product.nameAr || ""} loading="lazy" decoding="async" onError={handleImageError} className="h-full w-full object-contain object-center" />
                               </div>
 
                               <div className="min-w-0 flex-1">
@@ -1079,12 +1067,12 @@ const CheckoutPage = () => {
                 </button>
 
                 {currentStep < STEPS.length - 1 ? (
-                  <button type="button" onClick={nextStep} className="flex h-11 min-w-[110px] items-center justify-center gap-1.5 rounded-[10px] bg-[#D4777D] px-5 text-[8px] font-semibold text-white active:bg-[#C96B72]">
+                  <button type="button" onClick={nextStep} className="flex h-11 min-w-[138px] items-center justify-center gap-1.5 rounded-[10px] bg-[#D4777D] px-5 text-[8px] font-semibold text-white active:bg-[#C96B72]">
                     التالي
                     <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
                   </button>
                 ) : (
-                  <button type="button" onClick={handleSubmit} disabled={isSubmitting} className="flex h-11 min-w-[145px] items-center justify-center gap-2 rounded-[10px] bg-[#D4777D] px-5 text-[8px] font-semibold text-white active:bg-[#C96B72] disabled:cursor-not-allowed disabled:opacity-50">
+                  <button type="button" onClick={handleSubmit} disabled={isSubmitting} className="flex h-11 min-w-[155px] items-center justify-center gap-2 rounded-[10px] bg-[#D4777D] px-5 text-[8px] font-semibold text-white active:bg-[#C96B72] disabled:cursor-not-allowed disabled:opacity-50">
                     {isSubmitting && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
                     {isSubmitting ? "جارٍ إنشاء الطلب" : "تأكيد الطلب النهائي"}
                   </button>
@@ -1093,11 +1081,13 @@ const CheckoutPage = () => {
             </div>
 
             {/* =================================================
-                SUMMARY
+                ORDER SUMMARY
             ================================================= */}
 
             <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
               <div className="overflow-hidden rounded-[16px] border border-[#EAE0DC] bg-white">
+                {/* SUMMARY HEADER */}
+
                 <div className="border-b border-[#EEE4E0] px-4 py-3.5">
                   <div className="flex items-center justify-between">
                     <h2 className="text-[10px] font-semibold text-[#483C38]">ملخص الطلب</h2>
@@ -1106,24 +1096,41 @@ const CheckoutPage = () => {
                   </div>
                 </div>
 
-                {/* PRODUCTS */}
+                {/* SUMMARY PRODUCTS */}
 
-                <div className="max-h-[260px] overflow-y-auto px-4 [scrollbar-width:thin]">
+                <div className="max-h-[280px] overflow-y-auto px-4 [scrollbar-width:thin]">
                   {cart.map((item, index) => {
                     const price = item.product.discount ? item.product.price * (1 - item.product.discount / 100) : item.product.price;
-
                     const accessoriesTotal = item.selectedAccessories?.reduce((sum, accessory) => sum + accessory.price * accessory.quantity, 0) || 0;
+                    const color = item.selectedColor || item.variantColor;
 
                     return (
-                      <div key={`${item.product.id}-${index}`} className={`flex items-center gap-2.5 py-3 ${index !== cart.length - 1 ? "border-b border-[#F0E8E5]" : ""}`}>
-                        <div className="h-[50px] w-[42px] shrink-0 overflow-hidden rounded-[7px] bg-[#F5F3F1]">
-                          <img src={optimizeImage(item.product.images?.[0] || "/placeholder.svg", 160, 76)} alt={item.product.nameAr || ""} loading="lazy" decoding="async" onError={handleImageError} className="h-full w-full object-cover object-bottom" />
+                      <div key={`${item.product.id}-${index}`} className={`flex items-center gap-3 py-3 ${index !== cart.length - 1 ? "border-b border-[#F0E8E5]" : ""}`}>
+                        {/* PRODUCT IMAGE - CONTAIN */}
+                        <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center overflow-hidden rounded-[9px] border border-[#EEE7E4] bg-[#F7F5F3] p-1">
+                          <img src={optimizeImage(item.product.images?.[0] || "/placeholder.svg", 200, 80)} alt={item.product.nameAr || ""} loading="lazy" decoding="async" onError={handleImageError} className="h-full w-full object-contain object-center" />
                         </div>
 
                         <div className="min-w-0 flex-1">
-                          <p className="truncate text-[7px] font-medium text-[#514540]">{item.product.nameAr}</p>
+                          <p className="truncate text-[7.5px] font-medium leading-5 text-[#514540]">{item.product.nameAr}</p>
 
-                          <p className="mt-1 text-[6px] text-[#9A8C87]">الكمية {item.quantity}</p>
+                          <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[6px] text-[#9A8C87]">
+                            <span>الكمية {item.quantity}</span>
+
+                            {item.selectedSize && (
+                              <>
+                                <span className="text-[#D0C6C2]">•</span>
+                                <span>{item.selectedSize}</span>
+                              </>
+                            )}
+
+                            {color && (
+                              <>
+                                <span className="text-[#D0C6C2]">•</span>
+                                <span className="max-w-[60px] truncate">{color}</span>
+                              </>
+                            )}
+                          </div>
                         </div>
 
                         <span className="shrink-0 text-[7px] font-semibold text-[#A95B61]">{((price + accessoriesTotal) * item.quantity).toFixed(0)}</span>
@@ -1175,6 +1182,8 @@ const CheckoutPage = () => {
           </div>
         </div>
       </main>
+
+      <Footer />
     </div>
   );
 };

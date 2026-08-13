@@ -9,6 +9,7 @@ import {
   MagnifyingGlass,
   MapPin,
   Package,
+  QrCode,
   ShoppingCart,
   SignIn,
   SignOut,
@@ -39,7 +40,6 @@ import {
 const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <section className="mt-6">
     <p className="mb-2 px-2 text-[10px] font-semibold text-[#A29590]">{label}</p>
-
     <div className="space-y-1">{children}</div>
   </section>
 );
@@ -141,8 +141,10 @@ const Navbar = () => {
     <header dir="rtl" className="sticky inset-x-0 top-0 z-50 border-b border-[#F0E5E1] bg-white">
       <div className="mx-auto max-w-7xl px-4 md:px-8">
         {/* TOP ROW */}
+
         <div className="relative flex h-14 items-center justify-between md:h-16">
           {/* RIGHT */}
+
           <div className="flex items-center">
             <Sheet open={menuOpen} onOpenChange={setMenuOpen}>
               <SheetTrigger asChild>
@@ -153,6 +155,7 @@ const Navbar = () => {
 
               <SheetContent side="right" dir="rtl" className="flex h-full w-[86vw] max-w-[355px] flex-col border-l border-[#EEE4E0] bg-[#FFFDFC] p-0">
                 {/* MENU HEADER */}
+
                 <div className="flex items-center justify-center border-b border-[#EEE4E0] px-5 py-5">
                   <Link to="/home" onClick={() => setMenuOpen(false)} className="flex items-center">
                     <img src="/icons/flamingo.jpeg" alt="فلامنجو" width={60} height={60} loading="lazy" className="h-[60px] w-[60px] object-contain" />
@@ -160,14 +163,16 @@ const Navbar = () => {
                 </div>
 
                 {/* MENU */}
+
                 <nav className="flex-1 overflow-y-auto px-3 pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                   {unreadCount > 0 && (
                     <button type="button" onClick={() => { setMenuOpen(false); navigate("/notifications"); }} className="mt-4 flex w-full items-center gap-3 rounded-[14px] border border-[#EFD8D5] bg-[#FFF6F4] px-4 py-3 text-right">
                       <Bell size={19} className="text-[#C86970]" />
-
                       <span className="flex-1 text-xs font-medium text-[#A95B61]">لديك {unreadCount} إشعار جديد</span>
                     </button>
                   )}
+
+                  {/* SHOPPING */}
 
                   <Section label="التسوق">
                     <NavItem to="/home" icon={House} label="الرئيسية" onNavigate={() => setMenuOpen(false)} />
@@ -183,6 +188,8 @@ const Navbar = () => {
                     <NavItem to="/best-sellers" icon={Crown} label="الأكثر مبيعاً" onNavigate={() => setMenuOpen(false)} />
                   </Section>
 
+                  {/* ACCOUNT */}
+
                   <Section label="الحساب">
                     <NavItem to="/cart" icon={ShoppingCart} label="السلة" badge={cartCount || undefined} onNavigate={() => setMenuOpen(false)} />
 
@@ -191,12 +198,17 @@ const Navbar = () => {
                     <NavItem to="/account" icon={User} label="حسابي" onNavigate={() => setMenuOpen(false)} />
                   </Section>
 
+                  {/* STORE */}
+
                   <Section label="المتجر">
                     <NavItem to="/store-info" icon={MapPin} label="معلومات المتجر" onNavigate={() => setMenuOpen(false)} />
+
+                    <NavItem to="/qr-code" icon={QrCode} label="باركود المتجر" onNavigate={() => setMenuOpen(false)} />
                   </Section>
                 </nav>
 
                 {/* MENU FOOTER */}
+
                 <div className="border-t border-[#EEE4E0] bg-[#FFFDFC] p-4">
                   {customer ? (
                     <button type="button" onClick={handleLogout} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#E4D8D4] bg-white text-sm font-medium text-[#70625D] transition-colors hover:border-[#E2B9B5] hover:bg-[#FFF8F6] hover:text-[#B86168]">
@@ -215,13 +227,16 @@ const Navbar = () => {
           </div>
 
           {/* LOGO */}
+
           <Link to="/home" aria-label="الرئيسية" className="absolute left-1/2 -translate-x-1/2">
             <img src="/icons/flamingo.jpeg" alt="فلامنجو" width={48} height={48} fetchPriority="high" className="h-12 w-12 object-contain" />
           </Link>
 
           {/* LEFT */}
+
           <div className="flex items-center gap-0.5">
             {/* CURRENCY */}
+
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <button type="button" aria-label="العملة" className="flex h-10 items-center gap-1 rounded-xl px-2 text-[11px] font-semibold text-[#6C5E59] transition-colors hover:bg-[#FFF6F4] hover:text-[#B86168]">
@@ -249,6 +264,7 @@ const Navbar = () => {
             </DropdownMenu>
 
             {/* CART */}
+
             <button type="button" onClick={openCart} aria-label="السلة" className="relative flex h-10 w-10 items-center justify-center rounded-xl text-[#5B504C] transition-colors hover:bg-[#FFF6F4] hover:text-[#B86168]">
               <ShoppingCart size={21} weight="regular" />
 
@@ -258,6 +274,7 @@ const Navbar = () => {
         </div>
 
         {/* SEARCH */}
+
         <form onSubmit={submitSearch} className="pb-3">
           <label className="relative block">
             <MagnifyingGlass size={18} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#A79A95]" />

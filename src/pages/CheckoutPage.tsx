@@ -1175,8 +1175,6 @@ const CheckoutPage = () => {
           </div>
         </div>
       </main>
-
-      <Footer />
     </div>
   );
 };

@@ -35,7 +35,6 @@ const QRCodePage = lazy(() => import("./pages/QRCodePage"));
 const CategoriesPage = lazy(() => import("./pages/CategoriesPage"));
 const BestSellersPage = lazy(() => import("./pages/BestSellersPage"));
 const NewArrivalsPage = lazy(() => import("./pages/NewArrivalsPage"));
-const CuratedPage = lazy(() => import("./pages/CuratedPage"));
 const NewSeasonPage = lazy(() => import("./pages/NewSeasonPage"));
 const TopSellingPage = lazy(() => import("./pages/TopSellingPage"));
 const SearchPage = lazy(() => import("./pages/SearchPage"));
@@ -46,7 +45,6 @@ const MyOrdersPage = lazy(() => import("./pages/MyOrdersPage"));
 const MyShipmentsPage = lazy(() => import("./pages/MyShipmentsPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const StoreInfoPage = lazy(() => import("./pages/StoreInfoPage"));
-const CampaignPage = lazy(() => import("./pages/CampaignPage"));
 const BannerPage = lazy(() => import("./pages/bannerPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const OrderTrackingPage = lazy(() => import("./pages/OrderTrackingPage"));
@@ -207,7 +205,6 @@ const App = () => {
             <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
             <Route path="/best-sellers" element={<ProtectedRoute><BestSellersPage /></ProtectedRoute>} />
             <Route path="/new-arrivals" element={<ProtectedRoute><NewArrivalsPage /></ProtectedRoute>} />
-            <Route path="/curated" element={<ProtectedRoute><CuratedPage /></ProtectedRoute>} />
             <Route path="/new-season" element={<ProtectedRoute><NewSeasonPage /></ProtectedRoute>} />
             <Route path="/top-selling" element={<ProtectedRoute><TopSellingPage /></ProtectedRoute>} />
             <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
@@ -228,7 +225,6 @@ const App = () => {
             <Route path="/favorites" element={<ProtectedRoute><FavoritesPage /></ProtectedRoute>} />
             <Route path="/qr-code" element={<QRCodePage />} />
             <Route path="/store-info" element={<ProtectedRoute><StoreInfoPage /></ProtectedRoute>} />
-            <Route path="/campaigns/:slug" element={<ProtectedRoute><CampaignPage /></ProtectedRoute>} />
             <Route path="/banner/:slug" element={<ProtectedRoute><BannerPage /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/order-tracking" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />

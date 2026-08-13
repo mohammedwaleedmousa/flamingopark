@@ -688,420 +688,472 @@ const ProductsPage = () => {
   const currentSortLabel = sortBy === "best" ? "الأكثر مبيعًا" : sortBy === "featured" ? "مختارة" : sortBy === "price-asc" ? "الأقل سعرًا" : sortBy === "price-desc" ? "الأعلى سعرًا" : "الأحدث";
 
   return (
-    <div className="min-h-screen bg-[#FFFDFC] text-[#261F1D]" dir="rtl">
-      <Navbar />
-      <CartDrawer />
+  <div className="min-h-screen bg-[#FFF9F7] text-[#35282A]" dir="rtl">
+    <Navbar />
+    <CartDrawer />
 
-      <main className=" pb-24 md:pt-24 md:pb-20">
-        {/* =========================================================
-            HEADER
-        ========================================================= */}
-        <section className="bg-[#FFFDFC]">
-          <div className="mx-auto w-full max-w-[1600px] px-4 pt-5 pb-3 text-center md:px-6 md:pt-8 md:pb-5">
-            <div className="mb-1.5 flex items-center justify-center gap-2.5">
-              <span className="h-px w-6 bg-gradient-to-l from-[#C9797E]/60 to-transparent" />
-              <span className="font-serif text-[8px] tracking-[0.34em] text-[#B96C72] md:text-[9px]">FLAMINGO</span>
-              <span className="h-px w-6 bg-gradient-to-r from-[#C9797E]/60 to-transparent" />
+    <main className="pb-36 md:pt-24 md:pb-20">
+      {/* =========================================================
+          FLAMINGO SIGNATURE HEADER
+      ========================================================= */}
+      <section className="relative overflow-hidden border-b border-[#EEDFDA] bg-[#FFF9F7]">
+        <div className="pointer-events-none absolute -left-16 -top-20 h-48 w-48 rounded-full bg-[#F4D8D7]/45 blur-3xl" />
+        <div className="pointer-events-none absolute -right-14 top-10 h-40 w-40 rounded-full bg-[#FCE8E3]/70 blur-3xl" />
+
+        <div className="relative mx-auto w-full max-w-[1600px] px-4 pt-7 pb-6 md:px-6 md:pt-12 md:pb-10">
+          <div className="flex items-end justify-between gap-6">
+            <div className="min-w-0">
+              <div className="mb-3 flex items-center gap-2.5">
+                <span className="h-[2px] w-5 rounded-full bg-[#C96F79]" />
+                <span className="font-serif text-[7px] font-medium tracking-[0.3em] text-[#A7535D] md:text-[8px]">FLAMINGO PARK</span>
+              </div>
+
+              <h1 className="text-[30px] font-semibold leading-[1.05] tracking-[-0.045em] text-[#3A292B] md:text-[48px]">{currentCategory ? currentCategory.name_ar : getSiteText(content, "products_page_title", "جميع المنتجات")}</h1>
+
+              <p className="mt-3 max-w-[300px] text-[9px] leading-[1.9] text-[#9A7E7E] md:max-w-md md:text-[11px]">{currentCategory ? "اكتشف اختيارات فلامنجو المميزة من هذه المجموعة." : "مختارات أنيقة بعناية لتجربة تسوق تحمل توقيع فلامنجو."}</p>
             </div>
 
-            <h1 className="text-[21px] font-semibold leading-tight tracking-[-0.02em] text-[#261F1D] md:text-[30px]">{currentCategory ? currentCategory.name_ar : getSiteText(content, "products_page_title", "جميع المنتجات")}</h1>
-
-            <p className="mx-auto mt-1.5 max-w-lg text-[10px] leading-5 text-[#968A85] md:text-[12px]">{currentCategory ? "مختارات فلامنجو لهذه المجموعة" : "تشكيلة مختارة بعناية لتجربة تسوق أكثر أناقة"}</p>
-          </div>
-
-          {/* =========================================================
-              CATEGORIES
-          ========================================================= */}
-          <div className="mx-auto w-full max-w-[1600px] border-t border-[#F2ECE9] px-3 py-3 md:px-6">
-            <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              <button onClick={() => setParam("category", null)} className={`shrink-0 rounded-full px-4 py-[7px] text-[10px] font-medium transition-all md:text-[11px] ${!categorySlug ? "bg-[#D4777D] text-white shadow-[0_5px_16px_rgba(212,119,125,.19)]" : "border border-[#E9DFDB] bg-white text-[#6D625D]"}`}>الكل</button>
-
-              {categories.filter((category) => !category.parent_id).map((category) => (
-                <button key={category.id} onClick={() => setParam("category", category.slug)} className={`shrink-0 rounded-full px-4 py-[7px] text-[10px] font-medium transition-all md:text-[11px] ${categorySlug === category.slug ? "bg-[#D4777D] text-white shadow-[0_5px_16px_rgba(212,119,125,.19)]" : "border border-[#E9DFDB] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
-              ))}
-            </div>
-          </div>
-        </section>
-
-        {/* =========================================================
-            PREMIUM TOOLBAR
-        ========================================================= */}
-        <section className="sticky top-[68px] z-30 bg-[#FFFDFC]/94 px-3 py-2 backdrop-blur-xl md:top-[76px] md:px-6">
-          <div className="mx-auto max-w-[1600px]">
-            <div className="flex h-[48px] items-center overflow-hidden rounded-[15px] border border-[#EAE0DC] bg-white shadow-[0_8px_28px_rgba(65,45,38,.055)]">
-              <button onClick={() => setFiltersOpen(true)} className="group flex h-full min-w-0 flex-1 items-center justify-center gap-2 border-l border-[#EFE7E3] px-3 transition-colors active:bg-[#FBF5F3]">
-                <span className={`flex h-7 w-7 items-center justify-center rounded-full transition-colors ${activeFilterCount > 0 ? "bg-[#F8E7E6] text-[#BE666C]" : "bg-[#F7F3F1] text-[#625752]"}`}>
-                  <SlidersHorizontal className="h-[14px] w-[14px] stroke-[1.7]" />
-                </span>
-
-                <span className="truncate text-[11px] font-medium text-[#3D3430]">فلترة</span>
-
-                {activeFilterCount > 0 && <span className="flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[#D4777D] px-1 text-[8px] font-semibold text-white">{activeFilterCount}</span>}
-              </button>
-
-              <button onClick={() => setSortOpen(true)} className="flex h-full min-w-0 flex-1 items-center justify-center gap-2 border-l border-[#EFE7E3] px-2 transition-colors active:bg-[#FBF5F3]">
-                <span className="min-w-0">
-                  <span className="block text-[8px] leading-none text-[#AAA09B]">ترتيب</span>
-                  <span className="mt-1 block max-w-[78px] truncate text-[10px] font-medium leading-none text-[#3D3430]">{currentSortLabel}</span>
-                </span>
-
-                <ChevronDown className="h-3.5 w-3.5 shrink-0 stroke-[1.5] text-[#756A65]" />
-              </button>
-
-              <div className="flex h-full w-[72px] shrink-0 flex-col items-center justify-center bg-[#FDF9F7] sm:w-[82px]">
-                {metadataLoading ? <span className="h-3 w-6 animate-pulse rounded bg-[#EDE4E0]" /> : <span className="text-[12px] font-semibold leading-none text-[#B86168]">{totalProductsCount}</span>}
-                <span className="mt-1 text-[8px] leading-none text-[#9D918B]">منتج</span>
+            <div className="hidden md:block">
+              <div className="flex items-end gap-2">
+                <span className="text-[32px] font-light leading-none tracking-[-0.055em] text-[#4A3436]">{metadataLoading ? "—" : totalProductsCount}</span>
+                <span className="pb-[3px] text-[7px] tracking-[0.14em] text-[#B38F8E]">PIECES</span>
               </div>
             </div>
           </div>
-        </section>
+        </div>
 
         {/* =========================================================
-            ACTIVE FILTERS
+            FLAMINGO CATEGORY RAIL
         ========================================================= */}
-        {activeFilterCount > 0 && (
-          <section className="mx-auto w-full max-w-[1600px] px-3 pt-1 md:px-6">
-            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {brandFilter !== "all" && <button onClick={() => setParam("brand", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">{brandFilter}<X className="h-2.5 w-2.5" /></button>}
+        <div className="relative border-t border-[#F1E5E1] bg-[#FFFDFC]/90">
+          <div className="mx-auto w-full max-w-[1600px] px-3 md:px-6">
+            <div className="flex items-center gap-2 overflow-x-auto py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:gap-2.5">
+              <button onClick={() => setParam("category", null)} className={`shrink-0 rounded-full px-4 py-[8px] text-[9px] font-medium transition-all md:px-5 md:text-[10px] ${!categorySlug ? "bg-[#C96F79] text-white shadow-[0_6px_18px_rgba(201,111,121,.23)]" : "border border-[#EBDAD5] bg-white text-[#826B6B] hover:border-[#D9B6B2] hover:text-[#A7535D]"}`}>الكل</button>
 
-              {colorFilter !== "all" && <button onClick={() => setParam("color", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">{colorFilter}<X className="h-2.5 w-2.5" /></button>}
-
-              {sizeFilter !== "all" && <button onClick={() => setParam("size", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">{sizeFilter}<X className="h-2.5 w-2.5" /></button>}
-
-              {saleOnly && <button onClick={() => setParam("sale", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">العروض<X className="h-2.5 w-2.5" /></button>}
-
-              {inStockOnly && <button onClick={() => setParam("stock", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">متوفر<X className="h-2.5 w-2.5" /></button>}
-
-              {(minPriceParam > 0 || maxPriceParam > 0) && <button onClick={() => { const next = new URLSearchParams(searchParams); next.delete("min"); next.delete("max"); next.delete("page"); setSearchParams(next); }} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">{effectiveMin} - {effectiveMax}<X className="h-2.5 w-2.5" /></button>}
-
-              <button onClick={clearAllFilters} className="shrink-0 px-2 py-1.5 text-[9px] font-medium text-[#B75F66]">مسح الكل</button>
+              {categories.filter((category) => !category.parent_id).map((category) => (
+                <button key={category.id} onClick={() => setParam("category", category.slug)} className={`shrink-0 rounded-full px-4 py-[8px] text-[9px] font-medium transition-all md:px-5 md:text-[10px] ${categorySlug === category.slug ? "bg-[#C96F79] text-white shadow-[0_6px_18px_rgba(201,111,121,.23)]" : "border border-[#EBDAD5] bg-white text-[#826B6B] hover:border-[#D9B6B2] hover:text-[#A7535D]"}`}>{category.name_ar}</button>
+              ))}
             </div>
-          </section>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          DESKTOP FLAMINGO TOOLBAR
+      ========================================================= */}
+      <section className="sticky top-[76px] z-30 hidden border-b border-[#EEDFDA] bg-[#FFF9F7]/94 backdrop-blur-xl md:block">
+        <div className="mx-auto flex h-[58px] w-full max-w-[1600px] items-center justify-between px-6">
+          <div className="flex items-center gap-2">
+            <button onClick={() => setFiltersOpen(true)} className="flex h-10 items-center gap-2 rounded-full border border-[#E7D4CF] bg-white px-4 text-[10px] font-medium text-[#5C4143] shadow-[0_4px_14px_rgba(96,62,64,.04)] transition-all hover:border-[#D8AAA7] hover:text-[#A7535D]">
+              <SlidersHorizontal className="h-[14px] w-[14px] stroke-[1.6]" />
+              فلترة
+              {activeFilterCount > 0 && <span className="flex h-[17px] min-w-[17px] items-center justify-center rounded-full bg-[#C96F79] px-1 text-[7px] font-semibold text-white">{activeFilterCount}</span>}
+            </button>
+
+            <button onClick={() => setSortOpen(true)} className="flex h-10 items-center gap-1.5 rounded-full border border-[#E7D4CF] bg-white px-4 text-[10px] font-medium text-[#5C4143] shadow-[0_4px_14px_rgba(96,62,64,.04)] transition-all hover:border-[#D8AAA7] hover:text-[#A7535D]">
+              {currentSortLabel}
+              <ChevronDown className="h-3 w-3 stroke-[1.5]" />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-2 rounded-full bg-[#F7E9E6] px-3.5 py-2">
+            <span className="text-[11px] font-semibold text-[#A7535D]">{metadataLoading ? "—" : totalProductsCount}</span>
+            <span className="text-[8px] text-[#9D7E7D]">منتج</span>
+          </div>
+        </div>
+      </section>
+
+      {/* =========================================================
+          ACTIVE FILTERS
+      ========================================================= */}
+      {activeFilterCount > 0 && (
+        <section className="border-b border-[#EEDFDA] bg-[#FFF4F1]">
+          <div className="mx-auto flex w-full max-w-[1600px] items-center gap-2 overflow-x-auto px-3 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:px-6">
+            {brandFilter !== "all" && <button onClick={() => setParam("brand", null)} className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#E9D3CE] bg-white px-2.5 py-1.5 text-[8px] font-medium text-[#8B5E61]">{brandFilter}<X className="h-2.5 w-2.5" /></button>}
+            {colorFilter !== "all" && <button onClick={() => setParam("color", null)} className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#E9D3CE] bg-white px-2.5 py-1.5 text-[8px] font-medium text-[#8B5E61]">{colorFilter}<X className="h-2.5 w-2.5" /></button>}
+            {sizeFilter !== "all" && <button onClick={() => setParam("size", null)} className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#E9D3CE] bg-white px-2.5 py-1.5 text-[8px] font-medium text-[#8B5E61]">{sizeFilter}<X className="h-2.5 w-2.5" /></button>}
+            {saleOnly && <button onClick={() => setParam("sale", null)} className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#E9D3CE] bg-white px-2.5 py-1.5 text-[8px] font-medium text-[#8B5E61]">العروض<X className="h-2.5 w-2.5" /></button>}
+            {inStockOnly && <button onClick={() => setParam("stock", null)} className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#E9D3CE] bg-white px-2.5 py-1.5 text-[8px] font-medium text-[#8B5E61]">متوفر<X className="h-2.5 w-2.5" /></button>}
+
+            {(minPriceParam > 0 || maxPriceParam > 0) && (
+              <button onClick={() => { const next = new URLSearchParams(searchParams); next.delete("min"); next.delete("max"); next.delete("page"); setSearchParams(next); }} className="flex shrink-0 items-center gap-1.5 rounded-full border border-[#E9D3CE] bg-white px-2.5 py-1.5 text-[8px] font-medium text-[#8B5E61]">
+                {effectiveMin} — {effectiveMax}
+                <X className="h-2.5 w-2.5" />
+              </button>
+            )}
+
+            <button onClick={clearAllFilters} className="shrink-0 px-2 text-[8px] font-semibold text-[#A7535D]">مسح الكل</button>
+          </div>
+        </section>
+      )}
+
+      {/* =========================================================
+          PRODUCTS
+      ========================================================= */}
+      <section id="products-grid" className="mx-auto w-full max-w-[1600px] px-[6px] pt-[7px] sm:px-3 sm:pt-3 md:px-6 md:pt-6">
+        {isLoadingProducts && products.length === 0 ? (
+          <div className="grid grid-cols-2 gap-x-[6px] gap-y-6 sm:gap-x-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-5">
+            {Array.from({ length: 10 }).map((_, index) => (
+              <div key={index}>
+                <div className="aspect-[4/5] animate-pulse rounded-[14px] bg-[#F2E8E5]" />
+                <div className="mt-2.5 h-2 w-[67%] animate-pulse rounded-full bg-[#EFE2DE]" />
+                <div className="mt-2 h-2 w-[34%] animate-pulse rounded-full bg-[#EFE2DE]" />
+              </div>
+            ))}
+          </div>
+        ) : products.length === 0 ? (
+          <div className="flex min-h-[57vh] flex-col items-center justify-center px-6 text-center">
+            <div className="relative flex h-[70px] w-[70px] items-center justify-center">
+              <span className="absolute inset-0 rounded-full border border-[#E8D3CF]" />
+              <span className="absolute inset-[7px] rounded-full bg-[#F8E8E5]" />
+              <Heart className="relative h-5 w-5 stroke-[1.2] text-[#B76067]" />
+            </div>
+
+            <p className="mt-5 font-serif text-[7px] tracking-[0.27em] text-[#A7535D]">FLAMINGO PARK</p>
+            <h3 className="mt-2 text-[19px] font-semibold tracking-[-0.03em] text-[#3B2B2D]">لم نجد نتائج مناسبة</h3>
+            <p className="mt-2 max-w-[260px] text-[9px] leading-5 text-[#9E8281]">جرّب تعديل خيارات الفلترة لتكتشف المزيد من القطع.</p>
+
+            <button onClick={clearAllFilters} className="mt-5 rounded-full border border-[#DAB8B4] bg-white px-5 py-2 text-[8px] font-medium text-[#9D565C]">إعادة تعيين</button>
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-x-[6px] gap-y-6 sm:gap-x-3 sm:gap-y-7 md:grid-cols-3 md:gap-x-5 md:gap-y-9 lg:grid-cols-4 xl:grid-cols-5">
+            {products.map((product, index) => (
+              <motion.div key={product.id} custom={index} initial={isMobileViewport ? false : "hidden"} animate={isMobileViewport ? false : "show"} variants={shimmerVariants} className="min-w-0">
+                <ProductCard product={product} onQuickView={(selectedProduct) => setQuickViewProd(selectedProduct)} />
+              </motion.div>
+            ))}
+          </div>
         )}
 
         {/* =========================================================
-            PRODUCTS
+            LOAD MORE
         ========================================================= */}
-        <section id="products-grid" className="mx-auto w-full max-w-[1600px] px-2.5 pt-3 md:px-6 md:pt-5">
-          {isLoadingProducts && products.length === 0 ? (
-            <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4 xl:grid-cols-5">
-              {Array.from({ length: 10 }).map((_, index) => (
-                <div key={index}>
-                  <div className="aspect-[4/5] animate-pulse rounded-[15px] bg-[#F3EEEB]" />
-                  <div className="mt-2.5 h-2.5 w-[72%] animate-pulse rounded-full bg-[#F0E9E6]" />
-                  <div className="mt-2 h-2.5 w-[38%] animate-pulse rounded-full bg-[#F0E9E6]" />
+        {hasMore && (
+          <div className="mx-auto flex max-w-[430px] flex-col items-center px-5 pb-6 pt-14 md:pt-16">
+            <div className="mb-5 w-full">
+              <div className="h-[2px] overflow-hidden rounded-full bg-[#F0DEDA]">
+                <div className="h-full rounded-full bg-[linear-gradient(90deg,#C96F79,#E5A0A3)] transition-all duration-500" style={{ width: `${Math.min(100, (products.length / Math.max(totalProductsCount, 1)) * 100)}%` }} />
+              </div>
+
+              <div className="mt-2 flex justify-between text-[7px] text-[#AD8D8B]">
+                <span>{products.length}</span>
+                <span>{totalProductsCount}</span>
+              </div>
+            </div>
+
+            <button onClick={handleLoadMore} disabled={isLoadingProducts} className="group flex h-[44px] min-w-[164px] items-center justify-center gap-2 rounded-full border border-[#D8B7B3] bg-white px-6 text-[9px] font-medium text-[#8B565A] shadow-[0_7px_20px_rgba(122,76,79,.06)] transition-all hover:border-[#C96F79] hover:text-[#A7535D] active:scale-[0.985] disabled:opacity-50">
+              {isLoadingProducts ? (
+                <>
+                  <span className="h-3 w-3 animate-spin rounded-full border border-[#E2CBC7] border-t-[#C96F79]" />
+                  جاري التحميل
+                </>
+              ) : (
+                <>
+                  عرض المزيد
+                  <ChevronDown className="h-3 w-3 stroke-[1.5]" />
+                </>
+              )}
+            </button>
+
+            <span className="mt-2.5 font-serif text-[6px] tracking-[0.14em] text-[#B28F8D]">FLAMINGO COLLECTION</span>
+          </div>
+        )}
+      </section>
+
+      {/* =========================================================
+          MOBILE FLAMINGO FLOATING DOCK
+      ========================================================= */}
+      <div className="fixed bottom-[calc(env(safe-area-inset-bottom)+14px)] left-1/2 z-40 w-[calc(100%-28px)] max-w-[370px] -translate-x-1/2 md:hidden">
+        <div className="relative overflow-hidden rounded-[20px] border border-[#E8CFCA]/90 bg-[#FFF8F5]/95 p-[5px] shadow-[0_16px_46px_rgba(105,58,62,.19)] backdrop-blur-2xl">
+          <div className="pointer-events-none absolute inset-x-12 -top-10 h-16 rounded-full bg-[#F2CBCD]/35 blur-xl" />
+
+          <div className="relative flex h-[50px] items-center rounded-[15px] bg-white/80">
+            <button onClick={() => setFiltersOpen(true)} className="flex h-full flex-1 items-center justify-center gap-2 text-[#5A3D40]">
+              <span className={`flex h-7 w-7 items-center justify-center rounded-full ${activeFilterCount > 0 ? "bg-[#F6DEDC] text-[#A7535D]" : "bg-[#F8EFEC] text-[#735B5C]"}`}>
+                <SlidersHorizontal className="h-[13px] w-[13px] stroke-[1.6]" />
+              </span>
+
+              <span className="text-[9px] font-semibold">فلترة</span>
+
+              {activeFilterCount > 0 && <span className="flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#C96F79] px-1 text-[7px] font-semibold text-white">{activeFilterCount}</span>}
+            </button>
+
+            <span className="h-6 w-px bg-[#E9D8D4]" />
+
+            <button onClick={() => setSortOpen(true)} className="flex h-full flex-1 items-center justify-center gap-1.5 text-[#5A3D40]">
+              <div className="min-w-0 text-center">
+                <span className="block text-[6px] leading-none text-[#B09291]">ترتيب</span>
+                <span className="mt-1 block max-w-[80px] truncate text-[8px] font-semibold leading-none">{currentSortLabel}</span>
+              </div>
+
+              <ChevronDown className="h-3 w-3 stroke-[1.4] text-[#9B7979]" />
+            </button>
+
+            <span className="h-6 w-px bg-[#E9D8D4]" />
+
+            <div className="flex h-full min-w-[58px] flex-col items-center justify-center">
+              <span className="text-[11px] font-semibold leading-none text-[#A7535D]">{metadataLoading ? "—" : totalProductsCount}</span>
+              <span className="mt-1 text-[6px] leading-none text-[#B09391]">منتج</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* =========================================================
+          SORT SHEET
+      ========================================================= */}
+      <AnimatePresence>
+        {sortOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] flex items-end justify-center bg-[#3A2729]/28 backdrop-blur-[3px] md:items-center" onClick={() => setSortOpen(false)}>
+            <motion.div initial={isMobileViewport ? { y: "100%" } : { opacity: 0, y: 10 }} animate={isMobileViewport ? { y: 0 } : { opacity: 1, y: 0 }} exit={isMobileViewport ? { y: "100%" } : { opacity: 0, y: 10 }} transition={{ type: "spring", stiffness: 350, damping: 37 }} onClick={(event) => event.stopPropagation()} className="w-full rounded-t-[26px] bg-[#FFF9F7] px-5 pb-[calc(env(safe-area-inset-bottom)+18px)] pt-3 shadow-[0_-18px_50px_rgba(75,43,46,.12)] md:max-w-[380px] md:rounded-[20px] md:p-6">
+              <div className="mx-auto mb-5 h-[3px] w-8 rounded-full bg-[#E2C7C4] md:hidden" />
+
+              <div className="flex items-start justify-between">
+                <div>
+                  <p className="font-serif text-[7px] tracking-[0.27em] text-[#A7535D]">FLAMINGO</p>
+                  <h3 className="mt-1.5 text-[22px] font-semibold tracking-[-0.04em] text-[#3B292B]">ترتيب المنتجات</h3>
+                  <p className="mt-1 text-[8px] text-[#AA8988]">اختر الطريقة المناسبة لعرض المجموعة</p>
                 </div>
-              ))}
-            </div>
-          ) : products.length === 0 ? (
-            <div className="flex min-h-[52vh] flex-col items-center justify-center px-6 text-center">
-              <div className="flex h-[74px] w-[74px] items-center justify-center rounded-full bg-[#FAF0EE]">
-                <Heart className="h-7 w-7 stroke-[1.25] text-[#CE7A7F]" />
+
+                <button onClick={() => setSortOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E8D1CC] bg-white text-[#6F5052]">
+                  <X className="h-4 w-4 stroke-[1.4]" />
+                </button>
               </div>
 
-              <h3 className="mt-5 text-[17px] font-semibold text-[#302724]">لا توجد منتجات مطابقة</h3>
-              <p className="mt-2 max-w-[280px] text-[11px] leading-5 text-[#948883]">جرّب إزالة أحد خيارات الفلترة أو اختيار مجموعة مختلفة.</p>
+              <div className="mt-6 overflow-hidden rounded-[18px] border border-[#EBDAD5] bg-white">
+                {[
+                  { value: "new", label: "الأحدث", desc: "أحدث القطع المضافة" },
+                  { value: "best", label: "الأكثر مبيعًا", desc: "الأكثر طلبًا من العملاء" },
+                  { value: "featured", label: "مختارات فلامنجو", desc: "اختياراتنا المميزة" },
+                  { value: "price-asc", label: "الأقل سعرًا", desc: "من الأقل إلى الأعلى" },
+                  { value: "price-desc", label: "الأعلى سعرًا", desc: "من الأعلى إلى الأقل" },
+                ].map((option) => (
+                  <button key={option.value} onClick={() => { setParam("sort", option.value); setSortOpen(false); }} className="flex min-h-[60px] w-full items-center justify-between border-b border-[#F2E6E2] px-4 text-right last:border-0">
+                    <div>
+                      <span className={`block text-[10px] font-semibold ${sortBy === option.value ? "text-[#A7535D]" : "text-[#554043]"}`}>{option.label}</span>
+                      <span className="mt-1 block text-[7px] text-[#AF9190]">{option.desc}</span>
+                    </div>
 
-              <button onClick={clearAllFilters} className="mt-5 rounded-full border border-[#DED2CD] bg-white px-6 py-2.5 text-[11px] font-medium text-[#594D48]">إعادة تعيين</button>
-            </div>
-          ) : (
-            <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 sm:gap-y-6 md:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4 xl:grid-cols-5">
-              {products.map((product, index) => (
-                <motion.div key={product.id} custom={index} initial={isMobileViewport ? false : "hidden"} animate={isMobileViewport ? false : "show"} variants={shimmerVariants} className="min-w-0">
-                  <ProductCard product={product} onQuickView={(selectedProduct) => setQuickViewProd(selectedProduct)} />
-                </motion.div>
-              ))}
-            </div>
-          )}
-
-          {hasMore && (
-            <div className="flex flex-col items-center justify-center pb-5 pt-10 md:pt-14">
-              <button onClick={handleLoadMore} disabled={isLoadingProducts} className="group flex h-[46px] min-w-[178px] items-center justify-center rounded-full border border-[#DBCBC6] bg-white px-7 text-[11px] font-medium text-[#514540] shadow-[0_7px_24px_rgba(64,44,37,.055)] transition-all active:scale-[0.985] disabled:cursor-wait disabled:opacity-60">
-                {isLoadingProducts ? (
-                  <span className="flex items-center gap-2">
-                    <span className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-[#E3D7D2] border-t-[#C66C72]" />
-                    جاري التحميل
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-2">
-                    عرض المزيد
-                    <ChevronDown className="h-3.5 w-3.5 stroke-[1.6]" />
-                  </span>
-                )}
-              </button>
-
-              <div className="mt-2.5 flex items-center gap-2">
-                <span className="h-px w-5 bg-[#E2D6D1]" />
-                <span className="text-[8px] tracking-[0.12em] text-[#AAA09B]">{products.length} / {totalProductsCount}</span>
-                <span className="h-px w-5 bg-[#E2D6D1]" />
+                    <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${sortBy === option.value ? "border-[#C96F79] bg-[#C96F79]" : "border-[#E3D2CE] bg-white"}`}>
+                      {sortBy === option.value && <Check className="h-2.5 w-2.5 stroke-[2.2] text-white" />}
+                    </span>
+                  </button>
+                ))}
               </div>
-            </div>
-          )}
-        </section>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        {/* =========================================================
-            SORT
-        ========================================================= */}
-        <AnimatePresence>
-          {sortOpen && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] flex items-end justify-center bg-[#211B19]/35 backdrop-blur-[2px] md:items-center" onClick={() => setSortOpen(false)}>
-              <motion.div initial={isMobileViewport ? { y: "100%" } : { opacity: 0, scale: 0.97 }} animate={isMobileViewport ? { y: 0 } : { opacity: 1, scale: 1 }} exit={isMobileViewport ? { y: "100%" } : { opacity: 0, scale: 0.97 }} transition={{ type: "spring", stiffness: 340, damping: 34 }} onClick={(event) => event.stopPropagation()} className="w-full rounded-t-[26px] bg-[#FFFDFC] px-4 pb-[calc(env(safe-area-inset-bottom)+18px)] pt-3 shadow-[0_-20px_50px_rgba(55,37,31,.12)] md:max-w-[380px] md:rounded-[22px] md:p-5">
-                <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-[#DDD1CD] md:hidden" />
+      {/* =========================================================
+          FLAMINGO FILTER DRAWER
+      ========================================================= */}
+      <AnimatePresence>
+        {filtersOpen && (
+          <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] flex items-end bg-[#3A2729]/28 backdrop-blur-[3px] md:items-stretch">
+            <div className="absolute inset-0" onClick={() => setFiltersOpen(false)} />
 
-                <div className="mb-2 flex items-center justify-between px-1">
+            <motion.aside initial={isMobileViewport ? { y: "100%" } : { x: "100%" }} animate={isMobileViewport ? { y: 0 } : { x: 0 }} exit={isMobileViewport ? { y: "100%" } : { x: "100%" }} transition={{ type: "spring", stiffness: 330, damping: 37 }} className="relative mr-auto flex max-h-[94vh] w-full flex-col rounded-t-[28px] bg-[#FFF9F7] shadow-[0_-22px_60px_rgba(75,43,46,.14)] md:h-full md:max-h-none md:w-[420px] md:rounded-none">
+              {/* HEADER */}
+              <div className="shrink-0 px-5 pt-3 md:px-6 md:pt-6">
+                <div className="mx-auto mb-4 h-[3px] w-8 rounded-full bg-[#E2C7C4] md:hidden" />
+
+                <div className="flex items-start justify-between border-b border-[#EBDAD5] pb-5">
                   <div>
-                    <p className="text-[9px] text-[#B66A70]">FLAMINGO</p>
-                    <h3 className="mt-0.5 text-[16px] font-semibold text-[#302724]">ترتيب المنتجات</h3>
+                    <div className="mb-1.5 flex items-center gap-2">
+                      <span className="h-[2px] w-4 rounded-full bg-[#C96F79]" />
+                      <p className="font-serif text-[7px] tracking-[0.25em] text-[#A7535D]">FLAMINGO REFINE</p>
+                    </div>
+
+                    <h3 className="text-[23px] font-semibold tracking-[-0.045em] text-[#3B292B]">اختياراتك</h3>
+                    <p className="mt-1 text-[8px] text-[#A78988]">{metadataLoading ? "جاري تجهيز الخيارات..." : `${totalProductsCount} منتج مطابق`}</p>
                   </div>
 
-                  <button onClick={() => setSortOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-full border border-[#EAE0DC] bg-white">
-                    <X className="h-3.5 w-3.5" />
+                  <button onClick={() => setFiltersOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E6CEC9] bg-white text-[#745356]">
+                    <X className="h-4 w-4 stroke-[1.4]" />
                   </button>
                 </div>
+              </div>
 
-                <div className="mt-4 overflow-hidden rounded-[16px] border border-[#ECE2DE] bg-white">
-                  {[
-                    { value: "new", label: "الأحدث", desc: "أحدث المنتجات المضافة" },
-                    { value: "best", label: "الأكثر مبيعًا", desc: "القطع الأكثر طلبًا" },
-                    { value: "featured", label: "مختارات فلامنجو", desc: "منتجات مختارة بعناية" },
-                    { value: "price-asc", label: "السعر: الأقل أولًا", desc: "من الأقل إلى الأعلى" },
-                    { value: "price-desc", label: "السعر: الأعلى أولًا", desc: "من الأعلى إلى الأقل" },
-                  ].map((option) => (
-                    <button key={option.value} onClick={() => { setParam("sort", option.value); setSortOpen(false); }} className="flex min-h-[57px] w-full items-center justify-between border-b border-[#F0E9E6] px-3.5 text-right last:border-0">
-                      <div>
-                        <span className={`block text-[11px] ${sortBy === option.value ? "font-semibold text-[#B95F66]" : "font-medium text-[#4B403B]"}`}>{option.label}</span>
-                        <span className="mt-1 block text-[8px] text-[#A0958F]">{option.desc}</span>
-                      </div>
-
-                      <span className={`flex h-[22px] w-[22px] items-center justify-center rounded-full border transition-all ${sortBy === option.value ? "border-[#D4777D] bg-[#D4777D]" : "border-[#DDD2CE] bg-white"}`}>
-                        {sortBy === option.value && <Check className="h-3 w-3 stroke-[2.2] text-white" />}
-                      </span>
-                    </button>
-                  ))}
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* =========================================================
-            FILTER DRAWER
-        ========================================================= */}
-        <AnimatePresence>
-          {filtersOpen && (
-            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 z-[80] flex items-end bg-[#211B19]/35 backdrop-blur-[2px] md:items-stretch">
-              <div className="absolute inset-0" onClick={() => setFiltersOpen(false)} />
-
-              <motion.aside initial={isMobileViewport ? { y: "100%" } : { x: "100%" }} animate={isMobileViewport ? { y: 0 } : { x: 0 }} exit={isMobileViewport ? { y: "100%" } : { x: "100%" }} transition={{ type: "spring", stiffness: 320, damping: 34 }} className="relative mr-auto flex max-h-[92vh] w-full flex-col rounded-t-[28px] bg-[#FFFDFC] shadow-[0_-20px_60px_rgba(55,37,31,.14)] md:h-full md:max-h-none md:w-[430px] md:rounded-none">
-                {/* HEADER */}
-                <div className="shrink-0 px-4 pt-3 md:px-6 md:pt-6">
-                  <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-[#DDD1CD] md:hidden" />
-
-                  <div className="flex items-center justify-between border-b border-[#EEE6E2] pb-4">
+              {/* CONTENT */}
+              <div className="flex-1 overflow-y-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:px-6">
+                {/* CATEGORY */}
+                <div className="border-b border-[#EDE0DC] py-5">
+                  <div className="mb-4 flex items-center justify-between">
                     <div>
-                      <p className="text-[8px] tracking-[0.18em] text-[#B86A70]">FLAMINGO FILTER</p>
-                      <h3 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-[#302724]">فلترة المنتجات</h3>
-                      <p className="mt-1 text-[9px] text-[#9A8F89]">{metadataLoading ? "جاري تجهيز الخيارات..." : `${totalProductsCount} منتج مطابق لاختياراتك`}</p>
+                      <p className="text-[11px] font-semibold text-[#493537]">القسم</p>
+                      <p className="mt-1 text-[7px] text-[#B29391]">اختر القسم المناسب</p>
                     </div>
 
-                    <button onClick={() => setFiltersOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E9DEDA] bg-white text-[#554944]">
-                      <X className="h-4 w-4" />
-                    </button>
+                    {categorySlug && <button onClick={() => setParam("category", null)} className="text-[7px] font-medium text-[#A7535D]">مسح</button>}
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button onClick={() => setParam("category", null)} className={`rounded-full px-3.5 py-2 text-[8px] font-medium ${!categorySlug ? "bg-[#C96F79] text-white" : "border border-[#E6D3CE] bg-white text-[#776061]"}`}>الكل</button>
+
+                    {categories.filter((category) => !category.parent_id).map((category) => (
+                      <button key={category.id} onClick={() => setParam("category", category.slug)} className={`rounded-full px-3.5 py-2 text-[8px] font-medium ${categorySlug === category.slug ? "bg-[#C96F79] text-white" : "border border-[#E6D3CE] bg-white text-[#776061]"}`}>{category.name_ar}</button>
+                    ))}
                   </div>
                 </div>
 
-                {/* CONTENT */}
-                <div className="flex-1 overflow-y-auto px-4 pb-6 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:px-6">
-                  {/* CATEGORY */}
-                  <div className="border-b border-[#F0E8E5] py-5">
-                    <div className="mb-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-[12px] font-semibold text-[#403632]">الفئة</p>
-                        <p className="mt-0.5 text-[8px] text-[#AAA09A]">اختر القسم المناسب</p>
-                      </div>
-
-                      {categorySlug && <button onClick={() => setParam("category", null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
+                {/* BRANDS */}
+                <div className="border-b border-[#EDE0DC] py-5">
+                  <div className="mb-4 flex items-end justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold text-[#493537]">الماركة</p>
+                      <p className="mt-1 text-[7px] text-[#B29391]">{brandsAvailable.length} ماركة متاحة</p>
                     </div>
 
-                    <div className="flex flex-wrap gap-2">
-                      <button onClick={() => setParam("category", null)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${!categorySlug ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>الكل</button>
+                    {brandFilter !== "all" && <button onClick={() => setParam("brand", null)} className="text-[7px] font-medium text-[#A7535D]">مسح</button>}
+                  </div>
 
-                      {categories.filter((category) => !category.parent_id).map((category) => (
-                        <button key={category.id} onClick={() => setParam("category", category.slug)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${categorySlug === category.slug ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
+                  <div className="max-h-[116px] overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="grid grid-cols-2 gap-x-7 gap-y-3.5">
+                      <button onClick={() => setParam("brand", null)} className={`truncate text-right text-[8px] ${brandFilter === "all" ? "font-semibold text-[#A7535D]" : "text-[#7C6565]"}`}>جميع الماركات</button>
+
+                      {brandsAvailable.map((brand) => (
+                        <button key={brand} onClick={() => setParam("brand", brand)} className={`truncate text-right text-[8px] ${brandFilter === brand ? "font-semibold text-[#A7535D]" : "text-[#7C6565]"}`}>{brand}</button>
                       ))}
                     </div>
                   </div>
+                </div>
 
-                  {/* BRANDS */}
-                  <div className="border-b border-[#F0E8E5] py-5">
-                    <div className="mb-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-[12px] font-semibold text-[#403632]">الماركة</p>
-                        <p className="mt-0.5 text-[8px] text-[#AAA09A]">{brandsAvailable.length} ماركة متاحة</p>
-                      </div>
-
-                      {brandFilter !== "all" && <button onClick={() => setParam("brand", null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
+                {/* COLORS */}
+                <div className="border-b border-[#EDE0DC] py-5">
+                  <div className="mb-4 flex items-end justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold text-[#493537]">اللون</p>
+                      <p className="mt-1 text-[7px] text-[#B29391]">{metadataLoading ? "..." : `${colorsAvailable.length} لون متاح`}</p>
                     </div>
 
-                    <div className="max-h-[126px] overflow-y-auto overscroll-contain pr-[1px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                      <div className="flex flex-wrap gap-2">
-                        <button onClick={() => setParam("brand", null)} className={`rounded-full px-3.5 py-2 text-[9px] font-medium transition-all ${brandFilter === "all" ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E6DCD8] bg-white text-[#6C615C]"}`}>جميع الماركات</button>
+                    {colorFilter !== "all" && <button onClick={() => setParam("color", null)} className="text-[7px] font-medium text-[#A7535D]">مسح</button>}
+                  </div>
 
-                        {brandsAvailable.map((brand) => (
-                          <button key={brand} onClick={() => setParam("brand", brand)} className={`rounded-full px-3.5 py-2 text-[9px] font-medium transition-all ${brandFilter === brand ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E6DCD8] bg-white text-[#6C615C]"}`}>{brand}</button>
-                        ))}
-                      </div>
+                  {/* 3 ROWS THEN HIDDEN SCROLL */}
+                  <div className="max-h-[151px] overflow-y-auto overscroll-contain [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <div className="grid grid-cols-5 gap-x-3 gap-y-4">
+                      <button onClick={() => setParam("color", null)} className="flex min-w-0 flex-col items-center">
+                        <span className={`relative flex h-[33px] w-[33px] items-center justify-center rounded-full border-2 ${colorFilter === "all" ? "border-[#C96F79] ring-2 ring-[#C96F79]/10" : "border-[#E2D2CD]"}`} style={{ background: "conic-gradient(#C96F79,#E2A3A5,#C8A06A,#8A9D7A,#7E91A2,#9A769A,#C96F79)" }}>
+                          <span className="flex h-[24px] w-[24px] items-center justify-center rounded-full bg-[#FFF9F7] text-[6px] font-semibold text-[#6C5455]">كل</span>
+                        </span>
+                        <span className="mt-1.5 text-[7px] text-[#826B6B]">الكل</span>
+                      </button>
+
+                      {colorsAvailable.map((color) => {
+                        const active = colorFilter.toLowerCase() === color.name.toLowerCase();
+
+                        return (
+                          <button key={color.name} onClick={() => setParam("color", active ? null : color.name)} className="flex min-w-0 flex-col items-center">
+                            <span className={`relative h-[33px] w-[33px] rounded-full border-2 ${active ? "border-[#C96F79] ring-2 ring-[#C96F79]/10" : "border-[#E2D2CD]"}`} style={{ background: color.hex2 ? `linear-gradient(135deg, ${color.hex} 50%, ${color.hex2} 50%)` : color.hex }}>
+                              {active && <span className="absolute inset-0 flex items-center justify-center"><span className="flex h-[15px] w-[15px] items-center justify-center rounded-full bg-white/95 shadow-sm"><Check className="h-2 w-2 stroke-[2.5] text-[#5E494A]" /></span></span>}
+                            </span>
+
+                            <span className={`mt-1.5 max-w-full truncate text-[7px] ${active ? "font-semibold text-[#A7535D]" : "text-[#826B6B]"}`}>{color.name}</span>
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
-                  {/* COLORS - 3 ROWS THEN HIDDEN SCROLL */}
-                  <div className="border-b border-[#F0E8E5] py-5">
-                    <div className="mb-4 flex items-center justify-between">
-                      <div>
-                        <p className="text-[12px] font-semibold text-[#403632]">اللون</p>
-                        <p className="mt-0.5 text-[8px] text-[#AAA09A]">{metadataLoading ? "جاري تحميل الألوان" : `${colorsAvailable.length} لون متاح`}</p>
-                      </div>
-
-                      {colorFilter !== "all" && <button onClick={() => setParam("color", null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
-                    </div>
-
-                    <div className="max-h-[178px] overflow-y-auto overscroll-contain px-[1px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                      <div className="grid grid-cols-4 gap-x-2 gap-y-3">
-                        <button onClick={() => setParam("color", null)} className="group flex min-w-0 flex-col items-center">
-                          <span className={`relative flex h-[38px] w-[38px] items-center justify-center rounded-full border-2 transition-all ${colorFilter === "all" ? "border-[#C96B71] ring-2 ring-[#C96B71]/12" : "border-[#E2D9D5]"}`} style={{ background: "conic-gradient(#D4777D,#D4AB62,#6D9779,#6D8DA8,#8970A8,#D4777D)" }}>
-                            <span className="flex h-[29px] w-[29px] items-center justify-center rounded-full bg-[#FFFDFC] text-[8px] font-semibold text-[#5F544F]">كل</span>
-                          </span>
-
-                          <span className={`mt-1.5 max-w-full truncate text-[8px] ${colorFilter === "all" ? "font-semibold text-[#B65E65]" : "text-[#786D67]"}`}>الكل</span>
-                        </button>
-
-                        {colorsAvailable.map((color) => {
-                          const active = colorFilter.toLowerCase() === color.name.toLowerCase();
-
-                          return (
-                            <button key={color.name} onClick={() => setParam("color", active ? null : color.name)} className="group flex min-w-0 flex-col items-center">
-                              <span className={`relative block h-[38px] w-[38px] rounded-full border-2 transition-all ${active ? "border-[#C96B71] ring-2 ring-[#C96B71]/12" : "border-[#E2D9D5]"}`} style={{ background: color.hex2 ? `linear-gradient(135deg, ${color.hex} 0%, ${color.hex} 50%, ${color.hex2} 50%, ${color.hex2} 100%)` : color.hex }}>
-                                {active && (
-                                  <span className="absolute inset-0 flex items-center justify-center">
-                                    <span className="flex h-[18px] w-[18px] items-center justify-center rounded-full bg-white/95 shadow-[0_2px_7px_rgba(30,20,18,.16)]">
-                                      <Check className="h-2.5 w-2.5 stroke-[2.4] text-[#4F4540]" />
-                                    </span>
-                                  </span>
-                                )}
-                              </span>
-
-                              <span className={`mt-1.5 max-w-full truncate px-1 text-[8px] ${active ? "font-semibold text-[#B65E65]" : "text-[#786D67]"}`}>{color.name}</span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-
-                    {colorsAvailable.length > 11 && (
-                      <div className="mt-3 flex items-center justify-center gap-2">
-                        <span className="h-px w-7 bg-[#E8DEDA]" />
-                        <span className="text-[7px] text-[#ADA39E]">اسحب لعرض المزيد</span>
-                        <span className="h-px w-7 bg-[#E8DEDA]" />
-                      </div>
-                    )}
-                  </div>
-
-                  {/* SIZES */}
-                  {sizesAvailable.length > 0 && (
-                    <div className="border-b border-[#F0E8E5] py-5">
-                      <div className="mb-3 flex items-center justify-between">
-                        <div>
-                          <p className="text-[12px] font-semibold text-[#403632]">المقاس</p>
-                          <p className="mt-0.5 text-[8px] text-[#AAA09A]">اختر المقاس المطلوب</p>
-                        </div>
-
-                        {sizeFilter !== "all" && <button onClick={() => setParam("size", null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        <button onClick={() => setParam("size", null)} className={`min-w-[44px] rounded-xl px-3 py-2 text-[9px] font-medium ${sizeFilter === "all" ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E4DAD6] bg-white text-[#655A55]"}`}>الكل</button>
-
-                        {sizesAvailable.map((size) => (
-                          <button key={size} onClick={() => setParam("size", size)} className={`min-w-[44px] rounded-xl px-3 py-2 text-[9px] font-medium ${sizeFilter === size ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E4DAD6] bg-white text-[#655A55]"}`}>{size}</button>
-                        ))}
-                      </div>
+                  {colorsAvailable.length > 14 && (
+                    <div className="mt-3 flex items-center justify-center gap-2">
+                      <span className="h-px w-6 bg-[#E4D3CF]" />
+                      <span className="text-[6px] text-[#B39492]">اسحب لعرض المزيد</span>
+                      <span className="h-px w-6 bg-[#E4D3CF]" />
                     </div>
                   )}
+                </div>
 
-                  {/* PRICE */}
-                  <div className="border-b border-[#F0E8E5] py-5">
-                    <div className="mb-4 flex items-end justify-between">
-                      <div>
-                        <p className="text-[12px] font-semibold text-[#403632]">نطاق السعر</p>
-                        <p className="mt-0.5 text-[8px] text-[#AAA09A]">حدد ميزانيتك</p>
-                      </div>
-
-                      <div className="rounded-full bg-[#F8F2EF] px-3 py-1.5 text-[9px] font-medium text-[#8B6967]">
-                        {Math.round(priceRange[0])} — {Math.round(priceRange[1])}
-                      </div>
+                {/* SIZES */}
+                {sizesAvailable.length > 0 && (
+                  <div className="border-b border-[#EDE0DC] py-5">
+                    <div className="mb-4 flex items-center justify-between">
+                      <p className="text-[11px] font-semibold text-[#493537]">المقاس</p>
+                      {sizeFilter !== "all" && <button onClick={() => setParam("size", null)} className="text-[7px] font-medium text-[#A7535D]">مسح</button>}
                     </div>
 
-                    <div className="rounded-[18px] border border-[#EAE0DC] bg-white px-4 py-5 shadow-[0_5px_18px_rgba(60,42,36,.025)]">
-                      <Slider value={[priceRange[0], priceRange[1]]} min={priceBounds.min} max={priceBounds.max} step={1} onValueChange={(values) => { if (values.length === 2) setPriceRange([values[0], values[1]]); }} onValueCommit={(values) => { if (values.length === 2) applyPriceRange([values[0], values[1]]); }} />
+                    <div className="flex flex-wrap gap-2">
+                      <button onClick={() => setParam("size", null)} className={`flex h-8 min-w-[42px] items-center justify-center rounded-[10px] border px-2.5 text-[8px] font-medium ${sizeFilter === "all" ? "border-[#C96F79] bg-[#F7E4E2] text-[#A7535D]" : "border-[#E2D2CD] bg-white text-[#756060]"}`}>الكل</button>
 
-                      <div className="mt-4 flex items-center justify-between text-[8px] text-[#A19792]">
-                        <span>{priceBounds.min}</span>
-                        <span>{priceBounds.max}</span>
-                      </div>
+                      {sizesAvailable.map((size) => (
+                        <button key={size} onClick={() => setParam("size", size)} className={`flex h-8 min-w-[42px] items-center justify-center rounded-[10px] border px-2.5 text-[8px] font-medium ${sizeFilter === size ? "border-[#C96F79] bg-[#F7E4E2] text-[#A7535D]" : "border-[#E2D2CD] bg-white text-[#756060]"}`}>{size}</button>
+                      ))}
                     </div>
                   </div>
+                )}
 
-                  {/* STATUS */}
-                  <div className="py-5">
-                    <div className="mb-3">
-                      <p className="text-[12px] font-semibold text-[#403632]">الحالة</p>
-                      <p className="mt-0.5 text-[8px] text-[#AAA09A]">خيارات إضافية</p>
+                {/* PRICE */}
+                <div className="border-b border-[#EDE0DC] py-5">
+                  <div className="mb-5 flex items-end justify-between">
+                    <div>
+                      <p className="text-[11px] font-semibold text-[#493537]">السعر</p>
+                      <p className="mt-1 text-[7px] text-[#B29391]">حدد النطاق المناسب</p>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <button onClick={() => setParam("sale", saleOnly ? null : "1")} className={`relative min-h-[54px] overflow-hidden rounded-[15px] border px-3 text-right transition-all ${saleOnly ? "border-[#D4777D] bg-[#FAEDEC]" : "border-[#E7DDD9] bg-white"}`}>
-                        <span className={`block text-[10px] font-semibold ${saleOnly ? "text-[#B85E65]" : "text-[#554A45]"}`}>العروض فقط</span>
-                        <span className="mt-1 block text-[7px] text-[#A29892]">المنتجات المخفضة</span>
+                    <span className="rounded-full bg-[#F5E5E2] px-3 py-1.5 text-[8px] font-semibold text-[#9D5A5F]">{Math.round(priceRange[0])} — {Math.round(priceRange[1])}</span>
+                  </div>
 
-                        {saleOnly && <Check className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#C6666D]" />}
-                      </button>
+                  <div className="rounded-[16px] border border-[#E9D8D3] bg-white px-4 py-5">
+                    <Slider value={[priceRange[0], priceRange[1]]} min={priceBounds.min} max={priceBounds.max} step={1} onValueChange={(values) => { if (values.length === 2) setPriceRange([values[0], values[1]]); }} onValueCommit={(values) => { if (values.length === 2) applyPriceRange([values[0], values[1]]); }} />
 
-                      <button onClick={() => setParam("stock", inStockOnly ? null : "1")} className={`relative min-h-[54px] overflow-hidden rounded-[15px] border px-3 text-right transition-all ${inStockOnly ? "border-[#D4777D] bg-[#FAEDEC]" : "border-[#E7DDD9] bg-white"}`}>
-                        <span className={`block text-[10px] font-semibold ${inStockOnly ? "text-[#B85E65]" : "text-[#554A45]"}`}>المتوفر فقط</span>
-                        <span className="mt-1 block text-[7px] text-[#A29892]">جاهز للطلب</span>
-
-                        {inStockOnly && <Check className="absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#C6666D]" />}
-                      </button>
+                    <div className="mt-4 flex justify-between text-[6px] text-[#B29A97]">
+                      <span>{priceBounds.min}</span>
+                      <span>{priceBounds.max}</span>
                     </div>
                   </div>
                 </div>
 
-                {/* BOTTOM */}
-                <div className="shrink-0 border-t border-[#EDE4E0] bg-[#FFFDFC]/96 px-4 pb-[calc(env(safe-area-inset-bottom)+13px)] pt-3 backdrop-blur-xl md:px-6 md:pb-5">
-                  <div className="grid grid-cols-[.85fr_1.45fr] gap-2.5">
-                    <button onClick={clearAllFilters} className="flex h-[47px] items-center justify-center gap-1.5 rounded-[14px] border border-[#DFD4CF] bg-white text-[10px] font-medium text-[#6B5F59]">
-                      <RotateCcw className="h-3.5 w-3.5 stroke-[1.6]" />
-                      إعادة تعيين
+                {/* STATUS */}
+                <div className="py-5">
+                  <p className="mb-3 text-[11px] font-semibold text-[#493537]">الحالة</p>
+
+                  <div className="space-y-2">
+                    <button onClick={() => setParam("sale", saleOnly ? null : "1")} className={`flex h-[48px] w-full items-center justify-between rounded-[14px] border px-3.5 ${saleOnly ? "border-[#D9A4A2] bg-[#F9E9E6]" : "border-[#E7D8D4] bg-white"}`}>
+                      <span className={`text-[8px] font-medium ${saleOnly ? "text-[#A7535D]" : "text-[#6F595A]"}`}>العروض فقط</span>
+
+                      <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${saleOnly ? "border-[#C96F79] bg-[#C96F79]" : "border-[#E0CECA] bg-white"}`}>
+                        {saleOnly && <Check className="h-2.5 w-2.5 text-white" />}
+                      </span>
                     </button>
 
-                    <button onClick={() => setFiltersOpen(false)} className="h-[47px] rounded-[14px] bg-[#D4777D] text-[11px] font-semibold text-white shadow-[0_7px_22px_rgba(212,119,125,.23)]">
-                      {metadataLoading ? "تطبيق الفلاتر" : `عرض ${totalProductsCount} منتج`}
+                    <button onClick={() => setParam("stock", inStockOnly ? null : "1")} className={`flex h-[48px] w-full items-center justify-between rounded-[14px] border px-3.5 ${inStockOnly ? "border-[#D9A4A2] bg-[#F9E9E6]" : "border-[#E7D8D4] bg-white"}`}>
+                      <span className={`text-[8px] font-medium ${inStockOnly ? "text-[#A7535D]" : "text-[#6F595A]"}`}>المتوفر فقط</span>
+
+                      <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${inStockOnly ? "border-[#C96F79] bg-[#C96F79]" : "border-[#E0CECA] bg-white"}`}>
+                        {inStockOnly && <Check className="h-2.5 w-2.5 text-white" />}
+                      </span>
                     </button>
                   </div>
                 </div>
-              </motion.aside>
-            </motion.div>
-          )}
-        </AnimatePresence>
+              </div>
 
-        <AnimatePresence>
-          {quickViewProd && <QuickView product={quickViewProd} isMobile={isMobileViewport} onClose={() => setQuickViewProd(null)} />}
-        </AnimatePresence>
-      </main>
+              {/* ACTIONS */}
+              <div className="shrink-0 border-t border-[#E8D8D3] bg-[#FFF9F7]/97 px-5 pb-[calc(env(safe-area-inset-bottom)+14px)] pt-3 backdrop-blur-xl md:px-6 md:pb-5">
+                <div className="grid grid-cols-[.82fr_1.65fr] gap-2.5">
+                  <button onClick={clearAllFilters} className="flex h-[46px] items-center justify-center gap-1.5 rounded-[14px] border border-[#DCC4BF] bg-white text-[8px] font-medium text-[#775D5E]">
+                    <RotateCcw className="h-3 w-3 stroke-[1.5]" />
+                    إعادة تعيين
+                  </button>
 
-      <Footer />
-    </div>
-  );
+                  <button onClick={() => setFiltersOpen(false)} className="h-[46px] rounded-[14px] bg-[linear-gradient(135deg,#C96F79,#B65E67)] text-[9px] font-semibold text-white shadow-[0_9px_24px_rgba(185,94,103,.23)]">
+                    {metadataLoading ? "عرض المنتجات" : `عرض ${totalProductsCount} منتج`}
+                  </button>
+                </div>
+              </div>
+            </motion.aside>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {quickViewProd && <QuickView product={quickViewProd} isMobile={isMobileViewport} onClose={() => setQuickViewProd(null)} />}
+      </AnimatePresence>
+    </main>
+
+    <Footer />
+  </div>
+);
 };
 
 export default ProductsPage;

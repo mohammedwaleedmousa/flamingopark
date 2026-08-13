@@ -1,7 +1,14 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft } from "lucide-react";
+import { Swiper, SwiperSlide } from "swiper/react";
+import { FreeMode } from "swiper/modules";
+
 import { supabase } from "@/integrations/supabase/client";
+
+import "swiper/css";
+import "swiper/css/free-mode";
 
 interface BrandRow {
   id: string;
@@ -24,432 +31,77 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
   const { data: brands = [] } = useQuery({
     queryKey: ["home-brands"],
     enabled,
-
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("brands")
-        .select("id,name,logo_url,countries,is_active,sort_order,slug")
-        .eq("is_active", true)
-        .order("sort_order", { ascending: true });
+      const { data, error } = await supabase.from("brands").select("id,name,logo_url,countries,is_active,sort_order,slug").eq("is_active", true).order("sort_order", { ascending: true });
 
       if (error) throw error;
 
       return (data || []) as BrandRow[];
     },
+    staleTime: 1000 * 60 * 10,
+    refetchOnWindowFocus: false,
   });
 
-  const renderBrands: BrandViewModel[] = useMemo(
-    () =>
-      brands.map((brand) => ({
-        id: brand.id,
-        name: brand.name,
-        slug: brand.slug || brand.name.toLowerCase().replace(/\s+/g, "-"),
-        logo_url: brand.logo_url,
-      })),
-    [brands]
-  );
+  const renderBrands = useMemo<BrandViewModel[]>(() => {
+    return brands.map((brand) => ({
+      id: brand.id,
+      name: brand.name,
+      slug: brand.slug || brand.name.toLowerCase().trim().replace(/\s+/g, "-"),
+      logo_url: brand.logo_url,
+    }));
+  }, [brands]);
 
   if (!enabled || renderBrands.length === 0) {
     return null;
   }
 
   return (
-    <section className="brands-clean-strip" dir="rtl" aria-label="الماركات">
-      <style>{`
-        .brands-clean-strip {
-          --pink: #E85A91;
-          --text: #241D20;
-          --muted: #8F8589;
-          --line: #EEE9EB;
-
-          width: 100%;
-          background: #FFFFFF;
-          padding: 20px 0 24px;
-        }
-
-        /* =========================
-           HEADER
-        ========================= */
-
-        .brands-clean-strip .brands-header {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 16px;
-          margin-bottom: 14px;
-        }
-
-        .brands-clean-strip .brands-heading {
-          display: flex;
-          align-items: center;
-          gap: 8px;
-        }
-
-        .brands-clean-strip .brands-marker {
-          width: 4px;
-          height: 28px;
-          border-radius: 999px;
-          background: var(--pink);
-        }
-
-        .brands-clean-strip .brands-title {
-          margin: 0;
-          color: var(--text);
-          font-size: 20px;
-          font-weight: 800;
-          line-height: 1.4;
-        }
-
-        .brands-clean-strip .brands-all {
-          display: inline-flex;
-          align-items: center;
-          gap: 5px;
-
-          color: var(--muted);
-
-          font-size: 12px;
-          font-weight: 600;
-
-          text-decoration: none;
-          white-space: nowrap;
-
-          transition: color 160ms ease;
-        }
-
-        .brands-clean-strip .brands-all-icon {
-          color: var(--pink);
-          font-size: 17px;
-          line-height: 1;
-          transform: translateY(-1px);
-        }
-
-        /* =========================
-           MAIN STRIP
-        ========================= */
-
-        .brands-clean-strip .brands-shell {
-          position: relative;
-
-          width: 100%;
-
-          overflow: hidden;
-
-          border: 1px solid #F0EBED;
-          border-radius: 22px;
-
-          background: #FFFFFF;
-
-          box-shadow:
-            0 8px 28px rgba(44, 28, 34, 0.045),
-            0 2px 7px rgba(44, 28, 34, 0.025);
-        }
-
-        .brands-clean-strip .brands-track {
-          display: flex;
-
-          width: 100%;
-
-          overflow-x: auto;
-          overflow-y: hidden;
-
-          scroll-snap-type: x proximity;
-          overscroll-behavior-x: contain;
-
-          scrollbar-width: none;
-          -ms-overflow-style: none;
-          -webkit-overflow-scrolling: touch;
-
-          touch-action: pan-x;
-        }
-
-        .brands-clean-strip .brands-track::-webkit-scrollbar {
-          display: none;
-        }
-
-        /* =========================
-           BRAND ITEM
-        ========================= */
-
-        .brands-clean-strip .brand-item {
-          position: relative;
-
-          display: flex;
-          flex: 0 0 108px;
-          min-width: 108px;
-          height: 110px;
-
-          flex-direction: column;
-          align-items: center;
-          justify-content: center;
-
-          padding: 15px 9px 13px;
-
-          color: inherit;
-          text-decoration: none;
-
-          scroll-snap-align: start;
-
-          -webkit-tap-highlight-color: transparent;
-
-          transition:
-            background-color 160ms ease,
-            transform 160ms ease;
-        }
-
-        .brands-clean-strip .brand-item:not(:last-child)::after {
-          content: "";
-
-          position: absolute;
-
-          top: 20px;
-          bottom: 20px;
-          left: 0;
-
-          width: 1px;
-
-          background: var(--line);
-        }
-
-        .brands-clean-strip .brand-logo {
-          display: flex;
-
-          width: 72px;
-          height: 45px;
-
-          align-items: center;
-          justify-content: center;
-
-          margin-bottom: 10px;
-        }
-
-        .brands-clean-strip .brand-logo img {
-          display: block;
-
-          max-width: 68px;
-          max-height: 36px;
-
-          object-fit: contain;
-
-          filter: saturate(0.92);
-        }
-
-        .brands-clean-strip .brand-fallback {
-          display: block;
-
-          max-width: 100%;
-
-          overflow: hidden;
-
-          color: var(--text);
-
-          font-size: 11px;
-          font-weight: 800;
-
-          text-align: center;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-        }
-
-        .brands-clean-strip .brand-name {
-          display: block;
-
-          width: 100%;
-
-          overflow: hidden;
-
-          color: #393034;
-
-          font-size: 12px;
-          font-weight: 600;
-          line-height: 1.25;
-
-          text-align: center;
-          text-overflow: ellipsis;
-          white-space: nowrap;
-
-          transition: color 160ms ease;
-        }
-
-        /* =========================
-           INTERACTION
-        ========================= */
-
-        .brands-clean-strip .brand-item:active {
-          background: #FFF8FA;
-        }
-
-        .brands-clean-strip .brand-item:active .brand-name {
-          color: var(--pink);
-        }
-
-        .brands-clean-strip .brands-all:active {
-          color: var(--pink);
-        }
-
-        @media (hover: hover) {
-          .brands-clean-strip .brands-all:hover {
-            color: var(--pink);
-          }
-
-          .brands-clean-strip .brand-item:hover {
-            background: #FFF9FB;
-          }
-
-          .brands-clean-strip .brand-item:hover .brand-name {
-            color: var(--pink);
-          }
-        }
-
-        /* =========================
-           MOBILE
-        ========================= */
-
-        @media (max-width: 639px) {
-          .brands-clean-strip {
-            padding: 18px 0 22px;
-          }
-
-          .brands-clean-strip .brands-header {
-            margin-bottom: 13px;
-          }
-
-          .brands-clean-strip .brands-title {
-            font-size: 19px;
-          }
-
-          .brands-clean-strip .brands-all {
-            font-size: 11px;
-          }
-
-          .brands-clean-strip .brands-shell {
-            border-radius: 20px;
-          }
-
-          .brands-clean-strip .brand-item {
-            flex-basis: 102px;
-            min-width: 102px;
-            height: 105px;
-            padding-inline: 7px;
-          }
-
-          .brands-clean-strip .brand-logo {
-            width: 68px;
-            height: 43px;
-          }
-
-          .brands-clean-strip .brand-logo img {
-            max-width: 64px;
-            max-height: 34px;
-          }
-
-          .brands-clean-strip .brand-name {
-            font-size: 11.5px;
-          }
-        }
-
-        /* =========================
-           TABLET
-        ========================= */
-
-        @media (min-width: 640px) {
-          .brands-clean-strip {
-            padding: 26px 0 28px;
-          }
-
-          .brands-clean-strip .brands-title {
-            font-size: 21px;
-          }
-
-          .brands-clean-strip .brands-all {
-            font-size: 12px;
-          }
-
-          .brands-clean-strip .brands-shell {
-            border-radius: 24px;
-          }
-
-          .brands-clean-strip .brand-item {
-            flex-basis: 132px;
-            min-width: 132px;
-            height: 120px;
-          }
-
-          .brands-clean-strip .brand-logo {
-            width: 84px;
-            height: 48px;
-          }
-
-          .brands-clean-strip .brand-logo img {
-            max-width: 80px;
-            max-height: 38px;
-          }
-
-          .brands-clean-strip .brand-name {
-            font-size: 12.5px;
-          }
-        }
-
-        /* =========================
-           DESKTOP
-        ========================= */
-
-        @media (min-width: 1024px) {
-          .brands-clean-strip .brands-shell {
-            max-width: 100%;
-          }
-
-          .brands-clean-strip .brand-item {
-            flex: 1 0 145px;
-            min-width: 145px;
-            height: 124px;
-          }
-
-          .brands-clean-strip .brand-logo {
-            width: 92px;
-          }
-        }
-      `}</style>
-
-      <div className="container mx-auto px-4 md:px-8">
-        <div className="brands-header">
-          <div className="brands-heading">
-            <span className="brands-marker" />
-            <h2 className="brands-title">الماركات</h2>
+    <section className="w-full overflow-hidden bg-background py-4 md:py-6" dir="rtl" aria-label="الماركات">
+      <div className="mx-auto w-full max-w-[1400px] px-3 md:px-6">
+        {/* HEADER */}
+
+        <div className="mb-3 flex items-end justify-between gap-3 md:mb-4">
+          <div>
+            <div className="mb-1 flex items-center gap-2">
+              <span className="h-[2px] w-4 rounded-full bg-[#D4777D]" />
+              <span className="font-serif text-[6px] uppercase tracking-[0.2em] text-[#B86168] md:text-[7px]">BRANDS</span>
+            </div>
+
+            <h2 className="text-[16px] font-semibold tracking-[-0.02em] text-foreground md:text-[20px]">تسوق حسب الماركة</h2>
           </div>
 
-          <Link to="/brands" className="brands-all">
-            <span>عرض جميع الماركات</span>
-            <span className="brands-all-icon">‹</span>
+          <Link to="/brands" className="flex shrink-0 items-center gap-1 border-b border-border pb-0.5 text-[7px] font-medium text-[#A95B61] transition-opacity active:opacity-60 md:text-[8px]">
+            عرض الكل
+            <ArrowLeft className="h-3 w-3" strokeWidth={1.5} />
           </Link>
         </div>
 
-        <div className="brands-shell">
-          <div className="brands-track">
-            {renderBrands.map((brand) => (
-              <Link
-                key={brand.id}
-                to={`/brands/${brand.slug}`}
-                className="brand-item"
-                aria-label={`عرض منتجات ${brand.name}`}
-              >
-                <div className="brand-logo">
+        {/* BRANDS */}
+
+        <Swiper modules={[FreeMode]} slidesPerView="auto" spaceBetween={10} freeMode={{ enabled: true, momentum: true, momentumRatio: 0.65 }} grabCursor className="!overflow-visible">
+          {renderBrands.map((brand) => (
+            <SwiperSlide key={brand.id} className="!w-[78px] sm:!w-[90px] md:!w-[102px]">
+              <Link to={`/brands/${brand.slug}`} aria-label={`عرض منتجات ${brand.name}`} className="group block w-full select-none [-webkit-tap-highlight-color:transparent]">
+                {/* LOGO BOX */}
+
+                <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-[15px] border border-border/60 bg-white px-2.5 md:rounded-[18px] md:px-3">
                   {brand.logo_url ? (
-                    <img
-                      src={brand.logo_url}
-                      alt={brand.name}
-                      loading="lazy"
-                      decoding="async"
-                    />
+                    <img src={brand.logo_url} alt={brand.name} loading="lazy" decoding="async" className="max-h-[45%] max-w-[82%] object-contain object-center transition-transform duration-200 group-hover:scale-[1.04]" />
                   ) : (
-                    <span className="brand-fallback">{brand.name}</span>
+                    <span className="max-w-full truncate text-center font-serif text-[10px] font-semibold text-[#403633] md:text-[12px]">{brand.name}</span>
                   )}
                 </div>
 
-                <span className="brand-name">{brand.name}</span>
+                {/* BRAND NAME */}
+
+                <div className="mt-1.5 text-center">
+                  <p className="truncate text-[8px] font-semibold text-foreground md:text-[9px]">{brand.name}</p>
+                  <p className="mt-0.5 font-serif text-[5px] uppercase tracking-[0.08em] text-muted-foreground md:text-[6px]">BRAND</p>
+                </div>
               </Link>
-            ))}
-          </div>
-        </div>
+            </SwiperSlide>
+          ))}
+        </Swiper>
       </div>
     </section>
   );

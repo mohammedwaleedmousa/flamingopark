@@ -1,6 +1,6 @@
-import { useParams, useNavigate } from "react-router-dom";
-import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { motion } from "framer-motion";
 import { useQuery } from "@tanstack/react-query";
 import { TransformComponent, TransformWrapper } from "react-zoom-pan-pinch";
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Heart, Minus, Package, Plus, RotateCcw, Share2, Shield, ShoppingBag, ShoppingCart, Star, Truck } from "lucide-react";
@@ -98,7 +98,6 @@ const ProductDetailPage = () => {
 
       const accessories = (data as any).accessories || [];
       const colorVariants = ((data as any).color_variants || []) as ProductColorVariant[];
-
       const baseImages = data.images?.length ? data.images : colorVariants?.[0]?.images || [];
 
       return {
@@ -172,29 +171,30 @@ const ProductDetailPage = () => {
   });
 
   /* =========================================================
-     INITIAL COLOR
+     DEFAULT COLOR
   ========================================================= */
 
   useEffect(() => {
-    if (product?.colorVariants?.length && selectedColorIdx === null) {
-      setSelectedColorIdx(0);
-    }
+    if (!product?.colorVariants?.length) return;
+    if (selectedColorIdx !== null) return;
+
+    setSelectedColorIdx(0);
   }, [product, selectedColorIdx]);
 
   /* =========================================================
-     PRELOAD FIRST COLOR IMAGES
+     PRELOAD
   ========================================================= */
 
   useEffect(() => {
     if (!product?.colorVariants?.length) return;
 
-    product.colorVariants.slice(0, 6).forEach((color) => {
-      const src = color.images?.[0];
+    product.colorVariants.slice(0, 5).forEach((color) => {
+      const firstImage = color.images?.[0];
 
-      if (!src) return;
+      if (!firstImage) return;
 
-      const img = new Image();
-      img.src = optimizeImage(src, 900, 76);
+      const image = new Image();
+      image.src = optimizeImage(firstImage, 900, 76);
     });
   }, [product]);
 
@@ -299,10 +299,6 @@ const ProductDetailPage = () => {
     };
   }, [product]);
 
-  /* =========================================================
-     LOADING
-  ========================================================= */
-
   if (isLoading) {
     return <ProductDetailSkeleton />;
   }
@@ -332,7 +328,7 @@ const ProductDetailPage = () => {
   }
 
   /* =========================================================
-     PRICE + VARIANTS
+     PRODUCT STATE
   ========================================================= */
 
   const accessoriesTotal =
@@ -354,6 +350,9 @@ const ProductDetailPage = () => {
 
   const displayImages = qualityImages?.length ? qualityImages : activeColorVariant?.images?.length ? activeColorVariant.images : product.images?.length ? product.images : ["/placeholder.svg"];
 
+  const safeSelectedImage = Math.min(selectedImage, Math.max(displayImages.length - 1, 0));
+  const currentImage = displayImages[safeSelectedImage] || displayImages[0] || "/placeholder.svg";
+
   const sizesToShow = (activeColorVariant?.sizes?.length ? activeColorVariant.sizes : product.sizes || []).map((entry) => (typeof entry === "string" ? entry : entry.size));
 
   const selectedSizeStock = activeColorVariant?.sizes?.find((entry) => typeof entry !== "string" && entry.size === selectedSize);
@@ -370,11 +369,10 @@ const ProductDetailPage = () => {
   const available = activeQuality?.in_stock === false ? false : typeof activeStock === "number" ? activeStock > 0 : product.inStock;
 
   const lowStock = typeof activeStock === "number" && activeStock > 0 && activeStock <= 5;
-
   const isLiked = isFavorite(product.id);
 
   /* =========================================================
-     ACCESSORY
+     ACCESSORIES
   ========================================================= */
 
   const updateAccessoryQuantity = (key: string, delta: number) => {
@@ -385,7 +383,7 @@ const ProductDetailPage = () => {
   };
 
   /* =========================================================
-     VALIDATION
+     VALIDATE
   ========================================================= */
 
   const validateSelection = () => {
@@ -412,7 +410,7 @@ const ProductDetailPage = () => {
   };
 
   /* =========================================================
-     ADD TO CART
+     ADD CURRENT PRODUCT
   ========================================================= */
 
   const addCurrentProductToCart = () => {
@@ -462,6 +460,18 @@ const ProductDetailPage = () => {
   };
 
   /* =========================================================
+     FAVORITE
+  ========================================================= */
+
+  const handleFavorite = () => {
+    const nowLiked = toggleFavorite(product as Product);
+
+    toast({
+      title: nowLiked ? "تمت الإضافة للمفضلة" : "تمت الإزالة من المفضلة",
+    });
+  };
+
+  /* =========================================================
      SHARE
   ========================================================= */
 
@@ -503,11 +513,15 @@ const ProductDetailPage = () => {
   ========================================================= */
 
   const nextImage = () => {
-    setSelectedImage((current) => (current === displayImages.length - 1 ? 0 : current + 1));
+    if (displayImages.length <= 1) return;
+
+    setSelectedImage((current) => (current >= displayImages.length - 1 ? 0 : current + 1));
   };
 
   const prevImage = () => {
-    setSelectedImage((current) => (current === 0 ? displayImages.length - 1 : current - 1));
+    if (displayImages.length <= 1) return;
+
+    setSelectedImage((current) => (current <= 0 ? displayImages.length - 1 : current - 1));
   };
 
   const goToImage = (index: number) => {
@@ -580,7 +594,7 @@ const ProductDetailPage = () => {
             <ShoppingCart className="h-[19px] w-[19px]" strokeWidth={1.5} />
           </button>
 
-          <button type="button" onClick={() => toggleFavorite(product as Product)} aria-label="المفضلة" className="flex h-9 w-9 items-center justify-center rounded-full text-[#443A37] active:bg-[#FFF5F3]">
+          <button type="button" onClick={handleFavorite} aria-label={isLiked ? "إزالة من المفضلة" : "إضافة للمفضلة"} className="flex h-9 w-9 items-center justify-center rounded-full text-[#443A37] active:bg-[#FFF5F3]">
             <Heart className={`h-[19px] w-[19px] ${isLiked ? "fill-[#D4777D] text-[#D4777D]" : ""}`} strokeWidth={1.5} />
           </button>
 
@@ -623,58 +637,68 @@ const ProductDetailPage = () => {
 
             <section className="min-w-0 bg-white lg:border-l lg:border-[#EDE3DF]">
               <div className="lg:sticky lg:top-[98px]">
-                <div className="relative aspect-[1/1.08] w-full overflow-hidden bg-[#F6F4F2] sm:aspect-[1/0.95] lg:aspect-[4/5]">
-                  <motion.div key={`${activeColorVariant?.name || "default"}-${selectedQualityIdx ?? "default"}-${selectedImage}`} initial={{ opacity: 0.6 }} animate={{ opacity: 1 }} transition={{ duration: 0.14 }} drag={displayImages.length > 1 ? "x" : false} dragConstraints={{ left: 0, right: 0 }} dragElastic={0.1} dragMomentum={false} onDragEnd={(_, info) => { if (displayImages.length <= 1) return; if (info.offset.x < -55 || info.velocity.x < -450) { nextImage(); return; } if (info.offset.x > 55 || info.velocity.x > 450) prevImage(); }} style={{ touchAction: "pan-y" }} className="h-full w-full cursor-grab active:cursor-grabbing">
-                    <TransformWrapper minScale={1} maxScale={4} centerOnInit centerZoomedOut limitToBounds panning={{ disabled: true }} wheel={{ disabled: true }} doubleClick={{ disabled: true }}>
-                      <TransformComponent wrapperClass="!h-full !w-full !overflow-hidden" contentClass="!h-full !w-full">
-                        <img src={optimizeImage(displayImages[selectedImage] || displayImages[0], 1400, 84)} alt={product.nameAr || product.name} fetchPriority="high" decoding="async" onError={handleImageError} draggable={false} className="h-full w-full select-none object-contain object-center" />
-                      </TransformComponent>
-                    </TransformWrapper>
-                  </motion.div>
+                {/* ===========================================
+                    MAIN IMAGE
+                    لا يتم قص المنتج
+                    الخلفية تملأ الفراغ الجانبي
+                =========================================== */}
 
-                  {/* DISCOUNT */}
+                <div className="relative h-[56svh] min-h-[410px] max-h-[520px] w-full overflow-hidden bg-[#F4F2F0] sm:h-[60svh] sm:min-h-[450px] sm:max-h-[600px] md:h-auto md:min-h-0 md:max-h-none md:aspect-[4/5]">
+  {/* MAIN PRODUCT */}
+  <motion.div key={`${activeColorVariant?.name || "default"}-${selectedQualityIdx ?? "default"}-${safeSelectedImage}`} initial={{ opacity: 0.65 }} animate={{ opacity: 1 }} transition={{ duration: 0.14 }} drag={displayImages.length > 1 ? "x" : false} dragConstraints={{ left: 0, right: 0 }} dragElastic={0.1} dragMomentum={false} onDragEnd={(_, info) => { if (displayImages.length <= 1) return; if (info.offset.x < -55 || info.velocity.x < -450) { nextImage(); return; } if (info.offset.x > 55 || info.velocity.x > 450) { prevImage(); } }} style={{ touchAction: "pan-y" }} className="h-full w-full cursor-grab active:cursor-grabbing">
+    <TransformWrapper minScale={1} maxScale={4} centerOnInit centerZoomedOut limitToBounds panning={{ disabled: true }} wheel={{ disabled: true }} doubleClick={{ disabled: true }}>
+      <TransformComponent wrapperClass="!h-full !w-full !overflow-hidden" contentClass="!h-full !w-full">
+        <img src={optimizeImage(currentImage, 1400, 84)} alt={product.nameAr || product.name} fetchPriority="high" decoding="async" onError={handleImageError} draggable={false} className="h-full w-full select-none object-cover object-bottom" />
+      </TransformComponent>
+    </TransformWrapper>
+  </motion.div>
 
-                  {!!product.discount && <span className="absolute right-3 top-3 z-10 rounded-[6px] bg-[#D4777D] px-2 py-1 text-[9px] font-semibold text-white md:right-5 md:top-5">-{product.discount}%</span>}
+  {/* DISCOUNT */}
+  {!!product.discount && (
+    <span className="absolute right-3 top-3 z-20 rounded-[6px] bg-[#D4777D] px-2 py-1 text-[9px] font-semibold text-white md:right-5 md:top-5">
+      -{product.discount}%
+    </span>
+  )}
 
-                  {/* IMAGE COUNTER */}
+  {/* COUNTER */}
+  <span className="pointer-events-none absolute bottom-3 right-3 z-20 rounded-full border border-[#E8DDD9] bg-white/95 px-2.5 py-1 text-[8px] font-semibold text-[#A95B61] shadow-sm">
+    {safeSelectedImage + 1} / {displayImages.length}
+  </span>
 
-                  <span className="pointer-events-none absolute bottom-3 right-3 z-10 rounded-full border border-[#E8DDD9] bg-white/95 px-2.5 py-1 text-[8px] font-semibold text-[#A95B61] md:bottom-5 md:right-5">
-                    {selectedImage + 1} / {displayImages.length}
-                  </span>
+  {/* DESKTOP PREVIOUS */}
+  {displayImages.length > 1 && (
+    <button type="button" onClick={prevImage} aria-label="الصورة السابقة" className="absolute right-4 top-1/2 z-20 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#E7DDD9] bg-white/95 text-[#786863] shadow-sm md:flex">
+      <ChevronRight className="h-4 w-4" strokeWidth={1.4} />
+    </button>
+  )}
 
-                  {/* ARROWS */}
+  {/* DESKTOP NEXT */}
+  {displayImages.length > 1 && (
+    <button type="button" onClick={nextImage} aria-label="الصورة التالية" className="absolute left-4 top-1/2 z-20 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#E7DDD9] bg-white/95 text-[#786863] shadow-sm md:flex">
+      <ChevronLeft className="h-4 w-4" strokeWidth={1.4} />
+    </button>
+  )}
 
-                  {displayImages.length > 1 && (
-                    <>
-                      <button type="button" onClick={prevImage} aria-label="الصورة السابقة" className="absolute right-4 top-1/2 z-20 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#E7DDD9] bg-white/95 text-[#786863] shadow-sm md:flex">
-                        <ChevronRight className="h-4 w-4" strokeWidth={1.4} />
-                      </button>
+  {/* MOBILE DOTS */}
+  {displayImages.length > 1 && (
+    <div className="pointer-events-none absolute bottom-4 left-1/2 z-20 flex -translate-x-1/2 items-center gap-1 md:hidden">
+      {displayImages.slice(0, 8).map((_, index) => (
+        <span key={index} className={`h-1 rounded-full transition-all duration-150 ${safeSelectedImage === index ? "w-4 bg-[#D4777D]" : "w-1 bg-white/80"}`} />
+      ))}
+    </div>
+  )}
+</div>
 
-                      <button type="button" onClick={nextImage} aria-label="الصورة التالية" className="absolute left-4 top-1/2 z-20 hidden h-9 w-9 -translate-y-1/2 items-center justify-center rounded-full border border-[#E7DDD9] bg-white/95 text-[#786863] shadow-sm md:flex">
-                        <ChevronLeft className="h-4 w-4" strokeWidth={1.4} />
-                      </button>
-                    </>
-                  )}
-
-                  {/* MOBILE DOTS */}
-
-                  {displayImages.length > 1 && (
-                    <div className="pointer-events-none absolute bottom-4 left-1/2 z-10 flex -translate-x-1/2 items-center gap-1 md:hidden">
-                      {displayImages.slice(0, 8).map((_, index) => (
-                        <span key={index} className={`h-1 rounded-full transition-all ${selectedImage === index ? "w-4 bg-[#D4777D]" : "w-1 bg-[#C9BFBB]"}`} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* THUMBNAILS */}
+                {/* ===========================================
+                    THUMBNAILS
+                =========================================== */}
 
                 {displayImages.length > 1 && (
                   <div className="border-b border-[#EEE4E0] bg-white">
-                    <div className="flex gap-2 overflow-x-auto px-3 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:px-4 md:py-3">
+                    <div className="flex gap-2 overflow-x-auto px-2.5 py-2.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:px-4 md:py-3">
                       {displayImages.map((image, index) => (
-                        <button type="button" key={`${image}-${index}`} onClick={() => goToImage(index)} aria-label={`عرض الصورة ${index + 1}`} className={`relative h-[54px] w-[54px] shrink-0 overflow-hidden rounded-[8px] bg-[#F6F4F2] transition md:h-[66px] md:w-[66px] ${selectedImage === index ? "ring-1 ring-[#C96F79] ring-offset-2" : "opacity-70 hover:opacity-100"}`}>
-                          <img src={optimizeImage(image, 220, 78)} alt="" loading="lazy" decoding="async" onError={handleImageError} className="h-full w-full object-contain object-center p-0.5" />
+                        <button type="button" key={`${image}-${index}`} onClick={() => goToImage(index)} aria-label={`عرض الصورة ${index + 1}`} className={`relative h-[58px] w-[58px] shrink-0 overflow-hidden rounded-[9px] bg-[#F5F3F1] transition md:h-[68px] md:w-[68px] ${safeSelectedImage === index ? "ring-1 ring-[#C96F79] ring-offset-2" : "opacity-70 active:opacity-100"}`}>
+                          <img src={optimizeImage(image, 220, 78)} alt="" loading="lazy" decoding="async" onError={handleImageError} className="h-full w-full object-cover object-center" />
                         </button>
                       ))}
                     </div>
@@ -688,14 +712,16 @@ const ProductDetailPage = () => {
             =============================================== */}
 
             <section className="min-w-0 bg-white lg:px-6 lg:py-6">
-              {/* TITLE */}
+              {/* =============================================
+                  TITLE + PRICE
+              ============================================= */}
 
               <div className="border-b border-[#EEE4E0] px-3.5 py-4 sm:px-5 lg:px-0 lg:pt-0">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0">
                     {product.brand && (
                       <div className="mb-1.5 flex items-center gap-2">
-                        <span className="h-[2px] w-3 bg-[#D4777D]" />
+                        <span className="h-[2px] w-3 rounded-full bg-[#D4777D]" />
                         <span className="text-[8px] font-semibold tracking-[0.08em] text-[#B86168]">{product.brand}</span>
                       </div>
                     )}
@@ -703,14 +729,12 @@ const ProductDetailPage = () => {
                     <h1 className="text-[16px] font-semibold leading-[1.65] tracking-[-0.025em] text-[#302725] md:text-[20px]">{product.nameAr || product.name}</h1>
                   </div>
 
-                  {/* DESKTOP ACTIONS */}
-
                   <div className="hidden shrink-0 items-center gap-1 lg:flex">
-                    <button type="button" onClick={() => toggleFavorite(product as Product)} aria-label="المفضلة" className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E7DDD9] text-[#746762] hover:bg-[#FFF7F5]">
+                    <button type="button" onClick={handleFavorite} aria-label={isLiked ? "إزالة من المفضلة" : "إضافة للمفضلة"} className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E7DDD9] text-[#746762] hover:bg-[#FFF7F5]">
                       <Heart className={`h-3.5 w-3.5 ${isLiked ? "fill-[#D4777D] text-[#D4777D]" : ""}`} strokeWidth={1.5} />
                     </button>
 
-                    <button type="button" onClick={handleShare} aria-label="مشاركة" className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E7DDD9] text-[#746762] hover:bg-[#FFF7F5]">
+                    <button type="button" onClick={handleShare} aria-label="مشاركة المنتج" className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E7DDD9] text-[#746762] hover:bg-[#FFF7F5]">
                       <Share2 className="h-3.5 w-3.5" strokeWidth={1.5} />
                     </button>
                   </div>
@@ -750,9 +774,9 @@ const ProductDetailPage = () => {
                 </div>
               </div>
 
-              {/* ===============================================
+              {/* =============================================
                   QUALITY
-              =============================================== */}
+              ============================================= */}
 
               {product.hasQualityVariants && product.qualityVariants?.length > 0 && (
                 <div className="border-b border-[#EEE4E0] px-3.5 py-4 sm:px-5 lg:px-0">
@@ -766,9 +790,9 @@ const ProductDetailPage = () => {
                       const active = selectedQualityIdx === index;
 
                       return (
-                        <button type="button" key={variant.id || index} onClick={() => { setSelectedQualityIdx(active ? null : index); setSelectedImage(0); }} className={`flex min-w-[145px] items-center gap-2 rounded-[10px] border p-2 text-right ${active ? "border-[#D9A7A4] bg-[#FFF7F5]" : "border-[#E9DFDB] bg-white"}`}>
+                        <button type="button" key={variant.id || index} onClick={() => { setSelectedQualityIdx(active ? null : index); setSelectedImage(0); setQuantity(1); }} className={`flex min-w-[145px] items-center gap-2 rounded-[10px] border p-2 text-right ${active ? "border-[#D9A7A4] bg-[#FFF7F5]" : "border-[#E9DFDB] bg-white"}`}>
                           {variant.images?.[0] ? (
-                            <img src={optimizeImage(variant.images[0], 160, 78)} alt={variant.name} loading="lazy" decoding="async" onError={handleImageError} className="h-10 w-10 shrink-0 rounded-[7px] bg-[#F6F4F2] object-contain" />
+                            <img src={optimizeImage(variant.images[0], 160, 78)} alt={variant.name} loading="lazy" decoding="async" onError={handleImageError} className="h-10 w-10 shrink-0 rounded-[7px] bg-[#F6F4F2] object-cover object-center" />
                           ) : (
                             <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[7px] bg-[#F8F3F1]">
                               <Package className="h-4 w-4 stroke-[1.4] text-[#B96A70]" />
@@ -788,9 +812,9 @@ const ProductDetailPage = () => {
                 </div>
               )}
 
-              {/* ===============================================
+              {/* =============================================
                   COLORS
-              =============================================== */}
+              ============================================= */}
 
               {product.colorVariants?.length > 0 && (
                 <div className="border-b border-[#EEE4E0] px-3.5 py-4 sm:px-5 lg:px-0">
@@ -815,14 +839,15 @@ const ProductDetailPage = () => {
                 </div>
               )}
 
-              {/* ===============================================
+              {/* =============================================
                   SIZE
-              =============================================== */}
+              ============================================= */}
 
               {sizesToShow.length > 0 && (
                 <div className="border-b border-[#EEE4E0] px-3.5 py-4 sm:px-5 lg:px-0">
                   <div className="mb-3 flex items-center justify-between">
                     <span className="text-[10px] font-semibold text-[#413633]">المقاس</span>
+
                     {selectedSize && <span className="text-[8px] text-[#958782]">المختار: {selectedSize}</span>}
                   </div>
 
@@ -836,9 +861,9 @@ const ProductDetailPage = () => {
                 </div>
               )}
 
-              {/* ===============================================
+              {/* =============================================
                   QUANTITY
-              =============================================== */}
+              ============================================= */}
 
               <div className="flex items-center justify-between border-b border-[#EEE4E0] px-3.5 py-3 sm:px-5 lg:px-0">
                 <div>
@@ -859,9 +884,9 @@ const ProductDetailPage = () => {
                 </div>
               </div>
 
-              {/* ===============================================
-                  TRUST
-              =============================================== */}
+              {/* =============================================
+                  FEATURES
+              ============================================= */}
 
               <div className="grid grid-cols-3 border-b border-[#EEE4E0] bg-[#FFFBFA]">
                 {features.map((feature, index) => {
@@ -870,16 +895,18 @@ const ProductDetailPage = () => {
                   return (
                     <div key={`${feature.title}-${index}`} className={`flex min-h-[72px] flex-col items-center justify-center px-1.5 py-2.5 text-center ${index !== features.length - 1 ? "border-l border-[#EEE4E0]" : ""}`}>
                       <Icon className="mb-1 h-4 w-4 text-[#C66C72]" strokeWidth={1.4} />
+
                       <span className="text-[8px] font-semibold leading-4 text-[#4E423E]">{feature.title}</span>
+
                       <span className="text-[7px] leading-4 text-[#998B86]">{feature.desc}</span>
                     </div>
                   );
                 })}
               </div>
 
-              {/* ===============================================
+              {/* =============================================
                   ACCESSORIES
-              =============================================== */}
+              ============================================= */}
 
               {product.accessories?.length > 0 && (
                 <div className="border-b border-[#EEE4E0] px-3.5 py-4 sm:px-5 lg:px-0">
@@ -898,9 +925,9 @@ const ProductDetailPage = () => {
                 </div>
               )}
 
-              {/* ===============================================
+              {/* =============================================
                   ACCORDIONS
-              =============================================== */}
+              ============================================= */}
 
               <div className="divide-y divide-[#EEE4E0]">
                 {/* DETAILS */}
@@ -937,6 +964,7 @@ const ProductDetailPage = () => {
                           {product.specs.map((spec, index) => (
                             <div key={`${spec.label}-${index}`} className="flex items-start justify-between gap-4 border-b border-[#F2EBE8] py-2.5 last:border-0">
                               <dt className="text-[8px] text-[#998B86]">{spec.label}</dt>
+
                               <dd className="max-w-[65%] text-left text-[8px] font-semibold text-[#4E423E]">{spec.value}</dd>
                             </div>
                           ))}
@@ -962,19 +990,21 @@ const ProductDetailPage = () => {
                     <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="overflow-hidden">
                       <div className="px-3.5 pb-4 text-[9px] leading-6 text-[#796A65] sm:px-5 lg:px-0">
                         <p>التوصيل داخل عدن يتم في نفس اليوم حسب توفر المنتج ووقت الطلب.</p>
+
                         <p className="mt-1">التوصيل إلى بقية المحافظات يستغرق عادة من 2 إلى 7 أيام حسب المنطقة وإجراءات الشحن.</p>
                       </div>
                     </motion.div>
                   )}
                 </div>
 
-                {/* RETURN */}
+                {/* RETURNS */}
 
                 {effectiveReturnPolicy && (
                   <div>
                     <button type="button" onClick={() => setOpenSection(openSection === "return" ? null : "return")} className="flex w-full items-center justify-between px-3.5 py-4 text-right sm:px-5 lg:px-0">
                       <div className="flex items-center gap-2">
                         <RotateCcw className="h-3.5 w-3.5 text-[#C66C72]" strokeWidth={1.4} />
+
                         <span className="text-[10px] font-semibold text-[#413633]">الإرجاع والاستبدال</span>
                       </div>
 
@@ -992,9 +1022,9 @@ const ProductDetailPage = () => {
                 )}
               </div>
 
-              {/* ===============================================
-                  SUCCESS
-              =============================================== */}
+              {/* =============================================
+                  ADD SUCCESS
+              ============================================= */}
 
               {justAdded && (
                 <div className="mx-3.5 mb-4 flex items-center justify-between gap-3 rounded-[10px] border border-[#E8C9C6] bg-[#FFF6F4] px-3 py-2.5 sm:mx-5 lg:mx-0">
@@ -1015,9 +1045,9 @@ const ProductDetailPage = () => {
                 </div>
               )}
 
-              {/* ===============================================
-                  DESKTOP BUY
-              =============================================== */}
+              {/* =============================================
+                  DESKTOP ACTIONS
+              ============================================= */}
 
               <div className="hidden border-t border-[#EEE4E0] pt-5 lg:block">
                 <div className="flex gap-2">
@@ -1039,7 +1069,7 @@ const ProductDetailPage = () => {
           </div>
 
           {/* =================================================
-              BELOW CONTENT
+              STORE + QA + REVIEWS
           ================================================= */}
 
           <div className="mt-2 bg-white px-3.5 sm:px-5 md:mt-6 md:rounded-[18px] md:border md:border-[#EDE3DF] md:px-6">
@@ -1054,12 +1084,15 @@ const ProductDetailPage = () => {
                 <div className="min-w-0">
                   <div className="flex items-center gap-1.5">
                     <p className="truncate text-[10px] font-semibold text-[#403633]">Flamingo Park</p>
+
                     <Shield className="h-3 w-3 text-[#C66C72]" strokeWidth={1.6} />
                   </div>
 
                   <div className="mt-1 flex items-center gap-1">
                     <Star className="h-2.5 w-2.5 fill-[#DCA653] text-[#DCA653]" strokeWidth={1} />
+
                     <span className="text-[7px] font-semibold text-[#665853]">4.8</span>
+
                     <span className="text-[7px] text-[#A49792]">متجر موثوق</span>
                   </div>
                 </div>
@@ -1092,7 +1125,7 @@ const ProductDetailPage = () => {
               <div className="mb-4 flex items-end justify-between px-0.5">
                 <div>
                   <div className="mb-1 flex items-center gap-2">
-                    <span className="h-[2px] w-4 bg-[#D4777D]" />
+                    <span className="h-[2px] w-4 rounded-full bg-[#D4777D]" />
                     <span className="font-serif text-[6px] tracking-[0.22em] text-[#B86168]">FOR YOU</span>
                   </div>
 
@@ -1120,7 +1153,7 @@ const ProductDetailPage = () => {
             <section className="mt-2 bg-white px-2.5 py-5 md:mt-6 md:rounded-[18px] md:border md:border-[#EDE3DF] md:px-6 md:py-7">
               <div className="mb-4">
                 <div className="mb-1 flex items-center gap-2">
-                  <span className="h-[2px] w-4 bg-[#D4777D]" />
+                  <span className="h-[2px] w-4 rounded-full bg-[#D4777D]" />
                   <span className="font-serif text-[6px] tracking-[0.22em] text-[#B86168]">RECENTLY VIEWED</span>
                 </div>
 

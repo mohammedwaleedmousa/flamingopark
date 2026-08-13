@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { FaInstagram, FaWhatsapp, FaFacebookF, FaSnapchatGhost } from "react-icons/fa";
-import { ArrowUp } from "lucide-react";
+import { ArrowUp, ChevronLeft } from "lucide-react";
 
 const cols: { title: string; links: { label: string; href: string }[] }[] = [
   {
@@ -13,7 +13,7 @@ const cols: { title: string; links: { label: string; href: string }[] }[] = [
     ],
   },
   {
-    title: "الرئيسية",
+    title: "فلامنجو",
     links: [
       { label: "عن فلامنجو", href: "/store-info" },
       { label: "متاجرنا", href: "/store-info" },
@@ -34,76 +34,58 @@ const cols: { title: string; links: { label: string; href: string }[] }[] = [
 
 const Footer = () => {
   return (
-    <footer className="bg-background text-foreground border-t border-border">
+    <footer className="w-full border-t border-[#E7DED9] bg-background text-[#403633]" dir="rtl">
+      <div className="mx-auto w-full max-w-[1400px] px-4 md:px-6">
+        {/* BRAND */}
 
-      {/* Link columns */}
-      <div className="container mx-auto px-6 py-16">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-10">
+        <div className="flex flex-col gap-5 border-b border-[#E8E0DC] py-8 md:flex-row md:items-end md:justify-between md:py-10">
           <div>
-            <Link to="/home" className="flex items-center">
-              <img
-                src="/icons/flamingo.jpeg"
-                alt="Flamingo"
-                loading="lazy"
-                className="h-20 md:h-10 w-auto object-contain pr-8"
-              />
+            <Link to="/home" className="inline-flex">
+              <img src="/icons/flamingo.jpeg" alt="Flamingo Park" loading="lazy" decoding="async" className="h-[62px] w-auto object-contain md:h-[70px]" />
             </Link>
-            <p className="mt-5 text-xs text-muted-foreground leading-relaxed break-words overflow-wrap-break-word">
-              متجر أزياء يجمع بين الحرفة الفاخرة والروح المعاصرة.
-            </p>
-            <div className="flex items-center gap-3 mt-6">
 
-              {/* Instagram */}
-              <a
-                href="#"
-                aria-label="Instagram"
-                className="w-9 h-9 rounded-full border border-border flex items-center justify-center
-                hover:bg-pink-500 hover:text-white transition"
-              >
-                <FaInstagram />
-              </a>
+            <p className="mt-3 max-w-[370px] text-[13px] leading-7 text-[#857873]">متجر أزياء يجمع بين الماركات العالمية، الجودة، والتفاصيل التي تصنع أناقة مختلفة.</p>
+          </div>
 
-              {/* WhatsApp */}
-              <a
-                href="#"
-                aria-label="WhatsApp"
-                className="w-9 h-9 rounded-full border border-border flex items-center justify-center
-                hover:bg-green-500 hover:text-white transition"
-              >
+          {/* SOCIAL */}
+
+          <div>
+            <p className="mb-3 text-[12px] font-medium text-[#675A55]">تابع فلامنجو</p>
+
+            <div className="flex items-center gap-2.5">
+              
+
+              <a href="#" aria-label="WhatsApp" className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#25D366] text-[18px] text-white shadow-[0_3px_12px_rgba(37,211,102,0.14)] transition-transform duration-200 hover:-translate-y-0.5">
                 <FaWhatsapp />
               </a>
 
-              {/* Facebook */}
-              <a
-                href="#"
-                aria-label="Facebook"
-                className="w-9 h-9 rounded-full border border-border flex items-center justify-center
-                hover:bg-blue-600 hover:text-white transition"
-              >
+              <a href="#" aria-label="Facebook" className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#1877F2] text-[17px] text-white shadow-[0_3px_12px_rgba(24,119,242,0.14)] transition-transform duration-200 hover:-translate-y-0.5">
                 <FaFacebookF />
               </a>
 
-              {/* Snapchat */}
-              <a
-                href="#"
-                aria-label="Snapchat"
-                className="w-9 h-9 rounded-full border border-border flex items-center justify-center
-                hover:bg-yellow-400 hover:text-black transition"
-              >
+              <a href="#" aria-label="Snapchat" className="flex h-10 w-10 items-center justify-center rounded-[12px] bg-[#FFFC00] text-[18px] text-black shadow-[0_3px_12px_rgba(150,145,0,0.12)] transition-transform duration-200 hover:-translate-y-0.5">
                 <FaSnapchatGhost />
               </a>
-
             </div>
           </div>
+        </div>
 
+        {/* LINKS */}
+
+        <div className="grid grid-cols-2 gap-x-8 gap-y-9 py-8 sm:grid-cols-3 md:gap-x-16 md:py-10">
           {cols.map((col) => (
             <div key={col.title}>
-              <h3 className="text-[10px] tracking-[0.35em] uppercase text-foreground mb-5 break-words overflow-wrap-break-word whitespace-normal">{col.title}</h3>
+              <div className="mb-4 flex items-center gap-2">
+                <span className="h-[18px] w-[3px] rounded-full bg-[#D4777D]" />
+                <h3 className="text-[14px] font-semibold text-[#403633]">{col.title}</h3>
+              </div>
+
               <ul className="space-y-3">
-                {col.links.map((l) => (
-                  <li key={l.label}>
-                    <Link to={l.href} className="text-sm text-muted-foreground hover:text-foreground transition-colors break-words overflow-wrap-break-word">
-                      {l.label}
+                {col.links.map((link) => (
+                  <li key={link.label}>
+                    <Link to={link.href} className="group inline-flex items-center gap-1 text-[13px] text-[#857873] transition-colors hover:text-[#B86168]">
+                      <span>{link.label}</span>
+                      <ChevronLeft className="h-3 w-3 opacity-0 transition-all group-hover:translate-x-[-2px] group-hover:opacity-100" strokeWidth={1.5} />
                     </Link>
                   </li>
                 ))}
@@ -112,13 +94,14 @@ const Footer = () => {
           ))}
         </div>
 
-        <div className="mt-16 pt-6 border-t border-border flex flex-col md:flex-row justify-between items-center text-[11px] text-muted-foreground gap-4 -mb-20">
-          <p>© 2026 فلامنجو بارك — جميع الحقوق محفوظة.</p>
-          <button
-            onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
-            className="flex items-center gap-2 hover:text-foreground transition-colors"
-          >
-            عودة للأعلى <ArrowUp className="w-3 h-3" />
+        {/* BOTTOM */}
+
+        <div className="flex flex-col items-center justify-between gap-3 border-t border-[#E8E0DC] py-3.5 sm:flex-row">
+          <p className="text-center text-[11px] text-[#948781] sm:text-right">© 2026 فلامنجو بارك — جميع الحقوق محفوظة.</p>
+
+          <button type="button" onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })} aria-label="العودة للأعلى" className="flex h-9 items-center gap-2 rounded-[10px] border border-[#DED3CE] bg-background px-3.5 text-[11px] font-medium text-[#675A55] transition-colors hover:border-[#D3AAA7] hover:text-[#B86168]">
+            العودة للأعلى
+            <ArrowUp className="h-3.5 w-3.5" strokeWidth={1.6} />
           </button>
         </div>
       </div>

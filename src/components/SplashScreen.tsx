@@ -99,7 +99,6 @@ const SplashScreen = ({ onDone }: { onDone: () => void }) => {
           {!reduceMotion && <div className="flamingo-splash-sweep absolute inset-0 [mask-image:url('/icons/flamingo-loader.png')] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] [-webkit-mask-image:url('/icons/flamingo-loader.png')] [-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain]" />}
         </div>
 
-        <p className="mt-5 font-serif text-[7px] tracking-[0.3em] text-[#A99B96]">FLAMINGO PARK</p>
       </div>
 
       <style>{`

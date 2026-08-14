@@ -109,18 +109,6 @@ const systemItems: NavItem[] = [
   { title: "المساعدة والدعم", url: "/admin/support", icon: CircleHelp },
 ];
 
-const activeSpring = {
-  type: "spring" as const,
-  stiffness: 1050,
-  damping: 70,
-  mass: 0.28,
-};
-
-const fastEase = {
-  duration: 0.11,
-  ease: [0.22, 1, 0.36, 1] as [number, number, number, number],
-};
-
 const AdminSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -138,14 +126,16 @@ const AdminSidebar = () => {
 
   const isSectionActive = (section: NavSection) => section.items.some((item) => isActive(item));
 
-  const currentSection = () => sections.find((section) => isSectionActive(section))?.id ?? null;
+  const getCurrentSection = () => sections.find((section) => isSectionActive(section))?.id ?? null;
 
-  const [openSection, setOpenSection] = useState<string | null>(() => currentSection());
+  const [openSection, setOpenSection] = useState<string | null>(() => getCurrentSection());
 
   useEffect(() => {
-    const current = currentSection();
+    const section = getCurrentSection();
 
-    if (current) setOpenSection(current);
+    if (section) {
+      setOpenSection(section);
+    }
   }, [location.pathname]);
 
   useEffect(() => {
@@ -177,49 +167,49 @@ const AdminSidebar = () => {
   };
 
   return (
-    <Sidebar side="right" collapsible="icon" style={{ "--sidebar-width": "258px", "--sidebar-width-icon": "66px" } as CSSProperties} className="h-[100dvh] !overflow-hidden border-l border-[#EEEEEC] bg-white font-admin text-[#242524] shadow-none">
-      <div className="flex h-full min-h-0 w-full flex-col !overflow-hidden bg-white">
-        <div className="flex h-[62px] shrink-0 items-center border-b border-[#F1F2F0] bg-white px-[12px]">
-          <div className={cn("flex w-full items-center", collapsed ? "justify-center" : "justify-between")}>
-            <div className="flex min-w-0 items-center gap-[9px]">
-              <motion.button type="button" onClick={() => navigate("/admin")} whileHover={{ scale: 1.035 }} whileTap={{ scale: 0.97 }} transition={activeSpring} className="flex h-[36px] w-[36px] shrink-0 items-center justify-center overflow-hidden rounded-[9px] border border-[#ECEEEC] bg-white">
-                <img src="/icons/flamingo.jpeg" alt="Flamingo" className="h-[29px] w-[29px] object-contain" />
-              </motion.button>
+    <Sidebar side="right" collapsible="icon" style={{ "--sidebar-width": "268px", "--sidebar-width-icon": "68px" } as CSSProperties} className="h-[100dvh] border-l border-[#E3E7DF] bg-[#FAFBF8] font-admin text-[#20231F] shadow-none">
+      <div className="flex h-full min-h-0 flex-col overflow-hidden bg-[#FAFBF8]">
+        {/* HEADER */}
 
-              {!collapsed && (
-                <motion.div initial={{ opacity: 0, x: 3 }} animate={{ opacity: 1, x: 0 }} transition={fastEase} className="min-w-0">
-                  <div className="flex items-center gap-[6px]">
-                    <h1 className="truncate text-[15px] font-bold leading-none tracking-[-0.25px] text-[#181918]">Flamingo</h1>
-
-                    <span className="relative flex h-[6px] w-[6px] items-center justify-center">
-                      <motion.span animate={{ scale: [1, 1.7, 1], opacity: [0.16, 0, 0.16] }} transition={{ duration: 1.5, repeat: Infinity, ease: "easeOut" }} className="absolute h-[11px] w-[11px] rounded-full bg-[#5CC683]" />
-                      <span className="relative h-[6px] w-[6px] rounded-full bg-[#5CC683]" />
-                    </span>
-                  </div>
-
-                  <p className="mt-[5px] text-[9.5px] font-medium leading-none text-[#A0A29F]">إدارة متجر فلامنجو</p>
-                </motion.div>
-              )}
+        <div className="flex h-[72px] shrink-0 items-center px-[11px]">
+          <button type="button" onClick={() => navigate("/admin")} className={cn("flex w-full items-center rounded-[13px] transition-colors hover:bg-[#F1F4EE]", collapsed ? "h-[46px] justify-center" : "h-[52px] gap-[10px] px-[7px]")}>
+            <div className="flex h-[38px] w-[38px] shrink-0 items-center justify-center overflow-hidden rounded-[11px] border border-[#DEE4DA] bg-white">
+              <img src="/icons/flamingo.jpeg" alt="Flamingo Park" className="h-[30px] w-[30px] object-contain" />
             </div>
 
             {!collapsed && (
-              <div className="flex h-[27px] w-[27px] items-center justify-center rounded-full border border-[#EEEEEC]">
-                <span className="h-[6px] w-[6px] rounded-full bg-[#5CC683]" />
-              </div>
+              <>
+                <div className="min-w-0 flex-1 text-right">
+                  <div className="flex items-center gap-[7px]">
+                    <h1 className="truncate text-[13.5px] font-bold leading-none tracking-[-0.2px] text-[#252923]">Flamingo</h1>
+                    <span className="h-[5px] w-[5px] rounded-full bg-[#647057]" />
+                  </div>
+
+                  <p className="mt-[5px] text-[8px] font-medium leading-none tracking-[0.02em] text-[#92998D]">لوحة إدارة المتجر</p>
+                </div>
+
+                <span className="rounded-[6px] border border-[#DDE3D9] bg-[#F2F5EF] px-[6px] py-[3px] text-[7px] font-semibold text-[#687260]">ADMIN</span>
+              </>
             )}
-          </div>
+          </button>
         </div>
 
-        <div className="min-h-0 flex-1 !overflow-hidden bg-white px-[9px] py-[7px]">
-          <div className="space-y-[1px]">
+        {/* NAV */}
+
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-[8px] pb-[10px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {!collapsed && <SectionLabel>الرئيسية</SectionLabel>}
+
+          <div className="space-y-[2px]">
             {primaryItems.map((item) => (
               <MainItem key={item.url} item={item} active={isActive(item)} collapsed={collapsed} onNavigate={closeMobile} />
             ))}
           </div>
 
-          <Divider />
+          {!collapsed && <SectionLabel>الإدارة</SectionLabel>}
 
-          <div className="space-y-[1px]">
+          {collapsed && <Divider />}
+
+          <div className="space-y-[3px]">
             {sections.map((section) => {
               const Icon = section.icon;
               const active = isSectionActive(section);
@@ -227,33 +217,33 @@ const AdminSidebar = () => {
 
               return (
                 <div key={section.id}>
-                  <motion.button type="button" whileTap={{ scale: 0.992 }} transition={activeSpring} onClick={() => setOpenSection((current) => current === section.id ? null : section.id)} title={collapsed ? section.title : undefined} className={cn("group relative flex h-[36px] w-full items-center overflow-hidden rounded-[9px] outline-none transition-colors duration-100", collapsed ? "justify-center px-0" : "gap-[9px] px-[9px]", active ? "text-[#171817]" : "text-[#5B5D5B] hover:bg-[#FAFAF9] hover:text-[#242624]")}>
-                    {active && <motion.span layoutId="admin-active-background" transition={activeSpring} className="absolute inset-0 rounded-[9px] bg-[#F6F8F6]" />}
+                  <button type="button" title={collapsed ? section.title : undefined} onClick={() => setOpenSection((current) => current === section.id ? null : section.id)} className={cn("group relative flex h-[38px] w-full items-center rounded-[10px] transition-colors duration-150", collapsed ? "justify-center px-0" : "gap-[9px] px-[10px]", active ? "bg-[#EDF1E9] text-[#4C5644]" : "text-[#62685E] hover:bg-[#F0F3ED] hover:text-[#353B31]")}>
+                    {active && <span className="absolute inset-y-[8px] left-0 w-[3px] rounded-r-full bg-[#647057]" />}
 
-                    <span className={cn("relative z-[1] flex h-[22px] w-[22px] shrink-0 items-center justify-center transition-all duration-100", active ? "text-[#242624]" : "text-[#797B79] group-hover:scale-[1.05] group-hover:text-[#3F413F]")}>
-                      <Icon className="h-[15px] w-[15px] stroke-[1.75]" />
+                    <span className={cn("flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[7px] transition-colors", active ? "bg-[#E1E7DC] text-[#59634D]" : "text-[#82897E] group-hover:text-[#59634D]")}>
+                      <Icon className="h-[14px] w-[14px]" strokeWidth={1.7} />
                     </span>
 
                     {!collapsed && (
                       <>
-                        <span className={cn("relative z-[1] min-w-0 flex-1 truncate text-right text-[12.5px] leading-none", active ? "font-semibold" : "font-medium")}>{section.title}</span>
+                        <span className={cn("min-w-0 flex-1 truncate text-right text-[11.5px]", active ? "font-semibold" : "font-medium")}>{section.title}</span>
 
-                        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={fastEase} className="relative z-[1] flex h-[18px] w-[18px] shrink-0 items-center justify-center">
-                          <ChevronDown className="h-[12px] w-[12px] text-[#9EA09D]" />
+                        <motion.span animate={{ rotate: open ? 180 : 0 }} transition={{ duration: 0.16 }} className="flex h-[18px] w-[18px] items-center justify-center">
+                          <ChevronDown className="h-[11px] w-[11px] text-[#979D93]" strokeWidth={1.8} />
                         </motion.span>
                       </>
                     )}
-
-                    {active && <ActiveIndicator layoutId="admin-active-indicator" />}
-                  </motion.button>
+                  </button>
 
                   <AnimatePresence initial={false}>
                     {!collapsed && open && (
-                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ height: { duration: 0.11, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.07 } }} className="overflow-hidden">
-                        <div className="mr-[26px] py-[2px]">
-                          {section.items.map((item) => (
-                            <SubItem key={item.url} item={item} active={isActive(item)} onNavigate={closeMobile} />
-                          ))}
+                      <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ height: { duration: 0.18, ease: [0.22, 1, 0.36, 1] }, opacity: { duration: 0.12 } }} className="overflow-hidden">
+                        <div className="mr-[20px] py-[4px] pr-[12px]">
+                          <div className="space-y-[1px] border-r border-[#DDE3D9] pr-[9px]">
+                            {section.items.map((item) => (
+                              <SubItem key={item.url} item={item} active={isActive(item)} onNavigate={closeMobile} />
+                            ))}
+                          </div>
                         </div>
                       </motion.div>
                     )}
@@ -263,43 +253,47 @@ const AdminSidebar = () => {
             })}
           </div>
 
-          <Divider />
+          {!collapsed && <SectionLabel>النظام</SectionLabel>}
 
-          <div className="space-y-[1px]">
+          {collapsed && <Divider />}
+
+          <div className="space-y-[2px]">
             {systemItems.map((item) => (
               <MainItem key={item.url} item={item} active={isActive(item)} collapsed={collapsed} onNavigate={closeMobile} />
             ))}
           </div>
         </div>
 
-        <div className="shrink-0 border-t border-[#F1F2F0] bg-white p-[8px]">
+        {/* ACCOUNT */}
+
+        <div className="shrink-0 border-t border-[#E4E8E1] bg-[#FAFBF8] p-[8px]">
           {userEmail ? (
-            <div>
-              <motion.button type="button" whileTap={{ scale: 0.99 }} transition={activeSpring} onClick={() => navigate("/admin/settings")} className={cn("group flex w-full items-center rounded-[9px] transition-colors duration-100 hover:bg-[#FAFAF9]", collapsed ? "h-[40px] justify-center" : "gap-[8px] px-[6px] py-[5px]")}>
-                <div className="relative flex h-[33px] w-[33px] shrink-0 items-center justify-center rounded-full border border-[#ECEEEC] bg-white text-[11.5px] font-bold uppercase text-[#343634]">
+            <>
+              <button type="button" onClick={() => navigate("/admin/settings")} className={cn("group flex w-full items-center rounded-[11px] transition-colors hover:bg-[#EFF2EC]", collapsed ? "h-[44px] justify-center" : "gap-[9px] px-[7px] py-[6px]")}>
+                <div className="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] bg-[#E6EBE1] text-[11px] font-bold uppercase text-[#59634D]">
                   {userEmail.charAt(0).toUpperCase()}
-                  <span className="absolute bottom-0 left-0 h-[9px] w-[9px] rounded-full border-2 border-white bg-[#5CC683]" />
+                  <span className="absolute -bottom-[1px] -left-[1px] h-[9px] w-[9px] rounded-full border-2 border-[#FAFBF8] bg-[#647057]" />
                 </div>
 
                 {!collapsed && (
                   <>
                     <div className="min-w-0 flex-1 text-right">
-                      <p className="truncate text-[11.5px] font-semibold leading-none text-[#272827]">مدير المتجر</p>
-                      <p dir="ltr" className="mt-[4px] truncate text-left text-[8.5px] leading-none text-[#9A9C99]">{userEmail}</p>
+                      <p className="truncate text-[10.5px] font-semibold leading-none text-[#30352D]">مدير المتجر</p>
+                      <p dir="ltr" className="mt-[5px] truncate text-left text-[7.5px] leading-none text-[#969D92]">{userEmail}</p>
                     </div>
 
-                    <Settings className="h-[13px] w-[13px] shrink-0 text-[#A8AAA7] transition-all duration-150 group-hover:rotate-45 group-hover:text-[#666866]" />
+                    <Settings className="h-[12px] w-[12px] shrink-0 text-[#9DA49A] transition-colors group-hover:text-[#59634D]" strokeWidth={1.7} />
                   </>
                 )}
-              </motion.button>
-
-              <button type="button" onClick={handleLogout} className={cn("group mt-[1px] flex h-[29px] w-full items-center rounded-[7px] text-[#777977] transition-colors duration-100 hover:text-[#292A29]", collapsed ? "justify-center" : "gap-[8px] px-[8px]")}>
-                <LogOut className="h-[13px] w-[13px] stroke-[1.7] transition-transform duration-100 group-hover:-translate-x-[1px]" />
-                {!collapsed && <span className="text-[10.5px] font-medium">تسجيل الخروج</span>}
               </button>
-            </div>
+
+              <button type="button" onClick={handleLogout} className={cn("mt-[2px] flex h-[31px] w-full items-center rounded-[8px] text-[#858C81] transition-colors hover:bg-[#F3F5F1] hover:text-[#525A4B]", collapsed ? "justify-center" : "gap-[8px] px-[8px]")}>
+                <LogOut className="h-[12px] w-[12px]" strokeWidth={1.7} />
+                {!collapsed && <span className="text-[9.5px] font-medium">تسجيل الخروج</span>}
+              </button>
+            </>
           ) : (
-            <button type="button" onClick={() => navigate("/admin/login")} className="flex h-[36px] w-full items-center justify-center rounded-[8px] bg-[#5CC683] text-[11px] font-semibold text-white">تسجيل الدخول</button>
+            <button type="button" onClick={() => navigate("/admin/login")} className="flex h-[38px] w-full items-center justify-center rounded-[9px] bg-[#59634D] text-[10px] font-semibold text-white transition-colors hover:bg-[#4C5643]">تسجيل الدخول</button>
           )}
         </div>
       </div>
@@ -311,22 +305,20 @@ const MainItem = ({ item, active, collapsed, onNavigate }: { item: NavItem; acti
   const Icon = item.icon;
 
   return (
-    <NavLink to={item.url} end={item.exact} onClick={onNavigate} title={collapsed ? item.title : undefined} className={cn("group relative flex h-[36px] w-full items-center overflow-hidden rounded-[9px] outline-none transition-colors duration-100", collapsed ? "justify-center px-0" : "gap-[9px] px-[9px]", active ? "text-[#171817]" : "text-[#5B5D5B] hover:bg-[#FAFAF9] hover:text-[#242624]")}>
-      {active && <motion.span layoutId="admin-active-background" transition={activeSpring} className="absolute inset-0 rounded-[9px] bg-[#F6F8F6]" />}
+    <NavLink to={item.url} end={item.exact} onClick={onNavigate} title={collapsed ? item.title : undefined} className={cn("group relative flex h-[38px] w-full items-center rounded-[10px] transition-colors duration-150", collapsed ? "justify-center px-0" : "gap-[9px] px-[10px]", active ? "bg-[#E9EEE5] text-[#40493A]" : "text-[#60665C] hover:bg-[#F0F3ED] hover:text-[#343A30]")}>
+      {active && <span className="absolute inset-y-[8px] left-0 w-[3px] rounded-r-full bg-[#647057]" />}
 
-      <span className={cn("relative z-[1] flex h-[22px] w-[22px] shrink-0 items-center justify-center transition-all duration-100", active ? "text-[#242624]" : "text-[#797B79] group-hover:scale-[1.05] group-hover:text-[#3F413F]")}>
-        <Icon className="h-[15px] w-[15px] stroke-[1.75]" />
+      <span className={cn("flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-[7px] transition-colors", active ? "bg-[#DCE4D7] text-[#59634D]" : "text-[#81887D] group-hover:text-[#59634D]")}>
+        <Icon className="h-[14px] w-[14px]" strokeWidth={1.7} />
       </span>
 
       {!collapsed && (
         <>
-          <span className={cn("relative z-[1] min-w-0 flex-1 truncate text-right text-[12.5px] leading-none", active ? "font-semibold" : "font-medium")}>{item.title}</span>
+          <span className={cn("min-w-0 flex-1 truncate text-right text-[11.5px]", active ? "font-semibold" : "font-medium")}>{item.title}</span>
 
-          {item.badge !== undefined && <span className="relative z-[1] flex min-w-[28px] items-center justify-center rounded-full bg-[#D1F7E1] px-[7px] py-[3px] text-[9.5px] font-bold leading-none text-[#299B5D]">{item.badge}</span>}
+          {item.badge !== undefined && <span className={cn("flex min-w-[25px] items-center justify-center rounded-[7px] px-[6px] py-[3px] text-[8px] font-bold", active ? "bg-[#D6E0D0] text-[#59634D]" : "bg-[#ECEFE9] text-[#72796E]")}>{item.badge}</span>}
         </>
       )}
-
-      {active && <ActiveIndicator layoutId="admin-active-indicator" />}
     </NavLink>
   );
 };
@@ -335,28 +327,27 @@ const SubItem = ({ item, active, onNavigate }: { item: NavItem; active: boolean;
   const Icon = item.icon;
 
   return (
-    <NavLink to={item.url} end={item.exact} onClick={onNavigate} className={cn("group relative flex h-[26px] w-full items-center gap-[7px] rounded-[6px] px-[7px] outline-none transition-colors duration-100", active ? "font-semibold text-[#242624]" : "font-medium text-[#858784] hover:text-[#3E403E]")}>
-      <span className={cn("flex h-[17px] w-[17px] shrink-0 items-center justify-center transition-all duration-100", active ? "text-[#45AD70]" : "text-[#A3A5A2] group-hover:text-[#777977]")}>
-        <Icon className="h-[11.5px] w-[11.5px] stroke-[1.75]" />
-      </span>
+    <NavLink to={item.url} end={item.exact} onClick={onNavigate} className={cn("group flex h-[29px] w-full items-center gap-[7px] rounded-[7px] px-[7px] transition-colors duration-150", active ? "bg-[#EFF3EC] text-[#4C5744]" : "text-[#858C81] hover:bg-[#F5F7F3] hover:text-[#59634D]")}>
+      <Icon className={cn("h-[11px] w-[11px] shrink-0", active ? "text-[#647057]" : "text-[#A0A69C] group-hover:text-[#747D6B]")} strokeWidth={1.75} />
 
-      <span className="min-w-0 flex-1 truncate text-[11px]">{item.title}</span>
+      <span className={cn("min-w-0 flex-1 truncate text-[10px]", active ? "font-semibold" : "font-medium")}>{item.title}</span>
 
-      {active && <ActiveIndicator layoutId="admin-sub-active-indicator" small />}
+      {active && <span className="h-[4px] w-[4px] shrink-0 rounded-full bg-[#647057]" />}
     </NavLink>
   );
 };
 
-const ActiveIndicator = ({ layoutId, small = false }: { layoutId: string; small?: boolean }) => {
+const SectionLabel = ({ children }: { children: React.ReactNode }) => {
   return (
-    <span className="pointer-events-none absolute inset-y-0 left-[6px] z-[5] flex items-center justify-center">
-      <motion.span layoutId={layoutId} transition={activeSpring} className={cn("block rounded-full bg-[#5CC683]", small ? "h-[12px] w-[2px]" : "h-[18px] w-[3px]")} />
-    </span>
+    <div className="mb-[5px] mt-[13px] flex items-center gap-[8px] px-[10px]">
+      <span className="text-[7.5px] font-semibold tracking-[0.02em] text-[#A0A69D]">{children}</span>
+      <span className="h-px flex-1 bg-[#E7EAE4]" />
+    </div>
   );
 };
 
 const Divider = () => {
-  return <div className="mx-[9px] my-[7px] h-px bg-[#F1F2F0]" />;
+  return <div className="mx-[9px] my-[8px] h-px bg-[#E7EAE4]" />;
 };
 
 export default AdminSidebar;

@@ -1,20 +1,18 @@
-import { useState } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMemo, useState, type ChangeEvent, type FormEvent } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
-import { Slider } from "@/components/ui/slider";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { CheckCircle2, CircleOff, Folder, FolderTree, Grid3X3, Image as ImageIcon, Layers3, Loader2, Pencil, Plus, Search, Trash2, Upload, X } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Pencil, Trash2, Upload, Grid3X3, Search, Loader2, X, ZoomIn, Move } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
-import imageCompression from "browser-image-compression";
-import heic2any from "heic2any";
 
 interface Category {
   id: string;
@@ -26,127 +24,314 @@ interface Category {
   is_active: boolean | null;
   sort_order: number | null;
   countries: string[] | null;
+  description_ar?: string | null;
 }
 
+type CategoryForm = {
+  name: string;
+  name_ar: string;
+  slug: string;
+  parent_id: string;
+  image_url: string;
+  description_ar: string;
+  is_active: boolean;
+  sort_order: number;
+  countries: string[];
+};
+
+type StatusFilter = "all" | "active" | "inactive";
+type TypeFilter = "all" | "root" | "child";
+
+const SINGLE_COUNTRY = "GLOBAL";
+
+const emptyForm = (): CategoryForm => ({
+  name: "",
+  name_ar: "",
+  slug: "",
+  parent_id: "",
+  image_url: "",
+  description_ar: "",
+  is_active: true,
+  sort_order: 0,
+  countries: [SINGLE_COUNTRY],
+});
+
+const generateSlug = (name: string) => {
+  return name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9\s-]/g, "")
+    .replace(/\s+/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-+|-+$/g, "");
+};
+
 const AdminCategoriesPage = () => {
-  const SINGLE_COUNTRY = "GLOBAL";
   const queryClient = useQueryClient();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCategory, setEditingCategory] = useState<Category | null>(null);
+  const [deleteCategory, setDeleteCategory] = useState<Category | null>(null);
+
   const [search, setSearch] = useState("");
-  const [formData, setFormData] = useState({
-    name: "",
-    name_ar: "",
-    slug: "",
-    parent_id: "",
-    image_url: "",
-    is_active: true,
-    sort_order: 0,
-    countries: [SINGLE_COUNTRY] as string[],
-    image_zoom: 1,
-    image_position_x: 50,
-    image_position_y: 50,
-  });
+  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
+
+  const [formData, setFormData] = useState<CategoryForm>(emptyForm());
   const [uploading, setUploading] = useState(false);
 
-  const { data: categories, isLoading } = useQuery({
+  /* =========================================================
+     QUERY
+  ========================================================= */
+
+  const { data: categories = [], isLoading, isFetching } = useQuery({
     queryKey: ["admin-categories"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("*").order("sort_order", { ascending: true });
+      const { data, error } = await supabase.from("categories").select("id,name,name_ar,slug,parent_id,image_url,is_active,sort_order,countries,description_ar").order("sort_order", { ascending: true }).order("name_ar", { ascending: true });
+
       if (error) throw error;
-      return data as Category[];
+
+      return (data || []) as Category[];
     },
+    staleTime: 30_000,
   });
 
+  /* =========================================================
+     DERIVED DATA
+  ========================================================= */
+
+  const rootCategories = useMemo(() => categories.filter((category) => !category.parent_id), [categories]);
+
+  const childCategories = useMemo(() => categories.filter((category) => Boolean(category.parent_id)), [categories]);
+
+  const categoryNameById = useMemo(() => new Map(categories.map((category) => [category.id, category.name_ar])), [categories]);
+
+  const childrenCountMap = useMemo(() => {
+    const map = new Map<string, number>();
+
+    categories.forEach((category) => {
+      if (!category.parent_id) return;
+
+      map.set(category.parent_id, (map.get(category.parent_id) || 0) + 1);
+    });
+
+    return map;
+  }, [categories]);
+
+  const stats = useMemo(() => {
+    return {
+      total: categories.length,
+      active: categories.filter((category) => category.is_active).length,
+      inactive: categories.filter((category) => !category.is_active).length,
+      roots: rootCategories.length,
+      children: childCategories.length,
+    };
+  }, [categories, rootCategories.length, childCategories.length]);
+
+  const filteredCategories = useMemo(() => {
+    const normalizedSearch = search.trim().toLowerCase();
+
+    return categories.filter((category) => {
+      const matchesSearch = !normalizedSearch || category.name.toLowerCase().includes(normalizedSearch) || category.name_ar.toLowerCase().includes(normalizedSearch) || category.slug.toLowerCase().includes(normalizedSearch);
+
+      const matchesStatus = statusFilter === "all" || (statusFilter === "active" && Boolean(category.is_active)) || (statusFilter === "inactive" && !category.is_active);
+
+      const matchesType = typeFilter === "all" || (typeFilter === "root" && !category.parent_id) || (typeFilter === "child" && Boolean(category.parent_id));
+
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }, [categories, search, statusFilter, typeFilter]);
+
+  const parentOptions = useMemo(() => rootCategories.filter((category) => category.id !== editingCategory?.id), [rootCategories, editingCategory?.id]);
+
+  const hasFilters = Boolean(search.trim()) || statusFilter !== "all" || typeFilter !== "all";
+
+  /* =========================================================
+     FORM
+  ========================================================= */
+
+  const closeForm = () => {
+    setFormData(emptyForm());
+    setEditingCategory(null);
+    setIsDialogOpen(false);
+  };
+
+  const openCreate = () => {
+    setEditingCategory(null);
+    setFormData(emptyForm());
+    setIsDialogOpen(true);
+  };
+
+  const handleEdit = (category: Category) => {
+    setEditingCategory(category);
+
+    setFormData({
+      name: category.name || "",
+      name_ar: category.name_ar || "",
+      slug: category.slug || "",
+      parent_id: category.parent_id || "",
+      image_url: category.image_url || "",
+      description_ar: category.description_ar || "",
+      is_active: category.is_active ?? true,
+      sort_order: category.sort_order ?? 0,
+      countries: category.countries || [SINGLE_COUNTRY],
+    });
+
+    setIsDialogOpen(true);
+  };
+
+  /* =========================================================
+     SAVE
+  ========================================================= */
+
   const saveMutation = useMutation({
-    mutationFn: async (data: typeof formData & { id?: string }) => {
-      const slug = data.slug || data.name.toLowerCase().replace(/\s+/g, "-");
+    mutationFn: async (payload: CategoryForm & { id?: string }) => {
+      const name = payload.name.trim();
+      const nameAr = payload.name_ar.trim();
+      const slug = payload.slug.trim() || generateSlug(name);
 
-      if (data.id) {
-        const { data: result, error } = await supabase
-          .from("categories")
-          .update({
-            name: data.name,
-            name_ar: data.name_ar,
-            slug,
-            image_url: data.image_url || null,
-            parent_id: data.parent_id || null,
-            is_active: data.is_active,
-            sort_order: data.sort_order,
-            countries: data.countries,
-          })
-          .eq("id", data.id)
-          .select();
+      if (!name || !nameAr) throw new Error("أدخل اسم الفئة بالعربي والإنجليزي.");
+      if (!slug) throw new Error("تعذر إنشاء رابط صالح للفئة.");
 
-        if (error) throw error;
-      } else {
-        const { data: result, error } = await supabase
-          .from("categories")
-          .insert({
-            name: data.name,
-            name_ar: data.name_ar,
-            slug,
-            image_url: data.image_url || null,
-            parent_id: data.parent_id || null,
-            is_active: data.is_active,
-            sort_order: data.sort_order,
-            countries: data.countries,
-          })
-          .select();
+      const categoryData = {
+        name,
+        name_ar: nameAr,
+        slug,
+        image_url: payload.image_url || null,
+        description_ar: payload.description_ar.trim() || null,
+        parent_id: payload.parent_id || null,
+        is_active: payload.is_active,
+        sort_order: Number(payload.sort_order || 0),
+        countries: payload.countries,
+      };
+
+      if (payload.id) {
+        const { error } = await supabase.from("categories").update(categoryData).eq("id", payload.id);
 
         if (error) throw error;
+
+        return;
       }
+
+      const { error } = await supabase.from("categories").insert(categoryData);
+
+      if (error) throw error;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
-      toast({ title: editingCategory ? "تم تحديث الفئة" : "تم إضافة الفئة" });
-      resetForm();
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+
+      toast({
+        title: editingCategory ? "تم تحديث الفئة" : "تم إضافة الفئة",
+        description: editingCategory ? "تم حفظ التعديلات بنجاح." : "تم إنشاء الفئة الجديدة بنجاح.",
+      });
+
+      closeForm();
     },
     onError: (error: any) => {
       console.error("Category save error:", error);
-      toast({ title: "حدث خطأ", description: error?.message || "فشل في حفظ الفئة", variant: "destructive" });
+
+      toast({
+        title: "تعذر حفظ الفئة",
+        description: error?.message || "حدث خطأ أثناء الحفظ.",
+        variant: "destructive",
+      });
     },
   });
 
-  const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const { error } = await supabase.from("categories").delete().eq("id", id);
-      if (error) throw error;
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
-      toast({ title: "تم حذف الفئة" });
-    },
-  });
+  /* =========================================================
+     TOGGLE ACTIVE
+  ========================================================= */
 
   const toggleActiveMutation = useMutation({
     mutationFn: async ({ id, is_active }: { id: string; is_active: boolean }) => {
       const { error } = await supabase.from("categories").update({ is_active }).eq("id", id);
+
       if (error) throw error;
+
+      return { id, is_active };
     },
-    onSuccess: () => {
+
+    onMutate: async ({ id, is_active }) => {
+      await queryClient.cancelQueries({ queryKey: ["admin-categories"] });
+
+      const previous = queryClient.getQueryData<Category[]>(["admin-categories"]);
+
+      queryClient.setQueryData<Category[]>(["admin-categories"], (current = []) => current.map((category) => category.id === id ? { ...category, is_active } : category));
+
+      return { previous };
+    },
+
+    onError: (error: any, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData(["admin-categories"], context.previous);
+
+      toast({
+        title: "تعذر تحديث الحالة",
+        description: error?.message || "حدث خطأ أثناء تحديث الفئة.",
+        variant: "destructive",
+      });
+    },
+
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
     },
   });
 
-  const handleUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
+  /* =========================================================
+     DELETE
+  ========================================================= */
+
+  const deleteMutation = useMutation({
+    mutationFn: async (category: Category) => {
+      const childrenCount = childrenCountMap.get(category.id) || 0;
+
+      if (childrenCount > 0) {
+        throw new Error(`هذه الفئة تحتوي على ${childrenCount} فئة فرعية. انقل أو احذف الفئات الفرعية أولًا.`);
+      }
+
+      const { error } = await supabase.from("categories").delete().eq("id", category.id);
+
+      if (error) throw error;
+    },
+
+    onSuccess: async () => {
+      setDeleteCategory(null);
+
+      await queryClient.invalidateQueries({ queryKey: ["admin-categories"] });
+
+      toast({
+        title: "تم حذف الفئة",
+        description: "تم حذف الفئة من الكتالوج.",
+      });
+    },
+
+    onError: (error: any) => {
+      toast({
+        title: "تعذر حذف الفئة",
+        description: error?.message || "حدث خطأ أثناء الحذف.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  /* =========================================================
+     IMAGE UPLOAD
+  ========================================================= */
+
+  const handleUpload = async (event: ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
     if (!file) return;
 
+    setUploading(true);
+
     try {
-      setUploading(true);
+      const [{ default: imageCompression }, { default: heic2any }] = await Promise.all([import("browser-image-compression"), import("heic2any")]);
 
       let uploadFile: File = file;
-      const ext = file.name.split(".").pop()?.toLowerCase();
 
-      const isHeic =
-        ext === "heic" ||
-        ext === "heif" ||
-        file.type === "image/heic" ||
-        file.type === "image/heif";
+      const extension = file.name.split(".").pop()?.toLowerCase();
 
-      console.log("نوع الصورة:", file.type);
-      console.log("امتداد الصورة:", ext);
+      const isHeic = extension === "heic" || extension === "heif" || file.type === "image/heic" || file.type === "image/heif";
 
       if (isHeic) {
         try {
@@ -156,608 +341,662 @@ const AdminCategoriesPage = () => {
             quality: 0.9,
           });
 
-          const blob = Array.isArray(converted)
-            ? converted[0]
-            : converted;
+          const convertedBlob = Array.isArray(converted) ? converted[0] : converted;
 
-          uploadFile = new File(
-            [blob],
-            file.name.replace(/\.(heic|heif)$/i, ".jpg"),
-            {
-              type: "image/jpeg",
-            }
-          );
-        } catch (err: any) {
-          if (
-            err?.message?.includes("already browser readable")
-          ) {
-            // المتصفح فك HEIC بنفسه
-            uploadFile = new File(
-              [file],
-              file.name.replace(/\.(heic|heif)$/i, ".jpg"),
-              {
-                type: "image/jpeg",
-              }
-            );
-          } else {
-            throw err;
-          }
+          uploadFile = new File([convertedBlob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), {
+            type: "image/jpeg",
+          });
+        } catch (error: any) {
+          const browserReadable = String(error?.message || "").toLowerCase().includes("already browser readable");
+
+          if (!browserReadable) throw error;
+
+          uploadFile = file;
         }
-      } else {
-        uploadFile = file;
       }
-      console.log("بعد التحويل:", uploadFile.type, uploadFile.name);
-      // ضغط الصورة
+
       const compressedFile = await imageCompression(uploadFile, {
-        maxSizeMB: 0.5,
+        maxSizeMB: 0.45,
         maxWidthOrHeight: 1200,
         useWebWorker: true,
         fileType: "image/webp",
+        initialQuality: 0.86,
       });
 
-      const fileName = `categories/${Date.now()}.webp`;
+      const uniquePart = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
-      const result = await supabase.storage
-        .from("uploads")
-        .upload(fileName, compressedFile, {
-          contentType: "image/webp",
-          upsert: true,
-        });
+      const path = `categories/${uniquePart}.webp`;
 
-        if (result.error) {
-          alert(result.error.message);
-          console.error(result.error);
-          throw result.error;
-        }
+      const { error: uploadError } = await supabase.storage.from("uploads").upload(path, compressedFile, {
+        contentType: "image/webp",
+        cacheControl: "31536000",
+        upsert: false,
+      });
 
-      console.log("RESULT DATA:", result.data);
-      console.log("RESULT ERROR:", result.error);
-      console.log("RESULT:", JSON.stringify(result, null, 2));
+      if (uploadError) throw uploadError;
 
-      if (result.error) {
-        console.error(result.error);
-        throw result.error;
-      }
+      const { data } = supabase.storage.from("uploads").getPublicUrl(path);
 
-      const { data } = supabase.storage
-        .from("uploads")
-        .getPublicUrl(fileName);
-
-      setFormData((prev) => ({
-        ...prev,
+      setFormData((current) => ({
+        ...current,
         image_url: data.publicUrl,
       }));
 
       toast({
-        title: "تم رفع الصورة بنجاح",
+        title: "تم رفع الصورة",
+        description: "تم تحسين الصورة وتحويلها إلى WebP.",
       });
     } catch (error: any) {
-      console.error(error);
+      console.error("Category image upload error:", error);
 
       toast({
         title: "فشل رفع الصورة",
-        description: error.message,
+        description: error?.message || "تعذر معالجة الصورة.",
         variant: "destructive",
       });
     } finally {
       setUploading(false);
-      e.target.value = "";
+      event.target.value = "";
     }
   };
 
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      name_ar: "",
-      slug: "",
-      parent_id: "",
-      image_url: "",
-      is_active: true,
-      sort_order: 0,
-      countries: [SINGLE_COUNTRY],
-      image_zoom: 1,
-      image_position_x: 50,
-      image_position_y: 50,
-    });
-    setEditingCategory(null);
-    setIsDialogOpen(false);
-  };
+  /* =========================================================
+     SUBMIT
+  ========================================================= */
 
-  const handleEdit = (category: Category) => {
-    setEditingCategory(category);
-    setFormData({
-      name: category.name,
-      name_ar: category.name_ar,
-      slug: category.slug,
-      parent_id: category.parent_id || "",
-      image_url: category.image_url || "",
-      is_active: category.is_active ?? true,
-      sort_order: category.sort_order ?? 0,
-      countries: category.countries || [SINGLE_COUNTRY],
-      image_zoom: 1,
-      image_position_x: 50,
-      image_position_y: 50,
-    });
-    setIsDialogOpen(true);
-  };
+  const handleSubmit = (event: FormEvent) => {
+    event.preventDefault();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
     saveMutation.mutate({
       ...formData,
       id: editingCategory?.id,
     });
   };
 
-  const generateSlug = (name: string) => {
-    return name
-      .toLowerCase()
-      .replace(/\s+/g, "-")
-      .replace(/[^a-z0-9-]/g, "");
+  const clearFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setTypeFilter("all");
   };
 
-  const filteredCategories =
-    categories?.filter((c) => c.name.toLowerCase().includes(search.toLowerCase()) || c.name_ar.includes(search)) || [];
-
-  const categoryNameById = new Map((categories || []).map((c) => [c.id, c.name_ar]));
-
-  const parentOptions = (categories || []).filter((c) => c.id !== editingCategory?.id);
-
-  const stats = {
-    total: categories?.length || 0,
-    active: categories?.filter((c) => c.is_active).length || 0,
-    inactive: categories?.filter((c) => !c.is_active).length || 0,
-  };
+  /* =========================================================
+     LOADING
+  ========================================================= */
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[400px]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="flex min-h-[430px] items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto flex h-[48px] w-[48px] items-center justify-center rounded-[14px] border border-[#E5E9EF] bg-white">
+            <Loader2 className="h-[18px] w-[18px] animate-spin text-[#675CBA]" />
+          </div>
+
+          <p className="mt-3 text-[8px] font-medium text-[#969DA7]">جاري تحميل الفئات...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen max-w-[1500px] mx-auto px-3 md:px-6 py-6 space-y-8" dir="rtl">
-      {/* Header */}
-      <AdminPageHeader
-        category="الكتالوج"
-        title="إدارة الفئات"
-        description={`إجمالي ${stats.total} فئة • ${stats.active} نشطة حالياً`}
-        actions={[
-          {
-            label: "إضافة فئة",
-            icon: Plus,
-            onClick: () => {
-              resetForm();
-              setIsDialogOpen(true);
-            },
-            variant: "primary",
-          },
-        ]}
-      />
+    <div className="w-full space-y-4" dir="rtl">
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-        {[
-          {
-            label: "إجمالي الفئات",
-            value: stats.total,
-            style: "from-pink-500/20 to-pink-500/5",
-          },
-          {
-            label: "الفئات النشطة",
-            value: stats.active,
-            style: "from-green-500/20 to-green-500/5",
-          },
-          {
-            label: "الفئات المعطلة",
-            value: stats.inactive,
-            style: "from-red-500/20 to-red-500/5",
-          },
-        ].map((stat) => (
-          <div
-            key={stat.label}
-            className={`bg-gradient-to-br ${stat.style} border border-border rounded-2xl p-5 shadow-sm hover:shadow-md transition`}
-          >
-            <p className="text-3xl font-heading">
-              {stat.value}
-            </p>
+      <AdminPageHeader category="الكتالوج والمخزون" title="إدارة الفئات" description={`${stats.total.toLocaleString("ar-EG")} فئة داخل هيكل الكتالوج`} actions={[{ label: "إضافة فئة", icon: Plus, onClick: openCreate, variant: "primary" }]} />
 
-            <p className="text-sm text-muted-foreground mt-2">
-              {stat.label}
-            </p>
-          </div>
-        ))}
-      </div>
+      {/* =====================================================
+          STATS
+      ===================================================== */}
 
-      {/* Search */}
-      <div className="relative bg-card border border-border rounded-2xl shadow-sm">
-        <Search className="absolute right-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+      <section className="grid grid-cols-2 gap-[9px] lg:grid-cols-4">
+        <CategoryStatCard title="إجمالي الفئات" value={stats.total} helper="جميع أقسام الكتالوج" icon={Grid3X3} tone="indigo" />
+        <CategoryStatCard title="الفئات النشطة" value={stats.active} helper={`${stats.inactive} فئة معطلة`} icon={CheckCircle2} tone="green" />
+        <CategoryStatCard title="الأقسام الرئيسية" value={stats.roots} helper="المستوى الأول من الكتالوج" icon={FolderTree} tone="blue" />
+        <CategoryStatCard title="الأقسام الفرعية" value={stats.children} helper="مرتبطة بالأقسام الرئيسية" icon={Layers3} tone="coral" />
+      </section>
 
-        <Input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="ابحث عن فئة..."
-          className="h-14 pr-12 bg-transparent border-0 focus-visible:ring-0 text-base"
-          dir="rtl"
-        />
-      </div>
+      {/* =====================================================
+          FILTERS
+      ===================================================== */}
 
-      {/* Mobile Cards */}
-      <div className="md:hidden space-y-4">
-        {filteredCategories.map((category, index) => (
-          <motion.div
-            key={category.id}
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: index * 0.05 }}
-            className="bg-card border border-border rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all"
-          >
-            <div className="flex items-start gap-5">
-              {category.image_url ? (
-                <img
-                  src={`${category.image_url}?v=${Date.now()}`}
-                  loading="lazy"
-                  alt={category.name_ar}
-                  className="w-20 h-20 object-cover rounded-2xl shadow-sm"
-                />
-              ) : (
-                <div className="w-20 h-20 bg-muted rounded-2xl flex items-center justify-center">
-                  <Grid3X3 className="w-6 h-6 text-muted-foreground" />
-                </div>
-              )}
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between gap-2">
-                  <h3 className="font-heading text-lg text-foreground truncate">{category.name_ar}</h3>
-                  <span
-                    className={cn(
-                      "px-3 py-1 rounded-full text-xs font-medium shrink-0 border",
-                      category.is_active
-                        ? "bg-green-500/15 text-green-600 border-green-500/30"
-                        : "bg-red-500/15 text-red-600 border-red-500/30",
-                    )}
-                  >
-                    {category.is_active ? "نشط" : "معطل"}
-                  </span>
-                </div>
-                <p className="text-sm text-muted-foreground">{category.name}</p>
-                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                  <span>{category.parent_id ? `فرعي تحت: ${categoryNameById.get(category.parent_id) || "-"}` : "قسم رئيسي"}</span>
-                </div>
-                <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
-                  <span>الترتيب: {category.sort_order}</span>
-                </div>
-              </div>
+      <section className="overflow-hidden rounded-[16px] border border-[#E5E9EF] bg-white">
+        <div className="flex items-center justify-between border-b border-[#EDF0F3] px-[14px] py-[11px]">
+          <div className="flex items-center gap-[8px]">
+            <div className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-[#F1EFFF] text-[#675CBA]">
+              <Search className="h-[13px] w-[13px]" strokeWidth={1.8} />
             </div>
-            <div className="flex items-center gap-3 mt-5 pt-5 border-t border-border">
-              <Button
-                size="sm"
-                variant="outline"
-                className="flex-1 h-10 rounded-xl"
-                onClick={() => toggleActiveMutation.mutate({ id: category.id, is_active: !category.is_active })}
-              >
-                {category.is_active ? "تعطيل" : "تفعيل"}
-              </Button>
-              <Button size="sm" variant="outline" className="flex-1 h-10 rounded-xl gap-2" onClick={() => handleEdit(category)}>
-                <Pencil className="w-4 h-4" />
-                تعديل
-              </Button>
-              <Button
-                size="icon"
-                variant="outline"
-                className="text-destructive border-destructive/30 hover:bg-destructive/10"
-                onClick={() => {
-                  if (confirm("هل أنت متأكد من حذف هذه الفئة؟")) {
-                    deleteMutation.mutate(category.id);
-                  }
-                }}
-              >
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
-          </motion.div>
-        ))}
-        {filteredCategories.length === 0 && (
-          <div className="text-center py-12 text-muted-foreground">
-            <Grid3X3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-            <p>لا توجد فئات</p>
-          </div>
-        )}
-      </div>
 
-      {/* Desktop Table */}
-      <div className="hidden md:block bg-card border border-border rounded-2xl overflow-hidden shadow-sm">
-        <table className="w-full">
-          <thead className="bg-muted/30">
-            <tr>
-              <th className="text-right px-5 py-4 font-heading text-xs text-muted-foreground uppercase">الصورة</th>
-              <th className="text-right px-5 py-4 font-heading text-xs text-muted-foreground uppercase">الاسم (عربي)</th>
-              <th className="text-right px-5 py-4 font-heading text-xs text-muted-foreground uppercase">الاسم (إنجليزي)</th>
-              <th className="text-right px-5 py-4 font-heading text-xs text-muted-foreground uppercase">النوع</th>
-              <th className="text-right px-5 py-4 font-heading text-xs text-muted-foreground uppercase">الترتيب</th>
-              <th className="text-right px-5 py-4 font-heading text-xs text-muted-foreground uppercase">الحالة</th>
-              <th className="text-right px-5 py-4 font-heading text-xs text-muted-foreground uppercase">إجراءات</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredCategories.map((category) => (
-              <tr key={category.id} className="border-b border-border hover:bg-muted/40 transition">
-                <td className="p-4">
-                  {category.image_url ? (
-                    <img
-                      loading="lazy"
-                      src={category.image_url}
-                      alt={category.name_ar}
-                      className="h-14 w-14 object-cover rounded-xl shadow-sm"
-                    />
-                  ) : (
-                    <div className="h-14 w-14 bg-muted rounded-xl flex items-center justify-center">
-                      <Grid3X3 className="w-5 h-5 text-muted-foreground" />
-                    </div>
-                  )}
-                </td>
-                <td className="px-5 py-4 font-heading text-base">{category.name_ar}</td>
-                <td className="px-5 py-4 text-muted-foreground text-sm">{category.name}</td>
-                <td className="px-5 py-4 text-muted-foreground text-sm">
-                  {category.parent_id ? `فرعي (${categoryNameById.get(category.parent_id) || "-"})` : "رئيسي"}
-                </td>
-                <td className="px-5 py-4 text-muted-foreground text-sm">{category.sort_order}</td>
-                <td className="p-4">
-                  <Switch
-                    checked={category.is_active ?? true}
-                    onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: category.id, is_active: checked })}
-                  />
-                </td>
-                <td className="p-4">
-                  <div className="flex gap-2">
-                    <Button size="icon" variant="ghost" className="rounded-xl hover:bg-muted" onClick={() => handleEdit(category)}>
-                      <Pencil className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      size="icon"
-                      variant="ghost"
-                      className="text-destructive rounded-xl hover:bg-destructive/10"
-                      onClick={() => {
-                        if (confirm("هل أنت متأكد من حذف هذه الفئة؟")) {
-                          deleteMutation.mutate(category.id);
-                        }
-                      }}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
-                </td>
-              </tr>
-            ))}
-            {filteredCategories.length === 0 && (
-              <tr>
-                <td colSpan={7} className="p-12 text-center text-muted-foreground">
-                  <Grid3X3 className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>لا توجد فئات</p>
-                </td>
-              </tr>
+            <div>
+              <p className="text-[10px] font-semibold text-[#444B55]">البحث والتصفية</p>
+              <p className="mt-[2px] text-[7px] text-[#9BA2AC]">ابحث بالاسم أو الرابط وفلتر هيكل الفئات</p>
+            </div>
+          </div>
+
+          {hasFilters && (
+            <button type="button" onClick={clearFilters} className="flex h-[29px] items-center gap-[5px] rounded-[8px] px-[8px] text-[8px] font-semibold text-[#8A919B] transition-colors hover:bg-[#F5F7F9] hover:text-[#555D68]">
+              <X className="h-[10px] w-[10px]" />
+              مسح الفلاتر
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-[7px] p-[12px] lg:grid-cols-[minmax(0,1fr)_170px_170px]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute right-[12px] top-1/2 h-[13px] w-[13px] -translate-y-1/2 text-[#969EA8]" strokeWidth={1.7} />
+
+            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="اسم الفئة، الاسم الإنجليزي أو slug..." className="h-[40px] rounded-[10px] border-[#E3E7EC] bg-[#F8FAFC] pr-[35px] pl-[34px] text-[10px] font-medium shadow-none placeholder:text-[#A4ABB4] focus-visible:border-[#D7DBE5] focus-visible:bg-white focus-visible:ring-0" />
+
+            {search && (
+              <button type="button" onClick={() => setSearch("")} className="absolute left-[8px] top-1/2 flex h-[24px] w-[24px] -translate-y-1/2 items-center justify-center rounded-[7px] text-[#9AA1AB] transition-colors hover:bg-white hover:text-[#5C6470]">
+                <X className="h-[11px] w-[11px]" />
+              </button>
             )}
-          </tbody>
-        </table>
-      </div>
+          </div>
 
-      {/* Dialog */}
-      <AnimatePresence>
-        {isDialogOpen && (
-          <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-            <DialogContent className="max-w-md max-h-[90vh] overflow-auto">
-              <DialogHeader>
-                <DialogTitle className="font-heading">
-                  {editingCategory ? "تعديل الفئة" : "إضافة فئة جديدة"}
-                </DialogTitle>
-              </DialogHeader>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label>الاسم بالعربي</Label>
-                  <Input
-                    value={formData.name_ar}
-                    onChange={(e) => setFormData({ ...formData, name_ar: e.target.value })}
-                    placeholder="مثال: ساعات"
-                    dir="rtl"
-                    required
-                  />
+          <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as TypeFilter)}>
+            <SelectTrigger className="h-[40px] rounded-[10px] border-[#E3E7EC] bg-[#F8FAFC] px-[10px] text-[9px] shadow-none focus:ring-0">
+              <SelectValue />
+            </SelectTrigger>
+
+            <SelectContent>
+              <SelectItem value="all">كل المستويات</SelectItem>
+              <SelectItem value="root">رئيسية فقط</SelectItem>
+              <SelectItem value="child">فرعية فقط</SelectItem>
+            </SelectContent>
+          </Select>
+
+          <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as StatusFilter)}>
+            <SelectTrigger className="h-[40px] rounded-[10px] border-[#E3E7EC] bg-[#F8FAFC] px-[10px] text-[9px] shadow-none focus:ring-0">
+              <SelectValue />
+            </SelectTrigger>
+
+            <SelectContent>
+              <SelectItem value="all">كل الحالات</SelectItem>
+              <SelectItem value="active">نشطة</SelectItem>
+              <SelectItem value="inactive">معطلة</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </section>
+
+      {/* =====================================================
+          MOBILE
+      ===================================================== */}
+
+      <section className="space-y-[8px] md:hidden">
+        {filteredCategories.length === 0 ? (
+          <CategoryEmpty />
+        ) : (
+          filteredCategories.map((category) => {
+            const childrenCount = childrenCountMap.get(category.id) || 0;
+
+            return (
+              <article key={category.id} className="overflow-hidden rounded-[14px] border border-[#E5E9EF] bg-white">
+                <div className="p-[11px]">
+                  <div className="flex gap-[10px]">
+                    <CategoryImage category={category} size="mobile" />
+
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-[7px]">
+                        <div className="min-w-0">
+                          <h3 className="truncate text-[11px] font-semibold text-[#3B424C]">{category.name_ar}</h3>
+                          <p className="mt-[3px] truncate text-[7px] text-[#9299A3]">{category.name}</p>
+                        </div>
+
+                        <CategoryStatus active={Boolean(category.is_active)} />
+                      </div>
+
+                      <div className="mt-[8px] flex flex-wrap gap-[5px]">
+                        <CategoryTypeBadge category={category} parentName={category.parent_id ? categoryNameById.get(category.parent_id) : undefined} />
+
+                        {childrenCount > 0 && <span className="rounded-[6px] bg-[#EDF4FF] px-[6px] py-[3px] text-[6px] font-semibold text-[#567BC5]">{childrenCount} فرعي</span>}
+                      </div>
+
+                      <div className="mt-[8px] flex items-center justify-between text-[6.5px] text-[#9BA2AC]">
+                        <span dir="ltr">{category.slug}</span>
+                        <span>الترتيب #{category.sort_order ?? 0}</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="space-y-2">
-                  <Label>الاسم بالإنجليزي</Label>
-                  <Input
-                    value={formData.name}
-                    onChange={(e) => {
-                      const name = e.target.value;
-                      setFormData({
-                        ...formData,
-                        name,
-                        slug: generateSlug(name),
-                      });
-                    }}
-                    placeholder="Example: Watches"
-                    required
-                  />
-                </div>
+                <div className="grid grid-cols-[1fr_1fr_38px] gap-[5px] border-t border-[#EDF0F3] bg-[#FAFBFC] p-[7px]">
+                  <button type="button" onClick={() => toggleActiveMutation.mutate({ id: category.id, is_active: !category.is_active })} className="flex h-[34px] items-center justify-center rounded-[8px] border border-[#E3E7EC] bg-white text-[8px] font-semibold text-[#68717B]">
+                    {category.is_active ? "تعطيل" : "تفعيل"}
+                  </button>
 
-                <div className="space-y-2">
-                  <Label>الرابط (Slug)</Label>
-                  <Input
-                    value={formData.slug}
-                    onChange={(e) => setFormData({ ...formData, slug: e.target.value })}
-                    placeholder="watches"
-                    dir="ltr"
-                  />
-                </div>
+                  <button type="button" onClick={() => handleEdit(category)} className="flex h-[34px] items-center justify-center gap-[5px] rounded-[8px] border border-[#E3E7EC] bg-white text-[8px] font-semibold text-[#68717B]">
+                    <Pencil className="h-[10px] w-[10px]" />
+                    تعديل
+                  </button>
 
-                <div className="space-y-2">
-                  <Label>القسم الأب (اختياري)</Label>
-                  <Select
-                    value={formData.parent_id || "none"}
-                    onValueChange={(value) => setFormData({ ...formData, parent_id: value === "none" ? "" : value })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="قسم رئيسي (بدون أب)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="none">قسم رئيسي (بدون أب)</SelectItem>
-                      {parentOptions.map((c) => (
-                        <SelectItem key={c.id} value={c.id}>
-                          {c.name_ar}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                  <button type="button" onClick={() => setDeleteCategory(category)} className="flex h-[34px] w-[38px] items-center justify-center rounded-[8px] border border-[#F0D7D4] bg-white text-[#C15F56]">
+                    <Trash2 className="h-[11px] w-[11px]" />
+                  </button>
                 </div>
+              </article>
+            );
+          })
+        )}
+      </section>
 
-                <div className="space-y-2">
-                  <Label>الصورة</Label>
-                  <div className="flex flex-col gap-3">
-                    {formData.image_url ? (
-                      <div className="space-y-4">
-                        {/* Image Preview with positioning */}
-                        <div
-                          className="relative border border-border rounded overflow-hidden"
-                          style={{ height: "150px" }}
-                        >
-                          <img
-                            src={formData.image_url}
-                            alt="Preview"
-                            loading="lazy"
-                            className="w-full h-full"
-                            style={{
-                              objectFit: "cover",
-                              transform: `scale(${formData.image_zoom})`,
-                              objectPosition: `${formData.image_position_x}% ${formData.image_position_y}%`,
-                            }}
-                          />
-                          <button
-                            type="button"
-                            onClick={() => setFormData({ ...formData, image_url: "" })}
-                            className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
-                          >
-                            <X className="w-4 h-4" />
+      {/* =====================================================
+          DESKTOP
+      ===================================================== */}
+
+      <section className="hidden overflow-hidden rounded-[16px] border border-[#E5E9EF] bg-white md:block">
+        <div className="flex items-center justify-between border-b border-[#EAEDF1] px-[14px] py-[11px]">
+          <div>
+            <div className="flex items-center gap-[7px]">
+              <FolderTree className="h-[13px] w-[13px] text-[#675CBA]" strokeWidth={1.8} />
+              <h2 className="text-[10px] font-semibold text-[#454C56]">هيكل الفئات</h2>
+            </div>
+
+            <p className="mt-[4px] text-[7px] text-[#9CA3AC]">{filteredCategories.length.toLocaleString("ar-EG")} نتيجة ظاهرة</p>
+          </div>
+
+          {isFetching && (
+            <span className="flex items-center gap-[5px] text-[7px] text-[#969DA7]">
+              <Loader2 className="h-[10px] w-[10px] animate-spin" />
+              تحديث...
+            </span>
+          )}
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[960px]">
+            <thead>
+              <tr className="h-[42px] border-b border-[#EAEDF1] bg-[#FAFBFC] text-[7.5px] font-semibold text-[#9299A3]">
+                <th className="w-[70px] px-[10px] text-right font-semibold">الصورة</th>
+                <th className="px-[10px] text-right font-semibold">الفئة</th>
+                <th className="px-[10px] text-right font-semibold">النوع</th>
+                <th className="px-[10px] text-right font-semibold">الرابط</th>
+                <th className="px-[10px] text-right font-semibold">الترتيب</th>
+                <th className="px-[10px] text-right font-semibold">الحالة</th>
+                <th className="w-[110px] px-[10px] text-center font-semibold">الإجراءات</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {filteredCategories.length === 0 ? (
+                <tr>
+                  <td colSpan={7}>
+                    <CategoryEmpty />
+                  </td>
+                </tr>
+              ) : (
+                filteredCategories.map((category) => {
+                  const childrenCount = childrenCountMap.get(category.id) || 0;
+
+                  return (
+                    <tr key={category.id} className="h-[67px] border-b border-[#F0F2F5] transition-colors last:border-b-0 hover:bg-[#FCFDFE]">
+                      <td className="px-[10px]">
+                        <CategoryImage category={category} size="desktop" />
+                      </td>
+
+                      <td className="px-[10px]">
+                        <div className="min-w-[200px]">
+                          <div className="flex items-center gap-[6px]">
+                            <p className="max-w-[220px] truncate text-[10px] font-semibold text-[#414953]">{category.name_ar}</p>
+
+                            {childrenCount > 0 && <span className="rounded-[5px] bg-[#EDF4FF] px-[5px] py-[2px] text-[5.8px] font-semibold text-[#567BC5]">{childrenCount}</span>}
+                          </div>
+
+                          <p className="mt-[4px] max-w-[220px] truncate text-[7px] text-[#9BA2AC]">{category.name}</p>
+                        </div>
+                      </td>
+
+                      <td className="px-[10px]">
+                        <CategoryTypeBadge category={category} parentName={category.parent_id ? categoryNameById.get(category.parent_id) : undefined} />
+                      </td>
+
+                      <td className="px-[10px]">
+                        <span dir="ltr" className="block max-w-[180px] truncate text-right text-[7.5px] font-medium text-[#818994]">{category.slug}</span>
+                      </td>
+
+                      <td className="px-[10px]">
+                        <span className="inline-flex h-[25px] min-w-[28px] items-center justify-center rounded-[7px] bg-[#F2F4F7] px-[7px] text-[7px] font-semibold text-[#727A84]">{category.sort_order ?? 0}</span>
+                      </td>
+
+                      <td className="px-[10px]">
+                        <div className="flex items-center gap-[8px]">
+                          <Switch checked={category.is_active ?? true} onCheckedChange={(checked) => toggleActiveMutation.mutate({ id: category.id, is_active: checked })} />
+
+                          <span className={cn("text-[7px] font-semibold", category.is_active ? "text-[#568468]" : "text-[#8B929C]")}>{category.is_active ? "نشط" : "معطل"}</span>
+                        </div>
+                      </td>
+
+                      <td className="px-[10px]">
+                        <div className="flex items-center justify-center gap-[4px]">
+                          <button type="button" title="تعديل الفئة" onClick={() => handleEdit(category)} className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] border border-[#E3E7EC] bg-white text-[#707884] transition-colors hover:bg-[#F5F3FF] hover:text-[#675CBA]">
+                            <Pencil className="h-[11px] w-[11px]" />
+                          </button>
+
+                          <button type="button" title="حذف الفئة" onClick={() => setDeleteCategory(category)} className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] border border-[#F0D7D4] bg-white text-[#C15F56] transition-colors hover:bg-[#FFF3F1]">
+                            <Trash2 className="h-[11px] w-[11px]" />
                           </button>
                         </div>
+                      </td>
+                    </tr>
+                  );
+                })
+              )}
+            </tbody>
+          </table>
+        </div>
+      </section>
 
-                        {/* Image Controls */}
-                        <div className="space-y-3 p-3 bg-muted/50 rounded-lg">
-                          {/* Zoom */}
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <ZoomIn className="w-4 h-4 text-muted-foreground" />
-                              <label className="text-xs text-muted-foreground">
-                                التكبير: {formData.image_zoom.toFixed(1)}x
-                              </label>
-                            </div>
-                            <Slider
-                              value={[formData.image_zoom]}
-                              onValueChange={([v]) => setFormData({ ...formData, image_zoom: v })}
-                              min={1}
-                              max={2}
-                              step={0.1}
-                              className="w-full"
-                            />
-                          </div>
+      {/* =====================================================
+          CREATE / EDIT DIALOG
+      ===================================================== */}
 
-                          {/* Position X */}
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Move className="w-4 h-4 text-muted-foreground" />
-                              <label className="text-xs text-muted-foreground">
-                                الموضع الأفقي: {formData.image_position_x}%
-                              </label>
-                            </div>
-                            <Slider
-                              value={[formData.image_position_x]}
-                              onValueChange={([v]) => setFormData({ ...formData, image_position_x: v })}
-                              min={0}
-                              max={100}
-                              step={1}
-                              className="w-full"
-                            />
-                          </div>
+      <Dialog open={isDialogOpen} onOpenChange={(open) => { if (!open) closeForm(); else setIsDialogOpen(true); }}>
+        <DialogContent dir="rtl" className="max-h-[92vh] max-w-[720px] overflow-y-auto rounded-[18px] border-[#E4E8ED] bg-[#F7F8FA] p-0">
+          <DialogHeader className="sticky top-0 z-20 border-b border-[#E6E9EE] bg-white px-5 py-4">
+            <div className="flex items-center gap-[10px]">
+              <div className="flex h-[36px] w-[36px] items-center justify-center rounded-[11px] bg-[#F1EFFF] text-[#675CBA]">
+                {editingCategory ? <Pencil className="h-[15px] w-[15px]" /> : <Plus className="h-[15px] w-[15px]" />}
+              </div>
 
-                          {/* Position Y */}
-                          <div>
-                            <div className="flex items-center gap-2 mb-2">
-                              <Move className="w-4 h-4 text-muted-foreground rotate-90" />
-                              <label className="text-xs text-muted-foreground">
-                                الموضع العمودي: {formData.image_position_y}%
-                              </label>
-                            </div>
-                            <Slider
-                              value={[formData.image_position_y]}
-                              onValueChange={([v]) => setFormData({ ...formData, image_position_y: v })}
-                              min={0}
-                              max={100}
-                              step={1}
-                              className="w-full"
-                            />
-                          </div>
+              <div>
+                <DialogTitle className="text-right text-[14px] font-semibold text-[#343B45]">{editingCategory ? "تعديل الفئة" : "إضافة فئة جديدة"}</DialogTitle>
+                <DialogDescription className="mt-[3px] text-right text-[8px] text-[#9299A3]">{editingCategory ? "حدّث معلومات الفئة وطريقة ظهورها في المتجر." : "أنشئ قسمًا جديدًا داخل كتالوج Flamingo Park."}</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
 
-                          {/* Reset Button */}
-                          <Button
-                            type="button"
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              setFormData({ ...formData, image_zoom: 1, image_position_x: 50, image_position_y: 50 })
-                            }
-                          >
-                            إعادة تعيين الموضع
-                          </Button>
-                        </div>
-                      </div>
-                    ) : (
-                      <label className="cursor-pointer">
-                        <input type="file" accept="image/*" className="hidden" onChange={handleUpload} />
-                        <div className="h-24 w-24 border-2 border-dashed border-border rounded-lg flex flex-col items-center justify-center hover:border-gold transition-colors">
-                          {uploading ? (
-                            <Loader2 className="w-6 h-6 animate-spin text-muted-foreground" />
-                          ) : (
-                            <>
-                              <Upload className="w-6 h-6 text-muted-foreground mb-1" />
-                              <span className="text-xs text-muted-foreground">رفع صورة</span>
-                            </>
-                          )}
-                        </div>
-                      </label>
-                    )}
+          <form onSubmit={handleSubmit}>
+            <div className="grid grid-cols-1 gap-[10px] p-[10px] lg:grid-cols-[minmax(0,1fr)_230px]">
+              {/* FORM */}
+
+              <div className="space-y-[10px]">
+                <FormSection title="المعلومات الأساسية" icon={Folder}>
+                  <div className="grid grid-cols-1 gap-[9px] sm:grid-cols-2">
+                    <Field label="الاسم بالعربي" required>
+                      <Input value={formData.name_ar} onChange={(event) => setFormData((current) => ({ ...current, name_ar: event.target.value }))} placeholder="مثال: ساعات" className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[9px] shadow-none focus-visible:bg-white focus-visible:ring-0" required />
+                    </Field>
+
+                    <Field label="الاسم بالإنجليزي" required>
+                      <Input value={formData.name} onChange={(event) => { const name = event.target.value; setFormData((current) => ({ ...current, name, slug: editingCategory && current.slug ? current.slug : generateSlug(name) })); }} placeholder="Watches" dir="ltr" className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[9px] shadow-none focus-visible:bg-white focus-visible:ring-0" required />
+                    </Field>
                   </div>
-                </div>
 
-                <div className="space-y-2">
-                  <Label>الترتيب</Label>
-                  <Input
-                    type="number"
-                    value={formData.sort_order}
-                    onChange={(e) => setFormData({ ...formData, sort_order: parseInt(e.target.value) || 0 })}
-                  />
-                </div>
+                  <Field label="الرابط">
+                    <Input value={formData.slug} onChange={(event) => setFormData((current) => ({ ...current, slug: generateSlug(event.target.value) }))} placeholder="watches" dir="ltr" className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[9px] shadow-none focus-visible:bg-white focus-visible:ring-0" />
+                  </Field>
 
-                <div className="flex items-center justify-between">
-                  <Label>نشط</Label>
-                  <Switch
-                    checked={formData.is_active}
-                    onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })}
-                  />
-                </div>
+                  <Field label="الوصف العربي">
+                    <Textarea value={formData.description_ar} onChange={(event) => setFormData((current) => ({ ...current, description_ar: event.target.value }))} placeholder="وصف مختصر للفئة..." rows={3} className="resize-none rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[9px] leading-5 shadow-none focus-visible:bg-white focus-visible:ring-0" />
+                  </Field>
+                </FormSection>
 
-                <div className="flex gap-2 pt-4">
-                  <Button type="submit" className="flex-1 btn-gold" disabled={saveMutation.isPending}>
-                    {saveMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "حفظ"}
-                  </Button>
-                  <Button type="button" variant="outline" onClick={resetForm} className="flex-1">
-                    إلغاء
-                  </Button>
-                </div>
-              </form>
-            </DialogContent>
-          </Dialog>
-        )}
-      </AnimatePresence>
+                <FormSection title="الهيكل والتنظيم" icon={FolderTree}>
+                  <div className="grid grid-cols-1 gap-[9px] sm:grid-cols-2">
+                    <Field label="القسم الأب">
+                      <Select value={formData.parent_id || "none"} onValueChange={(value) => setFormData((current) => ({ ...current, parent_id: value === "none" ? "" : value }))}>
+                        <SelectTrigger className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[9px] shadow-none focus:ring-0">
+                          <SelectValue />
+                        </SelectTrigger>
+
+                        <SelectContent>
+                          <SelectItem value="none">قسم رئيسي</SelectItem>
+
+                          {parentOptions.map((category) => <SelectItem key={category.id} value={category.id}>{category.name_ar}</SelectItem>)}
+                        </SelectContent>
+                      </Select>
+                    </Field>
+
+                    <Field label="الترتيب">
+                      <Input type="number" min={0} value={formData.sort_order} onChange={(event) => setFormData((current) => ({ ...current, sort_order: Number.parseInt(event.target.value, 10) || 0 }))} className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[9px] shadow-none focus-visible:bg-white focus-visible:ring-0" />
+                    </Field>
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-[10px] border border-[#E6E9EE] bg-[#FAFBFC] p-[10px]">
+                    <div>
+                      <p className="text-[8.5px] font-semibold text-[#555D67]">حالة الفئة</p>
+                      <p className="mt-[2px] text-[6.5px] text-[#9BA2AC]">الفئة النشطة تظهر للعميل في المتجر.</p>
+                    </div>
+
+                    <div className="flex items-center gap-[7px]">
+                      <span className={cn("text-[7px] font-semibold", formData.is_active ? "text-[#568468]" : "text-[#8C949E]")}>{formData.is_active ? "نشطة" : "معطلة"}</span>
+                      <Switch checked={formData.is_active} onCheckedChange={(checked) => setFormData((current) => ({ ...current, is_active: checked }))} />
+                    </div>
+                  </div>
+                </FormSection>
+              </div>
+
+              {/* IMAGE */}
+
+              <div className="lg:sticky lg:top-[84px] lg:self-start">
+                <FormSection title="صورة الفئة" icon={ImageIcon}>
+                  {formData.image_url ? (
+                    <div>
+                      <div className="group relative aspect-square overflow-hidden rounded-[12px] border border-[#E3E7EC] bg-[#F3F5F7]">
+                        <img src={formData.image_url} alt={formData.name_ar || "صورة الفئة"} className="h-full w-full object-cover" />
+
+                        <button type="button" onClick={() => setFormData((current) => ({ ...current, image_url: "" }))} className="absolute left-[8px] top-[8px] flex h-[28px] w-[28px] items-center justify-center rounded-[8px] bg-white/95 text-[#C15F56] shadow-sm backdrop-blur">
+                          <Trash2 className="h-[11px] w-[11px]" />
+                        </button>
+                      </div>
+
+                      <label className="mt-[7px] flex h-[34px] cursor-pointer items-center justify-center gap-[5px] rounded-[8px] border border-[#E2E6EB] bg-white text-[7.5px] font-semibold text-[#69717B] transition-colors hover:bg-[#F8FAFC]">
+                        {uploading ? <Loader2 className="h-[10px] w-[10px] animate-spin" /> : <Upload className="h-[10px] w-[10px]" />}
+                        تغيير الصورة
+                        <input type="file" accept="image/*,.heic,.heif" className="hidden" disabled={uploading} onChange={handleUpload} />
+                      </label>
+                    </div>
+                  ) : (
+                    <label className={cn("flex aspect-square cursor-pointer flex-col items-center justify-center rounded-[12px] border border-dashed border-[#D9DEE5] bg-[#FAFBFC] transition-colors hover:border-[#BFB8DE] hover:bg-[#F9F8FF]", uploading && "pointer-events-none opacity-70")}>
+                      {uploading ? (
+                        <>
+                          <Loader2 className="h-[20px] w-[20px] animate-spin text-[#675CBA]" />
+                          <span className="mt-2 text-[7px] font-medium text-[#858D97]">جاري تحسين الصورة...</span>
+                        </>
+                      ) : (
+                        <>
+                          <div className="flex h-[38px] w-[38px] items-center justify-center rounded-[11px] bg-[#F1EFFF] text-[#675CBA]">
+                            <Upload className="h-[15px] w-[15px]" />
+                          </div>
+
+                          <span className="mt-[9px] text-[8px] font-semibold text-[#606873]">رفع صورة</span>
+                          <span className="mt-[3px] text-center text-[6px] leading-4 text-[#A0A6AF]">JPG، PNG، WEBP أو HEIC<br />سيتم ضغطها تلقائيًا</span>
+                        </>
+                      )}
+
+                      <input type="file" accept="image/*,.heic,.heif" className="hidden" disabled={uploading} onChange={handleUpload} />
+                    </label>
+                  )}
+
+                  <div className="mt-[8px] rounded-[9px] bg-[#F8FAFC] p-[8px]">
+                    <p className="text-[6px] leading-4 text-[#969DA7]">يفضل استخدام صورة مربعة وواضحة. سيتم تحويل الصورة تلقائيًا إلى WebP لتقليل حجم التحميل في المتجر.</p>
+                  </div>
+                </FormSection>
+              </div>
+            </div>
+
+            {/* FOOTER */}
+
+            <div className="sticky bottom-0 z-20 flex items-center justify-between gap-3 border-t border-[#E5E9EF] bg-white/95 px-5 py-3 backdrop-blur">
+              <p className="hidden text-[6.5px] text-[#A0A6AF] sm:block">{editingCategory ? "سيتم تطبيق التعديلات على الفئة الحالية." : "سيتم إضافة الفئة إلى كتالوج المتجر."}</p>
+
+              <div className="mr-auto flex items-center gap-[7px]">
+                <Button type="button" variant="outline" onClick={closeForm} disabled={saveMutation.isPending} className="h-[36px] rounded-[9px] border-[#E1E5EA] bg-white px-4 text-[8px] font-semibold text-[#707883] shadow-none">إلغاء</Button>
+
+                <Button type="submit" disabled={saveMutation.isPending || uploading} className="h-[36px] rounded-[9px] bg-[#675CBA] px-5 text-[8px] font-semibold text-white shadow-none hover:bg-[#594FAB]">
+                  {saveMutation.isPending ? <Loader2 className="ml-[5px] h-[11px] w-[11px] animate-spin" /> : editingCategory ? <Pencil className="ml-[5px] h-[11px] w-[11px]" /> : <Plus className="ml-[5px] h-[11px] w-[11px]" />}
+                  {editingCategory ? "حفظ التعديلات" : "إضافة الفئة"}
+                </Button>
+              </div>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      {/* =====================================================
+          DELETE DIALOG
+      ===================================================== */}
+
+      <AlertDialog open={Boolean(deleteCategory)} onOpenChange={(open) => { if (!open) setDeleteCategory(null); }}>
+        <AlertDialogContent dir="rtl" className="max-w-[420px] rounded-[15px] border-[#E4E8ED] bg-white p-5">
+          <AlertDialogHeader>
+            <div className="mb-2 flex h-[38px] w-[38px] items-center justify-center rounded-[11px] bg-[#FFF0F0] text-[#C76161]">
+              <Trash2 className="h-[16px] w-[16px]" />
+            </div>
+
+            <AlertDialogTitle className="text-[15px] font-semibold text-[#343A44]">حذف الفئة</AlertDialogTitle>
+
+            <AlertDialogDescription className="text-[10px] leading-6 text-[#858D97]">
+              {deleteCategory && (childrenCountMap.get(deleteCategory.id) || 0) > 0 ? `الفئة "${deleteCategory.name_ar}" تحتوي على ${childrenCountMap.get(deleteCategory.id)} فئة فرعية. يجب نقل أو حذف الفئات الفرعية أولًا.` : `سيتم حذف الفئة "${deleteCategory?.name_ar || ""}" نهائيًا. لا يمكن التراجع عن هذه العملية.`}
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+
+          <AlertDialogFooter className="mt-2 gap-2">
+            <AlertDialogCancel className="h-[38px] rounded-[9px] border-[#E2E6EB] bg-white px-4 text-[9px] font-semibold text-[#6B737E]">إلغاء</AlertDialogCancel>
+
+            <AlertDialogAction disabled={!deleteCategory || (childrenCountMap.get(deleteCategory.id) || 0) > 0 || deleteMutation.isPending} className="h-[38px] rounded-[9px] bg-[#C76161] px-4 text-[9px] font-semibold text-white hover:bg-[#B65555] disabled:opacity-40" onClick={(event) => {
+              event.preventDefault();
+
+              if (!deleteCategory) return;
+
+              deleteMutation.mutate(deleteCategory);
+            }}>
+              {deleteMutation.isPending ? <Loader2 className="ml-[5px] h-[12px] w-[12px] animate-spin" /> : <Trash2 className="ml-[5px] h-[12px] w-[12px]" />}
+              حذف نهائي
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
+  );
+};
+
+/* =========================================================
+   STAT CARD
+========================================================= */
+
+const CategoryStatCard = ({ title, value, helper, icon: Icon, tone }: { title: string; value: number; helper: string; icon: typeof Grid3X3; tone: "indigo" | "green" | "blue" | "coral" }) => {
+  const style = {
+    indigo: { icon: "bg-[#F1EFFF] text-[#675CBA]", line: "bg-[#675CBA]" },
+    green: { icon: "bg-[#EAF7EE] text-[#629067]", line: "bg-[#629067]" },
+    blue: { icon: "bg-[#EDF4FF] text-[#5680CF]", line: "bg-[#5680CF]" },
+    coral: { icon: "bg-[#FFF0ED] text-[#D06A5E]", line: "bg-[#D06A5E]" },
+  }[tone];
+
+  return (
+    <article className="relative min-h-[116px] overflow-hidden rounded-[15px] border border-[#E5E9EF] bg-white p-[13px]">
+      <span className={cn("absolute inset-x-0 top-0 h-[3px]", style.line)} />
+
+      <div className={cn("flex h-[32px] w-[32px] items-center justify-center rounded-[10px]", style.icon)}>
+        <Icon className="h-[14px] w-[14px]" strokeWidth={1.7} />
+      </div>
+
+      <p className="mt-[12px] text-[8px] font-medium text-[#8D949E]">{title}</p>
+      <p dir="ltr" className="mt-[4px] text-right text-[20px] font-semibold leading-none tracking-[-0.035em] text-[#303741]">{value.toLocaleString("en-US")}</p>
+      <p className="mt-[5px] text-[6.5px] text-[#A0A6AF]">{helper}</p>
+    </article>
+  );
+};
+
+/* =========================================================
+   IMAGE
+========================================================= */
+
+const CategoryImage = ({ category, size }: { category: Category; size: "mobile" | "desktop" }) => {
+  const boxClass = size === "mobile" ? "h-[68px] w-[68px] rounded-[11px]" : "h-[48px] w-[48px] rounded-[9px]";
+
+  if (!category.image_url) {
+    return (
+      <div className={cn("flex shrink-0 items-center justify-center border border-[#E8EBEF] bg-[#F3F5F7] text-[#969EA8]", boxClass)}>
+        <Grid3X3 className="h-[15px] w-[15px]" strokeWidth={1.5} />
+      </div>
+    );
+  }
+
+  return (
+    <div className={cn("shrink-0 overflow-hidden border border-[#E8EBEF] bg-[#F3F5F7]", boxClass)}>
+      <img src={category.image_url} loading="lazy" decoding="async" alt={category.name_ar} className="h-full w-full object-cover" />
+    </div>
+  );
+};
+
+/* =========================================================
+   STATUS
+========================================================= */
+
+const CategoryStatus = ({ active }: { active: boolean }) => {
+  return (
+    <span className={cn("inline-flex h-[24px] items-center gap-[5px] rounded-[7px] border px-[7px] text-[6.5px] font-semibold", active ? "border-[#D8E8DD] bg-[#EFF8F2] text-[#568468]" : "border-[#E3E6EA] bg-[#F5F6F8] text-[#818994]")}>
+      <span className={cn("h-[5px] w-[5px] rounded-full", active ? "bg-[#629067]" : "bg-[#969EA8]")} />
+      {active ? "نشط" : "معطل"}
+    </span>
+  );
+};
+
+/* =========================================================
+   TYPE
+========================================================= */
+
+const CategoryTypeBadge = ({ category, parentName }: { category: Category; parentName?: string }) => {
+  if (!category.parent_id) {
+    return (
+      <span className="inline-flex h-[25px] items-center gap-[5px] rounded-[7px] border border-[#E0DCF1] bg-[#F5F3FC] px-[7px] text-[6.5px] font-semibold text-[#6D64A5]">
+        <FolderTree className="h-[8px] w-[8px]" />
+        رئيسي
+      </span>
+    );
+  }
+
+  return (
+    <span className="inline-flex h-[25px] max-w-[170px] items-center gap-[5px] rounded-[7px] border border-[#DCE7F4] bg-[#F1F6FC] px-[7px] text-[6.5px] font-semibold text-[#5679A4]">
+      <Layers3 className="h-[8px] w-[8px] shrink-0" />
+      <span className="truncate">{parentName || "فرعي"}</span>
+    </span>
+  );
+};
+
+/* =========================================================
+   FORM HELPERS
+========================================================= */
+
+const FormSection = ({ title, icon: Icon, children }: { title: string; icon: typeof Folder; children: React.ReactNode }) => {
+  return (
+    <section className="rounded-[14px] border border-[#E5E9EF] bg-white p-[12px]">
+      <div className="mb-[11px] flex items-center gap-[7px] border-b border-[#F0F2F5] pb-[9px]">
+        <div className="flex h-[28px] w-[28px] items-center justify-center rounded-[8px] bg-[#F1EFFF] text-[#675CBA]">
+          <Icon className="h-[11px] w-[11px]" />
+        </div>
+
+        <h3 className="text-[9px] font-semibold text-[#4A525C]">{title}</h3>
+      </div>
+
+      <div className="space-y-[9px]">{children}</div>
+    </section>
+  );
+};
+
+const Field = ({ label, children, required = false }: { label: string; children: React.ReactNode; required?: boolean }) => {
+  return (
+    <div>
+      <Label className="mb-[6px] block text-[7.5px] font-semibold text-[#727A84]">{label}{required && <span className="mr-[3px] text-[#C76161]">*</span>}</Label>
+      {children}
+    </div>
+  );
+};
+
+/* =========================================================
+   EMPTY
+========================================================= */
+
+const CategoryEmpty = () => {
+  return (
+    <div className="flex min-h-[230px] flex-col items-center justify-center px-6 text-center">
+      <div className="flex h-[45px] w-[45px] items-center justify-center rounded-[13px] bg-[#F0F2F5] text-[#8C949E]">
+        <Grid3X3 className="h-[18px] w-[18px]" />
+      </div>
+
+      <h3 className="mt-3 text-[10px] font-semibold text-[#535B65]">لا توجد فئات</h3>
+      <p className="mt-[4px] text-[7px] text-[#9BA2AC]">لم نجد أي فئة مطابقة للبحث والفلاتر الحالية.</p>
     </div>
   );
 };

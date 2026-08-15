@@ -1,33 +1,25 @@
-import { useState, useEffect } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, FileText, ExternalLink, Trash2, Calendar, Loader2, Printer, Eye, Pencil, Plus } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
-import { format } from 'date-fns';
-import { ar } from 'date-fns/locale';
-import AdminPageHeader from '@/components/admin/AdminPageHeader';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog";
-import InvoiceEditor from '@/components/admin/InvoiceEditor';
-import NewInvoiceCreator from '@/components/admin/NewInvoiceCreator';
+import { useMemo, useState } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+import { toast } from "@/hooks/use-toast";
+import InvoiceEditor from "@/components/admin/InvoiceEditor";
+import NewInvoiceCreator from "@/components/admin/NewInvoiceCreator";
+import { CalendarDays, Check, CheckCircle2, CircleOff, ExternalLink, FileCheck2, FileClock, FileText, Filter, Loader2, Package, Pencil, Plus, Printer, ReceiptText, RotateCcw, Search, ShieldCheck, ThumbsDown, ThumbsUp, Trash2, UserRound, X, type LucideIcon } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 interface InvoiceFile {
   name: string;
   created_at: string;
-  url: string;
   orderNumber: string;
+  size?: number | null;
 }
 
 interface SelectedAccessory {
@@ -45,8 +37,11 @@ interface OrderItem {
   quantity: number;
   price: number;
   selected_size?: string | null;
+  selected_color?: string | null;
   selected_accessories?: SelectedAccessory[];
 }
+
+type InvoiceReviewStatus = "unreviewed" | "pending" | "accepted" | "rejected";
 
 interface Order {
   id: string;
@@ -62,183 +57,361 @@ interface Order {
   payment_method: string;
   country: string;
   created_at: string;
-  delivery_companies?: {
-    name: string;
-  } | null;
+  status: string;
+  invoice_url?: string | null;
+  coupon_code?: string | null;
+  discount_amount?: number | null;
+  currency_code?: string | null;
+  currency_mode?: string | null;
+  invoice_review_status: InvoiceReviewStatus;
+  invoice_reviewed_at?: string | null;
+  invoice_reviewed_by?: string | null;
+  invoice_review_note?: string | null;
+  delivery_companies?: { name: string } | null;
 }
 
+type TabMode = "review" | "accepted" | "rejected" | "all" | "files";
+type OrderStatusFilter = "all" | "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "completed" | "cancelled";
+type InvoicePresenceFilter = "all" | "with_invoice" | "without_invoice";
+
+const INVOICE_PAGE_SIZE = 1000;
+const MAX_INVOICE_PAGES = 20;
+
 const AdminInvoicesPage = () => {
-  const [invoices, setInvoices] = useState<InvoiceFile[]>([]);
-  const [filteredInvoices, setFilteredInvoices] = useState<InvoiceFile[]>([]);
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [filteredOrders, setFilteredOrders] = useState<Order[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isLoadingOrders, setIsLoadingOrders] = useState(true);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [dateFilter, setDateFilter] = useState('');
-  const [deleteTarget, setDeleteTarget] = useState<string | null>(null);
-  const [isDeleting, setIsDeleting] = useState(false);
+  const queryClient = useQueryClient();
+
+  const [activeTab, setActiveTab] = useState<TabMode>("review");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
+  const [orderStatusFilter, setOrderStatusFilter] = useState<OrderStatusFilter>("all");
+  const [invoicePresenceFilter, setInvoicePresenceFilter] = useState<InvoicePresenceFilter>("all");
+
+  const [deleteTarget, setDeleteTarget] = useState<InvoiceFile | null>(null);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [showInvoiceEditor, setShowInvoiceEditor] = useState(false);
   const [showNewInvoice, setShowNewInvoice] = useState(false);
 
-  useEffect(() => {
-    fetchInvoices();
-    fetchOrders();
-  }, []);
+  const [selectedIds, setSelectedIds] = useState<string[]>([]);
+  const [rejectTargetIds, setRejectTargetIds] = useState<string[]>([]);
+  const [rejectNote, setRejectNote] = useState("");
+  const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
 
-  useEffect(() => {
-    filterInvoices();
-    filterOrders();
-  }, [searchQuery, dateFilter, invoices, orders]);
+  /* =========================================================
+     ORDERS
+  ========================================================= */
 
-  const fetchOrders = async () => {
-    setIsLoadingOrders(true);
-    try {
-      const { data, error } = await supabase
-        .from('orders')
-        .select('*, delivery_companies(name)')
-        .order('created_at', { ascending: false });
+  const { data: orders = [], isLoading: isLoadingOrders, isFetching: isFetchingOrders } = useQuery({
+    queryKey: ["admin-invoice-orders"],
+    queryFn: async () => {
+      const { data, error } = await supabase.from("orders").select("id,order_number,customer_name,customer_phone,customer_address,customer_notes,items,subtotal,delivery_fee,total,payment_method,country,created_at,status,invoice_url,coupon_code,discount_amount,currency_code,currency_mode,invoice_review_status,invoice_reviewed_at,invoice_reviewed_by,invoice_review_note,delivery_companies(name)").order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      const ordersData = (data || []).map(order => ({
+      return (data || []).map((order: any) => ({
         ...order,
-        items: order.items as unknown as OrderItem[],
-      }));
+        items: Array.isArray(order.items) ? order.items : [],
+        subtotal: Number(order.subtotal || 0),
+        delivery_fee: Number(order.delivery_fee || 0),
+        total: Number(order.total || 0),
+        discount_amount: Number(order.discount_amount || 0),
+        invoice_review_status: (order.invoice_review_status || "unreviewed") as InvoiceReviewStatus,
+      })) as Order[];
+    },
+    staleTime: 15_000,
+  });
 
-      setOrders(ordersData as Order[]);
-      setFilteredOrders(ordersData);
-    } catch (error) {
-      console.error('Error fetching orders:', error);
-      toast({
-        title: 'خطأ',
-        description: 'فشل في تحميل الطلبات',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoadingOrders(false);
-    }
-  };
+  /* =========================================================
+     STORAGE PDF ARCHIVE
+  ========================================================= */
 
-  const fetchInvoices = async () => {
-    setIsLoading(true);
-    try {
-      const { data, error } = await supabase.storage
-        .from('invoices')
-        .list('', {
-          limit: 1000,
-          sortBy: { column: 'created_at', order: 'desc' },
+  const { data: invoices = [], isLoading: isLoadingInvoices, isFetching: isFetchingInvoices } = useQuery({
+    queryKey: ["admin-invoice-files"],
+    queryFn: async () => {
+      const files: InvoiceFile[] = [];
+
+      for (let page = 0; page < MAX_INVOICE_PAGES; page += 1) {
+        const { data, error } = await supabase.storage.from("invoices").list("", {
+          limit: INVOICE_PAGE_SIZE,
+          offset: page * INVOICE_PAGE_SIZE,
+          sortBy: { column: "created_at", order: "desc" },
         });
 
-      if (error) throw error;
+        if (error) throw error;
 
-      const invoiceFiles: InvoiceFile[] = await Promise.all((data || [])
-        .filter(file => file.name.endsWith('.pdf'))
-        .map(async (file) => {
-          const { data: signed, error: signedError } = await supabase.storage.from('invoices').createSignedUrl(file.name, 300);
-          if (signedError || !signed?.signedUrl) throw signedError || new Error('Could not sign invoice');
-          const orderMatch = file.name.match(/invoice-([^-]+)-/);
-          const orderNumber = orderMatch ? orderMatch[1] : 'غير معروف';
-          return { name: file.name, created_at: file.created_at || new Date().toISOString(), url: signed.signedUrl, orderNumber };
-        }));
+        const pageRows = (data || [])
+          .filter((file) => file.name.toLowerCase().endsWith(".pdf"))
+          .map((file) => ({
+            name: file.name,
+            created_at: file.created_at || new Date().toISOString(),
+            orderNumber: extractOrderNumber(file.name),
+            size: typeof file.metadata?.size === "number" ? file.metadata.size : null,
+          }));
 
-      setInvoices(invoiceFiles);
-      setFilteredInvoices(invoiceFiles);
-    } catch (error) {
-      console.error('Error fetching invoices:', error);
-      toast({
-        title: 'خطأ',
-        description: 'فشل في تحميل الفواتير',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsLoading(false);
-    }
+        files.push(...pageRows);
+
+        if ((data || []).length < INVOICE_PAGE_SIZE) break;
+      }
+
+      return files;
+    },
+    staleTime: 20_000,
+  });
+
+  const invoiceOrderNumberSet = useMemo(() => new Set(invoices.map((invoice) => invoice.orderNumber).filter((value) => value && value !== "غير معروف")), [invoices]);
+
+  const hasInvoice = (order: Order) => Boolean(order.invoice_url) || invoiceOrderNumberSet.has(order.order_number);
+
+  const effectiveReviewStatus = (order: Order): InvoiceReviewStatus => {
+    if (order.invoice_review_status === "accepted" || order.invoice_review_status === "rejected" || order.invoice_review_status === "pending") return order.invoice_review_status;
+    return hasInvoice(order) ? "pending" : "unreviewed";
   };
 
-  const filterInvoices = () => {
-    let filtered = [...invoices];
+  /* =========================================================
+     STATS
+  ========================================================= */
 
-    if (searchQuery) {
-      filtered = filtered.filter(inv => 
-        inv.orderNumber.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        inv.name.toLowerCase().includes(searchQuery.toLowerCase())
-      );
-    }
+  const stats = useMemo(() => {
+    const withInvoice = orders.filter(hasInvoice);
+    const reviewPending = withInvoice.filter((order) => effectiveReviewStatus(order) === "pending").length;
+    const accepted = withInvoice.filter((order) => effectiveReviewStatus(order) === "accepted").length;
+    const rejected = withInvoice.filter((order) => effectiveReviewStatus(order) === "rejected").length;
+    const withoutInvoice = orders.filter((order) => !hasInvoice(order)).length;
+    const today = toDateKey(new Date());
+    const generatedToday = invoices.filter((invoice) => toDateKey(new Date(invoice.created_at)) === today).length;
 
-    if (dateFilter) {
-      filtered = filtered.filter(inv => {
-        const invoiceDate = format(new Date(inv.created_at), 'yyyy-MM-dd');
-        return invoiceDate === dateFilter;
-      });
-    }
+    return {
+      totalOrders: orders.length,
+      withInvoice: withInvoice.length,
+      reviewPending,
+      accepted,
+      rejected,
+      withoutInvoice,
+      files: invoices.length,
+      generatedToday,
+    };
+  }, [orders, invoices, invoiceOrderNumberSet]);
 
-    setFilteredInvoices(filtered);
-  };
+  /* =========================================================
+     FILTERING
+  ========================================================= */
 
-  const filterOrders = () => {
-    let filtered = [...orders];
+  const baseFilteredOrders = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
 
-    if (searchQuery) {
-      filtered = filtered.filter(order => 
-        order.order_number.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customer_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.customer_phone.includes(searchQuery)
-      );
-    }
+    return orders.filter((order) => {
+      const searchable = `${order.order_number} ${order.customer_name} ${order.customer_phone}`.toLowerCase();
+      const matchesSearch = !query || searchable.includes(query);
+      const matchesDate = !dateFilter || toDateKey(new Date(order.created_at)) === dateFilter;
+      const matchesStatus = orderStatusFilter === "all" || order.status === orderStatusFilter;
+      const invoiceExists = hasInvoice(order);
+      const matchesInvoice = invoicePresenceFilter === "all" || (invoicePresenceFilter === "with_invoice" && invoiceExists) || (invoicePresenceFilter === "without_invoice" && !invoiceExists);
 
-    if (dateFilter) {
-      filtered = filtered.filter(order => {
-        const orderDate = format(new Date(order.created_at), 'yyyy-MM-dd');
-        return orderDate === dateFilter;
-      });
-    }
+      return matchesSearch && matchesDate && matchesStatus && matchesInvoice;
+    });
+  }, [orders, searchQuery, dateFilter, orderStatusFilter, invoicePresenceFilter, invoiceOrderNumberSet]);
 
-    setFilteredOrders(filtered);
-  };
+  const filteredOrders = useMemo(() => {
+    if (activeTab === "review") return baseFilteredOrders.filter((order) => hasInvoice(order) && effectiveReviewStatus(order) === "pending");
+    if (activeTab === "accepted") return baseFilteredOrders.filter((order) => hasInvoice(order) && effectiveReviewStatus(order) === "accepted");
+    if (activeTab === "rejected") return baseFilteredOrders.filter((order) => hasInvoice(order) && effectiveReviewStatus(order) === "rejected");
+    return baseFilteredOrders;
+  }, [baseFilteredOrders, activeTab, invoiceOrderNumberSet]);
 
-  const handleDelete = async (fileName: string) => {
-    setIsDeleting(true);
-    try {
-      const { error } = await supabase.storage
-        .from('invoices')
-        .remove([fileName]);
+  const filteredInvoices = useMemo(() => {
+    const query = searchQuery.trim().toLowerCase();
 
-      if (error) throw error;
+    return invoices.filter((invoice) => {
+      const searchable = `${invoice.orderNumber} ${invoice.name}`.toLowerCase();
+      const matchesSearch = !query || searchable.includes(query);
+      const matchesDate = !dateFilter || toDateKey(new Date(invoice.created_at)) === dateFilter;
 
-      toast({
-        title: 'تم الحذف',
-        description: 'تم حذف الفاتورة بنجاح',
-      });
+      return matchesSearch && matchesDate;
+    });
+  }, [invoices, searchQuery, dateFilter]);
 
-      fetchInvoices();
-    } catch (error) {
-      console.error('Error deleting invoice:', error);
-      toast({
-        title: 'خطأ',
-        description: 'فشل في حذف الفاتورة',
-        variant: 'destructive',
-      });
-    } finally {
-      setIsDeleting(false);
-      setDeleteTarget(null);
-    }
-  };
+  const hasFilters = Boolean(searchQuery.trim()) || Boolean(dateFilter) || orderStatusFilter !== "all" || invoicePresenceFilter !== "all";
 
-  const clearFilters = () => {
-    setSearchQuery('');
-    setDateFilter('');
-  };
+  /* =========================================================
+     REVIEW ACTIONS
+  ========================================================= */
 
-  const handlePrint = (url: string) => {
-    const printWindow = window.open(url, '_blank');
-    if (printWindow) {
-      printWindow.onload = () => {
-        printWindow.print();
+  const updateReviewMutation = useMutation({
+    mutationFn: async ({ ids, status, note }: { ids: string[]; status: InvoiceReviewStatus; note?: string | null }) => {
+      if (ids.length === 0) return;
+
+      const currentUser = await supabase.auth.getUser();
+      const reviewed = status === "accepted" || status === "rejected";
+
+      const payload = {
+        invoice_review_status: status,
+        invoice_reviewed_at: reviewed ? new Date().toISOString() : null,
+        invoice_reviewed_by: reviewed ? currentUser.data.user?.id || null : null,
+        invoice_review_note: reviewed ? note?.trim() || null : null,
       };
+
+      const { error } = await supabase.from("orders").update(payload).in("id", ids);
+
+      if (error) throw error;
+    },
+
+    onSuccess: async (_data, variables) => {
+      setSelectedIds([]);
+      setRejectTargetIds([]);
+      setRejectNote("");
+      setRejectDialogOpen(false);
+
+      await queryClient.invalidateQueries({ queryKey: ["admin-invoice-orders"] });
+
+      if (variables.status === "accepted") {
+        setActiveTab("accepted");
+        toast({ title: variables.ids.length > 1 ? "تم قبول الفواتير" : "تم قبول الفاتورة", description: "تم نقلها إلى قسم الفواتير المقبولة." });
+      } else if (variables.status === "rejected") {
+        setActiveTab("rejected");
+        toast({ title: variables.ids.length > 1 ? "تم رفض الفواتير" : "تم رفض الفاتورة", description: "تم نقلها إلى قسم الفواتير المرفوضة." });
+      } else if (variables.status === "pending") {
+        setActiveTab("review");
+        toast({ title: "تمت إعادة الفاتورة للمراجعة" });
+      }
+    },
+
+    onError: (error: any) => {
+      toast({ title: "تعذر تحديث حالة الفاتورة", description: error?.message || "حدث خطأ أثناء التحديث.", variant: "destructive" });
+    },
+  });
+
+  const acceptInvoices = (ids: string[]) => {
+    const validIds = ids.filter((id) => {
+      const order = orders.find((row) => row.id === id);
+      return order && hasInvoice(order);
+    });
+
+    if (validIds.length === 0) {
+      toast({ title: "لا توجد فاتورة محفوظة", description: "أنشئ PDF للفاتورة أولًا ثم اعتمدها.", variant: "destructive" });
+      return;
+    }
+
+    updateReviewMutation.mutate({ ids: validIds, status: "accepted" });
+  };
+
+  const openRejectDialog = (ids: string[]) => {
+    const validIds = ids.filter((id) => {
+      const order = orders.find((row) => row.id === id);
+      return order && hasInvoice(order);
+    });
+
+    if (validIds.length === 0) {
+      toast({ title: "لا توجد فاتورة محفوظة", description: "أنشئ PDF للفاتورة أولًا قبل رفضها.", variant: "destructive" });
+      return;
+    }
+
+    setRejectTargetIds(validIds);
+    setRejectNote("");
+    setRejectDialogOpen(true);
+  };
+
+  /* =========================================================
+     PDF ACTIONS
+  ========================================================= */
+
+  const createInvoiceSignedUrl = async (fileName: string) => {
+    const { data, error } = await supabase.storage.from("invoices").createSignedUrl(fileName, 300);
+
+    if (error || !data?.signedUrl) throw error || new Error("تعذر إنشاء رابط آمن للفاتورة.");
+
+    return data.signedUrl;
+  };
+
+  const openInvoiceFile = async (fileName: string) => {
+    const fileWindow = window.open("", "_blank");
+
+    try {
+      if (!fileWindow) throw new Error("المتصفح منع فتح نافذة الفاتورة.");
+
+      const signedUrl = await createInvoiceSignedUrl(fileName);
+      fileWindow.opener = null;
+      fileWindow.location.href = signedUrl;
+    } catch (error: any) {
+      fileWindow?.close();
+      toast({ title: "تعذر فتح الفاتورة", description: error?.message || "حدث خطأ أثناء إنشاء الرابط.", variant: "destructive" });
     }
   };
+
+  const printInvoiceFile = async (fileName: string) => {
+    const printWindow = window.open("", "_blank");
+
+    try {
+      if (!printWindow) throw new Error("المتصفح منع فتح نافذة الطباعة.");
+
+      const signedUrl = await createInvoiceSignedUrl(fileName);
+      printWindow.location.href = signedUrl;
+
+      printWindow.addEventListener("load", () => {
+        try {
+          printWindow.print();
+        } catch {}
+      });
+    } catch (error: any) {
+      printWindow?.close();
+      toast({ title: "تعذر فتح الطباعة", description: error?.message || "حدث خطأ أثناء تجهيز الفاتورة.", variant: "destructive" });
+    }
+  };
+
+  const deleteMutation = useMutation({
+    mutationFn: async (invoice: InvoiceFile) => {
+      const { error: storageError } = await supabase.storage.from("invoices").remove([invoice.name]);
+      if (storageError) throw storageError;
+
+      const { error: unlinkError } = await supabase.from("orders").update({
+        invoice_url: null,
+        invoice_review_status: "unreviewed",
+        invoice_reviewed_at: null,
+        invoice_reviewed_by: null,
+        invoice_review_note: null,
+      }).eq("invoice_url", invoice.name);
+
+      if (unlinkError) throw new Error(`تم حذف الملف لكن تعذر إزالة رابطه من الطلب: ${unlinkError.message}`);
+    },
+
+    onSuccess: async () => {
+      setDeleteTarget(null);
+
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["admin-invoice-files"] }),
+        queryClient.invalidateQueries({ queryKey: ["admin-invoice-orders"] }),
+      ]);
+
+      toast({ title: "تم حذف الفاتورة", description: "تم حذف PDF وإعادة حالة الفاتورة إلى غير منشأة إن كانت مرتبطة بالطلب." });
+    },
+
+    onError: (error: any) => {
+      toast({ title: "تعذر حذف الفاتورة", description: error?.message || "حدث خطأ أثناء الحذف.", variant: "destructive" });
+    },
+  });
+
+  /* =========================================================
+     SELECTION
+  ========================================================= */
+
+  const currentSelectableIds = useMemo(() => filteredOrders.filter((order) => hasInvoice(order)).map((order) => order.id), [filteredOrders, invoiceOrderNumberSet]);
+
+  const allVisibleSelected = currentSelectableIds.length > 0 && currentSelectableIds.every((id) => selectedIds.includes(id));
+
+  const toggleAllVisible = () => {
+    if (allVisibleSelected) {
+      setSelectedIds((current) => current.filter((id) => !currentSelectableIds.includes(id)));
+      return;
+    }
+
+    setSelectedIds((current) => Array.from(new Set([...current, ...currentSelectableIds])));
+  };
+
+  const toggleSelected = (id: string) => {
+    setSelectedIds((current) => current.includes(id) ? current.filter((rowId) => rowId !== id) : [...current, id]);
+  };
+
+  /* =========================================================
+     EDITOR
+  ========================================================= */
 
   const handleOpenInvoiceEditor = (order: Order) => {
     setSelectedOrder(order);
@@ -250,279 +423,538 @@ const AdminInvoicesPage = () => {
     setSelectedOrder(null);
   };
 
-  const handleOrderUpdated = () => {
-    fetchOrders();
-    fetchInvoices();
+  const handleDataUpdated = async () => {
+    await Promise.all([
+      queryClient.invalidateQueries({ queryKey: ["admin-invoice-orders"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-invoice-files"] }),
+      queryClient.invalidateQueries({ queryKey: ["admin-orders"] }),
+    ]);
   };
 
+  const handleNewInvoiceCreated = async (createdOrder: any) => {
+    await handleDataUpdated();
+
+    setShowNewInvoice(false);
+    setActiveTab("all");
+
+    if (!createdOrder?.id) return;
+
+    const normalizedOrder: Order = {
+      ...createdOrder,
+      items: Array.isArray(createdOrder.items) ? createdOrder.items : [],
+      subtotal: Number(createdOrder.subtotal || 0),
+      delivery_fee: Number(createdOrder.delivery_fee || 0),
+      total: Number(createdOrder.total || 0),
+      discount_amount: Number(createdOrder.discount_amount || 0),
+      invoice_review_status: (createdOrder.invoice_review_status || "unreviewed") as InvoiceReviewStatus,
+    };
+
+    setSelectedOrder(normalizedOrder);
+    setShowInvoiceEditor(true);
+  };
+
+  const clearFilters = () => {
+    setSearchQuery("");
+    setDateFilter("");
+    setOrderStatusFilter("all");
+    setInvoicePresenceFilter("all");
+  };
+
+  /* =========================================================
+     LOADING
+  ========================================================= */
+
+  if (isLoadingOrders && isLoadingInvoices) {
+    return (
+      <div className="flex min-h-[430px] items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto flex h-[48px] w-[48px] items-center justify-center rounded-[14px] border border-[#E5E9EF] bg-white">
+            <Loader2 className="h-[18px] w-[18px] animate-spin text-[#675CBA]" />
+          </div>
+          <p className="mt-3 text-[10px] font-medium text-[#969DA7]">جاري تحميل مركز الفواتير...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-5 max-w-[1500px] mx-auto px-4 md:px-6 py-6" dir="rtl">
-      <AdminPageHeader
-        category="المالية"
-        title="إدارة الفواتير"
-        description={`إدارة ${invoices.length.toLocaleString("ar-EG")} فاتورة محفوظة`}
-        actions={[
-          {
-            label: "فاتورة جديدة",
-            icon: Plus,
-            onClick: () => setShowNewInvoice(true),
-            variant: "primary",
-          },
-        ]}
-      />
+    <div className="w-full space-y-4" dir="rtl">
+      <AdminPageHeader category="المالية" title="مركز إدارة الفواتير" description="إنشاء ومراجعة واعتماد ورفض وأرشفة فواتير الطلبات من مكان واحد" actions={[{ label: "فاتورة جديدة", icon: Plus, onClick: () => setShowNewInvoice(true), variant: "primary" }]} />
 
-      {/* Filters */}
-      <Card className="rounded-2xl border-border bg-card shadow-sm overflow-hidden">
-        <CardContent className="p-5 space-y-5">
-          <div className="flex items-center justify-between">
+      <section className="grid grid-cols-2 gap-[9px] xl:grid-cols-5">
+        <InvoiceStatCard title="بانتظار المراجعة" value={stats.reviewPending.toLocaleString("en-US")} helper="فواتير تحتاج قبول أو رفض" icon={FileClock} tone="amber" />
+        <InvoiceStatCard title="الفواتير المقبولة" value={stats.accepted.toLocaleString("en-US")} helper="اعتمدت وأصبحت نهائية" icon={FileCheck2} tone="green" />
+        <InvoiceStatCard title="الفواتير المرفوضة" value={stats.rejected.toLocaleString("en-US")} helper="تحتاج تعديلًا أو إعادة مراجعة" icon={CircleOff} tone="coral" />
+        <InvoiceStatCard title="طلبات بدون فاتورة" value={stats.withoutInvoice.toLocaleString("en-US")} helper="لم يتم إنشاء PDF لها بعد" icon={ReceiptText} tone="indigo" />
+        <InvoiceStatCard title="أرشيف PDF" value={stats.files.toLocaleString("en-US")} helper={`${stats.generatedToday} ملف أُنشئ اليوم`} icon={FileText} tone="blue" />
+      </section>
+
+      {stats.reviewPending > 0 && (
+        <section className="rounded-[12px] border border-[#EEDFC4] bg-[#FFF9EF] px-[12px] py-[10px]">
+          <div className="flex items-start gap-[8px]">
+            <ShieldCheck className="mt-[1px] h-[13px] w-[13px] shrink-0 text-[#B17C37]" />
             <div>
-              <h3 className="font-heading text-base font-semibold">
-                البحث والتصفية
-              </h3>
-
-              <p className="text-xs text-muted-foreground mt-1">
-                البحث عن الفواتير والطلبات
-              </p>
-            </div>
-
-            <div className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl bg-pink-500/10 text-pink-600 text-sm font-medium">
-              <FileText className="w-4 h-4" />
-              {invoices.length} فاتورة
+              <p className="text-[10px] font-semibold text-[#9A7139]">{stats.reviewPending.toLocaleString("ar-EG")} فاتورة بانتظار قرار المراجعة</p>
+              <p className="mt-[3px] text-[9px] leading-5 text-[#8A7659]">راجع البيانات والمنتجات والمبالغ، ثم اضغط قبول لنقل الفاتورة إلى المقبولة أو رفض مع كتابة الملاحظة.</p>
             </div>
           </div>
-          <div className="grid grid-cols-1 lg:grid-cols-[1fr_220px_auto] gap-4">
-            <div className="relative">
-              <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                placeholder="البحث برقم الطلب أو اسم العميل..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-12 rounded-2xl pr-11 bg-background"
-              />
-            </div>
-            <div className="relative">
-              <Calendar className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type="date"
-                value={dateFilter}
-                onChange={(e) => setDateFilter(e.target.value)}
-                className="h-12 rounded-2xl pr-11 bg-background"
-              />
-            </div>
-            <Button variant="outline" className="h-12 rounded-2xl" onClick={clearFilters}>
+        </section>
+      )}
+
+      <section className="overflow-hidden rounded-[14px] border border-[#E5E9EF] bg-white">
+        <div className="flex items-center justify-between border-b border-[#EDF0F3] px-[13px] py-[10px]">
+          <div>
+            <h2 className="text-[11px] font-semibold text-[#444B55]">البحث والتصفية</h2>
+            <p className="mt-[3px] text-[9px] text-[#9BA2AC]">بحث شامل برقم الطلب أو العميل أو الهاتف مع فلترة التاريخ والحالة</p>
+          </div>
+
+          {hasFilters && (
+            <button type="button" onClick={clearFilters} className="flex h-[30px] items-center gap-[5px] rounded-[8px] px-[9px] text-[9px] font-semibold text-[#7E8690] hover:bg-[#F7F8FA]">
+              <X className="h-[10px] w-[10px]" />
               مسح الفلاتر
-            </Button>
+            </button>
+          )}
+        </div>
+
+        <div className="grid grid-cols-1 gap-[7px] p-[11px] xl:grid-cols-[minmax(0,1fr)_175px_175px_185px]">
+          <div className="relative">
+            <Search className="pointer-events-none absolute right-[12px] top-1/2 h-[13px] w-[13px] -translate-y-1/2 text-[#969EA8]" />
+            <Input value={searchQuery} onChange={(event) => setSearchQuery(event.target.value)} placeholder="رقم الطلب، اسم العميل أو رقم الهاتف..." className="h-[40px] rounded-[9px] border-[#E3E7EC] bg-[#F8FAFC] pr-[35px] text-[10px] shadow-none focus-visible:bg-white focus-visible:ring-0" />
           </div>
-        </CardContent>
-      </Card>
 
-      {/* Tabs for Orders and Uploaded Invoices */}
-      <Tabs defaultValue="orders" className="space-y-5">
-        <TabsList className="grid w-full grid-cols-2 h-12 rounded-xl bg-muted/50 p-1">
-          <TabsTrigger
-            value="orders"
-            className="rounded-xl gap-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm h-10"
-          >
-            <Pencil className="w-4 h-4" />
-            إنشاء/تعديل الفواتير ({filteredOrders.length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="files"
-            className="rounded-xl gap-2 text-sm font-medium data-[state=active]:bg-background data-[state=active]:shadow-sm"
-          >
-            <FileText className="w-4 h-4" />
-            الفواتير المحفوظة ({filteredInvoices.length})
-          </TabsTrigger>
-        </TabsList>
+          <div className="relative">
+            <CalendarDays className="pointer-events-none absolute right-[11px] top-1/2 z-10 h-[12px] w-[12px] -translate-y-1/2 text-[#969EA8]" />
+            <Input type="date" value={dateFilter} onChange={(event) => setDateFilter(event.target.value)} className="h-[40px] rounded-[9px] border-[#E3E7EC] bg-[#F8FAFC] pr-[33px] text-[10px] shadow-none focus-visible:bg-white focus-visible:ring-0" />
+          </div>
 
-        {/* Orders Tab - Create/Edit Invoices */}
-        <TabsContent value="orders">
-          <Card className="rounded-2xl border-border bg-card shadow-sm overflow-hidden">
-            <CardContent className="p-0">
-              {isLoadingOrders ? (
-                <div className="flex flex-col items-center justify-center py-16 gap-3">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                  <p className="text-sm text-muted-foreground">
-                    جاري تحميل الطلبات...
-                  </p>
-                </div>
-              ) : filteredOrders.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-20 text-center">
-                  <div className="w-20 h-20 rounded-3xl bg-pink-500/10 flex items-center justify-center mb-5">
-                    <FileText className="w-10 h-10 text-pink-500" />
-                  </div>
+          <Select value={orderStatusFilter} onValueChange={(value) => setOrderStatusFilter(value as OrderStatusFilter)}>
+            <SelectTrigger className="h-[40px] rounded-[9px] border-[#E3E7EC] bg-[#F8FAFC] text-[10px] shadow-none focus:ring-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل حالات الطلب</SelectItem>
+              <SelectItem value="pending">قيد الانتظار</SelectItem>
+              <SelectItem value="confirmed">مؤكد</SelectItem>
+              <SelectItem value="processing">قيد التجهيز</SelectItem>
+              <SelectItem value="shipped">تم الشحن</SelectItem>
+              <SelectItem value="delivered">تم التوصيل</SelectItem>
+              <SelectItem value="completed">مكتمل</SelectItem>
+              <SelectItem value="cancelled">ملغي</SelectItem>
+            </SelectContent>
+          </Select>
 
-                  <h3 className="font-heading text-lg font-semibold">
-                    لا توجد طلبات
-                  </h3>
+          <Select value={invoicePresenceFilter} onValueChange={(value) => setInvoicePresenceFilter(value as InvoicePresenceFilter)}>
+            <SelectTrigger className="h-[40px] rounded-[9px] border-[#E3E7EC] bg-[#F8FAFC] text-[10px] shadow-none focus:ring-0">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">كل الفواتير</SelectItem>
+              <SelectItem value="with_invoice">لديها PDF</SelectItem>
+              <SelectItem value="without_invoice">بدون PDF</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+      </section>
 
-                  <p className="text-sm text-muted-foreground mt-2">
-                    لا يوجد طلبات متاحة لإنشاء فواتير حالياً
-                  </p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto rounded-2xl" dir="rtl">
-                  <Table className="table-fixed text-right">
-                    <TableHeader className="bg-slate-50 border-b">
-                      <TableRow className="h-14 hover:bg-transparent">
-                        <TableHead className="text-right px-5 py-3 text-xs font-semibold text-slate-600 whitespace-nowrap">رقم الطلب</TableHead>
-                        <TableHead className="text-right px-5 py-3 text-xs font-semibold text-slate-600 whitespace-nowrap">العميل</TableHead>
-                        <TableHead className="text-right px-5 py-3 text-xs font-semibold text-slate-600 whitespace-nowrap">الإجمالي</TableHead>
-                        <TableHead className="text-right px-5 py-3 text-xs font-semibold text-slate-600 whitespace-nowrap">التاريخ</TableHead>
-                        <TableHead className="text-right px-5 py-3 text-xs font-semibold text-slate-600 whitespace-nowrap">الإجراءات</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredOrders.map((order) => (
-                        <TableRow key={order.id} className="h-20 border-b hover:bg-pink-50/40 transition-colors">
-                          <TableCell className="px-5 py-3 align-middle font-mono text-xs text-primary">{order.order_number}</TableCell>
-                          <TableCell className="px-5 py-3 align-middle">
-                            <div>
-                              <p className="font-medium">{order.customer_name}</p>
-                              <p className="text-sm text-muted-foreground" dir="ltr">{order.customer_phone}</p>
-                            </div>
-                          </TableCell>
-                          <TableCell className="px-5 py-3 align-middle font-bold text-primary">
-                            {order.total.toFixed(2)} ر.ي
-                          </TableCell>
-                          <TableCell className="px-5 py-3 align-middle text-sm text-muted-foreground">
-                            {format(new Date(order.created_at), 'dd MMM yyyy', { locale: ar })}
-                          </TableCell>
-                          <TableCell className="px-5 py-3 align-middle">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenInvoiceEditor(order)}
-                              className="gap-2 h-9 rounded-xl text-xs"
-                            >
-                              <Eye className="w-4 h-4" />
-                              عرض/تعديل الفاتورة
-                            </Button>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
+      <section className="overflow-hidden rounded-[14px] border border-[#E5E9EF] bg-white">
+        <div className="grid grid-cols-2 gap-[4px] border-b border-[#E5E9EF] bg-[#FAFBFC] p-[5px] sm:grid-cols-5">
+          <InvoiceTabButton active={activeTab === "review"} onClick={() => { setActiveTab("review"); setSelectedIds([]); }} icon={FileClock} label="بانتظار المراجعة" count={stats.reviewPending} tone="amber" />
+          <InvoiceTabButton active={activeTab === "accepted"} onClick={() => { setActiveTab("accepted"); setSelectedIds([]); }} icon={CheckCircle2} label="المقبولة" count={stats.accepted} tone="green" />
+          <InvoiceTabButton active={activeTab === "rejected"} onClick={() => { setActiveTab("rejected"); setSelectedIds([]); }} icon={CircleOff} label="المرفوضة" count={stats.rejected} tone="coral" />
+          <InvoiceTabButton active={activeTab === "all"} onClick={() => { setActiveTab("all"); setSelectedIds([]); }} icon={ReceiptText} label="كل الطلبات" count={stats.totalOrders} tone="indigo" />
+          <InvoiceTabButton active={activeTab === "files"} onClick={() => { setActiveTab("files"); setSelectedIds([]); }} icon={FileText} label="أرشيف PDF" count={stats.files} tone="blue" />
+        </div>
 
-        {/* Files Tab - Uploaded PDFs */}
-        <TabsContent value="files">
-          <Card className="rounded-2xl border-border shadow-sm overflow-hidden">
-            <CardContent className="p-0">
-              {isLoading ? (
-                <div className="flex items-center justify-center py-12">
-                  <Loader2 className="w-8 h-8 animate-spin text-primary" />
-                </div>
-              ) : filteredInvoices.length === 0 ? (
-                <div className="text-center py-12">
-                  <FileText className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-muted-foreground">لا توجد فواتير محفوظة</p>
-                </div>
-              ) : (
-                <div className="overflow-x-auto rounded-2xl">
-                  <Table className="table-fixed">
-                    <TableHeader className="bg-slate-50 border-b">
-                      <TableRow className="h-20 hover:bg-pink-50/40 transition-colors">
-                        <TableHead className="text-right">رقم الطلب</TableHead>
-                        <TableHead className="text-right">اسم الملف</TableHead>
-                        <TableHead className="text-right">تاريخ الإنشاء</TableHead>
-                        <TableHead className="text-right">الإجراءات</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredInvoices.map((invoice) => (
-                        <TableRow key={invoice.name}>
-                          <TableCell className="px-5 py-3 align-middle font-mono text-xs text-primary">{invoice.orderNumber}</TableCell>
-                          <TableCell className="max-w-[200px] truncate text-sm text-muted-foreground">
-                            {invoice.name}
-                          </TableCell>
-                          <TableCell className="px-5 py-3 align-middle">
-                            {format(new Date(invoice.created_at), 'dd MMMM yyyy - HH:mm', { locale: ar })}
-                          </TableCell>
-                          <TableCell className="px-5 py-3 align-middle">
-                            <div className="flex items-center gap-1.5 bg-slate-100 rounded-xl p-1 w-fit">
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 rounded-lg bg-white shadow-sm"
-                                onClick={() => window.open(invoice.url, '_blank')}
-                                title="فتح"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                className="h-9 w-9 rounded-lg bg-white shadow-sm"
-                                onClick={() => handlePrint(invoice.url)}
-                                title="طباعة"
-                              >
-                                <Printer className="w-4 h-4" />
-                              </Button>
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                className="text-destructive hover:text-destructive"
-                                onClick={() => setDeleteTarget(invoice.name)}
-                                title="حذف"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+        {activeTab !== "files" && selectedIds.length > 0 && (
+          <div className="flex flex-wrap items-center justify-between gap-[8px] border-b border-[#E5E9EF] bg-[#FCFDFE] px-[11px] py-[8px]">
+            <p className="text-[10px] font-semibold text-[#59616B]">تم تحديد {selectedIds.length.toLocaleString("ar-EG")} فاتورة</p>
 
-      {/* Delete Confirmation Dialog */}
-      <AlertDialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
-        <AlertDialogContent>
+            <div className="flex flex-wrap gap-[6px]">
+              {activeTab !== "accepted" && <Button type="button" onClick={() => acceptInvoices(selectedIds)} disabled={updateReviewMutation.isPending} className="h-[34px] rounded-[8px] bg-[#5E8A69] px-3 text-[10px] font-semibold text-white shadow-none hover:bg-[#52785C]"><ThumbsUp className="ml-[5px] h-[11px] w-[11px]" />قبول المحدد</Button>}
+              {activeTab !== "rejected" && <Button type="button" variant="outline" onClick={() => openRejectDialog(selectedIds)} disabled={updateReviewMutation.isPending} className="h-[34px] rounded-[8px] border-[#F0D7D4] bg-white px-3 text-[10px] font-semibold text-[#B95C54] shadow-none"><ThumbsDown className="ml-[5px] h-[11px] w-[11px]" />رفض المحدد</Button>}
+              <Button type="button" variant="outline" onClick={() => setSelectedIds([])} className="h-[34px] rounded-[8px] border-[#E3E7EC] bg-white px-3 text-[10px] font-semibold text-[#707883] shadow-none">إلغاء التحديد</Button>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "files" ? (
+          <InvoiceFilesPanel invoices={filteredInvoices} loading={isLoadingInvoices} fetching={isFetchingInvoices} onOpen={(invoice) => void openInvoiceFile(invoice.name)} onPrint={(invoice) => void printInvoiceFile(invoice.name)} onDelete={setDeleteTarget} />
+        ) : (
+          <OrdersPanel
+            orders={filteredOrders}
+            loading={isLoadingOrders}
+            fetching={isFetchingOrders}
+            invoiceOrderNumberSet={invoiceOrderNumberSet}
+            activeTab={activeTab}
+            selectedIds={selectedIds}
+            allVisibleSelected={allVisibleSelected}
+            onToggleAll={toggleAllVisible}
+            onToggleSelected={toggleSelected}
+            onOpenEditor={handleOpenInvoiceEditor}
+            onAccept={(order) => acceptInvoices([order.id])}
+            onReject={(order) => openRejectDialog([order.id])}
+            onReturnToReview={(order) => updateReviewMutation.mutate({ ids: [order.id], status: "pending" })}
+            reviewBusy={updateReviewMutation.isPending}
+          />
+        )}
+      </section>
+
+      <Dialog open={rejectDialogOpen} onOpenChange={(open) => { if (!open && !updateReviewMutation.isPending) setRejectDialogOpen(false); }}>
+        <DialogContent dir="rtl" className="max-w-[520px] rounded-[16px] border-[#E4E8ED] bg-[#F7F8FA] p-0">
+          <DialogHeader className="border-b border-[#E6E9EE] bg-white px-5 py-4">
+            <div className="flex items-center gap-[10px]">
+              <div className="flex h-[36px] w-[36px] items-center justify-center rounded-[11px] bg-[#FFF0ED] text-[#C15F56]"><ThumbsDown className="h-[15px] w-[15px]" /></div>
+              <div>
+                <DialogTitle className="text-right text-[14px] font-semibold text-[#343B45]">رفض الفاتورة</DialogTitle>
+                <DialogDescription className="mt-[3px] text-right text-[10px] text-[#9299A3]">اكتب سبب الرفض حتى يبقى واضحًا عند تعديل الفاتورة وإعادتها للمراجعة.</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-[10px] p-[12px]">
+            <div>
+              <p className="mb-[6px] text-[10px] font-semibold text-[#68717B]">ملاحظة المراجعة</p>
+              <Textarea value={rejectNote} onChange={(event) => setRejectNote(event.target.value)} rows={5} placeholder="مثال: مبلغ التوصيل غير صحيح، يرجى تعديل الفاتورة..." className="resize-none rounded-[9px] border-[#E2E6EB] bg-white text-[10px] leading-6 shadow-none focus-visible:ring-0" />
+            </div>
+
+            <div className="rounded-[9px] border border-[#F0D7D4] bg-[#FFF8F7] p-[9px] text-[9px] leading-5 text-[#A6635C]">سيتم نقل {rejectTargetIds.length.toLocaleString("ar-EG")} فاتورة إلى قسم المرفوضة، ويمكن إعادتها لاحقًا إلى المراجعة بعد التعديل.</div>
+          </div>
+
+          <div className="flex items-center justify-end gap-[7px] border-t border-[#E5E9EF] bg-white px-5 py-3">
+            <Button type="button" variant="outline" disabled={updateReviewMutation.isPending} onClick={() => setRejectDialogOpen(false)} className="h-[36px] rounded-[9px] border-[#E1E5EA] px-4 text-[10px] font-semibold text-[#707883] shadow-none">إلغاء</Button>
+            <Button type="button" disabled={updateReviewMutation.isPending} onClick={() => updateReviewMutation.mutate({ ids: rejectTargetIds, status: "rejected", note: rejectNote })} className="h-[36px] rounded-[9px] bg-[#C76161] px-5 text-[10px] font-semibold text-white shadow-none hover:bg-[#B65555]">{updateReviewMutation.isPending && <Loader2 className="ml-[5px] h-[11px] w-[11px] animate-spin" />}تأكيد الرفض</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
+        <AlertDialogContent dir="rtl" className="max-w-[430px] rounded-[15px] border-[#E4E8ED] bg-white p-5">
           <AlertDialogHeader>
-            <AlertDialogTitle>تأكيد الحذف</AlertDialogTitle>
-            <AlertDialogDescription>
-              هل أنت متأكد من حذف هذه الفاتورة؟ لا يمكن التراجع عن هذا الإجراء.
-            </AlertDialogDescription>
+            <div className="mb-2 flex h-[38px] w-[38px] items-center justify-center rounded-[11px] bg-[#FFF0F0] text-[#C76161]"><Trash2 className="h-[16px] w-[16px]" /></div>
+            <AlertDialogTitle className="text-[14px] font-semibold text-[#343A44]">حذف الفاتورة المحفوظة</AlertDialogTitle>
+            <AlertDialogDescription className="text-[10px] leading-6 text-[#858D97]">سيتم حذف ملف "{deleteTarget?.name || ""}" من الأرشيف وإزالة الرابط وحالة المراجعة من الطلب المرتبط به.</AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="gap-2">
-            <AlertDialogCancel disabled={isDeleting}>إلغاء</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => deleteTarget && handleDelete(deleteTarget)}
-              disabled={isDeleting}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-            >
-              {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : 'حذف'}
-            </AlertDialogAction>
+
+          <AlertDialogFooter className="mt-2 gap-2">
+            <AlertDialogCancel disabled={deleteMutation.isPending} className="h-[38px] rounded-[9px] border-[#E2E6EB] bg-white px-4 text-[10px] font-semibold text-[#6B737E]">إلغاء</AlertDialogCancel>
+            <AlertDialogAction disabled={deleteMutation.isPending} onClick={(event) => { event.preventDefault(); if (deleteTarget) deleteMutation.mutate(deleteTarget); }} className="h-[38px] rounded-[9px] bg-[#C76161] px-4 text-[10px] font-semibold text-white hover:bg-[#B65555]">{deleteMutation.isPending && <Loader2 className="ml-[5px] h-[11px] w-[11px] animate-spin" />}حذف نهائي</AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Invoice Editor Modal */}
-      <InvoiceEditor
-        order={selectedOrder}
-        open={showInvoiceEditor}
-        onClose={handleCloseInvoiceEditor}
-        onUpdate={handleOrderUpdated}
-      />
-
-      {/* New Invoice Creator Modal */}
-      <NewInvoiceCreator
-        open={showNewInvoice}
-        onClose={() => setShowNewInvoice(false)}
-        onCreated={handleOrderUpdated}
-      />
+      <InvoiceEditor order={selectedOrder} open={showInvoiceEditor} onClose={handleCloseInvoiceEditor} onUpdate={() => void handleDataUpdated()} />
+      <NewInvoiceCreator open={showNewInvoice} onClose={() => setShowNewInvoice(false)} onCreated={(createdOrder) => void handleNewInvoiceCreated(createdOrder)} />
     </div>
   );
+};
+
+/* =========================================================
+   ORDERS PANEL
+========================================================= */
+
+const OrdersPanel = ({ orders, loading, fetching, invoiceOrderNumberSet, activeTab, selectedIds, allVisibleSelected, onToggleAll, onToggleSelected, onOpenEditor, onAccept, onReject, onReturnToReview, reviewBusy }: { orders: Order[]; loading: boolean; fetching: boolean; invoiceOrderNumberSet: Set<string>; activeTab: TabMode; selectedIds: string[]; allVisibleSelected: boolean; onToggleAll: () => void; onToggleSelected: (id: string) => void; onOpenEditor: (order: Order) => void; onAccept: (order: Order) => void; onReject: (order: Order) => void; onReturnToReview: (order: Order) => void; reviewBusy: boolean }) => {
+  if (loading) return <PanelLoading text="جاري تحميل الفواتير..." />;
+  if (orders.length === 0) return <PanelEmpty icon={activeTab === "accepted" ? FileCheck2 : activeTab === "rejected" ? CircleOff : ReceiptText} title={activeTab === "accepted" ? "لا توجد فواتير مقبولة" : activeTab === "rejected" ? "لا توجد فواتير مرفوضة" : activeTab === "review" ? "لا توجد فواتير بانتظار المراجعة" : "لا توجد طلبات"} description="لا توجد نتائج مطابقة للقسم والفلاتر الحالية." />;
+
+  return (
+    <>
+      <div className="hidden md:block">
+        <div className="flex items-center justify-between border-b border-[#EAEDF1] px-[13px] py-[10px]">
+          <div>
+            <h2 className="text-[11px] font-semibold text-[#454C56]">{tabTitle(activeTab)}</h2>
+            <p className="mt-[3px] text-[9px] text-[#9CA3AC]">{orders.length.toLocaleString("ar-EG")} فاتورة/طلب ظاهر</p>
+          </div>
+
+          {fetching && <Loader2 className="h-[12px] w-[12px] animate-spin text-[#8E959F]" />}
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[1320px]">
+            <thead>
+              <tr className="h-[44px] border-b border-[#EAEDF1] bg-[#FAFBFC] text-[10px] font-semibold text-[#858D97]">
+                <th className="w-[44px] px-[10px] text-center"><Checkbox checked={allVisibleSelected} onCheckedChange={onToggleAll} /></th>
+                <th className="px-[12px] text-right">الطلب</th>
+                <th className="px-[12px] text-right">العميل</th>
+                <th className="px-[12px] text-right">المنتجات</th>
+                <th className="px-[12px] text-right">الإجمالي</th>
+                <th className="px-[12px] text-right">حالة الطلب</th>
+                <th className="px-[12px] text-right">حالة الفاتورة</th>
+                <th className="px-[12px] text-right">المراجعة</th>
+                <th className="px-[12px] text-right">التاريخ</th>
+                <th className="w-[210px] px-[12px] text-center">الإجراءات</th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {orders.map((order) => {
+                const invoiceExists = Boolean(order.invoice_url) || invoiceOrderNumberSet.has(order.order_number);
+                const reviewStatus = effectiveStatusFromOrder(order, invoiceExists);
+
+                return (
+                  <tr key={order.id} className="h-[76px] border-b border-[#F0F2F5] transition-colors last:border-b-0 hover:bg-[#FCFDFE]">
+                    <td className="px-[10px] text-center"><Checkbox checked={selectedIds.includes(order.id)} disabled={!invoiceExists} onCheckedChange={() => onToggleSelected(order.id)} /></td>
+                    <td className="px-[12px]"><p dir="ltr" className="text-right font-mono text-[10px] font-semibold text-[#675CBA]">{order.order_number}</p><p className="mt-[3px] text-[9px] text-[#9AA2AC]">{paymentLabel(order.payment_method)}</p></td>
+                    <td className="px-[12px]"><div className="flex min-w-[180px] items-center gap-[8px]"><div className="flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[9px] bg-[#F1EFFF] text-[#675CBA]"><UserRound className="h-[13px] w-[13px]" /></div><div className="min-w-0"><p className="max-w-[180px] truncate text-[10.5px] font-semibold text-[#4A525C]">{order.customer_name}</p><p dir="ltr" className="mt-[2px] text-right text-[9px] text-[#9299A3]">{order.customer_phone}</p></div></div></td>
+                    <td className="px-[12px]"><span className="inline-flex h-[26px] items-center gap-[5px] rounded-[7px] bg-[#F2F4F7] px-[8px] text-[9px] font-semibold text-[#68717B]"><Package className="h-[9px] w-[9px]" />{order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)} قطعة</span></td>
+                    <td className="px-[12px]"><span className="text-[10px] font-semibold text-[#59616B]">{formatOrderMoney(order.total, order.currency_code)}</span></td>
+                    <td className="px-[12px]"><OrderStatus status={order.status} /></td>
+                    <td className="px-[12px]"><InvoicePresence available={invoiceExists} /></td>
+                    <td className="px-[12px]"><ReviewStatus status={reviewStatus} note={order.invoice_review_note} /></td>
+                    <td className="px-[12px]"><div><span className="text-[9px] text-[#7E8690]">{formatDate(order.created_at)}</span>{order.invoice_reviewed_at && <p className="mt-[3px] text-[8px] text-[#A0A6AF]">مراجعة: {formatDate(order.invoice_reviewed_at)}</p>}</div></td>
+                    <td className="px-[12px]">
+                      <div className="flex items-center justify-center gap-[4px]">
+                        <button type="button" onClick={() => onOpenEditor(order)} className="flex h-[31px] items-center justify-center gap-[5px] rounded-[8px] border border-[#E2DEF3] bg-white px-[8px] text-[9px] font-semibold text-[#675CBA] hover:bg-[#F5F3FF]"><Pencil className="h-[10px] w-[10px]" />عرض</button>
+
+                        {invoiceExists && reviewStatus !== "accepted" && <button type="button" disabled={reviewBusy} onClick={() => onAccept(order)} className="flex h-[31px] items-center justify-center gap-[5px] rounded-[8px] border border-[#D8E8DD] bg-white px-[8px] text-[9px] font-semibold text-[#568468] hover:bg-[#EFF8F2]"><Check className="h-[10px] w-[10px]" />قبول</button>}
+
+                        {invoiceExists && reviewStatus !== "rejected" && <button type="button" disabled={reviewBusy} onClick={() => onReject(order)} className="flex h-[31px] items-center justify-center gap-[5px] rounded-[8px] border border-[#F0D7D4] bg-white px-[8px] text-[9px] font-semibold text-[#B95C54] hover:bg-[#FFF3F1]"><X className="h-[10px] w-[10px]" />رفض</button>}
+
+                        {invoiceExists && (reviewStatus === "accepted" || reviewStatus === "rejected") && <button type="button" disabled={reviewBusy} title="إعادة للمراجعة" onClick={() => onReturnToReview(order)} className="flex h-[31px] w-[31px] items-center justify-center rounded-[8px] border border-[#E3E7EC] bg-white text-[#707883] hover:bg-[#F7F8FA]"><RotateCcw className="h-[10px] w-[10px]" /></button>}
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="space-y-[8px] p-[8px] md:hidden">
+        {orders.map((order) => {
+          const invoiceExists = Boolean(order.invoice_url) || invoiceOrderNumberSet.has(order.order_number);
+          const reviewStatus = effectiveStatusFromOrder(order, invoiceExists);
+
+          return (
+            <article key={order.id} className="overflow-hidden rounded-[13px] border border-[#E5E9EF] bg-white">
+              <div className="p-[11px]">
+                <div className="flex items-start justify-between gap-[8px]">
+                  <div className="flex min-w-0 gap-[8px]">
+                    <Checkbox checked={selectedIds.includes(order.id)} disabled={!invoiceExists} onCheckedChange={() => onToggleSelected(order.id)} className="mt-[2px]" />
+                    <div className="min-w-0">
+                      <p dir="ltr" className="text-right font-mono text-[10px] font-semibold text-[#675CBA]">{order.order_number}</p>
+                      <h3 className="mt-[4px] truncate text-[11px] font-semibold text-[#3B424C]">{order.customer_name}</h3>
+                      <p dir="ltr" className="mt-[2px] text-right text-[9px] text-[#9299A3]">{order.customer_phone}</p>
+                    </div>
+                  </div>
+
+                  <ReviewStatus status={reviewStatus} note={order.invoice_review_note} />
+                </div>
+
+                <div className="mt-[10px] grid grid-cols-2 gap-[6px]">
+                  <InfoBox label="الإجمالي" value={formatOrderMoney(order.total, order.currency_code)} />
+                  <InfoBox label="المنتجات" value={`${order.items.reduce((sum, item) => sum + Number(item.quantity || 0), 0)} قطعة`} />
+                </div>
+
+                <div className="mt-[8px] flex flex-wrap items-center gap-[6px]">
+                  <OrderStatus status={order.status} />
+                  <InvoicePresence available={invoiceExists} />
+                  <span className="mr-auto text-[9px] text-[#9AA2AC]">{formatDate(order.created_at)}</span>
+                </div>
+
+                {order.invoice_review_note && reviewStatus === "rejected" && <div className="mt-[8px] rounded-[8px] border border-[#F0D7D4] bg-[#FFF8F7] p-[8px] text-[9px] leading-5 text-[#A6635C]">سبب الرفض: {order.invoice_review_note}</div>}
+              </div>
+
+              <div className="grid grid-cols-2 gap-[5px] border-t border-[#EDF0F3] bg-[#FAFBFC] p-[7px]">
+                <button type="button" onClick={() => onOpenEditor(order)} className="flex h-[35px] items-center justify-center gap-[5px] rounded-[8px] border border-[#E2DEF3] bg-white text-[9px] font-semibold text-[#675CBA]"><Pencil className="h-[10px] w-[10px]" />عرض / تعديل</button>
+
+                {invoiceExists && reviewStatus === "pending" && <button type="button" disabled={reviewBusy} onClick={() => onAccept(order)} className="flex h-[35px] items-center justify-center gap-[5px] rounded-[8px] border border-[#D8E8DD] bg-white text-[9px] font-semibold text-[#568468]"><Check className="h-[10px] w-[10px]" />قبول الفاتورة</button>}
+
+                {invoiceExists && reviewStatus === "accepted" && <button type="button" disabled={reviewBusy} onClick={() => onReturnToReview(order)} className="flex h-[35px] items-center justify-center gap-[5px] rounded-[8px] border border-[#E3E7EC] bg-white text-[9px] font-semibold text-[#707883]"><RotateCcw className="h-[10px] w-[10px]" />إعادة للمراجعة</button>}
+
+                {invoiceExists && reviewStatus === "rejected" && <button type="button" disabled={reviewBusy} onClick={() => onReturnToReview(order)} className="flex h-[35px] items-center justify-center gap-[5px] rounded-[8px] border border-[#E3E7EC] bg-white text-[9px] font-semibold text-[#707883]"><RotateCcw className="h-[10px] w-[10px]" />إعادة للمراجعة</button>}
+              </div>
+
+              {invoiceExists && reviewStatus === "pending" && <div className="border-t border-[#EDF0F3] bg-[#FAFBFC] px-[7px] pb-[7px]"><button type="button" disabled={reviewBusy} onClick={() => onReject(order)} className="flex h-[35px] w-full items-center justify-center gap-[5px] rounded-[8px] border border-[#F0D7D4] bg-white text-[9px] font-semibold text-[#B95C54]"><X className="h-[10px] w-[10px]" />رفض الفاتورة</button></div>}
+            </article>
+          );
+        })}
+      </div>
+    </>
+  );
+};
+
+/* =========================================================
+   FILES PANEL
+========================================================= */
+
+const InvoiceFilesPanel = ({ invoices, loading, fetching, onOpen, onPrint, onDelete }: { invoices: InvoiceFile[]; loading: boolean; fetching: boolean; onOpen: (invoice: InvoiceFile) => void; onPrint: (invoice: InvoiceFile) => void; onDelete: (invoice: InvoiceFile) => void }) => {
+  if (loading) return <PanelLoading text="جاري تحميل أرشيف الفواتير..." />;
+  if (invoices.length === 0) return <PanelEmpty icon={FileText} title="لا توجد فواتير محفوظة" description="ملفات PDF التي تنشئها من محرر الفاتورة ستظهر هنا." />;
+
+  return (
+    <>
+      <div className="hidden md:block">
+        <div className="flex items-center justify-between border-b border-[#EAEDF1] px-[13px] py-[10px]">
+          <div><h2 className="text-[11px] font-semibold text-[#454C56]">أرشيف ملفات PDF</h2><p className="mt-[3px] text-[9px] text-[#9CA3AC]">روابط الملفات الآمنة تُنشأ عند الفتح أو الطباعة فقط</p></div>
+          {fetching && <Loader2 className="h-[12px] w-[12px] animate-spin text-[#8E959F]" />}
+        </div>
+
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[900px]">
+            <thead><tr className="h-[42px] border-b border-[#EAEDF1] bg-[#FAFBFC] text-[10px] font-semibold text-[#858D97]"><th className="px-[12px] text-right">رقم الطلب</th><th className="px-[12px] text-right">اسم الملف</th><th className="px-[12px] text-right">الحجم</th><th className="px-[12px] text-right">تاريخ الإنشاء</th><th className="w-[145px] px-[12px] text-center">الإجراءات</th></tr></thead>
+            <tbody>
+              {invoices.map((invoice) => (
+                <tr key={invoice.name} className="h-[68px] border-b border-[#F0F2F5] transition-colors last:border-b-0 hover:bg-[#FCFDFE]">
+                  <td className="px-[12px]"><p dir="ltr" className="text-right font-mono text-[10px] font-semibold text-[#5680CF]">{invoice.orderNumber}</p></td>
+                  <td className="px-[12px]"><div className="flex min-w-[260px] items-center gap-[8px]"><div className="flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[9px] bg-[#EDF4FF] text-[#5680CF]"><FileText className="h-[14px] w-[14px]" /></div><p dir="ltr" className="max-w-[340px] truncate text-right text-[9px] text-[#68717B]">{invoice.name}</p></div></td>
+                  <td className="px-[12px]"><span className="text-[9px] text-[#7E8690]">{formatFileSize(invoice.size)}</span></td>
+                  <td className="px-[12px]"><span className="text-[9px] text-[#7E8690]">{formatDateTime(invoice.created_at)}</span></td>
+                  <td className="px-[12px]"><div className="flex items-center justify-center gap-[4px]"><button type="button" title="فتح الفاتورة" onClick={() => onOpen(invoice)} className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] border border-[#DCE7F4] bg-white text-[#5680CF] hover:bg-[#F3F7FC]"><ExternalLink className="h-[11px] w-[11px]" /></button><button type="button" title="طباعة" onClick={() => onPrint(invoice)} className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] border border-[#E3E7EC] bg-white text-[#68717B] hover:bg-[#F7F8FA]"><Printer className="h-[11px] w-[11px]" /></button><button type="button" title="حذف" onClick={() => onDelete(invoice)} className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] border border-[#F0D7D4] bg-white text-[#C15F56] hover:bg-[#FFF3F1]"><Trash2 className="h-[11px] w-[11px]" /></button></div></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div className="space-y-[8px] p-[8px] md:hidden">
+        {invoices.map((invoice) => (
+          <article key={invoice.name} className="overflow-hidden rounded-[13px] border border-[#E5E9EF] bg-white">
+            <div className="p-[11px]"><div className="flex items-start gap-[9px]"><div className="flex h-[40px] w-[40px] shrink-0 items-center justify-center rounded-[10px] bg-[#EDF4FF] text-[#5680CF]"><FileText className="h-[15px] w-[15px]" /></div><div className="min-w-0 flex-1"><p dir="ltr" className="text-right font-mono text-[10px] font-semibold text-[#5680CF]">{invoice.orderNumber}</p><p dir="ltr" className="mt-[3px] truncate text-right text-[9px] text-[#858D97]">{invoice.name}</p><p className="mt-[4px] text-[9px] text-[#9AA2AC]">{formatDateTime(invoice.created_at)} · {formatFileSize(invoice.size)}</p></div></div></div>
+            <div className="grid grid-cols-3 gap-[5px] border-t border-[#EDF0F3] bg-[#FAFBFC] p-[7px]"><button type="button" onClick={() => onOpen(invoice)} className="flex h-[35px] items-center justify-center gap-[5px] rounded-[8px] border border-[#DCE7F4] bg-white text-[9px] font-semibold text-[#5680CF]"><ExternalLink className="h-[10px] w-[10px]" />فتح</button><button type="button" onClick={() => onPrint(invoice)} className="flex h-[35px] items-center justify-center gap-[5px] rounded-[8px] border border-[#E3E7EC] bg-white text-[9px] font-semibold text-[#68717B]"><Printer className="h-[10px] w-[10px]" />طباعة</button><button type="button" onClick={() => onDelete(invoice)} className="flex h-[35px] items-center justify-center gap-[5px] rounded-[8px] border border-[#F0D7D4] bg-white text-[9px] font-semibold text-[#C15F56]"><Trash2 className="h-[10px] w-[10px]" />حذف</button></div>
+          </article>
+        ))}
+      </div>
+    </>
+  );
+};
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+const effectiveStatusFromOrder = (order: Order, invoiceExists: boolean): InvoiceReviewStatus => {
+  if (order.invoice_review_status === "accepted" || order.invoice_review_status === "rejected" || order.invoice_review_status === "pending") return order.invoice_review_status;
+  return invoiceExists ? "pending" : "unreviewed";
+};
+
+const tabTitle = (tab: TabMode) => {
+  if (tab === "review") return "فواتير بانتظار المراجعة";
+  if (tab === "accepted") return "الفواتير المقبولة";
+  if (tab === "rejected") return "الفواتير المرفوضة";
+  return "كل الطلبات والفواتير";
+};
+
+const extractOrderNumber = (fileName: string) => {
+  const cleaned = fileName.replace(/^invoice-/, "").replace(/\.pdf$/i, "");
+  const timestampMatch = cleaned.match(/^(.*)-(\d{10,})$/);
+  return timestampMatch?.[1] || cleaned || "غير معروف";
+};
+
+const toDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+};
+
+const formatDate = (value: string) => {
+  try {
+    return new Intl.DateTimeFormat("ar-YE", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value));
+  } catch {
+    return "—";
+  }
+};
+
+const formatDateTime = (value: string) => {
+  try {
+    return new Intl.DateTimeFormat("ar-YE", { day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit" }).format(new Date(value));
+  } catch {
+    return "—";
+  }
+};
+
+const formatFileSize = (size?: number | null) => {
+  if (!size || size <= 0) return "—";
+  if (size < 1024) return `${size} B`;
+  if (size < 1024 * 1024) return `${(size / 1024).toFixed(1)} KB`;
+  return `${(size / (1024 * 1024)).toFixed(1)} MB`;
+};
+
+const currencySymbol = (code?: string | null) => {
+  const normalized = String(code || "SAR").toUpperCase();
+  if (normalized === "SAR") return "ر.س";
+  if (normalized === "YER" || normalized.includes("YER")) return "ر.ي";
+  if (normalized === "USD") return "$";
+  if (normalized === "AED") return "د.إ";
+  return normalized;
+};
+
+const formatOrderMoney = (value: number, code?: string | null) => `${Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} ${currencySymbol(code)}`;
+
+const paymentLabel = (method: string) => {
+  const value = String(method || "").toLowerCase();
+  if (value === "cod") return "الدفع عند الاستلام";
+  if (value === "cash") return "نقدًا";
+  if (value === "card") return "بطاقة";
+  if (value === "transfer" || value === "bank_transfer") return "تحويل بنكي";
+  return method || "غير محدد";
+};
+
+const OrderStatus = ({ status }: { status: string }) => {
+  const value = String(status || "pending").toLowerCase();
+
+  const config: Record<string, { label: string; className: string }> = {
+    pending: { label: "قيد الانتظار", className: "border-[#EEDFC4] bg-[#FFF7E8] text-[#A9782F]" },
+    confirmed: { label: "مؤكد", className: "border-[#DCE7F4] bg-[#F1F6FC] text-[#5679A4]" },
+    processing: { label: "قيد التجهيز", className: "border-[#E2DEF3] bg-[#F6F4FF] text-[#675CBA]" },
+    shipped: { label: "تم الشحن", className: "border-[#D7E5EE] bg-[#F1F7FA] text-[#4F7C96]" },
+    delivered: { label: "تم التوصيل", className: "border-[#D8E8DD] bg-[#EFF8F2] text-[#568468]" },
+    completed: { label: "مكتمل", className: "border-[#D8E8DD] bg-[#EFF8F2] text-[#568468]" },
+    cancelled: { label: "ملغي", className: "border-[#F0D7D4] bg-[#FFF3F1] text-[#C15F56]" },
+  };
+
+  const current = config[value] || { label: status || "غير محدد", className: "border-[#E3E6EA] bg-[#F5F6F8] text-[#818994]" };
+
+  return <span className={cn("inline-flex h-[25px] items-center rounded-[7px] border px-[8px] text-[9px] font-semibold", current.className)}>{current.label}</span>;
+};
+
+const InvoicePresence = ({ available }: { available: boolean }) => {
+  return <span className={cn("inline-flex h-[25px] items-center gap-[5px] rounded-[7px] border px-[8px] text-[9px] font-semibold", available ? "border-[#D8E8DD] bg-[#EFF8F2] text-[#568468]" : "border-[#E3E6EA] bg-[#F5F6F8] text-[#818994]")}>{available ? <CheckCircle2 className="h-[9px] w-[9px]" /> : <CircleOff className="h-[9px] w-[9px]" />}{available ? "PDF موجود" : "بدون PDF"}</span>;
+};
+
+const ReviewStatus = ({ status, note }: { status: InvoiceReviewStatus; note?: string | null }) => {
+  if (status === "accepted") return <span className="inline-flex h-[25px] items-center gap-[5px] rounded-[7px] border border-[#D8E8DD] bg-[#EFF8F2] px-[8px] text-[9px] font-semibold text-[#568468]"><CheckCircle2 className="h-[9px] w-[9px]" />مقبولة</span>;
+  if (status === "rejected") return <span title={note || "مرفوضة"} className="inline-flex h-[25px] items-center gap-[5px] rounded-[7px] border border-[#F0D7D4] bg-[#FFF3F1] px-[8px] text-[9px] font-semibold text-[#C15F56]"><CircleOff className="h-[9px] w-[9px]" />مرفوضة</span>;
+  if (status === "pending") return <span className="inline-flex h-[25px] items-center gap-[5px] rounded-[7px] border border-[#EEDFC4] bg-[#FFF7E8] px-[8px] text-[9px] font-semibold text-[#A9782F]"><FileClock className="h-[9px] w-[9px]" />بانتظار المراجعة</span>;
+  return <span className="inline-flex h-[25px] items-center gap-[5px] rounded-[7px] border border-[#E3E6EA] bg-[#F5F6F8] px-[8px] text-[9px] font-semibold text-[#818994]"><ReceiptText className="h-[9px] w-[9px]" />غير منشأة</span>;
+};
+
+const InvoiceTabButton = ({ active, onClick, icon: Icon, label, count, tone }: { active: boolean; onClick: () => void; icon: LucideIcon; label: string; count: number; tone: "amber" | "green" | "coral" | "indigo" | "blue" }) => {
+  const colors = {
+    amber: active ? "bg-white text-[#A9782F]" : "text-[#858D97]",
+    green: active ? "bg-white text-[#568468]" : "text-[#858D97]",
+    coral: active ? "bg-white text-[#C15F56]" : "text-[#858D97]",
+    indigo: active ? "bg-white text-[#675CBA]" : "text-[#858D97]",
+    blue: active ? "bg-white text-[#5680CF]" : "text-[#858D97]",
+  }[tone];
+
+  return <button type="button" onClick={onClick} className={cn("flex min-h-[40px] items-center justify-center gap-[5px] rounded-[9px] px-[7px] text-[9px] font-semibold transition-colors", colors, active && "shadow-[0_1px_4px_rgba(31,41,55,0.08)]")}><Icon className="h-[11px] w-[11px]" /><span className="truncate">{label}</span><span className="rounded-[6px] bg-[#F2F4F7] px-[5px] py-[2px] text-[8px] text-[#68717B]">{count}</span></button>;
+};
+
+const InvoiceStatCard = ({ title, value, helper, icon: Icon, tone }: { title: string; value: string; helper: string; icon: LucideIcon; tone: "indigo" | "green" | "blue" | "coral" | "amber" }) => {
+  const style = {
+    indigo: { icon: "bg-[#F1EFFF] text-[#675CBA]", line: "bg-[#675CBA]" },
+    green: { icon: "bg-[#EAF7EE] text-[#629067]", line: "bg-[#629067]" },
+    blue: { icon: "bg-[#EDF4FF] text-[#5680CF]", line: "bg-[#5680CF]" },
+    coral: { icon: "bg-[#FFF0ED] text-[#D06A5E]", line: "bg-[#D06A5E]" },
+    amber: { icon: "bg-[#FFF7E8] text-[#A9782F]", line: "bg-[#C49446]" },
+  }[tone];
+
+  return <article className="relative min-h-[116px] overflow-hidden rounded-[14px] border border-[#E5E9EF] bg-white p-[13px]"><span className={cn("absolute inset-x-0 top-0 h-[3px]", style.line)} /><div className={cn("flex h-[32px] w-[32px] items-center justify-center rounded-[10px]", style.icon)}><Icon className="h-[14px] w-[14px]" /></div><p className="mt-[12px] text-[10px] text-[#8D949E]">{title}</p><p className="mt-[4px] truncate text-[19px] font-semibold leading-none text-[#303741]">{value}</p><p className="mt-[6px] text-[9px] text-[#A0A6AF]">{helper}</p></article>;
+};
+
+const InfoBox = ({ label, value }: { label: string; value: string }) => {
+  return <div className="rounded-[9px] bg-[#F8FAFC] p-[8px]"><p className="text-[9px] text-[#9AA2AC]">{label}</p><p className="mt-[3px] text-[10px] font-semibold text-[#59616B]">{value}</p></div>;
+};
+
+const PanelLoading = ({ text }: { text: string }) => {
+  return <div className="flex min-h-[320px] flex-col items-center justify-center gap-[8px]"><Loader2 className="h-[19px] w-[19px] animate-spin text-[#675CBA]" /><p className="text-[10px] text-[#9299A3]">{text}</p></div>;
+};
+
+const PanelEmpty = ({ icon: Icon, title, description }: { icon: LucideIcon; title: string; description: string }) => {
+  return <div className="flex min-h-[300px] flex-col items-center justify-center px-6 text-center"><div className="flex h-[46px] w-[46px] items-center justify-center rounded-[13px] bg-[#F0F2F5] text-[#8C949E]"><Icon className="h-[18px] w-[18px]" /></div><h3 className="mt-3 text-[11px] font-semibold text-[#535B65]">{title}</h3><p className="mt-[4px] text-[9px] text-[#9BA2AC]">{description}</p></div>;
 };
 
 export default AdminInvoicesPage;

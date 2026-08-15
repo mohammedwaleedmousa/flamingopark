@@ -90,8 +90,6 @@ const AdminCustomerDetailPage = lazy(() => import("./pages/admin/AdminCustomerDe
 const AdminNotificationDeliveriesPage = lazy(() => import("./pages/admin/AdminNotificationDeliveriesPage"));
 const AdminCurrenciesPage = lazy(() => import("./pages/admin/AdminCurrenciesPage"));
 const AdminCountriesPage = lazy(() => import("./pages/admin/AdminCountriesPage"));
-const AdminCustomerExperiencePage = lazy(() => import("./pages/admin/AdminCustomerExperiencePage"));
-const AdminStorefrontMapPage = lazy(() => import("./pages/admin/AdminStorefrontMapPage"));
 const AdminCampaignsPage = lazy(() => import("./pages/admin/AdminCampaignsPage"));
 
 const queryClient = new QueryClient({
@@ -280,8 +278,6 @@ const App = () => {
               <Route path="customers/:id" element={<AdminCustomerDetailPage />} />
               <Route path="currencies" element={<AdminCurrenciesPage />} />
               <Route path="countries" element={<AdminCountriesPage />} />
-              <Route path="customer-experience" element={<AdminCustomerExperiencePage />} />
-              <Route path="storefront-map" element={<AdminStorefrontMapPage />} />
               <Route path="brand-sections/:id/products" element={<AdminBrandSectionProductsPage />} />
             </Route>
 

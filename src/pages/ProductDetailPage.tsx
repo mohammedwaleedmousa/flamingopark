@@ -62,6 +62,26 @@ type QualityVariant = {
   in_stock?: boolean;
 };
 
+type InventorySkuRow = {
+  id: string;
+  product_id: string;
+  variant_key: string;
+  label: string;
+  color_name: string | null;
+  color_hex: string | null;
+  color_hex2: string | null;
+  size: string | null;
+  stock_quantity: number;
+  is_default: boolean;
+};
+
+const normalizeInventoryValue = (value?: string | null) => String(value || "").trim().toLowerCase();
+
+const safeInventoryStock = (value: unknown) => {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.trunc(number)) : 0;
+};
+
 const WHATSAPP_URL = "https://wa.me/967778579777";
 
 const ProductDetailPage = () => {
@@ -135,6 +155,21 @@ const ProductDetailPage = () => {
     staleTime: 1000 * 60 * 5,
     gcTime: 1000 * 60 * 10,
     refetchOnWindowFocus: false,
+  });
+
+  const { data: inventorySkus = [] } = useQuery({
+    queryKey: ["product-inventory-skus", product?.id],
+    enabled: !!product?.id,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("inventory_skus").select("id,product_id,variant_key,label,color_name,color_hex,color_hex2,size,stock_quantity,is_default").eq("product_id", product!.id).order("is_default", { ascending: true }).order("label", { ascending: true });
+
+      if (error) throw error;
+
+      return (data || []) as InventorySkuRow[];
+    },
+    staleTime: 15_000,
+    gcTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: true,
   });
 
   /* =========================================================
@@ -353,16 +388,90 @@ const ProductDetailPage = () => {
   const safeSelectedImage = Math.min(selectedImage, Math.max(displayImages.length - 1, 0));
   const currentImage = displayImages[safeSelectedImage] || displayImages[0] || "/placeholder.svg";
 
-  const sizesToShow = (activeColorVariant?.sizes?.length ? activeColorVariant.sizes : product.sizes || []).map((entry) => (typeof entry === "string" ? entry : entry.size));
+  const activeColorName = activeColorVariant?.name || null;
+  const normalizedActiveColor = normalizeInventoryValue(activeColorName);
+  const inventoryVariantRows = inventorySkus.filter((sku) => !sku.is_default);
+  const inventoryRowsForActiveColor = activeColorVariant
+    ? inventoryVariantRows.filter((sku) => normalizeInventoryValue(sku.color_name) === normalizedActiveColor)
+    : [];
+  const inventoryStandaloneSizeRows = !product.colorVariants?.length
+    ? inventoryVariantRows.filter((sku) => !sku.color_name && Boolean(sku.size))
+    : [];
+  const inventorySizeRows = activeColorVariant
+    ? inventoryRowsForActiveColor.filter((sku) => Boolean(sku.size))
+    : inventoryStandaloneSizeRows;
 
+  const legacySizes = (activeColorVariant?.sizes?.length ? activeColorVariant.sizes : product.sizes || []).map((entry) => (typeof entry === "string" ? entry : entry.size));
+  const inventorySizeNames = Array.from(new Set(inventorySizeRows.map((sku) => String(sku.size || "").trim()).filter(Boolean)));
+  const sizesToShow = inventorySizeNames.length > 0 ? inventorySizeNames : legacySizes;
+
+  const selectedInventorySizeRow = selectedSize
+    ? inventorySizeRows.find((sku) => normalizeInventoryValue(sku.size) === normalizeInventoryValue(selectedSize))
+    : undefined;
   const selectedSizeStock = activeColorVariant?.sizes?.find((entry) => typeof entry !== "string" && entry.size === selectedSize);
 
-  const activeStock =
+  const legacyActiveStock =
     typeof selectedSizeStock === "object"
       ? selectedSizeStock.stock
       : activeColorVariant?.sizes?.length
         ? undefined
         : activeColorVariant?.stock ?? product.stockQuantity;
+
+  const inventoryDefaultRow = inventorySkus.find((sku) => sku.is_default);
+  let inventoryActiveStock: number | undefined;
+
+  if (inventorySkus.length > 0) {
+    if (selectedInventorySizeRow) {
+      inventoryActiveStock = safeInventoryStock(selectedInventorySizeRow.stock_quantity);
+    } else if (activeColorVariant && inventoryRowsForActiveColor.length > 0) {
+      inventoryActiveStock = inventoryRowsForActiveColor.reduce((sum, sku) => sum + safeInventoryStock(sku.stock_quantity), 0);
+    } else if (!product.colorVariants?.length && selectedSize) {
+      const standaloneSelected = inventoryStandaloneSizeRows.find((sku) => normalizeInventoryValue(sku.size) === normalizeInventoryValue(selectedSize));
+      if (standaloneSelected) inventoryActiveStock = safeInventoryStock(standaloneSelected.stock_quantity);
+    } else if (!product.colorVariants?.length && inventoryStandaloneSizeRows.length > 0) {
+      inventoryActiveStock = inventoryStandaloneSizeRows.reduce((sum, sku) => sum + safeInventoryStock(sku.stock_quantity), 0);
+    } else if (inventoryDefaultRow) {
+      inventoryActiveStock = safeInventoryStock(inventoryDefaultRow.stock_quantity);
+    }
+  }
+
+  const activeStock = inventoryActiveStock ?? legacyActiveStock;
+
+  const getSizeStock = (size: string) => {
+    const normalizedSize = normalizeInventoryValue(size);
+
+    if (inventorySizeRows.length > 0) {
+      const row = inventorySizeRows.find((sku) => normalizeInventoryValue(sku.size) === normalizedSize);
+      if (row) return safeInventoryStock(row.stock_quantity);
+    }
+
+    const legacyEntry = activeColorVariant?.sizes?.find((entry) => {
+      const entrySize = typeof entry === "string" ? entry : entry.size;
+      return normalizeInventoryValue(entrySize) === normalizedSize;
+    });
+
+    if (legacyEntry && typeof legacyEntry !== "string") return safeInventoryStock(legacyEntry.stock);
+
+    return undefined;
+  };
+
+  const getColorStock = (variant: ProductColorVariant) => {
+    const normalizedColor = normalizeInventoryValue(variant.name);
+    const rows = inventoryVariantRows.filter((sku) => normalizeInventoryValue(sku.color_name) === normalizedColor);
+
+    if (rows.length > 0) {
+      return rows.reduce((sum, sku) => sum + safeInventoryStock(sku.stock_quantity), 0);
+    }
+
+    if (variant.sizes?.length) {
+      const knownStocks = variant.sizes.filter((entry): entry is { size: string; stock: number } => typeof entry !== "string");
+      if (knownStocks.length > 0) return knownStocks.reduce((sum, entry) => sum + safeInventoryStock(entry.stock), 0);
+    }
+
+    if (typeof variant.stock === "number") return safeInventoryStock(variant.stock);
+
+    return undefined;
+  };
 
   const effectiveReturnPolicy = product.returnPolicy || defaultReturnPolicy;
 
@@ -400,6 +509,30 @@ const ProductDetailPage = () => {
       toast({
         title: "اختر المقاس أولاً",
         description: "يرجى تحديد المقاس قبل المتابعة.",
+        variant: "destructive",
+      });
+
+      return false;
+    }
+
+    if (selectedSize) {
+      const selectedStock = getSizeStock(selectedSize);
+
+      if (typeof selectedStock === "number" && selectedStock <= 0) {
+        toast({
+          title: "المقاس غير متوفر",
+          description: `المقاس ${selectedSize} نفد من المخزون.`,
+          variant: "destructive",
+        });
+
+        return false;
+      }
+    }
+
+    if (typeof activeStock === "number" && quantity > activeStock) {
+      toast({
+        title: "الكمية غير متوفرة",
+        description: `المتاح: ${activeStock} فقط`,
         variant: "destructive",
       });
 
@@ -828,7 +961,7 @@ const ProductDetailPage = () => {
                       const active = selectedColorIdx === index;
 
                       return (
-                        <button type="button" key={`${variant.name}-${index}`} title={variant.name} aria-label={variant.name} onClick={() => { setSelectedColorIdx(index); setSelectedImage(0); setSelectedSize(null); setQuantity(1); }} className={`relative flex h-8 w-8 items-center justify-center rounded-full ${active ? "ring-2 ring-[#D4777D] ring-offset-[3px]" : "ring-1 ring-[#DFD4D0]"}`}>
+                        <button type="button" key={`${variant.name}-${index}`} title={variant.name} aria-label={variant.name} onClick={() => { const colorStock = getColorStock(variant); if (typeof colorStock === "number" && colorStock <= 0) { toast({ title: "اللون غير متوفر", description: `نفد مخزون اللون ${variant.name}.`, variant: "destructive" }); return; } setSelectedColorIdx(index); setSelectedImage(0); setSelectedSize(null); setQuantity(1); }} className={`relative flex h-8 w-8 items-center justify-center rounded-full ${active ? "ring-2 ring-[#D4777D] ring-offset-[3px]" : "ring-1 ring-[#DFD4D0]"}`}>
                           <span className="h-full w-full rounded-full border border-black/[0.06]" style={variant.hex2 ? { background: `linear-gradient(135deg, ${variant.hex} 0%, ${variant.hex} 50%, ${variant.hex2} 50%, ${variant.hex2} 100%)` } : { backgroundColor: variant.hex }} />
 
                           {active && <Check className="absolute h-3 w-3 text-white drop-shadow-[0_1px_2px_rgba(0,0,0,.75)]" strokeWidth={3} />}
@@ -853,7 +986,7 @@ const ProductDetailPage = () => {
 
                   <div className="flex flex-wrap gap-2">
                     {sizesToShow.map((size: string) => (
-                      <button type="button" key={size} onClick={() => { setSelectedSize(size); setQuantity(1); }} className={`min-w-[58px] rounded-[8px] border px-3 py-2 text-[9px] font-semibold ${selectedSize === size ? "border-[#D4777D] bg-[#FFF5F3] text-[#A95B61]" : "border-[#E4DAD6] bg-white text-[#5E514D]"}`}>
+                      <button type="button" key={size} onClick={() => { const sizeStock = getSizeStock(size); if (typeof sizeStock === "number" && sizeStock <= 0) { toast({ title: "المقاس غير متوفر", description: `المقاس ${size} نفد من المخزون.`, variant: "destructive" }); return; } setSelectedSize(size); setQuantity(1); }} className={`min-w-[58px] rounded-[8px] border px-3 py-2 text-[9px] font-semibold ${selectedSize === size ? "border-[#D4777D] bg-[#FFF5F3] text-[#A95B61]" : "border-[#E4DAD6] bg-white text-[#5E514D]"}`}>
                         {size}
                       </button>
                     ))}

@@ -193,8 +193,6 @@ const sections: NavSection[] = [
       { title: "صفحات الماركات", url: "/admin/brand-pages", icon: Store, tone: "rose" },
       { title: "أقسام الماركات", url: "/admin/brand-sections", icon: LayoutGrid, tone: "rose" },
       { title: "فلاتر الماركات", url: "/admin/brand-filters", icon: SlidersHorizontal, tone: "rose" },
-      { title: "تجربة العميل", url: "/admin/customer-experience", icon: Users, tone: "rose" },
-      { title: "خريطة الواجهة", url: "/admin/storefront-map", icon: PanelsTopLeft, tone: "rose" },
     ],
   },
   {

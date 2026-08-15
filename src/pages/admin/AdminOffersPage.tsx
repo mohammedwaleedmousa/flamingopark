@@ -1,29 +1,27 @@
-import { useEffect, useState } from 'react';
-import { supabase } from '@/integrations/supabase/client';
-import { uploadOptimizedImage } from '@/lib/prepareImageUpload';
-import { toast } from '@/hooks/use-toast';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Textarea } from '@/components/ui/textarea';
-import { Checkbox } from '@/components/ui/checkbox';
-import { Switch } from '@/components/ui/switch';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { ScrollArea } from '@/components/ui/scroll-area';
-import { Plus, Edit, Trash2, Upload, X, Loader2, Settings, Tag, Package, Search, Timer, GripVertical, ChevronUp, ChevronDown, TicketSlash } from 'lucide-react';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import AdminPageHeader from '@/components/admin/AdminPageHeader';
+import { useEffect, useMemo, useState, type ChangeEvent, type FormEvent, type ReactNode } from "react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { CalendarClock, CheckCircle2, CircleOff, Copy, Gift, Image as ImageIcon, Loader2, Pencil, Percent, Plus, Search, Settings, ShoppingBag, Smartphone, Tag, TicketSlash, Trash2, Upload, X, type LucideIcon } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { uploadOptimizedImage } from "@/lib/prepareImageUpload";
+import { toast } from "@/hooks/use-toast";
+import { cn } from "@/lib/utils";
+import AdminPageHeader from "@/components/admin/AdminPageHeader";
+import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import { Textarea } from "@/components/ui/textarea";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
+
+type OfferType = "general" | "seasonal" | "flash" | "clearance";
+type OfferStatus = "live" | "scheduled" | "expired" | "draft";
+type OfferStatusFilter = "all" | OfferStatus;
+type OfferTypeFilter = "all" | OfferType;
+type OfferSort = "priority" | "newest" | "discount_high" | "products_high";
+type PageView = "offers" | "settings";
 
 interface Offer {
   id: string;
@@ -34,8 +32,14 @@ interface Offer {
   description: string | null;
   description_ar: string | null;
   image_url: string | null;
+  mobile_image_url: string | null;
+  badge_text: string | null;
+  cta_label: string | null;
+  cta_url: string | null;
   discount_code: string | null;
   discount_percentage: number;
+  offer_type: OfferType;
+  apply_to_all: boolean;
   start_date: string | null;
   end_date: string | null;
   countries: string[];
@@ -43,6 +47,8 @@ interface Offer {
   is_featured: boolean;
   sort_order: number;
   product_ids: string[];
+  created_at: string;
+  updated_at: string;
 }
 
 interface OffersSettings {
@@ -54,784 +60,680 @@ interface OffersSettings {
   show_countdown: boolean;
   show_promo_banner: boolean;
   countries: string[];
+  updated_at: string;
 }
 
 interface Product {
   id: string;
   name_ar: string;
-  images: string[];
+  images: string[] | null;
   price: number;
   discount: number | null;
+  brand: string | null;
+  in_stock: boolean | null;
 }
 
-const AdminOffersPage = () => {
-  const SINGLE_COUNTRY = 'GLOBAL';
-  const [offers, setOffers] = useState<Offer[]>([]);
-  const [products, setProducts] = useState<Product[]>([]);
-  const [settings, setSettings] = useState<OffersSettings | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
-  const [isSaving, setIsSaving] = useState(false);
-  const [isUploading, setIsUploading] = useState(false);
-  const [productSearch, setProductSearch] = useState('');
-  const [applyToAll, setApplyToAll] = useState(false);
+interface OfferForm {
+  title: string;
+  title_ar: string;
+  subtitle: string;
+  subtitle_ar: string;
+  description: string;
+  description_ar: string;
+  image_url: string;
+  mobile_image_url: string;
+  badge_text: string;
+  cta_label: string;
+  cta_url: string;
+  discount_code: string;
+  discount_percentage: string;
+  offer_type: OfferType;
+  start_date: string;
+  end_date: string;
+  countries: string[];
+  is_active: boolean;
+  is_featured: boolean;
+  sort_order: string;
+  product_ids: string[];
+  apply_to_all: boolean;
+}
 
-  const [formData, setFormData] = useState({
-    title: '',
-    title_ar: '',
-    subtitle: '',
-    subtitle_ar: '',
-    description: '',
-    description_ar: '',
-    image_url: '',
-    discount_code: '',
-    discount_percentage: 0,
-    start_date: '',
-    end_date: '',
-    countries: [SINGLE_COUNTRY] as string[],
-    is_active: true,
-    is_featured: false,
-    sort_order: 0,
-    product_ids: [] as string[],
-  });
+const GLOBAL = "GLOBAL";
+
+const createEmptyForm = (): OfferForm => ({
+  title: "",
+  title_ar: "",
+  subtitle: "",
+  subtitle_ar: "",
+  description: "",
+  description_ar: "",
+  image_url: "",
+  mobile_image_url: "",
+  badge_text: "",
+  cta_label: "تسوق الآن",
+  cta_url: "/seasonal-offers",
+  discount_code: "",
+  discount_percentage: "0",
+  offer_type: "seasonal",
+  start_date: "",
+  end_date: "",
+  countries: [GLOBAL],
+  is_active: true,
+  is_featured: false,
+  sort_order: "0",
+  product_ids: [],
+  apply_to_all: false,
+});
+
+const toLocalInput = (value: string | null) => value ? new Date(value).toISOString().slice(0, 16) : "";
+const toIsoOrNull = (value: string) => value ? new Date(value).toISOString() : null;
+
+const AdminOffersPage = () => {
+  const queryClient = useQueryClient();
+
+  const [view, setView] = useState<PageView>("offers");
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState<OfferStatusFilter>("all");
+  const [typeFilter, setTypeFilter] = useState<OfferTypeFilter>("all");
+  const [sortMode, setSortMode] = useState<OfferSort>("priority");
+
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [editingOffer, setEditingOffer] = useState<Offer | null>(null);
+  const [form, setForm] = useState<OfferForm>(createEmptyForm());
+
+  const [productSearch, setProductSearch] = useState("");
+  const [debouncedProductSearch, setDebouncedProductSearch] = useState("");
+
+  const [uploadingDesktop, setUploadingDesktop] = useState(false);
+  const [uploadingMobile, setUploadingMobile] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<Offer | null>(null);
+  const [duplicateTarget, setDuplicateTarget] = useState<Offer | null>(null);
 
   useEffect(() => {
-    fetchData();
-  }, []);
+    const timer = window.setTimeout(() => setDebouncedProductSearch(productSearch.trim()), 250);
+    return () => window.clearTimeout(timer);
+  }, [productSearch]);
 
-  const fetchData = async () => {
-    setIsLoading(true);
-    
-    // Fetch offers
-    const { data: offersData, error: offersError } = await supabase
-      .from('offers')
-      .select('*')
-      .order('sort_order', { ascending: true });
+  const { data: offers = [], isLoading, isFetching } = useQuery({
+    queryKey: ["admin-offers"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("offers").select("id,title,title_ar,subtitle,subtitle_ar,description,description_ar,image_url,mobile_image_url,badge_text,cta_label,cta_url,discount_code,discount_percentage,offer_type,apply_to_all,start_date,end_date,countries,is_active,is_featured,sort_order,product_ids,created_at,updated_at").order("sort_order", { ascending: true }).order("updated_at", { ascending: false });
+      if (error) throw error;
 
-    if (offersError) {
-      toast({ title: 'خطأ', description: 'فشل في تحميل العروض', variant: 'destructive' });
-    } else {
-      setOffers(offersData || []);
-    }
+      return (data || []).map((row: any) => ({
+        ...row,
+        discount_percentage: Number(row.discount_percentage || 0),
+        sort_order: Number(row.sort_order || 0),
+        product_ids: Array.isArray(row.product_ids) ? row.product_ids : [],
+        countries: Array.isArray(row.countries) ? row.countries : [GLOBAL],
+        apply_to_all: Boolean(row.apply_to_all),
+      })) as Offer[];
+    },
+    staleTime: 20_000,
+  });
 
-    // Fetch products
-    const { data: productsData } = await supabase
-      .from('products')
-      .select('id, name_ar, images, price, discount')
-      .eq('is_active', true)
-      .order('name_ar', { ascending: true });
-    
-    setProducts(productsData || []);
+  const { data: settings } = useQuery({
+    queryKey: ["admin-offers-settings"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("offers_settings").select("id,page_title,page_subtitle,countdown_end_date,promo_banner_text,show_countdown,show_promo_banner,countries,updated_at").limit(1).maybeSingle();
+      if (error) throw error;
+      return data as OffersSettings | null;
+    },
+    staleTime: 60_000,
+  });
 
-    // Fetch settings
-    const { data: settingsData, error: settingsError } = await supabase
-      .from('offers_settings')
-      .select('*')
-      .limit(1)
-      .maybeSingle();
+  const [settingsDraft, setSettingsDraft] = useState<OffersSettings | null>(null);
 
-    if (!settingsError && settingsData) {
-      setSettings(settingsData);
-    } else {
-      // Create default settings if none exist
-      const { data: newSettings } = await supabase
-        .from('offers_settings')
-        .insert({
-          page_title: 'عروض استثنائية',
-          page_subtitle: 'اغتنم الفرصة واحصل على أفخم القطع الذهبية بأسعار لا تُقاوم',
-          promo_banner_text: 'استخدم كود gold50 للحصول على خصم إضافي',
-          show_countdown: true,
-          show_promo_banner: true,
-          countries: [SINGLE_COUNTRY],
-        })
-        .select()
-        .single();
-      if (newSettings) setSettings(newSettings);
-    }
+  useEffect(() => {
+    if (settings) setSettingsDraft(settings);
+  }, [settings]);
 
-    setIsLoading(false);
+  const selectedIdsKey = useMemo(() => form.product_ids.join(","), [form.product_ids]);
+
+  const { data: selectedProducts = [] } = useQuery({
+    queryKey: ["offer-selected-products", selectedIdsKey],
+    enabled: dialogOpen && form.product_ids.length > 0,
+    queryFn: async () => {
+      const { data, error } = await supabase.from("products").select("id,name_ar,images,price,discount,brand,in_stock").in("id", form.product_ids);
+      if (error) throw error;
+
+      const map = new Map((data || []).map((product: any) => [product.id, product]));
+      return form.product_ids.map((id) => map.get(id)).filter(Boolean) as Product[];
+    },
+    staleTime: 30_000,
+  });
+
+  const productSearchQuery = useQuery({
+    queryKey: ["offer-product-search", debouncedProductSearch],
+    enabled: dialogOpen && !form.apply_to_all,
+    queryFn: async () => {
+      let query = supabase.from("products").select("id,name_ar,images,price,discount,brand,in_stock").eq("is_active", true).order("created_at", { ascending: false }).limit(40);
+
+      if (debouncedProductSearch) {
+        const safe = debouncedProductSearch.replace(/[%_,()]/g, " ").trim();
+        query = query.or(`name_ar.ilike.%${safe}%,brand.ilike.%${safe}%`);
+      }
+
+      const { data, error } = await query;
+      if (error) throw error;
+      return (data || []) as Product[];
+    },
+    staleTime: 20_000,
+  });
+
+  const getStatus = (offer: Offer): OfferStatus => {
+    if (!offer.is_active) return "draft";
+
+    const now = Date.now();
+    if (offer.start_date && new Date(offer.start_date).getTime() > now) return "scheduled";
+    if (offer.end_date && new Date(offer.end_date).getTime() < now) return "expired";
+    return "live";
   };
 
-  const resetForm = () => {
-    setFormData({
-      title: '',
-      title_ar: '',
-      subtitle: '',
-      subtitle_ar: '',
-      description: '',
-      description_ar: '',
-      image_url: '',
-      discount_code: '',
-      discount_percentage: 0,
-      start_date: '',
-      end_date: '',
-      countries: [SINGLE_COUNTRY],
-      is_active: true,
-      is_featured: false,
-      sort_order: offers.length,
-      product_ids: [],
+  const stats = useMemo(() => {
+    const live = offers.filter((offer) => getStatus(offer) === "live").length;
+    const scheduled = offers.filter((offer) => getStatus(offer) === "scheduled").length;
+    const featured = offers.filter((offer) => offer.is_featured).length;
+    const highestDiscount = offers.reduce((max, offer) => Math.max(max, offer.discount_percentage), 0);
+
+    return { total: offers.length, live, scheduled, featured, highestDiscount };
+  }, [offers]);
+
+  const filteredOffers = useMemo(() => {
+    const query = search.trim().toLowerCase();
+
+    const rows = offers.filter((offer) => {
+      const searchable = `${offer.title_ar} ${offer.title} ${offer.subtitle_ar || ""} ${offer.discount_code || ""} ${offer.description_ar || ""}`.toLowerCase();
+      const matchesSearch = !query || searchable.includes(query);
+      const matchesStatus = statusFilter === "all" || getStatus(offer) === statusFilter;
+      const matchesType = typeFilter === "all" || offer.offer_type === typeFilter;
+      return matchesSearch && matchesStatus && matchesType;
     });
+
+    return [...rows].sort((a, b) => {
+      if (sortMode === "newest") return new Date(b.updated_at).getTime() - new Date(a.updated_at).getTime();
+      if (sortMode === "discount_high") return b.discount_percentage - a.discount_percentage;
+      if (sortMode === "products_high") return (b.apply_to_all ? Number.MAX_SAFE_INTEGER : b.product_ids.length) - (a.apply_to_all ? Number.MAX_SAFE_INTEGER : a.product_ids.length);
+      return a.sort_order - b.sort_order;
+    });
+  }, [offers, search, statusFilter, typeFilter, sortMode]);
+
+  const hasFilters = Boolean(search.trim()) || statusFilter !== "all" || typeFilter !== "all" || sortMode !== "priority";
+
+  const openNew = () => {
     setEditingOffer(null);
-    setProductSearch('');
-    setApplyToAll(false);
+    setForm({ ...createEmptyForm(), sort_order: String(offers.length) });
+    setProductSearch("");
+    setDialogOpen(true);
   };
 
-  const openDialog = (offer?: Offer) => {
-    if (offer) {
-      setEditingOffer(offer);
-      setApplyToAll(offer.product_ids.length === 0);
-      setFormData({
-        title: offer.title || '',
-        title_ar: offer.title_ar || '',
-        subtitle: offer.subtitle || '',
-        subtitle_ar: offer.subtitle_ar || '',
-        description: offer.description || '',
-        description_ar: offer.description_ar || '',
-        image_url: offer.image_url || '',
-        discount_code: offer.discount_code || '',
-        discount_percentage: offer.discount_percentage || 0,
-        start_date: offer.start_date ? offer.start_date.split('T')[0] : '',
-        end_date: offer.end_date ? offer.end_date.split('T')[0] : '',
-        countries: offer.countries || [SINGLE_COUNTRY],
-        is_active: offer.is_active ?? true,
-        is_featured: offer.is_featured ?? false,
-        sort_order: offer.sort_order || 0,
-        product_ids: offer.product_ids || [],
-      });
-    } else {
-      resetForm();
-    }
-    setIsDialogOpen(true);
+  const openEdit = (offer: Offer) => {
+    setEditingOffer(offer);
+    setForm({
+      title: offer.title || "",
+      title_ar: offer.title_ar || "",
+      subtitle: offer.subtitle || "",
+      subtitle_ar: offer.subtitle_ar || "",
+      description: offer.description || "",
+      description_ar: offer.description_ar || "",
+      image_url: offer.image_url || "",
+      mobile_image_url: offer.mobile_image_url || "",
+      badge_text: offer.badge_text || "",
+      cta_label: offer.cta_label || "",
+      cta_url: offer.cta_url || "",
+      discount_code: offer.discount_code || "",
+      discount_percentage: String(offer.discount_percentage || 0),
+      offer_type: offer.offer_type || "seasonal",
+      start_date: toLocalInput(offer.start_date),
+      end_date: toLocalInput(offer.end_date),
+      countries: offer.countries || [GLOBAL],
+      is_active: offer.is_active,
+      is_featured: offer.is_featured,
+      sort_order: String(offer.sort_order),
+      product_ids: offer.product_ids || [],
+      apply_to_all: Boolean(offer.apply_to_all || offer.product_ids.length === 0),
+    });
+    setProductSearch("");
+    setDialogOpen(true);
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-      toast({ title: 'خطأ', description: 'يرجى اختيار ملف صورة صحيح', variant: 'destructive' });
-      return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-      toast({ title: 'خطأ', description: 'حجم الصورة كبير جداً (الحد الأقصى 10MB)', variant: 'destructive' });
-      return;
-    }
-
-    setIsUploading(true);
-
-    try {
-      const imageUrl = await uploadOptimizedImage(file, 'offers', { maxSizeMB: 0.8, maxWidthOrHeight: 1600 });
-      setFormData(prev => ({ ...prev, image_url: imageUrl }));
-      toast({ title: 'تم', description: 'تم رفع الصورة بنجاح' });
-    } catch (err: any) {
-      toast({ title: 'خطأ', description: 'حدث خطأ غير متوقع', variant: 'destructive' });
-    } finally {
-      setIsUploading(false);
-    }
+  const closeDialog = () => {
+    if (saveMutation.isPending || uploadingDesktop || uploadingMobile) return;
+    setDialogOpen(false);
+    setEditingOffer(null);
+    setForm(createEmptyForm());
+    setProductSearch("");
   };
 
-  const handleSubmit = async () => {
-    if (!formData.title_ar) {
-      toast({ title: 'خطأ', description: 'يرجى إدخال عنوان العرض', variant: 'destructive' });
-      return;
-    }
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const discount = Number(form.discount_percentage);
 
-    setIsSaving(true);
+      if (!form.title_ar.trim()) throw new Error("العنوان العربي مطلوب.");
+      if (!Number.isFinite(discount) || discount < 0 || discount > 100) throw new Error("نسبة الخصم يجب أن تكون بين 0 و100.");
+      if (form.start_date && form.end_date && new Date(form.end_date) <= new Date(form.start_date)) throw new Error("تاريخ نهاية العرض يجب أن يكون بعد تاريخ البداية.");
+      if (!form.apply_to_all && form.product_ids.length === 0) throw new Error("اختر منتجات العرض أو فعّل تطبيق العرض على جميع المنتجات.");
 
-    try {
-      const submitData = {
-        ...formData,
-        start_date: formData.start_date ? new Date(formData.start_date).toISOString() : null,
-        end_date: formData.end_date ? new Date(formData.end_date + 'T23:59:59').toISOString() : null,
-        product_ids: applyToAll ? [] : formData.product_ids,
+      const payload = {
+        title: form.title.trim() || form.title_ar.trim(),
+        title_ar: form.title_ar.trim(),
+        subtitle: form.subtitle.trim() || null,
+        subtitle_ar: form.subtitle_ar.trim() || null,
+        description: form.description.trim() || null,
+        description_ar: form.description_ar.trim() || null,
+        image_url: form.image_url || null,
+        mobile_image_url: form.mobile_image_url || null,
+        badge_text: form.badge_text.trim() || null,
+        cta_label: form.cta_label.trim() || null,
+        cta_url: form.cta_url.trim() || null,
+        discount_code: form.discount_code.trim().toUpperCase() || null,
+        discount_percentage: discount,
+        offer_type: form.offer_type,
+        apply_to_all: form.apply_to_all,
+        start_date: toIsoOrNull(form.start_date),
+        end_date: toIsoOrNull(form.end_date),
+        countries: [GLOBAL],
+        is_active: form.is_active,
+        is_featured: form.is_featured,
+        sort_order: Number(form.sort_order || 0),
+        product_ids: form.apply_to_all ? [] : form.product_ids,
       };
 
       if (editingOffer) {
-        const { error } = await supabase
-          .from('offers')
-          .update(submitData)
-          .eq('id', editingOffer.id);
+        const { error } = await (supabase as any).from("offers").update(payload).eq("id", editingOffer.id);
         if (error) throw error;
-        toast({ title: 'تم', description: 'تم تحديث العرض' });
-      } else {
-        const { error } = await supabase.from('offers').insert(submitData);
-        if (error) throw error;
-        toast({ title: 'تم', description: 'تم إضافة العرض' });
+        return;
       }
-      setIsDialogOpen(false);
-      fetchData();
+
+      const { error } = await (supabase as any).from("offers").insert(payload);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      const wasEditing = Boolean(editingOffer);
+      setDialogOpen(false);
+      setEditingOffer(null);
+      setForm(createEmptyForm());
+      setProductSearch("");
+      await queryClient.invalidateQueries({ queryKey: ["admin-offers"] });
+      toast({ title: wasEditing ? "تم تحديث العرض" : "تم إنشاء العرض" });
+    },
+    onError: (error: any) => toast({ title: "تعذر حفظ العرض", description: translateError(error?.message), variant: "destructive" }),
+  });
+
+  const toggleMutation = useMutation({
+    mutationFn: async ({ offer, checked }: { offer: Offer; checked: boolean }) => {
+      const { error } = await supabase.from("offers").update({ is_active: checked }).eq("id", offer.id);
+      if (error) throw error;
+    },
+    onMutate: async ({ offer, checked }) => {
+      await queryClient.cancelQueries({ queryKey: ["admin-offers"] });
+      const previous = queryClient.getQueryData<Offer[]>(["admin-offers"]);
+      queryClient.setQueryData<Offer[]>(["admin-offers"], (current = []) => current.map((row) => row.id === offer.id ? { ...row, is_active: checked } : row));
+      return { previous };
+    },
+    onError: (error: any, _variables, context) => {
+      if (context?.previous) queryClient.setQueryData(["admin-offers"], context.previous);
+      toast({ title: "تعذر تحديث حالة العرض", description: error?.message || "حدث خطأ.", variant: "destructive" });
+    },
+    onSettled: () => queryClient.invalidateQueries({ queryKey: ["admin-offers"] }),
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (offer: Offer) => {
+      const { error } = await supabase.from("offers").delete().eq("id", offer.id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setDeleteTarget(null);
+      await queryClient.invalidateQueries({ queryKey: ["admin-offers"] });
+      toast({ title: "تم حذف العرض" });
+    },
+    onError: (error: any) => toast({ title: "تعذر حذف العرض", description: error?.message || "حدث خطأ.", variant: "destructive" }),
+  });
+
+  const duplicateMutation = useMutation({
+    mutationFn: async (offer: Offer) => {
+      const { id: _id, created_at: _createdAt, updated_at: _updatedAt, ...rest } = offer;
+      const { error } = await (supabase as any).from("offers").insert({ ...rest, title_ar: `${offer.title_ar} - نسخة`, title: `${offer.title || offer.title_ar} Copy`, is_active: false, start_date: null, end_date: null, sort_order: offers.length });
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      setDuplicateTarget(null);
+      await queryClient.invalidateQueries({ queryKey: ["admin-offers"] });
+      toast({ title: "تم إنشاء نسخة غير مفعلة من العرض" });
+    },
+    onError: (error: any) => toast({ title: "تعذر نسخ العرض", description: error?.message || "حدث خطأ.", variant: "destructive" }),
+  });
+
+  const settingsMutation = useMutation({
+    mutationFn: async () => {
+      if (!settingsDraft) throw new Error("إعدادات صفحة العروض غير متاحة.");
+
+      const { error } = await (supabase as any).from("offers_settings").update({
+        page_title: settingsDraft.page_title.trim(),
+        page_subtitle: settingsDraft.page_subtitle.trim(),
+        countdown_end_date: settingsDraft.countdown_end_date,
+        promo_banner_text: settingsDraft.promo_banner_text.trim(),
+        show_countdown: settingsDraft.show_countdown,
+        show_promo_banner: settingsDraft.show_promo_banner,
+        countries: [GLOBAL],
+      }).eq("id", settingsDraft.id);
+
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({ queryKey: ["admin-offers-settings"] });
+      toast({ title: "تم حفظ إعدادات صفحة العروض" });
+    },
+    onError: (error: any) => toast({ title: "تعذر حفظ الإعدادات", description: error?.message || "حدث خطأ.", variant: "destructive" }),
+  });
+
+  const uploadImage = async (file: File, target: "desktop" | "mobile") => {
+    if (target === "desktop") setUploadingDesktop(true);
+    else setUploadingMobile(true);
+
+    try {
+      const imageUrl = await uploadOptimizedImage(file, "offers", { maxSizeMB: 0.9, maxWidthOrHeight: target === "desktop" ? 2000 : 1400 });
+      setForm((current) => ({ ...current, [target === "desktop" ? "image_url" : "mobile_image_url"]: imageUrl }));
+      toast({ title: "تم رفع الصورة" });
     } catch (error: any) {
-      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
+      toast({ title: "تعذر رفع الصورة", description: error?.message || "حدث خطأ.", variant: "destructive" });
     } finally {
-      setIsSaving(false);
-    }
-  };
-
-  const deleteOffer = async (id: string) => {
-    if (!confirm('هل أنت متأكد من حذف هذا العرض؟')) return;
-
-    const { error } = await supabase.from('offers').delete().eq('id', id);
-
-    if (error) {
-      toast({ title: 'خطأ', description: 'فشل في حذف العرض', variant: 'destructive' });
-    } else {
-      setOffers(offers.filter(o => o.id !== id));
-      toast({ title: 'تم', description: 'تم حذف العرض' });
+      if (target === "desktop") setUploadingDesktop(false);
+      else setUploadingMobile(false);
     }
   };
 
   const toggleProduct = (productId: string) => {
-    setFormData(prev => ({
-      ...prev,
-      product_ids: prev.product_ids.includes(productId)
-        ? prev.product_ids.filter(id => id !== productId)
-        : [...prev.product_ids, productId],
-    }));
+    setForm((current) => ({ ...current, product_ids: current.product_ids.includes(productId) ? current.product_ids.filter((id) => id !== productId) : [...current.product_ids, productId] }));
   };
 
-  const moveOffer = async (offerId: string, direction: 'up' | 'down') => {
-    const currentIndex = offers.findIndex(o => o.id === offerId);
-    if (currentIndex === -1) return;
-    
-    const targetIndex = direction === 'up' ? currentIndex - 1 : currentIndex + 1;
-    if (targetIndex < 0 || targetIndex >= offers.length) return;
+  const moveProduct = (index: number, direction: -1 | 1) => {
+    setForm((current) => {
+      const targetIndex = index + direction;
+      if (targetIndex < 0 || targetIndex >= current.product_ids.length) return current;
 
-    const newOffers = [...offers];
-    const temp = newOffers[currentIndex];
-    newOffers[currentIndex] = newOffers[targetIndex];
-    newOffers[targetIndex] = temp;
-
-    // Update sort_order for both offers
-    const updates = [
-      { id: newOffers[currentIndex].id, sort_order: currentIndex },
-      { id: newOffers[targetIndex].id, sort_order: targetIndex },
-    ];
-
-    for (const update of updates) {
-      await supabase.from('offers').update({ sort_order: update.sort_order }).eq('id', update.id);
-    }
-
-    setOffers(newOffers.map((o, i) => ({ ...o, sort_order: i })));
-    toast({ title: 'تم', description: 'تم تغيير الترتيب' });
+      const productIds = [...current.product_ids];
+      [productIds[index], productIds[targetIndex]] = [productIds[targetIndex], productIds[index]];
+      return { ...current, product_ids: productIds };
+    });
   };
 
-  const saveSettings = async () => {
-    if (!settings) return;
-    
-    setIsSaving(true);
-    try {
-      const { error } = await supabase
-        .from('offers_settings')
-        .update({
-          page_title: settings.page_title,
-          page_subtitle: settings.page_subtitle,
-          countdown_end_date: settings.countdown_end_date,
-          promo_banner_text: settings.promo_banner_text,
-          show_countdown: settings.show_countdown,
-          show_promo_banner: settings.show_promo_banner,
-          countries: [SINGLE_COUNTRY],
-        })
-        .eq('id', settings.id);
-
-      if (error) throw error;
-      toast({ title: 'تم', description: 'تم حفظ الإعدادات' });
-    } catch (error: any) {
-      toast({ title: 'خطأ', description: error.message, variant: 'destructive' });
-    } finally {
-      setIsSaving(false);
-    }
+  const clearFilters = () => {
+    setSearch("");
+    setStatusFilter("all");
+    setTypeFilter("all");
+    setSortMode("priority");
   };
-
-  const formatDate = (dateStr: string | null) => {
-    if (!dateStr) return '-';
-    return new Date(dateStr).toLocaleDateString('ar');
-  };
-
-  const isOfferExpired = (endDate: string | null) => {
-    if (!endDate) return false;
-    return new Date(endDate) < new Date();
-  };
-
-  const filteredProducts = products.filter(p => 
-    p.name_ar.toLowerCase().includes(productSearch.toLowerCase())
-  );
-
-  const selectedProducts = products.filter(p => formData.product_ids.includes(p.id));
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center py-20">
-        <Loader2 className="w-8 h-8 animate-spin text-gold" />
+      <div className="flex min-h-[430px] items-center justify-center">
+        <div className="text-center">
+          <div className="mx-auto flex h-[48px] w-[48px] items-center justify-center rounded-[14px] border border-[#E5E9EF] bg-white"><Loader2 className="h-[18px] w-[18px] animate-spin text-[#675CBA]" /></div>
+          <p className="mt-3 text-[11px] font-medium text-[#8D949E]">جاري تحميل العروض...</p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6 max-w-[1400px] mx-auto" dir="rtl">
-      <AdminPageHeader
-        category="التسويق"
-        title="العروض"
-        description={`إدارة ${offers.length} عرض`}
-        actions={[
-          {
-            label: "إضافة عرض",
-            icon: Plus,
-            onClick: () => openDialog(),
-            variant: "primary",
-          },
-          {
-            label: "الكوبونات",
-            icon: TicketSlash,
-            href: "/admin/coupons",
-            variant: "outline",
-          },
-        ]}
-      />
+    <div className="w-full space-y-4" dir="rtl">
+      <AdminPageHeader category="التسويق" title="العروض" description="إدارة العروض والخصومات وجدولة ظهورها وربطها بالمنتجات" actions={[{ label: "عرض جديد", icon: Plus, onClick: openNew, variant: "primary" }, { label: "الكوبونات", icon: TicketSlash, href: "/admin/coupons", variant: "outline" }]} />
 
-      <Tabs defaultValue="offers" className="w-full">
-        <TabsList className="grid w-full grid-cols-2 max-w-md">
-          <TabsTrigger value="offers" className="gap-2">
-            <Tag className="w-4 h-4" />
-            العروض ({offers.length})
-          </TabsTrigger>
-          <TabsTrigger value="settings" className="gap-2">
-            <Settings className="w-4 h-4" />
-            إعدادات الصفحة
-          </TabsTrigger>
-        </TabsList>
+      <section className="grid grid-cols-2 gap-[9px] lg:grid-cols-4">
+        <StatCard title="إجمالي العروض" value={stats.total.toLocaleString("en-US")} helper={`${stats.featured.toLocaleString("ar-EG")} عرض مميز`} icon={Gift} tone="indigo" />
+        <StatCard title="مباشرة الآن" value={stats.live.toLocaleString("en-US")} helper="ظاهرة للعميل حاليًا" icon={CheckCircle2} tone="green" />
+        <StatCard title="مجدولة" value={stats.scheduled.toLocaleString("en-US")} helper="ستبدأ تلقائيًا" icon={CalendarClock} tone="blue" />
+        <StatCard title="أعلى خصم" value={`${stats.highestDiscount}%`} helper="أعلى نسبة في العروض" icon={Percent} tone="coral" />
+      </section>
 
-        <TabsContent value="offers" className="mt-6">
-          <div className="space-y-4">
-            {offers.map((offer, index) => (
-              <div 
-                key={offer.id} 
-                className={`bg-card border rounded-lg overflow-hidden ${
-                  isOfferExpired(offer.end_date) ? 'opacity-50 border-destructive/50' : 'border-border'
-                } ${!offer.is_active ? 'opacity-60' : ''}`}
-              >
-                <div className="flex items-stretch">
-                  {/* Sort Controls */}
-                  <div className="flex flex-col items-center justify-center gap-1 px-2 bg-muted/50 border-r border-border">
-                    <button
-                      onClick={() => moveOffer(offer.id, 'up')}
-                      disabled={index === 0}
-                      className="p-1 hover:bg-muted rounded disabled:opacity-30"
-                    >
-                      <ChevronUp className="w-4 h-4" />
-                    </button>
-                    <span className="text-xs text-muted-foreground">{index + 1}</span>
-                    <button
-                      onClick={() => moveOffer(offer.id, 'down')}
-                      disabled={index === offers.length - 1}
-                      className="p-1 hover:bg-muted rounded disabled:opacity-30"
-                    >
-                      <ChevronDown className="w-4 h-4" />
-                    </button>
-                  </div>
+      <section className="rounded-[12px] border border-[#E2DEF3] bg-[#F8F7FF] px-[12px] py-[10px]">
+        <div className="flex items-start gap-[8px]">
+          <Tag className="mt-[1px] h-[13px] w-[13px] shrink-0 text-[#675CBA]" />
+          <div>
+            <p className="text-[10.5px] font-semibold text-[#665D98]">مركز العروض مرتبط بالجدولة</p>
+            <p className="mt-[3px] text-[10px] leading-5 text-[#827AA8]">العرض المفعّل يظهر فقط داخل الفترة المحددة له. ويمكنك إبقاؤه بدون تاريخ بداية أو نهاية إذا أردته مستمرًا.</p>
+          </div>
+        </div>
+      </section>
 
-                  {/* Image */}
-                  {offer.image_url && (
-                    <div className="w-32 h-24 flex-shrink-0">
-                      <img
-                        loading="lazy"
-                        src={offer.image_url}
-                        alt={offer.title_ar}
-                        className="w-full h-full object-cover"
-                      />
-                    </div>
-                  )}
+      <section className="overflow-hidden rounded-[14px] border border-[#E5E9EF] bg-white">
+        <div className="grid grid-cols-2 gap-[4px] border-b border-[#E5E9EF] bg-[#FAFBFC] p-[5px]">
+          <button type="button" onClick={() => setView("offers")} className={cn("flex h-[40px] items-center justify-center gap-[6px] rounded-[9px] text-[10.5px] font-semibold transition-colors", view === "offers" ? "bg-white text-[#675CBA] shadow-[0_1px_4px_rgba(31,41,55,0.08)]" : "text-[#7E8690] hover:bg-white/60")}><Gift className="h-[11px] w-[11px]" />العروض ({offers.length})</button>
+          <button type="button" onClick={() => setView("settings")} className={cn("flex h-[40px] items-center justify-center gap-[6px] rounded-[9px] text-[10.5px] font-semibold transition-colors", view === "settings" ? "bg-white text-[#675CBA] shadow-[0_1px_4px_rgba(31,41,55,0.08)]" : "text-[#7E8690] hover:bg-white/60")}><Settings className="h-[11px] w-[11px]" />إعدادات صفحة العروض</button>
+        </div>
 
-                  {/* Content */}
-                  <div className="flex-1 p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div>
-                        <div className="flex items-center gap-2 mb-1">
-                          <h3 className="font-heading text-foreground">{offer.title_ar}</h3>
-                          {offer.is_featured && (
-                            <span className="bg-gold/20 text-gold text-xs px-2 py-0.5 rounded">مميز</span>
-                          )}
-                          {!offer.is_active && (
-                            <span className="bg-muted text-muted-foreground text-xs px-2 py-0.5 rounded">معطل</span>
-                          )}
-                          {isOfferExpired(offer.end_date) && (
-                            <span className="bg-destructive/20 text-destructive text-xs px-2 py-0.5 rounded">منتهي</span>
-                          )}
-                        </div>
-                        
-                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
-                          {offer.discount_percentage > 0 && (
-                            <span className="text-destructive font-bold">{offer.discount_percentage}% خصم</span>
-                          )}
-                          {offer.discount_code && (
-                            <span className="bg-muted px-2 py-0.5 rounded font-mono">{offer.discount_code}</span>
-                          )}
-                          {offer.product_ids && offer.product_ids.length > 0 ? (
-                            <span className="flex items-center gap-1">
-                              <Package className="w-3 h-3" />
-                              {offer.product_ids.length} منتج
-                            </span>
-                          ) : (
-                            <span className="text-gold">جميع المنتجات</span>
-                          )}
-                          {offer.end_date && (
-                            <span className="flex items-center gap-1">
-                              <Timer className="w-3 h-3" />
-                              ينتهي: {formatDate(offer.end_date)}
-                            </span>
-                          )}
-                          <span className="text-xs">المتجر الموحد</span>
-                        </div>
-                      </div>
+        {view === "offers" ? (
+          <>
+            <div className="border-b border-[#EDF0F3] px-[13px] py-[10px]">
+              <div className="flex items-center justify-between gap-[10px]">
+                <div><h2 className="text-[11.5px] font-semibold text-[#444B55]">قائمة العروض</h2><p className="mt-[3px] text-[10px] text-[#9BA2AC]">تحكم في النشر والخصم والمنتجات من مكان واحد</p></div>
+                {hasFilters && <button type="button" onClick={clearFilters} className="flex h-[32px] items-center gap-[5px] rounded-[8px] px-[9px] text-[10px] font-semibold text-[#7E8690] hover:bg-[#F7F8FA]"><X className="h-[10px] w-[10px]" />مسح الفلاتر</button>}
+              </div>
+            </div>
 
-                      <div className="flex gap-2">
-                        <Button size="icon" variant="ghost" onClick={() => openDialog(offer)}>
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button size="icon" variant="ghost" className="text-destructive" onClick={() => deleteOffer(offer.id)}>
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  </div>
+            <div className="grid grid-cols-1 gap-[7px] border-b border-[#EDF0F3] p-[11px] xl:grid-cols-[minmax(0,1fr)_160px_160px_170px]">
+              <div className="relative">
+                <Search className="pointer-events-none absolute right-[12px] top-1/2 h-[13px] w-[13px] -translate-y-1/2 text-[#969EA8]" />
+                <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="عنوان العرض، كود الخصم أو الوصف..." className="h-[40px] rounded-[9px] border-[#E3E7EC] bg-[#F8FAFC] pr-[35px] text-[11px] shadow-none focus-visible:bg-white focus-visible:ring-0" />
+              </div>
+
+              <Select value={statusFilter} onValueChange={(value) => setStatusFilter(value as OfferStatusFilter)}><SelectTrigger className="h-[40px] rounded-[9px] border-[#E3E7EC] bg-[#F8FAFC] text-[10.5px] shadow-none focus:ring-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">كل الحالات</SelectItem><SelectItem value="live">مباشرة</SelectItem><SelectItem value="scheduled">مجدولة</SelectItem><SelectItem value="expired">منتهية</SelectItem><SelectItem value="draft">مسودة</SelectItem></SelectContent></Select>
+              <Select value={typeFilter} onValueChange={(value) => setTypeFilter(value as OfferTypeFilter)}><SelectTrigger className="h-[40px] rounded-[9px] border-[#E3E7EC] bg-[#F8FAFC] text-[10.5px] shadow-none focus:ring-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="all">كل الأنواع</SelectItem><SelectItem value="general">عام</SelectItem><SelectItem value="seasonal">موسمي</SelectItem><SelectItem value="flash">فلاش</SelectItem><SelectItem value="clearance">تصفية</SelectItem></SelectContent></Select>
+              <Select value={sortMode} onValueChange={(value) => setSortMode(value as OfferSort)}><SelectTrigger className="h-[40px] rounded-[9px] border-[#E3E7EC] bg-[#F8FAFC] text-[10.5px] shadow-none focus:ring-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="priority">حسب الأولوية</SelectItem><SelectItem value="newest">آخر تعديل</SelectItem><SelectItem value="discount_high">أعلى خصم</SelectItem><SelectItem value="products_high">الأكثر منتجات</SelectItem></SelectContent></Select>
+            </div>
+
+            <div className="flex items-center justify-between border-b border-[#EAEDF1] px-[13px] py-[9px]">
+              <p className="text-[10.5px] font-semibold text-[#59616B]">{filteredOffers.length.toLocaleString("ar-EG")} عرض ظاهر من أصل {offers.length.toLocaleString("ar-EG")}</p>
+              {isFetching && <Loader2 className="h-[12px] w-[12px] animate-spin text-[#8E959F]" />}
+            </div>
+
+            {filteredOffers.length === 0 ? (
+              <PanelEmpty onCreate={openNew} />
+            ) : (
+              <>
+                <div className="hidden overflow-x-auto md:block">
+                  <table className="w-full min-w-[1220px]">
+                    <thead>
+                      <tr className="h-[44px] border-b border-[#EAEDF1] bg-[#FAFBFC] text-[10.5px] font-semibold text-[#858D97]">
+                        <th className="px-[12px] text-right">العرض</th>
+                        <th className="px-[12px] text-right">النوع</th>
+                        <th className="px-[12px] text-right">الخصم</th>
+                        <th className="px-[12px] text-right">المنتجات</th>
+                        <th className="px-[12px] text-right">الفترة</th>
+                        <th className="px-[12px] text-right">الحالة</th>
+                        <th className="w-[150px] px-[12px] text-center">الإجراءات</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {filteredOffers.map((offer) => (
+                        <tr key={offer.id} className="h-[82px] border-b border-[#F0F2F5] transition-colors last:border-b-0 hover:bg-[#FCFDFE]">
+                          <td className="px-[12px]">
+                            <div className="flex min-w-[260px] items-center gap-[9px]">
+                              <div className="flex h-[52px] w-[64px] shrink-0 items-center justify-center overflow-hidden rounded-[9px] bg-[#F2F4F6]">{offer.image_url ? <img src={offer.image_url} alt="" loading="lazy" className="h-full w-full object-cover" /> : <ImageIcon className="h-[14px] w-[14px] text-[#A0A6AF]" />}</div>
+                              <div className="min-w-0"><div className="flex items-center gap-[5px]"><p className="max-w-[250px] truncate text-[11px] font-semibold text-[#444C56]">{offer.title_ar}</p>{offer.is_featured && <span className="rounded-[6px] bg-[#FFF7E8] px-[6px] py-[2px] text-[9px] font-semibold text-[#A9782F]">مميز</span>}</div><p className="mt-[4px] max-w-[280px] truncate text-[9.5px] text-[#969DA7]">{offer.subtitle_ar || offer.description_ar || "بدون وصف مختصر"}</p>{offer.discount_code && <p dir="ltr" className="mt-[3px] w-fit rounded-[5px] bg-[#F1EFFF] px-[5px] py-[2px] font-mono text-[9px] font-semibold text-[#675CBA]">{offer.discount_code}</p>}</div>
+                            </div>
+                          </td>
+                          <td className="px-[12px]"><TypeBadge type={offer.offer_type} /></td>
+                          <td className="px-[12px]"><p className="text-[12px] font-semibold text-[#C15F56]">{offer.discount_percentage}%</p></td>
+                          <td className="px-[12px]"><p className="text-[10.5px] font-semibold text-[#59616B]">{offer.apply_to_all ? "جميع المنتجات" : `${offer.product_ids.length.toLocaleString("ar-EG")} منتج`}</p></td>
+                          <td className="px-[12px]"><p className="text-[10px] text-[#68717B]">{formatSchedule(offer.start_date, offer.end_date)}</p></td>
+                          <td className="px-[12px]"><div className="flex items-center gap-[8px]"><Switch checked={offer.is_active} onCheckedChange={(checked) => toggleMutation.mutate({ offer, checked })} /><StatusBadge status={getStatus(offer)} /></div></td>
+                          <td className="px-[12px]"><div className="flex items-center justify-center gap-[4px]"><button type="button" onClick={() => openEdit(offer)} className="flex h-[31px] w-[31px] items-center justify-center rounded-[8px] border border-[#E2DEF3] bg-white text-[#675CBA] hover:bg-[#F5F3FF]" title="تعديل"><Pencil className="h-[11px] w-[11px]" /></button><button type="button" onClick={() => setDuplicateTarget(offer)} className="flex h-[31px] w-[31px] items-center justify-center rounded-[8px] border border-[#DCE7F4] bg-white text-[#5680CF] hover:bg-[#F1F6FC]" title="نسخ"><Copy className="h-[11px] w-[11px]" /></button><button type="button" onClick={() => setDeleteTarget(offer)} className="flex h-[31px] w-[31px] items-center justify-center rounded-[8px] border border-[#F0D7D4] bg-white text-[#C15F56] hover:bg-[#FFF3F1]" title="حذف"><Trash2 className="h-[11px] w-[11px]" /></button></div></td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
                 </div>
-              </div>
-            ))}
-            
-            {offers.length === 0 && (
-              <div className="text-center py-12 text-muted-foreground bg-card rounded-lg border border-border">
-                <Tag className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>لا توجد عروض. أضف عرضاً جديداً للبدء.</p>
-              </div>
+
+                <div className="space-y-[8px] p-[8px] md:hidden">
+                  {filteredOffers.map((offer) => (
+                    <article key={offer.id} className="overflow-hidden rounded-[13px] border border-[#E5E9EF] bg-white">
+                      <div className="flex gap-[9px] p-[10px]">
+                        <div className="flex h-[76px] w-[72px] shrink-0 items-center justify-center overflow-hidden rounded-[10px] bg-[#F2F4F6]">{offer.image_url ? <img src={offer.image_url} alt="" loading="lazy" className="h-full w-full object-cover" /> : <ImageIcon className="h-[16px] w-[16px] text-[#A0A6AF]" />}</div>
+                        <div className="min-w-0 flex-1"><div className="flex items-start justify-between gap-[7px]"><div className="min-w-0"><h3 className="truncate text-[11.5px] font-semibold text-[#3B424C]">{offer.title_ar}</h3><div className="mt-[5px] flex flex-wrap gap-[4px]"><StatusBadge status={getStatus(offer)} /><TypeBadge type={offer.offer_type} />{offer.is_featured && <span className="inline-flex h-[25px] items-center rounded-[7px] border border-[#EEDFC4] bg-[#FFF7E8] px-[7px] text-[9.5px] font-semibold text-[#A9782F]">مميز</span>}</div></div><Switch checked={offer.is_active} onCheckedChange={(checked) => toggleMutation.mutate({ offer, checked })} /></div><p className="mt-[7px] text-[10px] text-[#858D97]">خصم <span className="font-semibold text-[#C15F56]">{offer.discount_percentage}%</span> · {offer.apply_to_all ? "كل المنتجات" : `${offer.product_ids.length} منتج`}</p><p className="mt-[4px] truncate text-[9.5px] text-[#9AA2AC]">{formatSchedule(offer.start_date, offer.end_date)}</p></div>
+                      </div>
+                      <div className="grid grid-cols-3 gap-[5px] border-t border-[#EDF0F3] bg-[#FAFBFC] p-[7px]"><button type="button" onClick={() => openEdit(offer)} className="flex h-[35px] items-center justify-center gap-[5px] rounded-[8px] border border-[#E2DEF3] bg-white text-[10px] font-semibold text-[#675CBA]"><Pencil className="h-[10px] w-[10px]" />تعديل</button><button type="button" onClick={() => setDuplicateTarget(offer)} className="flex h-[35px] items-center justify-center gap-[5px] rounded-[8px] border border-[#DCE7F4] bg-white text-[10px] font-semibold text-[#5680CF]"><Copy className="h-[10px] w-[10px]" />نسخ</button><button type="button" onClick={() => setDeleteTarget(offer)} className="flex h-[35px] items-center justify-center gap-[5px] rounded-[8px] border border-[#F0D7D4] bg-white text-[10px] font-semibold text-[#C15F56]"><Trash2 className="h-[10px] w-[10px]" />حذف</button></div>
+                    </article>
+                  ))}
+                </div>
+              </>
             )}
-          </div>
-        </TabsContent>
+          </>
+        ) : (
+          <SettingsPanel settings={settingsDraft} setSettings={setSettingsDraft} saving={settingsMutation.isPending} onSave={() => settingsMutation.mutate()} />
+        )}
+      </section>
 
-        <TabsContent value="settings" className="mt-6">
-          {settings && (
-            <div className="max-w-2xl space-y-6 bg-card p-6 rounded-lg border border-border">
-              <div>
-                <label className="block text-sm text-muted-foreground mb-2">عنوان الصفحة</label>
-                <Input
-                  value={settings.page_title}
-                  onChange={(e) => setSettings({ ...settings, page_title: e.target.value })}
-                  dir="rtl"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-muted-foreground mb-2">وصف الصفحة</label>
-                <Textarea
-                  value={settings.page_subtitle}
-                  onChange={(e) => setSettings({ ...settings, page_subtitle: e.target.value })}
-                  dir="rtl"
-                  rows={2}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-muted-foreground mb-2">نص شريط الخصم</label>
-                <Input
-                  value={settings.promo_banner_text}
-                  onChange={(e) => setSettings({ ...settings, promo_banner_text: e.target.value })}
-                  dir="rtl"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-muted-foreground mb-2">تاريخ انتهاء العد التنازلي الرئيسي</label>
-                <p className="text-xs text-muted-foreground mb-2">عند انتهاء هذا الوقت، ستختفي جميع العروض تلقائياً</p>
-                <Input
-                  type="datetime-local"
-                  value={settings.countdown_end_date ? settings.countdown_end_date.slice(0, 16) : ''}
-                  onChange={(e) => setSettings({ ...settings, countdown_end_date: e.target.value ? new Date(e.target.value).toISOString() : null })}
-                  dir="ltr"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm text-muted-foreground mb-2">النطاق</label>
-                <p className="text-sm">الإعدادات تعمل على المتجر الموحد</p>
-              </div>
-
-              <div className="flex items-center gap-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Switch
-                    checked={settings.show_countdown}
-                    onCheckedChange={(checked) => setSettings({ ...settings, show_countdown: checked })}
-                  />
-                  <span className="text-sm">إظهار العد التنازلي الرئيسي</span>
-                </label>
-
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Switch
-                    checked={settings.show_promo_banner}
-                    onCheckedChange={(checked) => setSettings({ ...settings, show_promo_banner: checked })}
-                  />
-                  <span className="text-sm">إظهار شريط الخصم</span>
-                </label>
-              </div>
-
-              <Button onClick={saveSettings} disabled={isSaving} className="btn-gold">
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'حفظ الإعدادات'}
-              </Button>
+      <Dialog open={dialogOpen} onOpenChange={(next) => { if (!next) closeDialog(); else setDialogOpen(true); }}>
+        <DialogContent dir="rtl" className="flex h-[calc(100dvh-16px)] max-h-[calc(100dvh-16px)] w-[calc(100vw-16px)] max-w-[1080px] flex-col overflow-hidden rounded-[18px] border-[#E4E8ED] bg-[#F7F8FA] p-0 sm:h-[94dvh] sm:max-h-[94dvh] sm:w-[calc(100vw-32px)]">
+          <DialogHeader className="shrink-0 border-b border-[#E6E9EE] bg-white px-5 py-4">
+            <div className="flex items-center gap-[10px]">
+              <div className="flex h-[36px] w-[36px] items-center justify-center rounded-[11px] bg-[#F1EFFF] text-[#675CBA]">{editingOffer ? <Pencil className="h-[15px] w-[15px]" /> : <Gift className="h-[15px] w-[15px]" />}</div>
+              <div><DialogTitle className="text-right text-[15px] font-semibold text-[#343B45]">{editingOffer ? "تعديل العرض" : "إضافة عرض جديد"}</DialogTitle><DialogDescription className="mt-[3px] text-right text-[10px] text-[#9299A3]">أنشئ العرض والخصم والجدولة والمنتجات والصور من نافذة واحدة.</DialogDescription></div>
             </div>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      {/* Offer Dialog */}
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingOffer ? 'تعديل العرض' : 'إضافة عرض جديد'}</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4">
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-muted-foreground mb-2">العنوان (عربي) *</label>
-                <Input
-                  value={formData.title_ar}
-                  onChange={(e) => setFormData({ ...formData, title_ar: e.target.value })}
-                  dir="rtl"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-muted-foreground mb-2">العنوان (إنجليزي)</label>
-                <Input
-                  value={formData.title}
-                  onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                  dir="ltr"
-                />
-              </div>
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-muted-foreground mb-2">العنوان الفرعي (عربي)</label>
-                <Input
-                  value={formData.subtitle_ar}
-                  onChange={(e) => setFormData({ ...formData, subtitle_ar: e.target.value })}
-                  dir="rtl"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-muted-foreground mb-2">العنوان الفرعي (إنجليزي)</label>
-                <Input
-                  value={formData.subtitle}
-                  onChange={(e) => setFormData({ ...formData, subtitle: e.target.value })}
-                  dir="ltr"
-                />
-              </div>
-            </div>
+          <form onSubmit={(event: FormEvent) => { event.preventDefault(); saveMutation.mutate(); }} className="flex min-h-0 flex-1 flex-col overflow-hidden">
+            <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-[10px] [-webkit-overflow-scrolling:touch] [scrollbar-gutter:stable]">
+              <div className="grid grid-cols-1 gap-[10px] xl:grid-cols-[minmax(0,1fr)_330px]">
+                <div className="space-y-[10px]">
+                  <FormSection title="بيانات العرض" icon={Tag}>
+                    <div className="grid grid-cols-1 gap-[8px] sm:grid-cols-2"><Field label="العنوان العربي" required><Input value={form.title_ar} onChange={(event) => setForm((current) => ({ ...current, title_ar: event.target.value }))} placeholder="مثال: عرض نهاية الأسبوع" className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[11px] shadow-none focus-visible:bg-white focus-visible:ring-0" /></Field><Field label="العنوان الإنجليزي"><Input value={form.title} onChange={(event) => setForm((current) => ({ ...current, title: event.target.value }))} placeholder="Weekend Offer" dir="ltr" className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[11px] shadow-none focus-visible:bg-white focus-visible:ring-0" /></Field></div>
+                    <div className="grid grid-cols-1 gap-[8px] sm:grid-cols-2"><Field label="العنوان الفرعي العربي"><Input value={form.subtitle_ar} onChange={(event) => setForm((current) => ({ ...current, subtitle_ar: event.target.value }))} placeholder="لفترة محدودة فقط" className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[11px] shadow-none focus-visible:bg-white focus-visible:ring-0" /></Field><Field label="العنوان الفرعي الإنجليزي"><Input value={form.subtitle} onChange={(event) => setForm((current) => ({ ...current, subtitle: event.target.value }))} dir="ltr" className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[11px] shadow-none focus-visible:bg-white focus-visible:ring-0" /></Field></div>
+                    <Field label="الوصف العربي"><Textarea rows={3} value={form.description_ar} onChange={(event) => setForm((current) => ({ ...current, description_ar: event.target.value }))} placeholder="وصف واضح ومختصر للعرض..." className="resize-none rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[11px] leading-6 shadow-none focus-visible:bg-white focus-visible:ring-0" /></Field>
+                  </FormSection>
 
-            <div>
-              <label className="block text-sm text-muted-foreground mb-2">الوصف (عربي)</label>
-              <Textarea
-                value={formData.description_ar}
-                onChange={(e) => setFormData({ ...formData, description_ar: e.target.value })}
-                dir="rtl"
-                rows={2}
-              />
-            </div>
+                  <FormSection title="الخصم وواجهة العرض" icon={Percent}>
+                    <div className="grid grid-cols-1 gap-[8px] sm:grid-cols-3"><Field label="نوع العرض"><Select value={form.offer_type} onValueChange={(value) => setForm((current) => ({ ...current, offer_type: value as OfferType }))}><SelectTrigger className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[10.5px] shadow-none focus:ring-0"><SelectValue /></SelectTrigger><SelectContent><SelectItem value="general">عام</SelectItem><SelectItem value="seasonal">موسمي</SelectItem><SelectItem value="flash">فلاش</SelectItem><SelectItem value="clearance">تصفية</SelectItem></SelectContent></Select></Field><Field label="نسبة الخصم"><Input type="number" min={0} max={100} step={1} value={form.discount_percentage} onChange={(event) => setForm((current) => ({ ...current, discount_percentage: event.target.value }))} className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[11px] shadow-none focus-visible:ring-0" /></Field><Field label="كود الخصم"><Input value={form.discount_code} onChange={(event) => setForm((current) => ({ ...current, discount_code: event.target.value.toUpperCase() }))} placeholder="SALE20" dir="ltr" className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] font-mono text-[10.5px] shadow-none focus-visible:ring-0" /></Field></div>
+                    <div className="grid grid-cols-1 gap-[8px] sm:grid-cols-3"><Field label="شارة صغيرة"><Input value={form.badge_text} onChange={(event) => setForm((current) => ({ ...current, badge_text: event.target.value }))} placeholder="لفترة محدودة" className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[11px] shadow-none focus-visible:ring-0" /></Field><Field label="نص الزر"><Input value={form.cta_label} onChange={(event) => setForm((current) => ({ ...current, cta_label: event.target.value }))} placeholder="تسوق الآن" className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[11px] shadow-none focus-visible:ring-0" /></Field><Field label="رابط الزر"><Input value={form.cta_url} onChange={(event) => setForm((current) => ({ ...current, cta_url: event.target.value }))} placeholder="/seasonal-offers" dir="ltr" className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[10.5px] shadow-none focus-visible:ring-0" /></Field></div>
+                  </FormSection>
 
-            <div>
-              <label className="block text-sm text-muted-foreground mb-2">الصورة</label>
-              {formData.image_url ? (
-                <div className="relative">
-                  <img loading="lazy" src={formData.image_url} alt="" className="w-full h-32 object-cover rounded" />
-                  <button
-                    onClick={() => setFormData({ ...formData, image_url: '' })}
-                    className="absolute top-2 right-2 p-1 bg-destructive text-destructive-foreground rounded-full"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
+                  <FormSection title="صور العرض" icon={ImageIcon}>
+                    <div className="grid grid-cols-1 gap-[8px] md:grid-cols-2"><ImageUploader title="صورة Desktop" helper="الصورة الرئيسية للعرض" value={form.image_url} uploading={uploadingDesktop} onUpload={(file) => void uploadImage(file, "desktop")} onRemove={() => setForm((current) => ({ ...current, image_url: "" }))} /><ImageUploader title="صورة الهاتف" helper="صورة مخصصة للموبايل" value={form.mobile_image_url} uploading={uploadingMobile} onUpload={(file) => void uploadImage(file, "mobile")} onRemove={() => setForm((current) => ({ ...current, mobile_image_url: "" }))} mobile /></div>
+                  </FormSection>
+
+                  <FormSection title="الجدولة والنشر" icon={CalendarClock}>
+                    <div className="grid grid-cols-1 gap-[8px] sm:grid-cols-2"><Field label="يبدأ في"><Input type="datetime-local" value={form.start_date} onChange={(event) => setForm((current) => ({ ...current, start_date: event.target.value }))} className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[10.5px] shadow-none focus-visible:ring-0" /></Field><Field label="ينتهي في"><Input type="datetime-local" value={form.end_date} onChange={(event) => setForm((current) => ({ ...current, end_date: event.target.value }))} className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[10.5px] shadow-none focus-visible:ring-0" /></Field></div>
+                    <div className="grid grid-cols-1 gap-[8px] sm:grid-cols-3"><Field label="الأولوية"><Input type="number" value={form.sort_order} onChange={(event) => setForm((current) => ({ ...current, sort_order: event.target.value }))} className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[11px] shadow-none focus-visible:ring-0" /></Field><ToggleBox label="نشط" helper={form.is_active ? "يمكن أن يظهر للعميل" : "مسودة غير ظاهرة"} checked={form.is_active} onChange={(checked) => setForm((current) => ({ ...current, is_active: checked }))} /><ToggleBox label="مميز" helper={form.is_featured ? "عرض ذو أولوية بصرية" : "عرض عادي"} checked={form.is_featured} onChange={(checked) => setForm((current) => ({ ...current, is_featured: checked }))} /></div>
+                  </FormSection>
+
+                  <FormSection title={`المنتجات المشمولة (${form.apply_to_all ? "الكل" : form.product_ids.length})`} icon={ShoppingBag}>
+                    <ToggleBox label="تطبيق على جميع المنتجات" helper="لن تحتاج لاختيار المنتجات يدويًا" checked={form.apply_to_all} onChange={(checked) => setForm((current) => ({ ...current, apply_to_all: checked }))} />
+
+                    {!form.apply_to_all && (
+                      <>
+                        {selectedProducts.length > 0 && <div className="space-y-[5px]">{selectedProducts.map((product, index) => <div key={product.id} className="flex items-center gap-[8px] rounded-[9px] border border-[#E6E9EE] bg-[#FAFBFC] p-[7px]"><div className="flex h-[42px] w-[38px] shrink-0 items-center justify-center overflow-hidden rounded-[7px] bg-white">{product.images?.[0] ? <img src={product.images[0]} alt="" loading="lazy" className="h-full w-full object-cover" /> : <ShoppingBag className="h-[11px] w-[11px] text-[#A0A6AF]" />}</div><div className="min-w-0 flex-1"><p className="truncate text-[10.5px] font-semibold text-[#555D67]">{product.name_ar}</p><p className="mt-[2px] text-[9.5px] text-[#9AA2AC]">{product.brand || "بدون ماركة"} · {Number(product.price || 0).toLocaleString("en-US")}</p></div><div className="flex gap-[3px]"><button type="button" disabled={index === 0} onClick={() => moveProduct(index, -1)} className="flex h-[29px] w-[29px] items-center justify-center rounded-[7px] border border-[#E3E7EC] bg-white text-[10px] font-semibold text-[#707883] disabled:opacity-30">↑</button><button type="button" disabled={index === selectedProducts.length - 1} onClick={() => moveProduct(index, 1)} className="flex h-[29px] w-[29px] items-center justify-center rounded-[7px] border border-[#E3E7EC] bg-white text-[10px] font-semibold text-[#707883] disabled:opacity-30">↓</button><button type="button" onClick={() => toggleProduct(product.id)} className="flex h-[29px] w-[29px] items-center justify-center rounded-[7px] border border-[#F0D7D4] bg-white text-[#C15F56]"><Trash2 className="h-[9px] w-[9px]" /></button></div></div>)}</div>}
+
+                        <div className="relative"><Search className="pointer-events-none absolute right-[11px] top-1/2 h-[12px] w-[12px] -translate-y-1/2 text-[#969EA8]" /><Input value={productSearch} onChange={(event) => setProductSearch(event.target.value)} placeholder="ابحث باسم المنتج أو الماركة..." className="h-[38px] rounded-[8px] border-[#E2E6EB] bg-[#F8FAFC] pr-[33px] text-[10.5px] shadow-none focus-visible:bg-white focus-visible:ring-0" />{productSearchQuery.isFetching && <Loader2 className="absolute left-[11px] top-1/2 h-[10px] w-[10px] -translate-y-1/2 animate-spin text-[#675CBA]" />}</div>
+
+                        <div className="grid max-h-[300px] grid-cols-1 gap-[5px] overflow-y-auto rounded-[10px] border border-[#E5E9EF] bg-[#FAFBFC] p-[5px] sm:grid-cols-2">{(productSearchQuery.data || []).map((product) => { const selected = form.product_ids.includes(product.id); return <button type="button" key={product.id} onClick={() => toggleProduct(product.id)} className={cn("flex items-center gap-[7px] rounded-[8px] border p-[6px] text-right transition-colors", selected ? "border-[#CBC5E7] bg-[#F5F3FF]" : "border-transparent bg-white hover:border-[#E1E5EA]")}><Checkbox checked={selected} className="pointer-events-none" /><div className="flex h-[38px] w-[34px] shrink-0 items-center justify-center overflow-hidden rounded-[7px] bg-[#F3F5F7]">{product.images?.[0] ? <img src={product.images[0]} alt="" loading="lazy" className="h-full w-full object-cover" /> : <ShoppingBag className="h-[10px] w-[10px] text-[#A0A6AF]" />}</div><div className="min-w-0 flex-1"><p className={cn("truncate text-[10px] font-semibold", selected ? "text-[#675CBA]" : "text-[#555D67]")}>{product.name_ar}</p><p className="mt-[2px] truncate text-[9px] text-[#9AA2AC]">{product.brand || "بدون ماركة"}</p></div>{selected && <CheckCircle2 className="h-[12px] w-[12px] shrink-0 text-[#675CBA]" />}</button>; })}</div>
+                      </>
+                    )}
+                  </FormSection>
                 </div>
-              ) : (
-                <label className="w-full h-32 border-2 border-dashed border-border rounded flex flex-col items-center justify-center cursor-pointer hover:border-gold transition-colors">
-                  {isUploading ? (
-                    <Loader2 className="w-8 h-8 text-gold animate-spin" />
-                  ) : (
-                    <>
-                      <Upload className="w-6 h-6 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground mt-1">اضغط لرفع صورة</span>
-                    </>
-                  )}
-                  <input type="file" accept="image/*" onChange={handleImageUpload} className="hidden" disabled={isUploading} />
-                </label>
-              )}
-            </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-muted-foreground mb-2">كود الخصم</label>
-                <Input
-                  value={formData.discount_code}
-                  onChange={(e) => setFormData({ ...formData, discount_code: e.target.value.toUpperCase() })}
-                  placeholder="gold50"
-                  dir="ltr"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-muted-foreground mb-2">نسبة الخصم %</label>
-                <Input
-                  type="number"
-                  value={formData.discount_percentage}
-                  onChange={(e) => setFormData({ ...formData, discount_percentage: parseInt(e.target.value) || 0 })}
-                  min={0}
-                  max={100}
-                  dir="ltr"
-                />
+                <aside className="space-y-[10px] xl:sticky xl:top-0 xl:self-start"><PreviewCard form={form} /><ReadinessCard form={form} /></aside>
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm text-muted-foreground mb-2">تاريخ البداية</label>
-                <Input
-                  type="date"
-                  value={formData.start_date}
-                  onChange={(e) => setFormData({ ...formData, start_date: e.target.value })}
-                  dir="ltr"
-                />
-              </div>
-              <div>
-                <label className="block text-sm text-muted-foreground mb-2">تاريخ النهاية (timer العرض)</label>
-                <Input
-                  type="date"
-                  value={formData.end_date}
-                  onChange={(e) => setFormData({ ...formData, end_date: e.target.value })}
-                  dir="ltr"
-                />
-                <p className="text-xs text-muted-foreground mt-1">سيختفي العرض تلقائياً عند هذا التاريخ</p>
-              </div>
-            </div>
-
-            {/* Product Selection Mode */}
-            <div className="border border-border rounded-lg p-4">
-              <div className="flex items-center justify-between mb-4">
-                <label className="block text-sm font-medium text-foreground">
-                  <Package className="w-4 h-4 inline ml-2" />
-                  المنتجات المشمولة بالعرض
-                </label>
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <Switch
-                    checked={applyToAll}
-                    onCheckedChange={setApplyToAll}
-                  />
-                  <span className="text-sm">تطبيق على جميع المنتجات</span>
-                </label>
-              </div>
-
-              {!applyToAll && (
-                <>
-                  {/* Selected Products */}
-                  {selectedProducts.length > 0 && (
-                    <div className="flex flex-wrap gap-2 mb-3">
-                      {selectedProducts.map(product => (
-                        <div 
-                          key={product.id}
-                          className="flex items-center gap-2 bg-gold/10 text-gold px-3 py-1.5 rounded-full text-sm"
-                        >
-                          {product.images?.[0] && (
-                            <img loading="lazy" src={product.images[0]} alt="" className="w-5 h-5 rounded object-cover" />
-                          )}
-                          <span>{product.name_ar}</span>
-                          <button onClick={() => toggleProduct(product.id)} className="hover:text-destructive">
-                            <X className="w-3 h-3" />
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {/* Search */}
-                  <div className="relative mb-3">
-                    <Search className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                    <Input
-                      value={productSearch}
-                      onChange={(e) => setProductSearch(e.target.value)}
-                      placeholder="ابحث عن منتج..."
-                      className="pr-10"
-                      dir="rtl"
-                    />
-                  </div>
-
-                  {/* Products List */}
-                  <ScrollArea className="h-48 border border-border rounded">
-                    <div className="p-2 space-y-1">
-                      {filteredProducts.map(product => (
-                        <label
-                          key={product.id}
-                          className={`flex items-center gap-3 p-2 rounded cursor-pointer transition-colors ${
-                            formData.product_ids.includes(product.id) 
-                              ? 'bg-gold/10 border border-gold/30' 
-                              : 'hover:bg-muted'
-                          }`}
-                        >
-                          <Checkbox
-                            checked={formData.product_ids.includes(product.id)}
-                            onCheckedChange={() => toggleProduct(product.id)}
-                          />
-                          {product.images?.[0] && (
-                            <img loading="lazy" src={product.images[0]} alt="" className="w-10 h-10 rounded object-cover" />
-                          )}
-                          <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium truncate">{product.name_ar}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {product.price} ر.ي
-                              {product.discount && product.discount > 0 && (
-                                <span className="text-destructive mr-2">(-{product.discount}%)</span>
-                              )}
-                            </p>
-                          </div>
-                        </label>
-                      ))}
-                      {filteredProducts.length === 0 && (
-                        <p className="text-center text-muted-foreground py-4 text-sm">لا توجد منتجات</p>
-                      )}
-                    </div>
-                  </ScrollArea>
-                </>
-              )}
-
-              {applyToAll && (
-                <p className="text-sm text-gold bg-gold/10 p-3 rounded">
-                  سيتم تطبيق هذا العرض على جميع المنتجات في المتجر
-                </p>
-              )}
-            </div>
-
-            <div className="flex flex-wrap gap-4">
-              <span className="text-sm text-muted-foreground">النطاق: المتجر الموحد</span>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Checkbox
-                  checked={formData.is_active}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_active: !!checked })}
-                />
-                <span className="text-sm">نشط</span>
-              </label>
-              <label className="flex items-center gap-2 cursor-pointer">
-                <Checkbox
-                  checked={formData.is_featured}
-                  onCheckedChange={(checked) => setFormData({ ...formData, is_featured: !!checked })}
-                />
-                <span className="text-sm">مميز</span>
-              </label>
-            </div>
-
-            <div className="flex gap-2 pt-4">
-              <Button onClick={handleSubmit} disabled={isSaving} className="btn-gold flex-1">
-                {isSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : editingOffer ? 'تحديث' : 'إضافة'}
-              </Button>
-              <Button variant="outline" onClick={() => setIsDialogOpen(false)}>إلغاء</Button>
-            </div>
-          </div>
+            <div className="z-20 flex shrink-0 items-center justify-end gap-[7px] border-t border-[#E5E9EF] bg-white px-4 py-3 sm:px-5"><Button type="button" variant="outline" disabled={saveMutation.isPending || uploadingDesktop || uploadingMobile} onClick={closeDialog} className="h-[38px] rounded-[9px] border-[#E1E5EA] bg-white px-4 text-[10.5px] font-semibold text-[#707883] shadow-none">إلغاء</Button><Button type="submit" disabled={saveMutation.isPending || uploadingDesktop || uploadingMobile} className="h-[38px] rounded-[9px] bg-[#675CBA] px-5 text-[10.5px] font-semibold text-white shadow-none hover:bg-[#594FAB]">{saveMutation.isPending ? <Loader2 className="ml-[5px] h-[12px] w-[12px] animate-spin" /> : <Gift className="ml-[5px] h-[12px] w-[12px]" />}{editingOffer ? "حفظ التعديلات" : "إنشاء العرض"}</Button></div>
+          </form>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(next) => { if (!next) setDeleteTarget(null); }}>
+        <AlertDialogContent dir="rtl" className="max-w-[430px] rounded-[15px] border-[#E4E8ED] bg-white p-5"><AlertDialogHeader><div className="mb-2 flex h-[38px] w-[38px] items-center justify-center rounded-[11px] bg-[#FFF0F0] text-[#C76161]"><Trash2 className="h-[16px] w-[16px]" /></div><AlertDialogTitle className="text-[15px] font-semibold text-[#343A44]">حذف العرض</AlertDialogTitle><AlertDialogDescription className="text-[10.5px] leading-6 text-[#858D97]">سيتم حذف "{deleteTarget?.title_ar || ""}" نهائيًا. إذا كان العرض مؤقتًا يمكنك تعطيله بدل الحذف.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter className="mt-2 gap-2"><AlertDialogCancel disabled={deleteMutation.isPending} className="h-[38px] rounded-[9px] border-[#E2E6EB] bg-white px-4 text-[10.5px] font-semibold text-[#6B737E]">إلغاء</AlertDialogCancel><AlertDialogAction disabled={deleteMutation.isPending} onClick={(event) => { event.preventDefault(); if (deleteTarget) deleteMutation.mutate(deleteTarget); }} className="h-[38px] rounded-[9px] bg-[#C76161] px-4 text-[10.5px] font-semibold text-white hover:bg-[#B65555]">{deleteMutation.isPending && <Loader2 className="ml-[5px] h-[11px] w-[11px] animate-spin" />}حذف نهائي</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={Boolean(duplicateTarget)} onOpenChange={(next) => { if (!next) setDuplicateTarget(null); }}>
+        <AlertDialogContent dir="rtl" className="max-w-[430px] rounded-[15px] border-[#E4E8ED] bg-white p-5"><AlertDialogHeader><div className="mb-2 flex h-[38px] w-[38px] items-center justify-center rounded-[11px] bg-[#EDF4FF] text-[#5680CF]"><Copy className="h-[16px] w-[16px]" /></div><AlertDialogTitle className="text-[15px] font-semibold text-[#343A44]">نسخ العرض</AlertDialogTitle><AlertDialogDescription className="text-[10.5px] leading-6 text-[#858D97]">سيتم إنشاء نسخة بجميع إعدادات العرض والمنتجات، وستكون غير مفعلة حتى تقوم بمراجعتها.</AlertDialogDescription></AlertDialogHeader><AlertDialogFooter className="mt-2 gap-2"><AlertDialogCancel disabled={duplicateMutation.isPending} className="h-[38px] rounded-[9px] border-[#E2E6EB] bg-white px-4 text-[10.5px] font-semibold text-[#6B737E]">إلغاء</AlertDialogCancel><AlertDialogAction disabled={duplicateMutation.isPending} onClick={(event) => { event.preventDefault(); if (duplicateTarget) duplicateMutation.mutate(duplicateTarget); }} className="h-[38px] rounded-[9px] bg-[#5680CF] px-4 text-[10.5px] font-semibold text-white hover:bg-[#496EAF]">{duplicateMutation.isPending && <Loader2 className="ml-[5px] h-[11px] w-[11px] animate-spin" />}إنشاء نسخة</AlertDialogAction></AlertDialogFooter></AlertDialogContent>
+      </AlertDialog>
     </div>
   );
+};
+
+const SettingsPanel = ({ settings, setSettings, saving, onSave }: { settings: OffersSettings | null; setSettings: (settings: OffersSettings) => void; saving: boolean; onSave: () => void }) => {
+  if (!settings) return <div className="flex min-h-[300px] items-center justify-center"><Loader2 className="h-[18px] w-[18px] animate-spin text-[#675CBA]" /></div>;
+
+  return (
+    <div className="grid grid-cols-1 gap-[10px] p-[10px] xl:grid-cols-[minmax(0,1fr)_330px]">
+      <div className="space-y-[10px]">
+        <FormSection title="محتوى صفحة العروض" icon={Settings}>
+          <Field label="عنوان الصفحة"><Input value={settings.page_title} onChange={(event) => setSettings({ ...settings, page_title: event.target.value })} className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[11px] shadow-none focus-visible:ring-0" /></Field>
+          <Field label="وصف الصفحة"><Textarea rows={3} value={settings.page_subtitle} onChange={(event) => setSettings({ ...settings, page_subtitle: event.target.value })} className="resize-none rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[11px] leading-6 shadow-none focus-visible:ring-0" /></Field>
+          <Field label="نص شريط الترويج"><Input value={settings.promo_banner_text} onChange={(event) => setSettings({ ...settings, promo_banner_text: event.target.value })} className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[11px] shadow-none focus-visible:ring-0" /></Field>
+          <Field label="نهاية العد التنازلي الرئيسي"><Input type="datetime-local" value={settings.countdown_end_date ? settings.countdown_end_date.slice(0, 16) : ""} onChange={(event) => setSettings({ ...settings, countdown_end_date: event.target.value ? new Date(event.target.value).toISOString() : null })} className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[10.5px] shadow-none focus-visible:ring-0" /></Field>
+        </FormSection>
+
+        <FormSection title="خيارات الظهور" icon={Gift}>
+          <div className="grid grid-cols-1 gap-[8px] sm:grid-cols-2"><ToggleBox label="إظهار العد التنازلي" helper="يظهر في صفحة العروض" checked={settings.show_countdown} onChange={(checked) => setSettings({ ...settings, show_countdown: checked })} /><ToggleBox label="إظهار شريط الترويج" helper="يظهر أعلى محتوى العروض" checked={settings.show_promo_banner} onChange={(checked) => setSettings({ ...settings, show_promo_banner: checked })} /></div>
+        </FormSection>
+
+        <div className="flex justify-end"><Button type="button" disabled={saving} onClick={onSave} className="h-[38px] rounded-[9px] bg-[#675CBA] px-5 text-[10.5px] font-semibold text-white shadow-none hover:bg-[#594FAB]">{saving && <Loader2 className="ml-[5px] h-[11px] w-[11px] animate-spin" />}حفظ الإعدادات</Button></div>
+      </div>
+
+      <aside className="xl:sticky xl:top-0 xl:self-start"><div className="rounded-[14px] border border-[#E5E9EF] bg-white p-[12px]"><div className="flex h-[32px] w-[32px] items-center justify-center rounded-[9px] bg-[#F1EFFF] text-[#675CBA]"><Gift className="h-[13px] w-[13px]" /></div><p className="mt-[11px] text-[10px] text-[#9AA2AC]">معاينة مختصرة</p><h3 className="mt-[4px] text-[15px] font-semibold text-[#3F4751]">{settings.page_title || "صفحة العروض"}</h3><p className="mt-[6px] text-[10px] leading-5 text-[#858D97]">{settings.page_subtitle || "سيظهر وصف الصفحة هنا."}</p>{settings.show_promo_banner && settings.promo_banner_text && <div className="mt-[10px] rounded-[9px] bg-[#F8F7FF] p-[8px] text-[10px] font-medium text-[#675CBA]">{settings.promo_banner_text}</div>}</div></aside>
+    </div>
+  );
+};
+
+const StatCard = ({ title, value, helper, icon: Icon, tone }: { title: string; value: string; helper: string; icon: LucideIcon; tone: "indigo" | "green" | "blue" | "coral" }) => {
+  const style = { indigo: { icon: "bg-[#F1EFFF] text-[#675CBA]", line: "bg-[#675CBA]" }, green: { icon: "bg-[#EAF7EE] text-[#629067]", line: "bg-[#629067]" }, blue: { icon: "bg-[#EDF4FF] text-[#5680CF]", line: "bg-[#5680CF]" }, coral: { icon: "bg-[#FFF0ED] text-[#D06A5E]", line: "bg-[#D06A5E]" } }[tone];
+  return <article className="relative min-h-[118px] overflow-hidden rounded-[14px] border border-[#E5E9EF] bg-white p-[13px]"><span className={cn("absolute inset-x-0 top-0 h-[3px]", style.line)} /><div className={cn("flex h-[32px] w-[32px] items-center justify-center rounded-[10px]", style.icon)}><Icon className="h-[14px] w-[14px]" /></div><p className="mt-[12px] text-[10.5px] text-[#8D949E]">{title}</p><p className="mt-[4px] truncate text-[18px] font-semibold leading-none text-[#303741]">{value}</p><p className="mt-[6px] truncate text-[10px] text-[#A0A6AF]">{helper}</p></article>;
+};
+
+const FormSection = ({ title, icon: Icon, children }: { title: string; icon: LucideIcon; children: ReactNode }) => <section className="rounded-[14px] border border-[#E5E9EF] bg-white p-[12px]"><div className="mb-[10px] flex items-center gap-[7px] border-b border-[#F0F2F5] pb-[8px]"><div className="flex h-[28px] w-[28px] items-center justify-center rounded-[8px] bg-[#F1EFFF] text-[#675CBA]"><Icon className="h-[11px] w-[11px]" /></div><h3 className="text-[11px] font-semibold text-[#4A525C]">{title}</h3></div><div className="space-y-[9px]">{children}</div></section>;
+const Field = ({ label, children, required = false }: { label: string; children: ReactNode; required?: boolean }) => <div><Label className="mb-[6px] block text-[10.5px] font-semibold text-[#727A84]">{label}{required && <span className="mr-[3px] text-[#C76161]">*</span>}</Label>{children}</div>;
+const ToggleBox = ({ label, helper, checked, onChange }: { label: string; helper: string; checked: boolean; onChange: (checked: boolean) => void }) => <div className="flex min-h-[68px] items-center justify-between rounded-[10px] border border-[#E6E9EE] bg-[#FAFBFC] px-[11px]"><div><p className="text-[10.5px] font-semibold text-[#555D67]">{label}</p><p className="mt-[3px] text-[9.5px] text-[#9BA2AC]">{helper}</p></div><Switch checked={checked} onCheckedChange={onChange} /></div>;
+
+const StatusBadge = ({ status }: { status: OfferStatus }) => {
+  const config = { live: { label: "مباشر", className: "border-[#D8E8DD] bg-[#EFF8F2] text-[#568468]", icon: CheckCircle2 }, scheduled: { label: "مجدول", className: "border-[#DCE7F4] bg-[#F1F6FC] text-[#5679A4]", icon: CalendarClock }, expired: { label: "منتهي", className: "border-[#F0D7D4] bg-[#FFF3F1] text-[#C15F56]", icon: CircleOff }, draft: { label: "مسودة", className: "border-[#EEDFC4] bg-[#FFF7E8] text-[#A9782F]", icon: CircleOff } }[status];
+  const Icon = config.icon;
+  return <span className={cn("inline-flex h-[26px] items-center gap-[5px] rounded-[7px] border px-[8px] text-[9.5px] font-semibold", config.className)}><Icon className="h-[9px] w-[9px]" />{config.label}</span>;
+};
+
+const TypeBadge = ({ type }: { type: OfferType }) => {
+  const label = type === "flash" ? "فلاش" : type === "clearance" ? "تصفية" : type === "general" ? "عام" : "موسمي";
+  return <span className="inline-flex h-[26px] items-center rounded-[7px] border border-[#E3E7EC] bg-[#F8FAFC] px-[8px] text-[9.5px] font-semibold text-[#68717B]">{label}</span>;
+};
+
+const ImageUploader = ({ title, helper, value, uploading, onUpload, onRemove, mobile = false }: { title: string; helper: string; value: string; uploading: boolean; onUpload: (file: File) => void; onRemove: () => void; mobile?: boolean }) => {
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => { const file = event.target.files?.[0]; event.target.value = ""; if (file) onUpload(file); };
+  return <div className="overflow-hidden rounded-[11px] border border-[#E5E9EF] bg-[#FAFBFC]"><div className={cn("relative bg-[#F1F3F5]", mobile ? "aspect-[4/5]" : "aspect-[16/10]")}>{value ? <img src={value} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full flex-col items-center justify-center text-[#A0A6AF]">{mobile ? <Smartphone className="h-[20px] w-[20px]" /> : <ImageIcon className="h-[20px] w-[20px]" />}<p className="mt-[6px] text-[9.5px]">لا توجد صورة</p></div>}{value && <button type="button" onClick={onRemove} className="absolute left-[7px] top-[7px] flex h-[28px] w-[28px] items-center justify-center rounded-[8px] bg-white/95 text-[#C15F56] shadow-sm"><Trash2 className="h-[10px] w-[10px]" /></button>}</div><div className="p-[9px]"><p className="text-[10.5px] font-semibold text-[#59616B]">{title}</p><p className="mt-[3px] text-[9px] text-[#9AA2AC]">{helper}</p><label className={cn("mt-[8px] flex h-[34px] cursor-pointer items-center justify-center gap-[5px] rounded-[8px] border border-[#E2DEF3] bg-white text-[10px] font-semibold text-[#675CBA]", uploading && "pointer-events-none opacity-60")}>{uploading ? <Loader2 className="h-[10px] w-[10px] animate-spin" /> : <Upload className="h-[10px] w-[10px]" />}{value ? "استبدال الصورة" : "رفع صورة"}<input type="file" accept="image/*,.heic,.heif" className="hidden" onChange={handleChange} /></label></div></div>;
+};
+
+const PreviewCard = ({ form }: { form: OfferForm }) => {
+  const image = form.mobile_image_url || form.image_url;
+  return <section className="overflow-hidden rounded-[14px] border border-[#E5E9EF] bg-white"><div className="flex items-center gap-[7px] border-b border-[#EDF0F3] px-[11px] py-[9px]"><Smartphone className="h-[11px] w-[11px] text-[#675CBA]" /><h3 className="text-[10.5px] font-semibold text-[#4A525C]">معاينة الهاتف</h3></div><div className="p-[10px]"><div className="mx-auto max-w-[270px] overflow-hidden rounded-[18px] border-[5px] border-[#22272E] bg-white"><div className="relative aspect-[4/5] bg-[#F2F4F6]">{image ? <img src={image} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center text-[#A1A8B0]"><ImageIcon className="h-[24px] w-[24px]" /></div>}<div className="absolute inset-x-0 bottom-0 bg-black/40 p-[12px] text-white">{form.badge_text && <span className="mb-[5px] inline-block rounded-[5px] bg-white px-[6px] py-[3px] text-[8px] font-semibold text-[#343A44]">{form.badge_text}</span>}<h4 className="text-[13px] font-semibold">{form.title_ar || "عنوان العرض"}</h4>{Number(form.discount_percentage) > 0 && <p className="mt-[4px] text-[15px] font-semibold">خصم {form.discount_percentage}%</p>}{form.cta_label && <span className="mt-[8px] inline-flex h-[28px] items-center rounded-[7px] bg-white px-[9px] text-[9px] font-semibold text-[#343A44]">{form.cta_label}</span>}</div></div></div></div></section>;
+};
+
+const ReadinessCard = ({ form }: { form: OfferForm }) => {
+  const checks = [{ label: "عنوان", done: Boolean(form.title_ar.trim()) }, { label: "نسبة الخصم", done: Number(form.discount_percentage) > 0 }, { label: "صورة", done: Boolean(form.image_url) }, { label: "المنتجات", done: form.apply_to_all || form.product_ids.length > 0 }, { label: "زر CTA", done: Boolean(form.cta_label.trim()) }, { label: "الجدولة", done: Boolean(form.start_date || form.end_date) }];
+  const complete = checks.filter((item) => item.done).length;
+  const percent = Math.round((complete / checks.length) * 100);
+  return <section className="rounded-[14px] border border-[#E5E9EF] bg-white p-[11px]"><div className="flex items-center justify-between"><h3 className="text-[10.5px] font-semibold text-[#4A525C]">جاهزية العرض</h3><span className="text-[11px] font-semibold text-[#675CBA]">{percent}%</span></div><div className="mt-[9px] h-[5px] overflow-hidden rounded-full bg-[#EEF0F3]"><div className="h-full rounded-full bg-[#675CBA] transition-all" style={{ width: `${percent}%` }} /></div><div className="mt-[9px] grid grid-cols-2 gap-[5px]">{checks.map((item) => <div key={item.label} className={cn("flex items-center gap-[5px] rounded-[7px] px-[7px] py-[6px] text-[9.5px] font-medium", item.done ? "bg-[#EFF8F2] text-[#568468]" : "bg-[#F7F8FA] text-[#9299A3]")}>{item.done ? <CheckCircle2 className="h-[9px] w-[9px]" /> : <CircleOff className="h-[9px] w-[9px]" />}{item.label}</div>)}</div></section>;
+};
+
+const PanelEmpty = ({ onCreate }: { onCreate: () => void }) => <div className="flex min-h-[300px] flex-col items-center justify-center px-6 text-center"><div className="flex h-[50px] w-[50px] items-center justify-center rounded-[14px] bg-[#F1EFFF] text-[#675CBA]"><Gift className="h-[20px] w-[20px]" /></div><h3 className="mt-3 text-[12px] font-semibold text-[#535B65]">لا توجد عروض</h3><p className="mt-[5px] max-w-[360px] text-[10px] leading-5 text-[#9BA2AC]">أنشئ أول عرض وحدد نسبة الخصم والمنتجات وفترة ظهوره.</p><Button type="button" onClick={onCreate} className="mt-3 h-[36px] rounded-[9px] bg-[#675CBA] px-4 text-[10px] font-semibold text-white shadow-none hover:bg-[#594FAB]"><Plus className="ml-[5px] h-[10px] w-[10px]" />عرض جديد</Button></div>;
+
+const formatSchedule = (start: string | null, end: string | null) => {
+  if (!start && !end) return "بدون فترة محددة";
+  const startText = start ? formatDate(start) : "فوري";
+  const endText = end ? formatDate(end) : "مستمر";
+  return `${startText} ← ${endText}`;
+};
+
+const formatDate = (value: string) => {
+  try { return new Intl.DateTimeFormat("ar-YE", { day: "2-digit", month: "short", year: "numeric" }).format(new Date(value)); } catch { return "—"; }
+};
+
+const translateError = (message?: string) => {
+  const value = String(message || "");
+  if (value.includes("offers_discount_percentage_check")) return "نسبة الخصم يجب أن تكون بين 0 و100.";
+  if (value.includes("offers_schedule_check")) return "تاريخ نهاية العرض يجب أن يكون بعد تاريخ البداية.";
+  return value || "حدث خطأ غير متوقع.";
 };
 
 export default AdminOffersPage;

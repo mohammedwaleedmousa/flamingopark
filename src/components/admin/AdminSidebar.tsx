@@ -220,7 +220,6 @@ const sections: NavSection[] = [
       { title: "دفتر اليومية", url: "/admin/ledger", icon: BookOpen, tone: "green" },
       { title: "المرتجعات", url: "/admin/refunds", icon: RotateCcw, tone: "green" },
       { title: "العملات", url: "/admin/currencies", icon: Coins, tone: "green" },
-      { title: "الدول", url: "/admin/countries", icon: Globe2, tone: "green" },
     ],
   },
   {

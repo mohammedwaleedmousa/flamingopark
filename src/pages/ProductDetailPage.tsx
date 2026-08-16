@@ -16,12 +16,12 @@ import AccessoryCard from "@/components/AccessoryCard";
 import ProductDetailSkeleton from "@/components/ProductDetailSkeleton";
 
 import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
-import { useStore, Product } from "@/store/useStore";
+import { useStore, type Country, type Product } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import { toast } from "@/hooks/use-toast";
-import { useCurrency } from "@/lib/currency";
+import { convertPrice, useCurrency } from "@/lib/currency";
 import { optimizeImage, handleImageError } from "@/lib/imageUrl";
 
 type ProductAccessory = {
@@ -75,6 +75,19 @@ type InventorySkuRow = {
   is_default: boolean;
 };
 
+type ProductDetail = Product & {
+  accessories: ProductAccessory[];
+  colorVariants: ProductColorVariant[];
+  features: ProductFeature[];
+  hasQualityVariants: boolean;
+  hasSizes: boolean;
+  qualityVariants: QualityVariant[];
+  returnPolicy: string | null;
+  specs: ProductSpec[];
+};
+
+const asArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value as T[] : [];
+
 const normalizeInventoryValue = (value?: string | null) => String(value || "").trim().toLowerCase();
 
 const safeInventoryStock = (value: unknown) => {
@@ -91,9 +104,9 @@ const ProductDetailPage = () => {
   const { addToCart } = useStore();
   const { isFavorite, toggleFavorite } = useFavorites();
   const { items: recentItems, add: addRecent } = useRecentlyViewed();
-  const { format: formatCurrency, symbol: currencySymbol } = useCurrency();
+  const { format: formatCurrency, symbol: currencySymbol, mode: currencyMode } = useCurrency();
 
-  const country = "GLOBAL" as any;
+  const country: Country = "GLOBAL";
 
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
@@ -108,16 +121,16 @@ const ProductDetailPage = () => {
      PRODUCT
   ========================================================= */
 
-  const { data: product, isLoading } = useQuery({
+  const { data: product, isLoading } = useQuery<ProductDetail | null>({
     queryKey: ["product", slug],
     queryFn: async () => {
-      const { data, error } = await supabase.from("products").select("id,name,name_ar,slug,price,cost_price,original_price,discount,description,description_ar,images,category,category_id,brand,in_stock,stock_quantity,countries,is_featured,is_best_seller,accessories,has_sizes,sizes,features,color_variants,specs,return_policy,has_quality_variants,quality_variants").eq("slug", slug).eq("is_active", true).maybeSingle();
+      const { data, error } = await supabase.from("products").select("id,name,name_ar,slug,price,original_price,discount,description,description_ar,images,category,category_id,brand,in_stock,stock_quantity,countries,is_featured,is_best_seller,accessories,has_sizes,sizes,features,color_variants,specs,return_policy,has_quality_variants,quality_variants").eq("slug", slug).eq("is_active", true).maybeSingle();
 
       if (error) throw error;
       if (!data) return null;
 
-      const accessories = (data as any).accessories || [];
-      const colorVariants = ((data as any).color_variants || []) as ProductColorVariant[];
+      const accessories = asArray<ProductAccessory>(data.accessories);
+      const colorVariants = asArray<ProductColorVariant>(data.color_variants);
       const baseImages = data.images?.length ? data.images : colorVariants?.[0]?.images || [];
 
       return {
@@ -126,29 +139,28 @@ const ProductDetailPage = () => {
         nameAr: data.name_ar,
         slug: data.slug,
         price: Number(data.price),
-        costPrice: data.cost_price ? Number(data.cost_price) : undefined,
         originalPrice: data.original_price ? Number(data.original_price) : undefined,
         discount: data.discount || undefined,
         description: data.description || "",
         descriptionAr: data.description_ar || "",
         images: baseImages,
-        category: data.category,
-        categoryId: (data as any).category_id || undefined,
-        brand: data.brand,
+        category: data.category || "",
+        categoryId: data.category_id || undefined,
+        brand: data.brand || "",
         inStock: data.in_stock ?? true,
-        stockQuantity: typeof (data as any).stock_quantity === "number" ? (data as any).stock_quantity : undefined,
+        stockQuantity: typeof data.stock_quantity === "number" ? data.stock_quantity : undefined,
         countries: (data.countries || ["GLOBAL"]) as Product["countries"],
         isFeatured: data.is_featured,
         isBestSeller: data.is_best_seller,
-        hasSizes: (data as any).has_sizes ?? false,
-        sizes: (data as any).sizes || [],
-        accessories: accessories as ProductAccessory[],
-        features: ((data as any).features || []) as ProductFeature[],
+        hasSizes: data.has_sizes ?? false,
+        sizes: data.sizes || [],
+        accessories,
+        features: asArray<ProductFeature>(data.features),
         colorVariants,
-        specs: ((data as any).specs || []) as ProductSpec[],
-        returnPolicy: (data as any).return_policy as string | null,
-        hasQualityVariants: (data as any).has_quality_variants ?? false,
-        qualityVariants: ((data as any).quality_variants || []) as QualityVariant[],
+        specs: asArray<ProductSpec>(data.specs),
+        returnPolicy: data.return_policy,
+        hasQualityVariants: data.has_quality_variants ?? false,
+        qualityVariants: asArray<QualityVariant>(data.quality_variants),
       };
     },
     enabled: !!slug,
@@ -161,7 +173,7 @@ const ProductDetailPage = () => {
     queryKey: ["product-inventory-skus", product?.id],
     enabled: !!product?.id,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("inventory_skus").select("id,product_id,variant_key,label,color_name,color_hex,color_hex2,size,stock_quantity,is_default").eq("product_id", product!.id).order("is_default", { ascending: true }).order("label", { ascending: true });
+      const { data, error } = await supabase.from("inventory_skus").select("id,product_id,variant_key,label,color_name,color_hex,color_hex2,size,stock_quantity,is_default").eq("product_id", product!.id).order("is_default", { ascending: true }).order("label", { ascending: true });
 
       if (error) throw error;
 
@@ -179,11 +191,11 @@ const ProductDetailPage = () => {
   const { data: defaultReturnPolicy } = useQuery({
     queryKey: ["default-return-policy"],
     queryFn: async () => {
-      const { data } = await (supabase as any).from("site_settings").select("value").eq("key", "default_return_policy").maybeSingle();
+      const { data } = await supabase.from("site_settings").select("value").eq("key", "default_return_policy").maybeSingle();
 
       const value = data?.value;
 
-      return (typeof value === "string" ? value : value ?? null) as string | null;
+      return typeof value === "string" ? value : null;
     },
     staleTime: 1000 * 60 * 10,
   });
@@ -193,15 +205,15 @@ const ProductDetailPage = () => {
   ========================================================= */
 
   const { data: relatedProducts = [] } = useQuery({
-    queryKey: ["related-products", (product as any)?.categoryId, product?.id, country],
+    queryKey: ["related-products", product?.categoryId, product?.id, country],
     queryFn: async () => {
-      const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).eq("category_id", (product as any).categoryId).neq("id", product!.id).contains("countries", [country]).limit(4);
+      const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).eq("category_id", product!.categoryId!).neq("id", product!.id).contains("countries", [country]).limit(4);
 
       if (error) throw error;
 
       return (data || []).map(mapProductCard);
     },
-    enabled: !!product && !!country && !!(product as any)?.categoryId,
+    enabled: !!product?.categoryId,
     staleTime: 1000 * 60 * 5,
   });
 
@@ -240,7 +252,7 @@ const ProductDetailPage = () => {
   useEffect(() => {
     if (!product) return;
 
-    addRecent(product as Product);
+    addRecent(product);
   }, [product?.id]);
 
   /* =========================================================
@@ -304,8 +316,8 @@ const ProductDetailPage = () => {
       offers: {
         "@type": "Offer",
         url: productUrl,
-        priceCurrency: "YER",
-        price: product.price,
+        priceCurrency: currencyMode.startsWith("YER") ? "YER" : currencyMode,
+        price: convertPrice(product.price, currencyMode),
         availability: product.inStock ? "https://schema.org/InStock" : "https://schema.org/OutOfStock",
         itemCondition: "https://schema.org/NewCondition",
       },
@@ -332,7 +344,7 @@ const ProductDetailPage = () => {
 
       script.remove();
     };
-  }, [product]);
+  }, [currencyMode, product]);
 
   if (isLoading) {
     return <ProductDetailSkeleton />;
@@ -597,7 +609,7 @@ const ProductDetailPage = () => {
   ========================================================= */
 
   const handleFavorite = () => {
-    const nowLiked = toggleFavorite(product as Product);
+    const nowLiked = toggleFavorite(product);
 
     toast({
       title: nowLiked ? "تمت الإضافة للمفضلة" : "تمت الإزالة من المفضلة",

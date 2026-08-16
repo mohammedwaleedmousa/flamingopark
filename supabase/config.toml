@@ -1,4 +1,20 @@
 project_id = "hcomhdkmtqttzghjxjcb"
 
+[auth]
+enable_signup = true
+enable_anonymous_sign_ins = false
+
 [functions.customer-assistant]
+verify_jwt = false
+
+[functions.customer-auth-bootstrap]
+verify_jwt = false
+
+[functions.customer-registration-finalize]
+verify_jwt = true
+
+[functions.create-order]
+verify_jwt = false
+
+[functions.invoice-access]
 verify_jwt = false

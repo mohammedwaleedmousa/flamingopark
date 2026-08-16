@@ -7,13 +7,14 @@ import CartDrawer from "@/components/CartDrawer";
 
 import { useStore } from "@/store/useStore";
 import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
+import { useCurrency } from "@/lib/currency";
 
 const CartPage = () => {
   const { cart, updateQuantity, removeFromCart, getCartTotal } = useStore();
+  const { format: formatCurrency } = useCurrency();
   const navigate = useNavigate();
   const { data: content } = useSiteContent("cart_");
 
-  const currency = "ر.ي";
   const total = getCartTotal();
 
   const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -42,8 +43,7 @@ const CartPage = () => {
 
             {cart.length > 0 && (
               <div className="shrink-0 text-left">
-                <span className="block text-[18px] font-semibold leading-none text-[#B85F66] md:text-[22px]">{total.toFixed(0)}</span>
-                <span className="mt-1 block text-[6px] text-[#A99A94] md:text-[7px]">{currency}</span>
+                <span className="block text-[18px] font-semibold leading-none text-[#B85F66] md:text-[22px]">{formatCurrency(total)}</span>
               </div>
             )}
           </div>
@@ -168,9 +168,9 @@ const CartPage = () => {
 
                       {/* PRICE */}
                       <div className="mt-2 flex items-end gap-1.5">
-                        <span className="text-[13px] font-semibold leading-none text-[#C65F68] md:text-[15px]">{unitTotal.toFixed(0)} {currency}</span>
+                        <span className="text-[13px] font-semibold leading-none text-[#C65F68] md:text-[15px]">{formatCurrency(unitTotal)}</span>
 
-                        {!!discount && <span className="text-[7px] leading-none text-[#AEA19C] line-through md:text-[8px]">{basePrice.toFixed(0)}</span>}
+                        {!!discount && <span className="text-[7px] leading-none text-[#AEA19C] line-through md:text-[8px]">{formatCurrency(basePrice)}</span>}
                       </div>
 
                       {/* BOTTOM */}
@@ -189,7 +189,7 @@ const CartPage = () => {
 
                         <div className="text-left">
                           <span className="block text-[6px] text-[#A99B96]">الإجمالي</span>
-                          <span className="mt-1 block text-[11px] font-semibold leading-none text-[#594441] md:text-[13px]">{itemTotal.toFixed(0)} {currency}</span>
+                          <span className="mt-1 block text-[11px] font-semibold leading-none text-[#594441] md:text-[13px]">{formatCurrency(itemTotal)}</span>
                         </div>
                       </div>
                     </div>
@@ -215,7 +215,7 @@ const CartPage = () => {
                 <div className="space-y-3 border-y border-[#EADFDA] py-4">
                   <div className="flex items-center justify-between">
                     <span className="text-[9px] text-[#897A75]">{getSiteText(content, "cart_subtotal_label", "المجموع الفرعي")}</span>
-                    <span className="text-[10px] font-semibold text-[#493A37]">{total.toFixed(0)} {currency}</span>
+                    <span className="text-[10px] font-semibold text-[#493A37]">{formatCurrency(total)}</span>
                   </div>
 
                   <div className="flex items-center justify-between">
@@ -236,8 +236,7 @@ const CartPage = () => {
                   </div>
 
                   <div className="text-left">
-                    <span className="text-[23px] font-semibold leading-none text-[#B95E66]">{total.toFixed(0)}</span>
-                    <span className="mr-1 text-[8px] font-medium text-[#8D7975]">{currency}</span>
+                    <span className="text-[23px] font-semibold leading-none text-[#B95E66]">{formatCurrency(total)}</span>
                   </div>
                 </div>
 

@@ -128,11 +128,9 @@ const searchablePages: SearchableAdminPage[] = [
   { title: "إضافة منتج", section: "الكتالوج", url: "/admin/products/new", keywords: "new product" },
   { title: "العملاء", section: "الرئيسية", url: "/admin/customers", keywords: "customers" },
 
-  { title: "تجربة عرض المنتج", section: "الكتالوج", url: "/admin/product-experience" },
   { title: "الفئات", section: "الكتالوج", url: "/admin/categories" },
   { title: "الماركات", section: "الكتالوج", url: "/admin/brands" },
   { title: "ربط الماركات بالفئات", section: "الكتالوج", url: "/admin/brand-category-map" },
-  { title: "سير عمل الكتالوج", section: "الكتالوج", url: "/admin/catalog-workflow" },
   { title: "تعديلات المخزون", section: "الكتالوج", url: "/admin/inventory-adjustments" },
 
   { title: "البانرات", section: "واجهة المتجر", url: "/admin/banners" },
@@ -141,8 +139,6 @@ const searchablePages: SearchableAdminPage[] = [
   { title: "صفحات الماركات", section: "واجهة المتجر", url: "/admin/brand-pages" },
   { title: "أقسام الماركات", section: "واجهة المتجر", url: "/admin/brand-sections" },
   { title: "فلاتر الماركات", section: "واجهة المتجر", url: "/admin/brand-filters" },
-  { title: "تجربة العميل", section: "واجهة المتجر", url: "/admin/customer-experience" },
-  { title: "خريطة الواجهة", section: "واجهة المتجر", url: "/admin/storefront-map" },
 
   { title: "إدارة التوصيل", section: "العمليات", url: "/admin/delivery" },
   { title: "مناطق الدفع عند الاستلام", section: "العمليات", url: "/admin/cod-regions", keywords: "cod مناطق" },
@@ -154,7 +150,6 @@ const searchablePages: SearchableAdminPage[] = [
   { title: "دفتر اليومية", section: "المالية", url: "/admin/ledger" },
   { title: "المرتجعات", section: "المالية", url: "/admin/refunds" },
   { title: "العملات", section: "المالية", url: "/admin/currencies" },
-  { title: "الدول", section: "المالية", url: "/admin/countries" },
 
   { title: "الحملات", section: "التسويق", url: "/admin/campaigns" },
   { title: "العروض", section: "التسويق", url: "/admin/offers" },
@@ -195,7 +190,6 @@ const pageMetaRules: PageMetaRule[] = [
   { match: "/admin/categories", title: "الفئات", section: "الكتالوج", exact: true },
   { match: "/admin/brands", title: "الماركات", section: "الكتالوج", exact: true },
   { match: "/admin/brand-category-map", title: "ربط الماركات بالفئات", section: "الكتالوج", exact: true },
-  { match: "/admin/catalog-workflow", title: "سير عمل الكتالوج", section: "الكتالوج", exact: true },
   { match: "/admin/inventory-adjustments", title: "تعديلات المخزون", section: "الكتالوج", exact: true },
 
   { match: "/admin/banners", title: "البانرات", section: "واجهة المتجر", exact: true },
@@ -217,7 +211,6 @@ const pageMetaRules: PageMetaRule[] = [
   { match: "/admin/ledger", title: "دفتر اليومية", section: "المالية", exact: true },
   { match: "/admin/refunds", title: "المرتجعات", section: "المالية", exact: true },
   { match: "/admin/currencies", title: "العملات", section: "المالية", exact: true },
-  { match: "/admin/countries", title: "الدول", section: "المالية", exact: true },
 
   { match: "/admin/campaigns", title: "الحملات", section: "التسويق", exact: true },
   { match: "/admin/offers", title: "العروض", section: "التسويق", exact: true },
@@ -290,42 +283,39 @@ const AdminLayout = () => {
   ========================================================= */
 
   useEffect(() => {
-    checkAdminAccess();
-  }, []);
+    let active = true;
 
-  const checkAdminAccess = async () => {
-    try {
-      if (import.meta.env.DEV) {
-        const params = new URLSearchParams(window.location.search);
+    const checkAdminAccess = async () => {
+      try {
+        const { data: { user } } = await supabase.auth.getUser();
 
-        if (params.get("dev") === "true") {
-          setIsAdmin(true);
+        if (!user) {
+          navigate("/admin/login");
           return;
         }
-      }
 
-      const { data: { user } } = await supabase.auth.getUser();
+        const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
 
-      if (!user) {
+        if (!roleData) {
+          navigate("/admin/login");
+          return;
+        }
+
+        if (active) setIsAdmin(true);
+      } catch (error) {
+        console.error("Auth check error:", error);
         navigate("/admin/login");
-        return;
+      } finally {
+        if (active) setIsLoading(false);
       }
+    };
 
-      const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
+    void checkAdminAccess();
 
-      if (!roleData) {
-        navigate("/admin/login");
-        return;
-      }
-
-      setIsAdmin(true);
-    } catch (error) {
-      console.error("Auth check error:", error);
-      navigate("/admin/login");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    return () => {
+      active = false;
+    };
+  }, [navigate]);
 
   /* =========================================================
      LOCK OUTER SCROLL

@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AlertTriangle, Boxes, CheckCircle2, ClipboardCheck, History, Layers3, Loader2, Minus, Package, PackagePlus, Pencil, Plus, RefreshCw, RotateCcw, Save, Search, SlidersHorizontal, Trash2, TrendingDown, TrendingUp, Wallet, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fetchAdminProductCostMap } from "@/lib/admin/productCosts";
 
 type VariantSizeEntry = string | { size?: string; stock?: number };
 
@@ -183,7 +184,7 @@ const AdminInventoryAdjustmentsPage = () => {
   const { data: summary, isLoading: summaryLoading } = useQuery({
     queryKey: ["inventory-summary-rpc"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc("get_inventory_summary");
+      const { data, error } = await supabase.rpc("get_inventory_summary");
       if (error) throw error;
       const row = Array.isArray(data) ? data[0] : data;
       return {
@@ -202,7 +203,7 @@ const AdminInventoryAdjustmentsPage = () => {
   const { data: productResult, isLoading: productsLoading, isFetching: productsFetching } = useQuery({
     queryKey: ["inventory-products", page, search, filter],
     queryFn: async () => {
-      let query = supabase.from("products").select("id,name,name_ar,brand,cost_price,price,stock_quantity,in_stock,is_active,images,color_variants,has_sizes,sizes,has_quality_variants", { count: "exact" });
+      let query = supabase.from("products").select("id,name,name_ar,brand,price,stock_quantity,in_stock,is_active,images,color_variants,has_sizes,sizes,has_quality_variants", { count: "exact" });
 
       if (search.trim()) {
         const safe = search.trim().replace(/[,%()]/g, " ");
@@ -218,7 +219,10 @@ const AdminInventoryAdjustmentsPage = () => {
       const { data, count, error } = await query.order("stock_quantity", { ascending: true }).order("name_ar", { ascending: true }).range(from, from + PRODUCT_PAGE_SIZE - 1);
       if (error) throw error;
 
-      return { rows: (data || []) as Product[], total: count || 0 };
+      const rows = (data || []) as Omit<Product, "cost_price">[];
+      const costs = await fetchAdminProductCostMap(rows.map((product) => product.id));
+
+      return { rows: rows.map((product) => ({ ...product, cost_price: costs.get(product.id) ?? null })), total: count || 0 };
     },
     staleTime: 15_000,
   });
@@ -231,7 +235,7 @@ const AdminInventoryAdjustmentsPage = () => {
     queryKey: ["inventory-page-skus", productIds],
     enabled: productIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("inventory_skus").select("id,product_id,variant_key,label,color_name,color_hex,color_hex2,size,stock_quantity,is_default").in("product_id", productIds).order("is_default", { ascending: true }).order("label", { ascending: true });
+      const { data, error } = await supabase.from("inventory_skus").select("id,product_id,variant_key,label,color_name,color_hex,color_hex2,size,stock_quantity,is_default").in("product_id", productIds).order("is_default", { ascending: true }).order("label", { ascending: true });
       if (error) throw error;
       return (data || []) as InventorySku[];
     },
@@ -250,7 +254,7 @@ const AdminInventoryAdjustmentsPage = () => {
     queryKey: ["inventory-product-skus", activeProduct?.id || "none"],
     enabled: Boolean(activeProduct?.id && adjustmentOpen),
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("inventory_skus").select("id,product_id,variant_key,label,color_name,color_hex,color_hex2,size,stock_quantity,is_default").eq("product_id", activeProduct!.id).order("is_default", { ascending: true }).order("label", { ascending: true });
+      const { data, error } = await supabase.from("inventory_skus").select("id,product_id,variant_key,label,color_name,color_hex,color_hex2,size,stock_quantity,is_default").eq("product_id", activeProduct!.id).order("is_default", { ascending: true }).order("label", { ascending: true });
       if (error) throw error;
       return (data || []) as InventorySku[];
     },
@@ -260,7 +264,7 @@ const AdminInventoryAdjustmentsPage = () => {
     queryKey: ["inventory-product-skus", editorProduct?.id || "none"],
     enabled: Boolean(editorProduct?.id && editorOpen),
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("inventory_skus").select("id,product_id,variant_key,label,color_name,color_hex,color_hex2,size,stock_quantity,is_default").eq("product_id", editorProduct!.id).order("is_default", { ascending: true }).order("label", { ascending: true });
+      const { data, error } = await supabase.from("inventory_skus").select("id,product_id,variant_key,label,color_name,color_hex,color_hex2,size,stock_quantity,is_default").eq("product_id", editorProduct!.id).order("is_default", { ascending: true }).order("label", { ascending: true });
       if (error) throw error;
       return (data || []) as InventorySku[];
     },
@@ -269,7 +273,7 @@ const AdminInventoryAdjustmentsPage = () => {
   const { data: historyResult, isLoading: historyLoading, isFetching: historyFetching } = useQuery({
     queryKey: ["inventory-adjustments", historyPage, historySearch, historyType],
     queryFn: async () => {
-      let query = (supabase as any).from("inventory_adjustments").select("*", { count: "exact" });
+      let query = supabase.from("inventory_adjustments").select("*", { count: "exact" });
 
       if (historyType !== "all") query = query.eq("adjustment_type", historyType);
 
@@ -338,7 +342,7 @@ const AdminInventoryAdjustmentsPage = () => {
       const distributedSkus = adjustmentSkus.filter((sku) => !sku.is_default);
       if (distributedSkus.length > 1 && !activeSkuId && !adjustmentSkus.some((sku) => sku.is_default)) throw new Error("اختر اللون أو المقاس الذي تريد تعديل مخزونه.");
 
-      const { error } = await (supabase as any).rpc("apply_inventory_adjustment", {
+      const { error } = await supabase.rpc("apply_inventory_adjustment", {
         p_product_id: activeProduct.id,
         p_adjustment_type: adjustmentForm.adjustment_type,
         p_quantity: quantity,
@@ -357,7 +361,7 @@ const AdminInventoryAdjustmentsPage = () => {
       setActiveSkuId("");
       await refresh();
     },
-    onError: (error: any) => toast({ title: "تعذر تحديث المخزون", description: error?.message || "حدث خطأ.", variant: "destructive" }),
+    onError: (error) => toast({ title: "تعذر تحديث المخزون", description: error instanceof Error ? error.message : "حدث خطأ.", variant: "destructive" }),
   });
 
   const buildEditableSkus = (product: Product, existing: InventorySku[]) => {
@@ -582,7 +586,7 @@ const AdminInventoryAdjustmentsPage = () => {
         is_default: sku.is_default,
       }));
 
-      const { error } = await (supabase as any).rpc("replace_product_inventory_skus", { p_product_id: editorProduct.id, p_items: payload });
+      const { error } = await supabase.rpc("replace_product_inventory_skus", { p_product_id: editorProduct.id, p_items: payload });
       if (error) throw error;
     },
     onSuccess: async () => {
@@ -594,12 +598,12 @@ const AdminInventoryAdjustmentsPage = () => {
       setNewSizeColor("");
       await refresh();
     },
-    onError: (error: any) => toast({ title: "تعذر حفظ التوزيع", description: error?.message || "حدث خطأ.", variant: "destructive" }),
+    onError: (error) => toast({ title: "تعذر حفظ التوزيع", description: error instanceof Error ? error.message : "حدث خطأ.", variant: "destructive" }),
   });
 
   const deleteProductMutation = useMutation({
     mutationFn: async (productId: string) => {
-      const { error } = await (supabase as any).rpc("delete_product_from_inventory", { p_product_id: productId });
+      const { error } = await supabase.rpc("delete_product_from_inventory", { p_product_id: productId });
       if (error) throw error;
     },
     onSuccess: async () => {
@@ -607,7 +611,7 @@ const AdminInventoryAdjustmentsPage = () => {
       setDeleteTarget(null);
       await refresh();
     },
-    onError: (error: any) => toast({ title: "تعذر حذف المنتج", description: error?.message || "حدث خطأ أثناء الحذف.", variant: "destructive" }),
+    onError: (error) => toast({ title: "تعذر حذف المنتج", description: error instanceof Error ? error.message : "حدث خطأ أثناء الحذف.", variant: "destructive" }),
   });
 
   return (

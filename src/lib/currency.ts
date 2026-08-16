@@ -30,14 +30,14 @@ export async function hydrateCurrencies(force = false): Promise<void> {
   hydratePromise = (async () => {
     try {
       const { data, error } = await supabase
-        .from("currencies" as any)
+        .from("currencies")
         .select("code,name_ar,symbol,rate_to_base,is_base,is_active,sort_order")
         .order("sort_order", { ascending: true });
       if (error) throw error;
       if (Array.isArray(data)) {
         // Clear and repopulate
         for (const k of Object.keys(CURRENCY_RATES)) delete CURRENCY_RATES[k];
-        for (const row of data as any[]) {
+        for (const row of data) {
           CURRENCY_RATES[row.code] = {
             rate: Number(row.rate_to_base) || 1,
             symbol: row.symbol || "",

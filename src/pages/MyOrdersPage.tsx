@@ -8,7 +8,7 @@ import CartDrawer from "@/components/CartDrawer";
 import LoadingScreen from "@/components/LoadingScreen";
 
 import { supabase } from "@/integrations/supabase/client";
-import { getCustomerSession } from "@/lib/customerSession";
+import { loadCustomerSession } from "@/lib/customerSession";
 import { toast } from "@/hooks/use-toast";
 
 type OrderRow = {
@@ -18,7 +18,6 @@ type OrderRow = {
   status: string;
   created_at: string;
   invoice_url: string | null;
-  tracking_token: string | null;
 };
 
 type NormalizedStatus = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
@@ -73,8 +72,7 @@ const MyOrdersPage = () => {
   const navigate = useNavigate();
 
   const [authLoading, setAuthLoading] = useState(true);
-  const [customerId, setCustomerId] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
+  const [ownerUserId, setOwnerUserId] = useState("");
 
   const [orders, setOrders] = useState<OrderRow[]>([]);
   const [loading, setLoading] = useState(false);
@@ -85,19 +83,17 @@ const MyOrdersPage = () => {
   ========================================================= */
 
   useEffect(() => {
-    const session = getCustomerSession();
-
-    if (!session) {
-      navigate("/auth", {
-        replace: true,
-      });
-
-      return;
-    }
-
-    setCustomerId(String(session.id));
-    setCustomerPhone(String(session.phone || "").trim());
-    setAuthLoading(false);
+    let active = true;
+    void loadCustomerSession().then((session) => {
+      if (!active) return;
+      if (!session) {
+        navigate("/auth", { replace: true });
+        return;
+      }
+      setOwnerUserId(session.userId);
+      setAuthLoading(false);
+    }).catch(() => navigate("/auth", { replace: true }));
+    return () => { active = false; };
   }, [navigate]);
 
   /* =========================================================
@@ -105,7 +101,7 @@ const MyOrdersPage = () => {
   ========================================================= */
 
   useEffect(() => {
-    if (!customerId) return;
+    if (!ownerUserId) return;
 
     let mounted = true;
 
@@ -113,15 +109,7 @@ const MyOrdersPage = () => {
       setLoading(true);
 
       try {
-        let query = supabase.from("orders").select("id,order_number,total,status,created_at,invoice_url,tracking_token").order("created_at", { ascending: false }).limit(100);
-
-        if (customerPhone) {
-          query = query.or(`customer_id.eq.${customerId},customer_phone.eq.${customerPhone}`);
-        } else {
-          query = query.eq("customer_id", customerId);
-        }
-
-        const { data, error } = await query;
+        const { data, error } = await supabase.from("orders").select("id,order_number,total,status,created_at,invoice_url").eq("owner_user_id", ownerUserId).order("created_at", { ascending: false }).limit(100);
 
         if (error) throw error;
 
@@ -152,7 +140,7 @@ const MyOrdersPage = () => {
     return () => {
       mounted = false;
     };
-  }, [customerId, customerPhone]);
+  }, [ownerUserId]);
 
   /* =========================================================
      INVOICE
@@ -194,17 +182,7 @@ const MyOrdersPage = () => {
   ========================================================= */
 
   const trackOrder = (order: OrderRow) => {
-    if (!order.tracking_token) {
-      toast({
-        title: "رابط التتبع غير متاح",
-        description: "تعذر العثور على رمز التتبع الخاص بهذا الطلب.",
-        variant: "destructive",
-      });
-
-      return;
-    }
-
-    navigate(`/order-tracking?order=${encodeURIComponent(order.order_number)}&token=${encodeURIComponent(order.tracking_token)}`);
+    navigate(`/order-tracking?order=${encodeURIComponent(order.order_number)}`);
   };
 
   /* =========================================================
@@ -385,7 +363,7 @@ const MyOrdersPage = () => {
                       {/* ACTIONS */}
 
                       <div className="mt-3 flex gap-2">
-                        <button type="button" onClick={() => trackOrder(order)} disabled={!order.tracking_token} className="flex h-[36px] flex-1 items-center justify-center gap-1.5 rounded-[9px] bg-[#D4777D] px-3 text-[7px] font-semibold text-white active:bg-[#C96B72] disabled:cursor-not-allowed disabled:bg-[#E6D9D6] disabled:text-[#AA9D98]">
+                        <button type="button" onClick={() => trackOrder(order)} className="flex h-[36px] flex-1 items-center justify-center gap-1.5 rounded-[9px] bg-[#D4777D] px-3 text-[7px] font-semibold text-white active:bg-[#C96B72]">
                           <Truck className="h-3.5 w-3.5" strokeWidth={1.5} />
                           تتبع الطلب
                         </button>

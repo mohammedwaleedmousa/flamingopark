@@ -5,7 +5,7 @@ import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import LoadingScreen from "@/components/LoadingScreen";
 import { supabase } from "@/integrations/supabase/client";
-import { getCustomerSession } from "@/lib/customerSession";
+import { loadCustomerSession } from "@/lib/customerSession";
 
 type ShipmentRow = {
   id: string;
@@ -61,37 +61,35 @@ const barMap: Record<string, string> = {
 const MyShipmentsPage = () => {
   const navigate = useNavigate();
   const [authLoading, setAuthLoading] = useState(true);
-  const [customerId, setCustomerId] = useState("");
-  const [customerPhone, setCustomerPhone] = useState("");
+  const [ownerUserId, setOwnerUserId] = useState("");
   const [shipments, setShipments] = useState<ShipmentRow[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const session = getCustomerSession();
-    if (!session) {
-      navigate("/auth", { replace: true });
-      return;
-    }
-    setCustomerId(String(session.id));
-    setCustomerPhone(String(session.phone || "").trim());
-    setAuthLoading(false);
+    let active = true;
+    void loadCustomerSession().then((session) => {
+      if (!active) return;
+      if (!session) {
+        navigate("/auth", { replace: true });
+        return;
+      }
+      setOwnerUserId(session.userId);
+      setAuthLoading(false);
+    }).catch(() => navigate("/auth", { replace: true }));
+    return () => { active = false; };
   }, [navigate]);
 
   useEffect(() => {
-    if (!customerId) return;
+    if (!ownerUserId) return;
     const fetchShipments = async () => {
       setLoading(true);
       try {
-        let query = supabase
+        const { data, error } = await supabase
           .from("orders")
           .select("id, order_number, status, created_at")
+          .eq("owner_user_id", ownerUserId)
           .order("created_at", { ascending: false })
           .limit(100);
-
-        if (customerPhone) query = query.or(`customer_id.eq.${customerId},customer_phone.eq.${customerPhone}`);
-        else query = query.eq("customer_id", customerId);
-
-        const { data, error } = await query;
         if (error) throw error;
 
         const rows = ((data || []) as ShipmentRow[]).filter((r) => {
@@ -106,7 +104,7 @@ const MyShipmentsPage = () => {
     };
 
     fetchShipments();
-  }, [customerId, customerPhone]);
+  }, [ownerUserId]);
 
   if (authLoading) return <LoadingScreen />;
 

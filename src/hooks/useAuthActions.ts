@@ -1,6 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { clearCustomerSession } from "@/lib/customerSession";
+import { useStore } from "@/store/useStore";
 
 interface LogoutOptions {
   redirectTo?: string;
@@ -20,6 +22,8 @@ export const useAuthActions = () => {
 
     try {
       await supabase.auth.signOut();
+      clearCustomerSession();
+      useStore.getState().setCustomer(null);
       onSuccess?.();
       toast({ title: successTitle });
       if (redirectTo) navigate(redirectTo);

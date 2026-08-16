@@ -255,6 +255,15 @@ const systemItems: NavItem[] = [
   { title: "سجل النشاط", url: "/admin/audit-log", icon: ScrollText, tone: "slate" },
 ];
 
+const isNavItemActive = (item: NavItem, pathname: string) => {
+  if (item.exact) return pathname === item.url;
+  return pathname === item.url || pathname.startsWith(`${item.url}/`);
+};
+
+const currentSectionForPath = (pathname: string) => (
+  sections.find((section) => section.items.some((item) => isNavItemActive(item, pathname)))?.id ?? null
+);
+
 const AdminSidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -282,24 +291,16 @@ const AdminSidebar = () => {
     retry: 1,
   });
 
-  const isActive = (item: NavItem) => {
-    if (item.exact) return location.pathname === item.url;
-
-    return location.pathname === item.url || location.pathname.startsWith(`${item.url}/`);
-  };
+  const isActive = (item: NavItem) => isNavItemActive(item, location.pathname);
 
   const isSectionActive = (section: NavSection) => {
     return section.items.some((item) => isActive(item));
   };
 
-  const getCurrentSection = () => {
-    return sections.find((section) => isSectionActive(section))?.id ?? null;
-  };
-
-  const [openSection, setOpenSection] = useState<string | null>(() => getCurrentSection());
+  const [openSection, setOpenSection] = useState<string | null>(() => currentSectionForPath(location.pathname));
 
   useEffect(() => {
-    const current = getCurrentSection();
+    const current = currentSectionForPath(location.pathname);
 
     if (current) {
       setOpenSection(current);

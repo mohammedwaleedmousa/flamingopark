@@ -3,12 +3,15 @@ import { persist } from "zustand/middleware";
 import { track } from "@/lib/analytics";
 import type { CurrencyMode } from "@/lib/currency";
 
+type FlamingoWindow = Window & { __flamingoStockToast?: (remaining: number) => void };
+
 export type Country = "GLOBAL" | string;
 
 export const detectCountryFromPhone = (_phone?: string): Country => "GLOBAL";
 
 export interface Customer {
   id: string;
+  userId?: string;
   name: string;
   phone: string;
   region?: string;
@@ -20,7 +23,6 @@ export interface Product {
   nameAr: string;
   slug: string;
   price: number;
-  costPrice?: number;
   originalPrice?: number;
   discount?: number;
   description: string;
@@ -35,11 +37,20 @@ export interface Product {
   isBestSeller?: boolean;
   // Optional modern variant model
   variants?: Variant[];
-  color_variants?: any[];
-  colorVariants?: any[];
+  color_variants?: ProductColorVariant[];
+  colorVariants?: ProductColorVariant[];
   sizes?: string[];
   categoryId?: string;
   brandId?: string;
+}
+
+export interface ProductColorVariant {
+  name?: string;
+  hex?: string;
+  hex2?: string;
+  images?: string[];
+  sizes?: Array<VariantSize | string>;
+  stock?: number;
 }
 
 export interface VariantSize {
@@ -129,16 +140,16 @@ export const useStore = create<StoreState>()(
         const cart = get().cart;
 
         // Enforce stock quantity if provided on product
-        const stock = (product as any).stockQuantity;
+        const stock = product.stockQuantity;
         if (typeof stock === "number" && stock >= 0) {
           const existingQty = cart
             .filter((it) => it.product.id === product.id && (it.variantId || "") === (variantId || ""))
             .reduce((s, it) => s + it.quantity, 0);
           if (existingQty + quantity > stock) {
             const remaining = Math.max(0, stock - existingQty);
-            const win: any = typeof window !== "undefined" ? window : {};
-            if (win.__flamingoStockToast) {
-              win.__flamingoStockToast(remaining);
+            const stockToast = typeof window !== "undefined" ? (window as FlamingoWindow).__flamingoStockToast : undefined;
+            if (stockToast) {
+              stockToast(remaining);
             }
             return;
           }
@@ -151,8 +162,8 @@ export const useStore = create<StoreState>()(
         );
 
         // Determine unit price taking variant override into account
-        const variant = variantId && (product as any).variants
-          ? (product as any).variants.find((v: any) => v.id === variantId)
+        const variant = variantId && product.variants
+          ? product.variants.find((candidate) => candidate.id === variantId)
           : undefined;
 
         const unitPriceSource = variant && (variant.price ?? variant.discount !== undefined)
@@ -241,8 +252,8 @@ export const useStore = create<StoreState>()(
       getCartTotal: () => {
         return get().cart.reduce((total, item) => {
           // Price may be overridden by variant
-          const variant = item.variantId && (item.product as any).variants
-            ? (item.product as any).variants.find((v: any) => v.id === item.variantId)
+          const variant = item.variantId && item.product.variants
+            ? item.product.variants.find((candidate) => candidate.id === item.variantId)
             : undefined;
 
           const basePrice = variant && variant.price !== undefined ? variant.price : item.product.price;

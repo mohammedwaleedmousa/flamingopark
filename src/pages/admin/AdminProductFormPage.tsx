@@ -2,6 +2,7 @@ import { lazy, Suspense, useEffect, useMemo, useState, type FormEvent } from 're
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
+import type { Json, TablesInsert } from '@/integrations/supabase/types';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -13,6 +14,7 @@ import { ArrowRight, BadgeDollarSign, Boxes, ClipboardList, Eye, Layers3, Loader
 import type { ColorVariant } from '@/components/admin/ColorVariantsEditor';
 import { syncProductInventory } from '@/lib/productInventory';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
+import { fetchAdminProductCostMap } from '@/lib/admin/productCosts';
 
 const ColorVariantsEditor = lazy(() => import('@/components/admin/ColorVariantsEditor'));
 
@@ -51,6 +53,17 @@ interface ProductFeature {
   title: string;
   desc: string;
 }
+
+const asArray = <T,>(value: unknown): T[] => Array.isArray(value) ? value as T[] : [];
+
+const errorMessage = (error: unknown, fallback: string) => {
+  if (error instanceof Error && error.message) return error.message;
+  if (error && typeof error === 'object') {
+    const details = error as { details?: unknown; hint?: unknown; message?: unknown };
+    return String(details.message || details.details || details.hint || fallback);
+  }
+  return fallback;
+};
 
 const prepareImage = async (file: File) => {
   const { prepareImageUpload } = await import('@/lib/prepareImageUpload');
@@ -162,7 +175,7 @@ const AdminProductFormPage = () => {
     queryKey: ['category-brand-links', selectedCategory?.id],
     enabled: !!selectedCategory,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from('brand_categories')
         .select('brand_id')
         .eq('category_id', selectedCategory!.id);
@@ -175,7 +188,7 @@ const AdminProductFormPage = () => {
 
   const filteredBrands = useMemo(() => {
     if (mappedBrandIds.size === 0) return brands;
-    return brands.filter((b: any) => mappedBrandIds.has(b.id));
+    return brands.filter((brand) => mappedBrandIds.has(brand.id));
   }, [brands, mappedBrandIds]);
 
   useEffect(() => {
@@ -233,7 +246,7 @@ const AdminProductFormPage = () => {
     setIsLoading(true);
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select('id,name,name_ar,slug,price,original_price,discount,description,description_ar,category,category_id,brand,brand_id,in_stock,is_featured,is_best_seller,is_active,countries,section_ids,home_collections,accessories,features,color_variants,stock_quantity,return_policy,specs,has_quality_variants,quality_variants')
       .eq('id', id)
       .single();
 
@@ -241,6 +254,19 @@ const AdminProductFormPage = () => {
       toast({ title: 'خطأ', description: 'فشل في تحميل المنتج', variant: 'destructive' });
       navigate('/admin/products');
     } else {
+      let protectedCost: number | null;
+
+      try {
+        const costs = await fetchAdminProductCostMap([data.id]);
+        protectedCost = costs.get(data.id) ?? null;
+      } catch (costError) {
+        console.error('Failed to load protected product cost', costError);
+        toast({ title: 'خطأ', description: 'تعذر تحميل تكلفة المنتج المحمية؛ لن يتم فتح التعديل حتى لا تُستبدل التكلفة.', variant: 'destructive' });
+        navigate('/admin/products');
+        setIsLoading(false);
+        return;
+      }
+
       setSelectedCategoryId(data.category_id || null);
       let brandName = data.brand?.trim() || '';
       if (!brandName && data.brand_id) {
@@ -256,7 +282,7 @@ const AdminProductFormPage = () => {
         name_ar: data.name_ar || '',
         slug: data.slug || '',
         price: data.price?.toString() || '',
-        cost_price: data.cost_price?.toString() || '',
+        cost_price: protectedCost?.toString() || '',
         original_price: data.original_price?.toString() || '',
         discount: data.discount?.toString() || '0',
         description: data.description || '',
@@ -268,19 +294,19 @@ const AdminProductFormPage = () => {
         is_best_seller: data.is_best_seller ?? false,
         is_active: data.is_active ?? true,
         countries: data.countries || [SINGLE_COUNTRY],
-        section_ids: (data as any).section_ids || [],
-        home_collections: (data as any).home_collections || [],
-        accessories: ((data as any).accessories || []) as Accessory[],
-        features: ((data as any).features || []) as ProductFeature[],
-        color_variants: ((data as any).color_variants || []) as ColorVariant[],
-        stock_quantity: (data as any).stock_quantity?.toString() || '0',
-        return_policy: (data as any).return_policy || '',
-        specs: ((data as any).specs || []) as { label: string; value: string }[],
-        has_quality_variants: (data as any).has_quality_variants ?? false,
-        quality_variants: ((data as any).quality_variants || []) as { name: string; price: number; description: string; images: string[]; in_stock: boolean }[],
+        section_ids: data.section_ids || [],
+        home_collections: data.home_collections || [],
+        accessories: asArray<Accessory>(data.accessories),
+        features: asArray<ProductFeature>(data.features),
+        color_variants: asArray<ColorVariant>(data.color_variants),
+        stock_quantity: data.stock_quantity?.toString() || '0',
+        return_policy: data.return_policy || '',
+        specs: asArray<{ label: string; value: string }>(data.specs),
+        has_quality_variants: data.has_quality_variants ?? false,
+        quality_variants: asArray<{ name: string; price: number; description: string; images: string[]; in_stock: boolean }>(data.quality_variants),
       });
 
-      const { data: skuRows, error: skuError } = await (supabase as any)
+      const { data: skuRows, error: skuError } = await supabase
         .from('inventory_skus')
         .select('size,stock_quantity,color_name,is_default')
         .eq('product_id', data.id)
@@ -288,8 +314,8 @@ const AdminProductFormPage = () => {
 
       if (!skuError) {
         const standalone = (skuRows || [])
-          .filter((row: any) => !row.color_name && row.size)
-          .map((row: any) => ({ size: String(row.size), stock: Math.max(0, Number(row.stock_quantity || 0)) }));
+          .filter((row) => !row.color_name && row.size)
+          .map((row) => ({ size: String(row.size), stock: Math.max(0, Number(row.stock_quantity || 0)) }));
         setStandaloneSizes(standalone);
       }
     }
@@ -373,8 +399,8 @@ const AdminProductFormPage = () => {
       || categories.find((c) => c.slug === resolvedCategory)
       || null;
     const brandName = formData.brand.trim();
-    const selectedBrand = (brands as any[]).find((b: any) => b.name?.trim() === brandName) || null;
-    const productData = {
+    const selectedBrand = brands.find((brand) => brand.name?.trim() === brandName) || null;
+    const productData: TablesInsert<'products'> = {
       name: resolvedName,
       name_ar: formData.name_ar,
       slug: resolvedSlug,
@@ -398,13 +424,13 @@ const AdminProductFormPage = () => {
       home_collections: formData.home_collections,
       has_sizes: standaloneSizes.length > 0 || formData.color_variants.some((color) => (color.sizes || []).length > 0),
       sizes: standaloneSizes.map((item) => item.size),
-      accessories: formData.accessories as unknown as any,
-      features: formData.features as unknown as any,
-      color_variants: formData.color_variants as unknown as any,
+      accessories: formData.accessories as unknown as Json,
+      features: formData.features as unknown as Json,
+      color_variants: formData.color_variants as unknown as Json,
       return_policy: formData.return_policy || null,
-      specs: formData.specs as unknown as any,
+      specs: formData.specs as unknown as Json,
       has_quality_variants: formData.has_quality_variants,
-      quality_variants: formData.quality_variants as unknown as any,
+      quality_variants: formData.quality_variants as unknown as Json,
     };
 
     try {
@@ -437,7 +463,7 @@ const AdminProductFormPage = () => {
       // المنتج ومركز المخزون وصفحة العميل كلها تقرأ نفس الكميات.
       await syncProductInventory(
         savedProductId,
-        formData.color_variants as any,
+        formData.color_variants,
         Math.max(0, parseInt(formData.stock_quantity || '0') || 0),
         standaloneSizes,
       );
@@ -447,8 +473,8 @@ const AdminProductFormPage = () => {
         description: isEditing ? 'تم تحديث المنتج ومخزونه الحقيقي بنجاح' : 'تم إضافة المنتج وربط مخزونه بنجاح',
       });
       navigate('/admin/products');
-    } catch (error: any) {
-      const desc = error?.message || error?.details || error?.hint || 'فشل حفظ المنتج';
+    } catch (error: unknown) {
+      const desc = errorMessage(error, 'فشل حفظ المنتج');
       console.error('[product-save] error:', error);
       toast({ title: 'خطأ في حفظ المنتج', description: desc, variant: 'destructive' });
     } finally {
@@ -657,7 +683,7 @@ const AdminProductFormPage = () => {
                 className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[10px] shadow-none focus-visible:border-[#D4D9E0] focus-visible:bg-white focus-visible:ring-0"
               />
               <datalist id="registered-brands">
-                {filteredBrands.map((brand: any) => <option key={brand.id} value={brand.name.trim()} />)}
+                {filteredBrands.map((brand) => <option key={brand.id} value={brand.name.trim()} />)}
               </datalist>
               <p className="text-[8px] text-[#969DA7] mt-[4px]">
                 يمكنك كتابة ماركة حرة؛ تُربط بصفحة ماركة فقط عند مطابقة اسم ماركة مسجلة.
@@ -725,7 +751,6 @@ const AdminProductFormPage = () => {
             <div className="flex flex-wrap gap-[7px]">
               {[
                 { key: "curated", label: "منتجات مختارة بعناية" },
-                { key: "new_season", label: "جديد الموسم" },
                 { key: "best_sellers", label: "الأكثر مبيعاً" },
               ].map((collection) => (
                 <button
@@ -747,7 +772,7 @@ const AdminProductFormPage = () => {
               ))}
             </div>
             <p className="text-[8px] text-[#969DA7] mt-[5px]">
-              اختياري — يحدد ظهور المنتج في صفحات: /curated و /new-season و /top-selling
+              اختياري — يحدد ظهور المنتج في صفحات: /curated و /top-selling
             </p>
           </div>
 
@@ -862,8 +887,8 @@ const AdminProductFormPage = () => {
                         if (error) throw error;
                         const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(path);
                         setNewAccessory(prev => ({ ...prev, image_url: urlData.publicUrl }));
-                      } catch (err: any) {
-                        toast({ title: 'فشل رفع الصورة', description: err?.message, variant: 'destructive' });
+                      } catch (err: unknown) {
+                        toast({ title: 'فشل رفع الصورة', description: errorMessage(err, 'تعذر رفع الصورة.'), variant: 'destructive' });
                       } finally {
                         setUploadingAccessoryImage(false);
                         e.target.value = '';
@@ -1163,8 +1188,8 @@ const AdminProductFormPage = () => {
                                       const { data } = supabase.storage.from('uploads').getPublicUrl(path);
                                       urls.push(data.publicUrl);
                                     }
-                                  } catch (err: any) {
-                                    toast({ title: `فشل رفع ${f.name}`, description: err?.message, variant: 'destructive' });
+                                  } catch (err: unknown) {
+                                    toast({ title: `فشل رفع ${f.name}`, description: errorMessage(err, 'تعذر رفع الصورة.'), variant: 'destructive' });
                                   }
                                 }
                                 const v = [...formData.quality_variants];

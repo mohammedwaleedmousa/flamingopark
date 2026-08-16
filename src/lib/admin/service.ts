@@ -3,6 +3,7 @@ import { supabase as supabaseClient } from "@/integrations/supabase/client";
 const supabase = supabaseClient as any;
 import type { Database } from "@/integrations/supabase/types";
 import type { QueryClient } from "@tanstack/react-query";
+import { fetchAdminProductCostMap } from "@/lib/admin/productCosts";
 
 type OrdersRow = Database["public"]["Tables"]["orders"]["Row"];
 type ProductsRow = Database["public"]["Tables"]["products"]["Row"];
@@ -165,7 +166,7 @@ function buildOrderListQuery(params: AdminOrderQueryParams) {
 function buildProductListQuery(params: AdminProductQueryParams) {
   let query = supabase
     .from("products")
-    .select("id,name,name_ar,slug,price,cost_price,discount,category,brand,in_stock,is_active,countries,images,sort_order,created_at", { count: "exact" });
+    .select("id,name,name_ar,slug,price,discount,category,brand,in_stock,is_active,countries,images,sort_order,created_at", { count: "exact" });
   if (params.search?.trim()) {
     const term = `%${params.search.trim()}%`;
     query = query.or(`name.ilike.${term},name_ar.ilike.${term},slug.ilike.${term}`);
@@ -226,7 +227,9 @@ export async function deleteOrders(orderIds: string[]) {
 export async function getProducts(params: AdminProductQueryParams = {}): Promise<AdminProductResult> {
   const { data, count, error } = await buildProductListQuery(params);
   if (error) throw error;
-  return { data: (data ?? []) as unknown as ProductsRow[], count: count ?? 0 };
+  const rows = data ?? [];
+  const costs = await fetchAdminProductCostMap(rows.map((product: { id: string }) => product.id));
+  return { data: rows.map((product: { id: string }) => ({ ...product, cost_price: costs.get(product.id) ?? null })) as unknown as ProductsRow[], count: count ?? 0 };
 }
 
 export async function updateProductActive(productId: string, next: boolean) {
@@ -518,12 +521,9 @@ export async function getProfitSummary(startDate: string, endDate: string) {
   const productsMap: Record<string, number> = {};
   if (prodIds.size > 0) {
     const ids = Array.from(prodIds);
-    const { data: products } = await supabase
-      .from("products")
-      .select("id, cost_price")
-      .in("id", ids as string[]);
-    for (const p of products ?? []) {
-      productsMap[p.id] = Number(p.cost_price ?? 0);
+    const costs = await fetchAdminProductCostMap(ids);
+    for (const id of ids) {
+      productsMap[id] = Number(costs.get(id) ?? 0);
     }
   }
 

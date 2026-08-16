@@ -1,197 +1,94 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronDown, Eye, EyeOff, Loader2, LockKeyhole, MapPin, Phone, Search, UserRound, X } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Globe2, Loader2, LockKeyhole, MapPin, Phone, ShieldCheck, UserRound } from "lucide-react";
 
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { COUNTRIES } from "@/lib/countries";
+import { loginCustomer, registerCustomer } from "@/lib/customerAuth";
+import { clearCustomerSession, type CustomerSession } from "@/lib/customerSession";
 
 type AuthMode = "login" | "register";
+type RegisterStage = 1 | 2;
 
-const REGIONS = [
-  "عدن",
-  "صنعاء",
-  "تعز",
-  "حضرموت",
-  "إب",
-  "الحديدة",
-  "لحج",
-  "أبين",
-  "شبوة",
-  "مأرب",
-  "ذمار",
-  "البيضاء",
-  "الضالع",
-  "صعدة",
-  "عمران",
-  "ريمة",
-  "المحويت",
-  "الجوف",
-];
+const fieldClass = "h-11 w-full rounded-[14px] border border-[#E9E4E1] bg-[#FBFAF9] px-3.5 text-[14px] text-[#302A28] outline-none transition-all placeholder:text-[#B8B0AC] focus:border-[#C88B91] focus:bg-white focus:ring-2 focus:ring-[#C88B91]/10";
+const labelClass = "mb-1.5 block text-[11px] font-medium text-[#655D59]";
 
 const CustomerAuthPage = () => {
   const navigate = useNavigate();
-
   const { setCustomer, setRegion } = useStore();
 
   const [mode, setMode] = useState<AuthMode>("login");
+  const [registerStage, setRegisterStage] = useState<RegisterStage>(1);
+  const [countryOpen, setCountryOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [claimExisting, setClaimExisting] = useState(false);
-
-  const [regionOpen, setRegionOpen] = useState(false);
-  const [regionSearch, setRegionSearch] = useState("");
-
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    password: "",
-    region: "",
-  });
-
-  const filteredRegions = useMemo(() => {
-    const value = regionSearch.trim();
-
-    if (!value) return REGIONS;
-
-    return REGIONS.filter((region) => region.includes(value));
-  }, [regionSearch]);
-
-  /* =========================================================
-     REGION SHEET BODY LOCK
-  ========================================================= */
+  const [formData, setFormData] = useState({ name: "", identifier: "", phone: "", password: "", country: "YE", region: "" });
 
   useEffect(() => {
-    if (!regionOpen) return;
-
-    const scrollY = window.scrollY;
-    const body = document.body;
-
-    const previousPosition = body.style.position;
-    const previousTop = body.style.top;
-    const previousWidth = body.style.width;
-    const previousOverflow = body.style.overflow;
-
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.width = "100%";
-    body.style.overflow = "hidden";
+    const previousBodyOverflow = document.body.style.overflow;
+    const previousBodyOverscroll = document.body.style.overscrollBehavior;
+    const previousHtmlOverflow = document.documentElement.style.overflow;
+    document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
+    document.documentElement.style.overflow = "hidden";
 
     return () => {
-      body.style.position = previousPosition;
-      body.style.top = previousTop;
-      body.style.width = previousWidth;
-      body.style.overflow = previousOverflow;
-
-      window.scrollTo({
-        top: scrollY,
-        behavior: "auto",
-      });
+      document.body.style.overflow = previousBodyOverflow;
+      document.body.style.overscrollBehavior = previousBodyOverscroll;
+      document.documentElement.style.overflow = previousHtmlOverflow;
     };
-  }, [regionOpen]);
+  }, []);
 
-  const updateField = (field: keyof typeof formData, value: string) => {
-    setFormData((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
-  };
+  const selectedCountry = useMemo(() => COUNTRIES.find((country) => country.code === formData.country), [formData.country]);
+  const updateField = <K extends keyof typeof formData>(field: K, value: (typeof formData)[K]) => setFormData((previous) => ({ ...previous, [field]: value }));
 
-  const persistCustomer = (raw: any) => {
-    const customerData = {
-      ...raw,
-      region: raw.region || raw.country || "عدن",
-    };
-
-    setCustomer({
-      id: customerData.id,
-      name: customerData.name,
-      phone: customerData.phone,
-      region: customerData.region,
-    });
-
+  const persistCustomer = (customerData: CustomerSession) => {
+    setCustomer({ id: customerData.id, userId: customerData.userId, name: customerData.name, phone: customerData.phone, region: customerData.region });
     setRegion(customerData.region);
-
-    localStorage.setItem("customer", JSON.stringify(customerData));
-    localStorage.setItem("customer_phone", customerData.phone);
-
     return customerData;
   };
 
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
+  const changeMode = (nextMode: AuthMode) => {
+    if (isLoading) return;
+    setMode(nextMode);
+    setRegisterStage(1);
+    setShowPassword(false);
+  };
 
-    const phone = formData.phone.trim();
-    const password = formData.password.trim();
-    const name = formData.name.trim();
-    const selectedRegion = formData.region.trim();
-
-    if (!phone || !password || (mode === "register" && !name) || (mode === "register" && !selectedRegion)) {
-      toast({
-        title: "البيانات غير مكتملة",
-        description: "يرجى تعبئة جميع الحقول المطلوبة.",
-        variant: "destructive",
-      });
-
+  const goToRegisterStageTwo = () => {
+    if (formData.name.trim().length < 2) {
+      toast({ title: "أدخل الاسم الكامل", description: "اكتب اسمًا صحيحًا للمتابعة.", variant: "destructive" });
       return;
     }
+    if (formData.region.trim().length < 2) {
+      toast({ title: "أدخل المدينة أو المنطقة", description: "نحتاجها لإكمال بيانات الحساب.", variant: "destructive" });
+      return;
+    }
+    setRegisterStage(2);
+  };
 
+  const handleCredentials = async (event: React.FormEvent) => {
+    event.preventDefault();
     setIsLoading(true);
 
     try {
       if (mode === "register") {
-        const { data: registerData, error } = await (supabase as any).rpc("customer_register", {
-          _name: name,
-          _phone: phone,
-          _country: selectedRegion,
-          _region: selectedRegion,
-          _password: password,
-        });
-
-        if (error) throw error;
-
-        if (!registerData || registerData.length === 0) {
-          throw new Error("تعذر إنشاء الحساب");
-        }
-
-        const customerData = persistCustomer(registerData[0]);
-
-        toast({
-          title: "تم إنشاء الحساب",
-          description: `أهلاً ${customerData.name}`,
-        });
-
+        const customerData = persistCustomer(await registerCustomer({ name: formData.name, phone: formData.phone, password: formData.password, country: formData.country, region: formData.region }));
+        toast({ title: "تم إنشاء الحساب", description: `أهلًا ${customerData.name}` });
         navigate("/home");
-
         return;
       }
 
-      const { data: loginData, error } = await (supabase as any).rpc("customer_login", {
-        _phone: phone,
-        _password: password,
-      });
-
-      if (error) throw error;
-
-      if (!loginData || loginData.length === 0) {
-        throw new Error("رقم الهاتف أو كلمة المرور غير صحيحة");
-      }
-
-      const customerData = persistCustomer(loginData[0]);
-
-      toast({
-        title: "مرحباً بعودتك",
-        description: `أهلاً ${customerData.name}`,
-      });
-
+      const customerData = persistCustomer(await loginCustomer(formData.identifier, formData.password));
+      toast({ title: "مرحباً بعودتك", description: `أهلاً ${customerData.name}` });
       navigate("/home");
-    } catch (error: any) {
-      toast({
-        title: "تعذر المتابعة",
-        description: error?.message || "حدث خطأ أثناء تسجيل الدخول.",
-        variant: "destructive",
-      });
+    } catch (error: unknown) {
+      toast({ title: "تعذر المتابعة", description: error instanceof Error ? error.message : "حدث خطأ أثناء المصادقة.", variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -199,304 +96,77 @@ const CustomerAuthPage = () => {
 
   const handleGuest = async () => {
     setIsGuestLoading(true);
-
     try {
-      setCustomer({
-        id: "guest",
-        name: "ضيف",
-        phone: "",
-        region: "عدن",
-      });
-
-      setRegion("عدن");
-
-      toast({
-        title: "مرحباً بك",
-        description: "يمكنك الآن تصفح المتجر.",
-      });
-
+      await supabase.auth.signOut();
+      clearCustomerSession();
+      setCustomer({ id: "guest", name: "ضيف", phone: "", region: "" });
+      setRegion("");
       navigate("/home");
     } finally {
       setIsGuestLoading(false);
     }
   };
 
-  const changeMode = (nextMode: AuthMode) => {
-    if (isLoading) return;
-
-    setMode(nextMode);
-    setShowPassword(false);
-    setRegionOpen(false);
-    setRegionSearch("");
-  };
-
-  const selectRegion = (region: string) => {
-    updateField("region", region);
-    setRegionOpen(false);
-    setRegionSearch("");
-  };
-
   return (
-    <main className="min-h-[100svh] bg-background" dir="rtl">
-      {/* =====================================================
-          TOP
-      ===================================================== */}
+    <main className="fixed inset-0 z-50 h-[100dvh] overflow-hidden bg-[#FCFBFA] text-[#302A28]" dir="rtl">
+      <div className="grid h-full min-h-0 w-full lg:grid-cols-[0.9fr_1.1fr]">
+        <aside className="relative hidden h-full overflow-hidden border-l border-[#E9E4E1] bg-[#F1ECE9] lg:flex lg:flex-col lg:justify-between lg:p-12 xl:p-16">
+          <div className="absolute -left-32 -top-28 h-[440px] w-[440px] rounded-full bg-white/60 blur-3xl" />
+          <div className="absolute -bottom-40 -right-28 h-[460px] w-[460px] rounded-full bg-[#D6A7AA]/20 blur-3xl" />
+          <button type="button" onClick={() => navigate("/home")} className="relative z-10 flex w-fit items-center gap-3" aria-label="العودة إلى متجر فلامنجو بارك"><img src="/icons/flamingo.jpeg" alt="Flamingo Park" width={54} height={54} className="h-[54px] w-[54px] rounded-2xl object-contain" /><div className="text-right"><p className="font-serif text-[16px] tracking-[0.14em] text-[#443A37]">FLAMINGO PARK</p><p className="mt-1 text-[11px] text-[#8E837E]">Secure global account</p></div></button>
+          <div className="relative z-10 max-w-[470px]"><div className="mb-6 flex h-11 w-11 items-center justify-center rounded-full bg-white/80"><Globe2 className="h-5 w-5 text-[#A8646B]" strokeWidth={1.5} /></div><h2 className="text-[40px] font-semibold leading-[1.24] tracking-[-0.04em] text-[#322A28] xl:text-[46px]">حسابك، أينما كنت.</h2><p className="mt-5 max-w-[420px] text-[14px] leading-7 text-[#786D69]">تسجيل عالمي سريع برقم هاتف دولي وكلمة مرور، بدون انتظار رمز تحقق عند إنشاء الحساب.</p><div className="mt-8 space-y-3 text-[13px] text-[#605753]"><div className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80"><Check className="h-4 w-4 text-[#A8646B]" /></span><span>لا توجد رسوم رسائل عند إنشاء الحساب</span></div><div className="flex items-center gap-3"><span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/80"><ShieldCheck className="h-4 w-4 text-[#A8646B]" /></span><span>التحقق يُستخدم لاحقًا فقط عند الحاجة</span></div></div></div>
+          <p className="relative z-10 text-[11px] text-[#988D88]">© Flamingo Park</p>
+        </aside>
 
-      <div className="mx-auto flex min-h-[100svh] w-full max-w-[520px] flex-col px-5 pb-7 pt-5 sm:px-7 md:justify-center md:py-10">
-        {/* LOGO */}
+        <section className="flex h-full min-h-0 flex-col bg-[#FCFBFA]">
+          <header className="relative flex h-[54px] shrink-0 items-center justify-between border-b border-[#F0ECEA] px-4 sm:h-[62px] sm:px-6 lg:h-[72px] lg:px-10">
+            <button type="button" onClick={() => navigate("/home")} aria-label="العودة إلى المتجر" className="flex h-9 w-9 items-center justify-center rounded-full text-[#776C68] transition-colors hover:bg-[#F4F0EE] hover:text-[#A85E66]"><ArrowLeft className="h-[18px] w-[18px]" /></button>
+            <button type="button" onClick={() => navigate("/home")} aria-label="Flamingo Park" className="absolute left-1/2 flex -translate-x-1/2 items-center gap-2 lg:hidden"><img src="/icons/flamingo.jpeg" alt="Flamingo Park" width={32} height={32} className="h-8 w-8 rounded-xl object-contain" /><span className="font-serif text-[10px] tracking-[0.12em] text-[#5E5350]">FLAMINGO</span></button>
+            <div className="hidden items-center gap-2 text-[11px] text-[#978C87] lg:flex"><ShieldCheck className="h-4 w-4" />تسجيل آمن</div>
+          </header>
 
-        <div className="flex justify-center">
-          <button type="button" onClick={() => navigate("/home")} aria-label="العودة إلى المتجر" className="flex h-[78px] w-[78px] items-center justify-center">
-            <img src="/icons/flamingo.jpeg" alt="Flamingo Park" width={78} height={78} fetchPriority="high" className="h-[78px] w-[78px] object-contain" />
-          </button>
-        </div>
+          <div className="flex min-h-0 flex-1 items-center justify-center px-5 pb-[max(12px,env(safe-area-inset-bottom))] pt-2 sm:px-7 sm:py-5 lg:px-10 lg:py-8">
+            <div className="w-full max-w-[420px] lg:max-w-[500px]">
+              <section className="mx-auto w-full rounded-[24px] bg-transparent px-0 py-1 sm:border sm:border-[#ECE7E4] sm:bg-white sm:p-6 sm:shadow-[0_16px_50px_rgba(68,50,45,0.04)] lg:p-7">
+                <div className="text-center"><p className="mb-1 text-[9px] font-semibold tracking-[0.18em] text-[#B1787C]">FLAMINGO PARK</p><h1 className="text-[25px] font-semibold tracking-[-0.04em] text-[#302A28]">{mode === "login" ? "أهلًا بك" : "إنشاء حساب"}</h1><p className="mt-1 text-[11px] leading-5 text-[#8A7F7A]">{mode === "login" ? "ادخل برقم هاتفك للمتابعة." : registerStage === 1 ? "بيانات بسيطة للبدء." : "أدخل رقم الهاتف وكلمة المرور."}</p></div>
 
-        {/* BRAND */}
+                <div className="mt-3 grid grid-cols-2 rounded-[13px] bg-[#F5F2F0] p-1"><button type="button" onClick={() => changeMode("login")} className={`h-9 rounded-[10px] text-[12px] font-medium transition-all ${mode === "login" ? "bg-white text-[#3B3330] shadow-[0_2px_8px_rgba(56,42,37,0.06)]" : "text-[#938884]"}`}>تسجيل الدخول</button><button type="button" onClick={() => changeMode("register")} className={`h-9 rounded-[10px] text-[12px] font-medium transition-all ${mode === "register" ? "bg-white text-[#3B3330] shadow-[0_2px_8px_rgba(56,42,37,0.06)]" : "text-[#938884]"}`}>حساب جديد</button></div>
 
-        <div className="mt-2 text-center">
-          <div className="flex items-center justify-center gap-2.5">
-            <span className="h-px w-5 bg-[#E0B7B4]" />
+                {mode === "register" && <div className="mt-3 flex items-center gap-2 px-1"><span className="text-[10px] font-semibold text-[#A45E65]">{registerStage}/2</span><div className="flex flex-1 gap-1.5"><span className="h-1 flex-1 rounded-full bg-[#B96C73]" /><span className={`h-1 flex-1 rounded-full ${registerStage === 2 ? "bg-[#B96C73]" : "bg-[#E9E3E0]"}`} /></div></div>}
 
-            <span className="font-serif text-[8px] tracking-[0.26em] text-[#B86168]">FLAMINGO PARK</span>
+                {mode === "login" ? (
+                  <form onSubmit={handleCredentials} className="mt-4 space-y-3">
+                    <div><label htmlFor="auth-identifier" className={labelClass}>رقم الهاتف</label><div className="relative"><Phone className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A89D98]" /><input id="auth-identifier" type="tel" value={formData.identifier} onChange={(event) => updateField("identifier", event.target.value)} autoComplete="tel" placeholder="+967 7XX XXX XXX" dir="ltr" className={`${fieldClass} pr-10 text-left`} /></div></div>
+                    <div><label htmlFor="auth-password" className={labelClass}>كلمة المرور</label><div className="relative"><LockKeyhole className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A89D98]" /><input id="auth-password" type={showPassword ? "text" : "password"} minLength={6} maxLength={72} autoComplete="current-password" value={formData.password} onChange={(event) => updateField("password", event.target.value)} placeholder="كلمة المرور" dir="ltr" className={`${fieldClass} pr-10 pl-11 text-left`} /><button type="button" onClick={() => setShowPassword((previous) => !previous)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-[#958A85]">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
+                    <button type="submit" disabled={isLoading} className="flex h-11 w-full items-center justify-center rounded-[14px] bg-[#B96C73] text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(185,108,115,0.16)] transition-colors hover:bg-[#AA6068] disabled:cursor-not-allowed disabled:opacity-50">{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "تسجيل الدخول"}</button>
+                  </form>
+                ) : registerStage === 1 ? (
+                  <div className="mt-3 space-y-2.5">
+                    <div><label htmlFor="auth-name" className={labelClass}>الاسم الكامل</label><div className="relative"><UserRound className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A89D98]" /><input id="auth-name" type="text" autoComplete="name" maxLength={100} value={formData.name} onChange={(event) => updateField("name", event.target.value)} placeholder="مثال: محمد وليد" className={`${fieldClass} pr-10`} /></div></div>
 
-            <span className="h-px w-5 bg-[#E0B7B4]" />
-          </div>
-        </div>
+                    <div><label className={labelClass}>الدولة</label><Popover open={countryOpen} onOpenChange={setCountryOpen}><PopoverTrigger asChild><button type="button" className="flex h-11 w-full items-center justify-between rounded-[14px] border border-[#E9E4E1] bg-[#FBFAF9] px-3.5 text-[13px] text-[#302A28] outline-none transition-all hover:border-[#DDD4D0] focus:border-[#C88B91] focus:ring-2 focus:ring-[#C88B91]/10"><span className="flex min-w-0 items-center gap-2"><span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-lg bg-[#F1ECEA]"><Globe2 className="h-3.5 w-3.5 text-[#A06469]" /></span><span className="truncate">{selectedCountry?.name || "اليمن"}</span><span className="shrink-0 text-[10px] text-[#A79D98]">{selectedCountry?.code || "YE"}</span></span><ChevronDown className="h-4 w-4 shrink-0 text-[#998E89]" /></button></PopoverTrigger><PopoverContent align="start" sideOffset={7} className="w-[min(360px,calc(100vw-32px))] overflow-hidden rounded-[18px] border border-[#E7E1DE] bg-white p-0 shadow-[0_18px_55px_rgba(55,42,37,0.15)]" dir="rtl"><Command className="rounded-[18px] bg-white"><CommandInput placeholder="ابحث عن دولة..." className="h-11 text-[13px]" /><CommandList className="max-h-[250px] overscroll-contain p-1.5"><CommandEmpty className="py-8 text-[12px] text-[#8C817D]">لم يتم العثور على الدولة.</CommandEmpty><CommandGroup>{COUNTRIES.map((country) => <CommandItem key={country.code} value={`${country.name} ${country.code}`} onSelect={() => { updateField("country", country.code); setCountryOpen(false); }} className="flex min-h-10 items-center justify-between rounded-xl px-3 text-[13px] data-[selected=true]:bg-[#F8F1F0] data-[selected=true]:text-[#7C4D52]"><span className="flex items-center gap-2"><span className="w-8 text-[10px] font-semibold tracking-[0.08em] text-[#A49A95]">{country.code}</span><span>{country.name}</span></span>{formData.country === country.code && <CheckCircle2 className="h-4 w-4 text-[#A45E65]" />}</CommandItem>)}</CommandGroup></CommandList></Command></PopoverContent></Popover></div>
 
-        {/* =====================================================
-            AUTH CARD
-        ===================================================== */}
+                    <div><label htmlFor="auth-region" className={labelClass}>المدينة / المنطقة</label><div className="relative"><MapPin className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A89D98]" /><input id="auth-region" value={formData.region} onChange={(event) => updateField("region", event.target.value)} maxLength={100} placeholder="مثال: عدن" className={`${fieldClass} pr-10`} /></div></div>
+                    <button type="button" onClick={goToRegisterStageTwo} className="flex h-11 w-full items-center justify-center gap-2 rounded-[14px] bg-[#B96C73] text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(185,108,115,0.14)] transition-colors hover:bg-[#AA6068]">التالي<ChevronLeft className="h-4 w-4" /></button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleCredentials} className="mt-3 space-y-2.5">
+                    <div><label htmlFor="auth-phone" className={labelClass}>رقم الهاتف الدولي</label><div className="relative"><Phone className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A89D98]" /><input id="auth-phone" type="tel" autoComplete="tel" value={formData.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder={formData.country === "YE" ? "+967 7XX XXX XXX" : "+966 5XX XXX XXX"} dir="ltr" className={`${fieldClass} pr-10 text-left`} /></div></div>
+                    <div><label htmlFor="auth-password" className={labelClass}>كلمة المرور</label><div className="relative"><LockKeyhole className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A89D98]" /><input id="auth-password" type={showPassword ? "text" : "password"} minLength={6} maxLength={72} autoComplete="new-password" value={formData.password} onChange={(event) => updateField("password", event.target.value)} placeholder="6 خانات على الأقل" dir="ltr" className={`${fieldClass} pr-10 pl-11 text-left`} /><button type="button" onClick={() => setShowPassword((previous) => !previous)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-[#958A85]">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
+                    <p className="px-1 text-[10px] leading-4 text-[#978C87]">لن نرسل رمز SMS عند إنشاء الحساب. يمكن طلب التحقق لاحقًا فقط للحالات الحساسة.</p>
+                    <button type="submit" disabled={isLoading} className="flex h-11 w-full items-center justify-center rounded-[14px] bg-[#B96C73] text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(185,108,115,0.14)] transition-colors hover:bg-[#AA6068] disabled:cursor-not-allowed disabled:opacity-50">{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "إنشاء الحساب"}</button>
+                    <button type="button" onClick={() => setRegisterStage(1)} disabled={isLoading} className="mx-auto flex h-6 items-center justify-center gap-1 text-[11px] font-medium text-[#786E69]"><ChevronRight className="h-3.5 w-3.5" />رجوع</button>
+                  </form>
+                )}
 
-        <section className="mt-8 rounded-[22px] border border-[#EEE4E0] bg-[#FFFDFC] px-4 pb-5 pt-6 sm:px-6 sm:pb-6 sm:pt-7">
-          {/* TITLE */}
-
-          <div className="text-center">
-            <h1 className="text-[25px] font-semibold tracking-[-0.035em] text-[#382F2C] sm:text-[28px]">{mode === "login" ? "مرحباً بعودتك" : "إنشاء حساب جديد"}</h1>
-
-            <p className="mx-auto mt-2 max-w-[320px] text-[10px] leading-5 text-[#958883] sm:text-[11px] sm:leading-6">{mode === "login" ? "سجّل دخولك لمتابعة طلباتك والوصول إلى مفضلاتك." : "أنشئ حسابك لتجربة تسوق أسرع وأسهل."}</p>
-          </div>
-
-          {/* =====================================================
-              TABS
-          ===================================================== */}
-
-          <div className="mt-6 grid grid-cols-2 rounded-[13px] bg-[#F7F3F1] p-1">
-            <button type="button" onClick={() => changeMode("login")} className={`h-[42px] rounded-[10px] text-[11px] font-medium transition-colors ${mode === "login" ? "bg-white text-[#443936] shadow-[0_1px_4px_rgba(49,39,35,0.06)]" : "text-[#9F928D]"}`}>تسجيل الدخول</button>
-
-            <button type="button" onClick={() => changeMode("register")} className={`h-[42px] rounded-[10px] text-[11px] font-medium transition-colors ${mode === "register" ? "bg-white text-[#443936] shadow-[0_1px_4px_rgba(49,39,35,0.06)]" : "text-[#9F928D]"}`}>حساب جديد</button>
-          </div>
-
-          {/* =====================================================
-              FORM
-          ===================================================== */}
-
-          <form onSubmit={handleSubmit} className="mt-5 space-y-3">
-            {/* NAME */}
-
-            {mode === "register" && (
-              <div>
-                <label htmlFor="auth-name" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">الاسم الكامل</label>
-
-                <div className="group relative">
-                  <UserRound className="pointer-events-none absolute right-4 top-1/2 h-[16px] w-[16px] -translate-y-1/2 text-[#A99D98] transition-colors group-focus-within:text-[#B86168]" strokeWidth={1.5} />
-
-                  <input id="auth-name" type="text" autoComplete="name" value={formData.name} onChange={(event) => updateField("name", event.target.value)} placeholder="أدخل اسمك الكامل" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-[12px] text-[#443936] outline-none transition-colors placeholder:text-[#B8ADA8] focus:border-[#D7AAA7]" />
-                </div>
-              </div>
-            )}
-
-            {/* REGION */}
-
-            {mode === "register" && (
-              <div>
-                <label className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">المحافظة</label>
-
-                <button type="button" onClick={() => setRegionOpen(true)} className="relative flex h-[50px] w-full items-center rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-11 text-right transition-colors hover:border-[#D9B9B5]">
-                  <MapPin className="absolute right-4 top-1/2 h-[16px] w-[16px] -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} />
-
-                  <span className={`flex-1 text-[12px] ${formData.region ? "text-[#443936]" : "text-[#B8ADA8]"}`}>{formData.region || "اختر المحافظة"}</span>
-
-                  <ChevronDown className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} />
-                </button>
-              </div>
-            )}
-
-            {/* PHONE */}
-
-            <div>
-              <label htmlFor="auth-phone" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">رقم الهاتف</label>
-
-              <div className="group relative">
-                <Phone className="pointer-events-none absolute right-4 top-1/2 h-[16px] w-[16px] -translate-y-1/2 text-[#A99D98] transition-colors group-focus-within:text-[#B86168]" strokeWidth={1.5} />
-
-                <input id="auth-phone" type="tel" inputMode="tel" autoComplete="tel" value={formData.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder="رقم الهاتف" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-left text-[12px] text-[#443936] outline-none transition-colors placeholder:text-[#B8ADA8] focus:border-[#D7AAA7]" />
-              </div>
+                <div className="mt-3 flex items-center justify-center gap-2 text-[11px] text-[#8B817C]"><span>{mode === "login" ? "ليس لديك حساب؟" : "لديك حساب؟"}</span><button type="button" onClick={() => changeMode(mode === "login" ? "register" : "login")} className="font-semibold text-[#A45E65]">{mode === "login" ? "إنشاء حساب" : "تسجيل الدخول"}</button></div>
+                {mode === "login" && <div className="mt-3 flex items-center gap-3"><span className="h-px flex-1 bg-[#EEE9E6]" /><span className="text-[10px] text-[#B0A7A2]">أو</span><span className="h-px flex-1 bg-[#EEE9E6]" /></div>}
+                {mode === "login" && <button type="button" onClick={handleGuest} disabled={isGuestLoading || isLoading} className="mt-3 flex h-10 w-full items-center justify-center rounded-[13px] border border-[#E8E2DF] bg-[#FBFAF9] text-[12px] font-medium text-[#685F5B] transition-colors hover:bg-white disabled:opacity-50">{isGuestLoading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : "متابعة كضيف"}</button>}
+              </section>
             </div>
-
-            {/* PASSWORD */}
-
-            <div>
-              <label htmlFor="auth-password" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">كلمة المرور</label>
-
-              <div className="group relative">
-                <LockKeyhole className="pointer-events-none absolute right-4 top-1/2 h-[16px] w-[16px] -translate-y-1/2 text-[#A99D98] transition-colors group-focus-within:text-[#B86168]" strokeWidth={1.5} />
-
-                <input id="auth-password" type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} value={formData.password} onChange={(event) => updateField("password", event.target.value)} placeholder="كلمة المرور" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-12 text-left text-[12px] text-[#443936] outline-none transition-colors placeholder:text-[#B8ADA8] focus:border-[#D7AAA7]" />
-
-                <button type="button" onClick={() => setShowPassword((previous) => !previous)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-[8px] text-[#A99D98] transition-colors hover:bg-[#FFF7F5] hover:text-[#B86168]">
-                  {showPassword ? <EyeOff className="h-[15px] w-[15px]" strokeWidth={1.5} /> : <Eye className="h-[15px] w-[15px]" strokeWidth={1.5} />}
-                </button>
-              </div>
-            </div>
-
-            {/* OLD CUSTOMER */}
-
-            {mode === "login" && (
-              <button type="button" onClick={() => setClaimExisting((previous) => !previous)} className="flex w-full items-center gap-2.5 px-1 py-1 text-right">
-                <span className={`flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-[5px] border transition-colors ${claimExisting ? "border-[#D4777D] bg-[#D4777D]" : "border-[#D8CECA] bg-white"}`}>{claimExisting && <Check className="h-2.5 w-2.5 text-white" strokeWidth={2.2} />}</span>
-
-                <span className="text-[9px] leading-5 text-[#978984]">ربط سجل العميل السابق المطابق لرقم الهاتف</span>
-              </button>
-            )}
-
-            {/* REGISTER NOTE */}
-
-            {mode === "register" && (
-              <div className="flex items-start gap-2.5 rounded-[10px] bg-[#FFF8F6] px-3 py-2.5">
-                <span className="mt-[2px] flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-full bg-[#F1DAD7]">
-                  <Check className="h-2.5 w-2.5 text-[#A95B61]" strokeWidth={2} />
-                </span>
-
-                <p className="text-[8.5px] leading-5 text-[#8F817C]">سيتم حفظ بياناتك لتسهيل الطلبات القادمة ومتابعة مشترياتك.</p>
-              </div>
-            )}
-
-            {/* SUBMIT */}
-
-            <button type="submit" disabled={isLoading} className="mt-1 flex h-[50px] w-full items-center justify-center rounded-[12px] bg-[#D4777D] px-4 text-[11px] font-semibold text-white transition-colors hover:bg-[#C96F79] active:bg-[#B86168] disabled:cursor-not-allowed disabled:opacity-60">
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.6} /> : mode === "login" ? "تسجيل الدخول" : "إنشاء الحساب"}
-            </button>
-          </form>
-
-          {/* =====================================================
-              CHANGE MODE
-          ===================================================== */}
-
-          <div className="mt-4 text-center">
-            <button type="button" onClick={() => changeMode(mode === "login" ? "register" : "login")} className="text-[9.5px] text-[#938681] transition-colors hover:text-[#A95B61]">
-              {mode === "login" ? (
-                <>
-                  ليس لديك حساب؟
-                  <span className="mr-1 font-semibold text-[#A95B61]">إنشاء حساب</span>
-                </>
-              ) : (
-                <>
-                  لديك حساب؟
-                  <span className="mr-1 font-semibold text-[#A95B61]">تسجيل الدخول</span>
-                </>
-              )}
-            </button>
           </div>
-
-          {/* =====================================================
-              GUEST
-          ===================================================== */}
-
-          <div className="my-5 flex items-center gap-3">
-            <span className="h-px flex-1 bg-[#EDE5E1]" />
-            <span className="text-[8px] text-[#B2A7A2]">أو</span>
-            <span className="h-px flex-1 bg-[#EDE5E1]" />
-          </div>
-
-          <button type="button" onClick={handleGuest} disabled={isGuestLoading || isLoading} className="flex h-[46px] w-full items-center justify-center gap-2 rounded-[11px] border border-[#E6DDD9] bg-white text-[10px] font-medium text-[#655853] transition-colors hover:border-[#D9B5B2] hover:bg-[#FFF8F6] hover:text-[#A95B61] disabled:opacity-50">
-            {isGuestLoading ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} />
-                جاري الدخول...
-              </>
-            ) : (
-              "متابعة التصفح كضيف"
-            )}
-          </button>
         </section>
-
-        {/* =====================================================
-            FOOT
-        ===================================================== */}
-
-        <div className="mt-auto pt-7 text-center md:mt-6">
-          <p className="font-serif text-[7px] tracking-[0.25em] text-[#B1A49F]">FLAMINGO PARK · ADEN</p>
-
-          <p className="mt-2 text-[8px] text-[#B7ABA6]">تسوق بأناقة، بسهولة.</p>
-        </div>
       </div>
-
-      {/* =====================================================
-          REGION PICKER
-      ===================================================== */}
-
-      {regionOpen && (
-        <div className="fixed inset-0 z-[150]" dir="rtl">
-          <button type="button" onClick={() => setRegionOpen(false)} aria-label="إغلاق اختيار المحافظة" className="absolute inset-0 bg-black/25" />
-
-          <div className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[78svh] w-full max-w-[480px] flex-col overflow-hidden rounded-t-[22px] bg-[#FFFDFC] shadow-[0_-10px_40px_rgba(54,42,37,0.10)] sm:bottom-6 sm:rounded-[20px]">
-            {/* HANDLE */}
-
-            <div className="flex h-6 shrink-0 items-center justify-center sm:hidden">
-              <span className="h-1 w-9 rounded-full bg-[#DDD3CE]" />
-            </div>
-
-            {/* HEADER */}
-
-            <div className="flex shrink-0 items-center justify-between border-b border-[#EEE5E1] px-4 pb-4 pt-2 sm:pt-4">
-              <div>
-                <h2 className="text-[15px] font-semibold text-[#403633]">اختر المحافظة</h2>
-                <p className="mt-1 text-[9px] text-[#9B8E89]">حدد موقعك لإكمال إنشاء الحساب</p>
-              </div>
-
-              <button type="button" onClick={() => setRegionOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-full text-[#8E817B] transition-colors hover:bg-[#FFF6F4] hover:text-[#B86168]">
-                <X className="h-4 w-4" strokeWidth={1.5} />
-              </button>
-            </div>
-
-            {/* SEARCH */}
-
-            <div className="shrink-0 px-4 py-3">
-              <div className="relative">
-                <Search className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} />
-
-                <input value={regionSearch} onChange={(event) => setRegionSearch(event.target.value)} placeholder="ابحث عن المحافظة..." autoFocus className="h-11 w-full rounded-[11px] border border-[#E7DEDA] bg-white pr-10 pl-4 text-[11px] text-[#443936] outline-none placeholder:text-[#B4A9A4] focus:border-[#D5AAA6]" />
-              </div>
-            </div>
-
-            {/* REGIONS */}
-
-            <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(16px,env(safe-area-inset-bottom))]">
-              {filteredRegions.length > 0 ? (
-                <div className="overflow-hidden rounded-[13px] border border-[#ECE3DF] bg-white">
-                  {filteredRegions.map((region, index) => {
-                    const selected = formData.region === region;
-
-                    return (
-                      <button key={region} type="button" onClick={() => selectRegion(region)} className={`flex h-[47px] w-full items-center justify-between px-4 text-right transition-colors ${index !== filteredRegions.length - 1 ? "border-b border-[#F0E9E6]" : ""} ${selected ? "bg-[#FFF7F5]" : "bg-white hover:bg-[#FCF9F8]"}`}>
-                        <span className={`text-[11px] font-medium ${selected ? "text-[#A95B61]" : "text-[#554945]"}`}>{region}</span>
-
-                        {selected && <Check className="h-4 w-4 text-[#D4777D]" strokeWidth={1.8} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="py-12 text-center">
-                  <MapPin className="mx-auto h-5 w-5 text-[#B4A9A4]" strokeWidth={1.5} />
-
-                  <p className="mt-3 text-[10px] text-[#938681]">لم نجد هذه المحافظة</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
     </main>
   );
 };

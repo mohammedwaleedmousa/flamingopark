@@ -13,6 +13,7 @@ import { AdminPagination } from "@/components/admin/AdminPagination";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { useDebounce } from "@/hooks/useDebounce";
 import { optimizeImage } from "@/lib/imageUrl";
+import { fetchAdminProductCostMap } from "@/lib/admin/productCosts";
 
 interface DbProduct {
   id: string;
@@ -35,7 +36,7 @@ interface DbProduct {
   is_active: boolean;
   is_featured: boolean;
   is_best_seller: boolean;
-  color_variants?: any[];
+  color_variants?: { images?: string[] }[];
   sort_order: number | null;
 }
 
@@ -170,7 +171,7 @@ const AdminProductsPage = () => {
       return;
     }
 
-    let query = supabase.from("products").select("id,name,name_ar,slug,price,cost_price,discount,category,category_id,brand,brand_id,in_stock,is_active,countries,images,color_variants,sort_order", { count: "exact" });
+    let query = supabase.from("products").select("id,name,name_ar,slug,price,discount,category,category_id,brand,brand_id,in_stock,is_active,countries,images,color_variants,sort_order", { count: "exact" });
 
     if (search.trim()) {
       const term = `%${search.trim()}%`;
@@ -199,7 +200,17 @@ const AdminProductsPage = () => {
     if (error) {
       toast({ title: "خطأ", description: "فشل في تحميل المنتجات", variant: "destructive" });
     } else {
-      setProducts((data || []) as DbProduct[]);
+      const rows = (data || []) as Omit<DbProduct, "cost_price">[];
+
+      try {
+        const costs = await fetchAdminProductCostMap(rows.map((product) => product.id));
+        setProducts(rows.map((product) => ({ ...product, cost_price: costs.get(product.id) ?? null })));
+      } catch (costError) {
+        console.error("Failed to load protected product costs", costError);
+        toast({ title: "تنبيه", description: "تم تحميل المنتجات لكن تعذر تحميل تكلفتها المحمية.", variant: "destructive" });
+        setProducts(rows.map((product) => ({ ...product, cost_price: null })));
+      }
+
       setTotal(count || 0);
     }
 

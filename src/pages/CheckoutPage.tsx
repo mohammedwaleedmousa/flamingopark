@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { z } from "zod";
+import { FunctionsHttpError } from "@supabase/supabase-js";
 import { AlertCircle, Banknote, Check, ChevronDown, ChevronLeft, ChevronRight, Copy, CreditCard, Loader2, MapPin, ShoppingBag, Ticket, Truck, User, X } from "lucide-react";
 
 import Navbar from "@/components/Navbar";
@@ -13,24 +14,21 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { SavedAddress, migrateLegacyCheckoutInfo, upsertSavedAddress } from "@/lib/savedAddresses";
 import { optimizeImage, handleImageError } from "@/lib/imageUrl";
+import { useCurrency } from "@/lib/currency";
+import { normalizeYemenPhone } from "@/lib/yemenPhone";
 
 const orderAccessorySchema = z.object({
   name: z.string().max(200).optional(),
   name_ar: z.string().max(200).optional(),
-  price: z.number().nonnegative().max(1000000),
-  quantity: z.number().int().min(1).max(100),
-  image_url: z.string().max(2000).optional(),
+  quantity: z.number().int().min(1).max(20),
 });
 
 const orderItemSchema = z.object({
   product_id: z.string().uuid(),
-  product_name: z.string().min(1).max(500),
-  product_image: z.string().max(2000).optional(),
   quantity: z.number().int().min(1).max(100),
-  price: z.number().nonnegative().max(10000000),
   selected_size: z.string().max(100).nullable(),
   selected_color: z.string().max(100).nullable().optional(),
-  selected_accessories: z.array(orderAccessorySchema).max(50),
+  selected_accessories: z.array(orderAccessorySchema).max(20),
 });
 
 const orderItemsSchema = z.array(orderItemSchema).min(1).max(100);
@@ -64,10 +62,10 @@ const STEPS = [
 const CheckoutPage = () => {
   const navigate = useNavigate();
   const { customer, cart, getCartTotal, clearCart, currencyMode } = useStore();
+  const { symbol: currency, convert } = useCurrency();
 
   const isGuestLike = !customer || customer.id === "guest";
   const subtotal = getCartTotal();
-  const currency = "ر.ي";
 
   const [currentStep, setCurrentStep] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "bank">("cod");
@@ -179,7 +177,7 @@ const CheckoutPage = () => {
   });
 
   const bankAccounts = useMemo(() => {
-    let value: any = checkoutSettings.bank_accounts ?? checkoutSettings.bank_accounts_ye ?? checkoutSettings.bank_accounts_sa;
+    let value: unknown = checkoutSettings.bank_accounts ?? checkoutSettings.bank_accounts_ye ?? checkoutSettings.bank_accounts_sa;
 
     if (typeof value === "string") {
       try {
@@ -193,11 +191,15 @@ const CheckoutPage = () => {
       return [] as BankAccount[];
     }
 
-    return value.map((item: any) => ({
-      bank: String(item?.bank || ""),
-      account: String(item?.account || ""),
-      name: String(item?.name || ""),
-    })) as BankAccount[];
+    return value.map((item) => {
+      const account = item && typeof item === "object" && !Array.isArray(item) ? item as Record<string, unknown> : {};
+
+      return {
+        bank: String(account.bank || ""),
+        account: String(account.account || ""),
+        name: String(account.name || ""),
+      };
+    }) as BankAccount[];
   }, [checkoutSettings]);
 
   /* =========================================================
@@ -223,19 +225,39 @@ const CheckoutPage = () => {
 
   const selectedCompany = deliveryCompanies.find((company) => company.id === selectedDelivery);
   const deliveryFee = selectedCompany?.base_fee || 0;
-  const total = Math.max(0, subtotal + deliveryFee - discountAmount);
+  const displaySubtotal = convert(subtotal);
+  const displayDeliveryFee = convert(deliveryFee);
+  const total = Math.max(0, displaySubtotal + displayDeliveryFee - discountAmount);
 
-  /* =========================================================
-     COST TOTAL
-  ========================================================= */
+  useEffect(() => {
+    setDiscountAmount(0);
+    setAppliedCoupon(null);
+  }, [currencyMode, subtotal]);
 
-  const getCostPriceTotal = () => {
-    return cart.reduce((totalCost, item) => {
-      const costPrice = item.product.costPrice || item.product.price;
-      const accessoriesTotal = item.selectedAccessories?.reduce((sum, accessory) => sum + accessory.price * accessory.quantity, 0) || 0;
+  const buildOrderItems = () => orderItemsSchema.parse(cart.map((item) => ({
+    product_id: item.product.id,
+    quantity: item.quantity,
+    selected_size: item.selectedSize || null,
+    selected_color: item.selectedColor || item.variantColor || null,
+    selected_accessories: (item.selectedAccessories || []).map((accessory) => ({
+      name: String(accessory.name || ""),
+      name_ar: String(accessory.name_ar || accessory.name || ""),
+      quantity: Number(accessory.quantity) || 1,
+    })),
+  })));
 
-      return totalCost + (costPrice + accessoriesTotal) * item.quantity;
-    }, 0);
+  const invokeOrderService = async (body: Record<string, unknown>) => {
+    const { data, error } = await supabase.functions.invoke("create-order", { body });
+    if (!error) return data;
+    if (error instanceof FunctionsHttpError) {
+      try {
+        const payload = await error.context.clone().json() as { error?: string };
+        if (payload.error) throw new Error(payload.error);
+      } catch (contextError) {
+        if (contextError instanceof Error && !(contextError instanceof SyntaxError)) throw contextError;
+      }
+    }
+    throw new Error("تعذر الاتصال بخدمة الطلبات. حاول مرة أخرى.");
   };
 
   /* =========================================================
@@ -254,36 +276,17 @@ const CheckoutPage = () => {
       return;
     }
 
-    const costPriceTotal = getCostPriceTotal();
-
     try {
-      const { data: couponData, error } = await supabase.from("coupons").select("code,type,value").eq("is_active", true).limit(100);
-
-      if (error) throw error;
-
-      const match = couponData?.find((coupon) => coupon.code?.trim().toUpperCase() === normalized);
-
-      if (!match) {
-        setDiscountAmount(0);
-        setAppliedCoupon(null);
-
-        toast({
-          title: "الكود غير صالح",
-          description: "كود الخصم غير موجود.",
-          variant: "destructive",
-        });
-
-        return;
-      }
-
-      const coupon = match as {
-        type: "percentage" | "fixed";
-        value: number;
-      };
-
-      let discount = coupon.type === "percentage" ? (costPriceTotal * coupon.value) / 100 : coupon.value;
-
-      discount = Math.min(discount, subtotal);
+      const quote = await invokeOrderService({
+        action: "quote",
+        customerPhone: customer?.phone || formData.phone,
+        deliveryCompanyId: selectedDelivery || null,
+        couponCode: normalized,
+        currencyMode,
+        items: buildOrderItems(),
+      });
+      const discount = Number(quote?.discount_amount || 0);
+      if (!(discount > 0)) throw new Error("كود الخصم غير صالح أو غير متاح.");
 
       setDiscountAmount(discount);
       setAppliedCoupon(normalized);
@@ -353,36 +356,20 @@ const CheckoutPage = () => {
      SECURE ORDER
   ========================================================= */
 
-  const createSecureOrder = async (items: unknown[]) => {
-    const { data, error } = await (supabase as any).rpc("create_secure_order", {
-      p_customer_id: customer?.id === "guest" ? null : customer?.id || null,
-      p_customer_name: String(customer?.name || formData.name || "").trim(),
-      p_customer_phone: String(customer?.phone || formData.phone || "").trim(),
-      p_customer_address: formData.address.trim(),
-      p_customer_city: formData.city.trim(),
-      p_customer_region: customer?.region || selectedRegion || null,
-      p_customer_notes: formData.notes.trim() || null,
-      p_country: "YE",
-      p_items: items,
-      p_subtotal: subtotal,
-      p_delivery_fee: deliveryFee,
-      p_total: total,
-      p_payment_method: paymentMethod,
-      p_currency_mode: currencyMode,
-      p_currency_code: currencyMode,
-      p_exchange_rate_snapshot: 1,
-      p_total_base: total,
-      p_coupon_code: appliedCoupon || null,
-      p_discount_amount: discountAmount,
+  const createSecureOrder = async (items: unknown[]) => invokeOrderService({
+      action: "create",
+      customerName: String(customer?.name || formData.name || "").trim(),
+      customerPhone: String(customer?.phone || formData.phone || "").trim(),
+      customerAddress: formData.address.trim(),
+      customerCity: formData.city.trim(),
+      customerRegion: customer?.region || selectedRegion || null,
+      customerNotes: formData.notes.trim() || null,
+      paymentMethod,
+      deliveryCompanyId: selectedDelivery,
+      couponCode: appliedCoupon || null,
+      currencyMode,
+      items,
     });
-
-    if (error) {
-      console.error("RPC ERROR FULL:", error);
-      throw error;
-    }
-
-    return data;
-  };
 
   /* =========================================================
      VALIDATION
@@ -393,9 +380,9 @@ const CheckoutPage = () => {
       const name = String(customer?.name || formData.name || "").trim();
       const phone = String(customer?.phone || formData.phone || "").trim();
 
-      if (isGuestLike && (!name || !phone)) {
+      if (isGuestLike && (!name || !normalizeYemenPhone(phone))) {
         toast({
-          title: "الاسم ورقم الهاتف مطلوبان",
+          title: "الاسم ورقم يمني صحيح مطلوبان",
           variant: "destructive",
         });
 
@@ -487,29 +474,13 @@ const CheckoutPage = () => {
 
     setIsSubmitting(true);
 
-    const rawOrderItems = cart.map((item) => {
-      const basePrice = item.product.discount ? item.product.price * (1 - item.product.discount / 100) : item.product.price;
-      const accessoriesTotal = item.selectedAccessories?.reduce((sum, accessory) => sum + accessory.price * accessory.quantity, 0) || 0;
-
-      return {
-        product_id: item.product.id,
-        product_name: item.product.nameAr,
-        product_image: item.product.images?.[0] || "",
-        quantity: item.quantity,
-        price: basePrice + accessoriesTotal,
-        selected_size: item.selectedSize || null,
-        selected_color: item.selectedColor || item.variantColor || null,
-        selected_accessories: (item.selectedAccessories || []).map((accessory) => ({
-          name: String((accessory as any).name || ""),
-          name_ar: String((accessory as any).name_ar || (accessory as any).name || ""),
-          price: Number((accessory as any).price) || 0,
-          quantity: Number((accessory as any).quantity) || 1,
-          image_url: String((accessory as any).image_url || ""),
-        })),
-      };
-    });
-
-    const validation = orderItemsSchema.safeParse(rawOrderItems);
+    const validation = orderItemsSchema.safeParse(cart.map((item) => ({
+      product_id: item.product.id,
+      quantity: item.quantity,
+      selected_size: item.selectedSize || null,
+      selected_color: item.selectedColor || item.variantColor || null,
+      selected_accessories: (item.selectedAccessories || []).map((accessory) => ({ name: accessory.name, name_ar: accessory.name_ar, quantity: accessory.quantity })),
+    })));
 
     if (!validation.success) {
       console.error("ORDER VALIDATION:", validation.error);
@@ -543,7 +514,7 @@ const CheckoutPage = () => {
         customerAddress: formData.address || "-",
         customerCity: formData.city || "",
         customerNotes: formData.notes || "",
-        items: validation.data,
+        items: createdOrder.items,
         subtotal: Number(createdOrder.subtotal),
         deliveryFee: Number(createdOrder.delivery_fee),
         discountAmount: Number(createdOrder.discount_amount),
@@ -552,7 +523,7 @@ const CheckoutPage = () => {
         paymentMethod,
         deliveryCompany: createdOrder.delivery_company || selectedCompany?.name || "",
         selectedRegion: paymentMethod === "cod" && regionData ? regionData.region_name_ar : customer?.region || null,
-        country: "GLOBAL",
+        country: "YE",
         currencyMode: createdOrder.currency_mode || currencyMode,
         createdAt: createdOrder.created_at || new Date().toISOString(),
       };
@@ -832,7 +803,7 @@ const CheckoutPage = () => {
                                   <p className={`text-[9px] font-semibold ${active ? "text-[#A95B61]" : "text-[#514540]"}`}>{company.name}</p>
 
                                   <p className="mt-1 text-[7px] text-[#9E918C]">
-                                    {company.base_fee.toFixed(0)} {currency}
+                                    {convert(company.base_fee).toFixed(0)} {currency}
                                     {company.delivery_days ? ` • ${company.delivery_days}` : ""}
                                   </p>
                                 </div>
@@ -1046,7 +1017,7 @@ const CheckoutPage = () => {
                                 </div>
                               </div>
 
-                              <span className="shrink-0 text-[8px] font-semibold text-[#A95B61]">{((price + accessoriesTotal) * item.quantity).toFixed(0)} {currency}</span>
+                              <span className="shrink-0 text-[8px] font-semibold text-[#A95B61]">{convert((price + accessoriesTotal) * item.quantity).toFixed(0)} {currency}</span>
                             </div>
                           );
                         })}
@@ -1133,7 +1104,7 @@ const CheckoutPage = () => {
                           </div>
                         </div>
 
-                        <span className="shrink-0 text-[7px] font-semibold text-[#A95B61]">{((price + accessoriesTotal) * item.quantity).toFixed(0)}</span>
+                        <span className="shrink-0 text-[7px] font-semibold text-[#A95B61]">{convert((price + accessoriesTotal) * item.quantity).toFixed(0)}</span>
                       </div>
                     );
                   })}
@@ -1145,12 +1116,12 @@ const CheckoutPage = () => {
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between text-[7px] text-[#746661]">
                       <span>المجموع الفرعي</span>
-                      <span>{subtotal.toFixed(2)} {currency}</span>
+                      <span>{displaySubtotal.toFixed(2)} {currency}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-[7px] text-[#746661]">
                       <span>رسوم التوصيل</span>
-                      <span>{deliveryFee > 0 ? `${deliveryFee.toFixed(2)} ${currency}` : "—"}</span>
+                      <span>{displayDeliveryFee > 0 ? `${displayDeliveryFee.toFixed(2)} ${currency}` : "—"}</span>
                     </div>
 
                     {discountAmount > 0 && (

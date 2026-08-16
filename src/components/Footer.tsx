@@ -27,7 +27,7 @@ const cols: { title: string; links: { label: string; href: string }[] }[] = [
       { label: "نساء", href: "/products?category=women" },
       { label: "رجال", href: "/products?category=men" },
       { label: "جمال", href: "/products?category=beauty" },
-      { label: "العروض", href: "/offers" },
+      { label: "العروض", href: "/seasonal-offers" },
     ],
   },
 ];

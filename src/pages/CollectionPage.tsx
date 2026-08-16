@@ -34,7 +34,7 @@ const CollectionPage = ({ collection, eyebrow, title, description, badge }: Coll
       const base = () => supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true);
 
       const { data: assigned, error } = await base()
-        .contains("home_collections", [collection] as any)
+        .contains("home_collections", [collection])
         .order("sort_order", { ascending: true })
         .limit(60);
       if (error) throw error;

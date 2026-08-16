@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { loadCustomerSession } from "@/lib/customerSession";
 
 type NotificationType = "order" | "system";
 
@@ -66,8 +67,7 @@ interface UseCustomerNotificationsOptions {
 
 export const useCustomerNotifications = (options: UseCustomerNotificationsOptions = {}) => {
   const { enabled = true, enableToasts = false } = options;
-  const [userId, setUserId] = useState<string>("");
-  const [userPhone, setUserPhone] = useState<string>("");
+  const [ownerUserId, setOwnerUserId] = useState<string>("");
   const [customerId, setCustomerId] = useState<string>("");
   const readIdsRef = useRef<Set<string>>(readLocalSet(READ_KEY));
   const deletedIdsRef = useRef<Set<string>>(readLocalSet(DELETED_KEY));
@@ -75,47 +75,34 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
   useEffect(() => {
     let mounted = true;
     const loadCustomer = async () => {
-      const savedCustomer = localStorage.getItem("customer");
-      if (savedCustomer) {
-        try {
-          const customer = JSON.parse(savedCustomer);
-          setUserId(String(customer.id || ""));
-          setUserPhone(String(customer.phone || ""));
-          return;
-        } catch {
-          // Fall back to the authenticated Supabase session.
-        }
-      }
-      const { data } = await supabase.auth.getUser();
+      const customer = await loadCustomerSession();
       if (!mounted) return;
-      const uid = String(data.user?.id || "").trim();
-      const phone = String(data.user?.user_metadata?.phone_number || "").trim();
-      setUserId(uid);
-      setUserPhone(phone);
+      setOwnerUserId(customer?.userId || "");
+      setCustomerId(customer?.id || "");
     };
-    loadCustomer();
+    void loadCustomer().catch(() => {
+      if (mounted) {
+        setOwnerUserId("");
+        setCustomerId("");
+      }
+    });
     return () => {
       mounted = false;
     };
   }, []);
 
   const notificationsQuery = useQuery({
-    queryKey: ["customer-notifications", userId, userPhone, customerId],
-    enabled: enabled && !!(customerId || userPhone),
+    queryKey: ["customer-notifications", ownerUserId, customerId],
+    enabled: enabled && Boolean(ownerUserId),
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     queryFn: async (): Promise<CustomerNotification[]> => {
       let query = supabase
         .from("orders")
-        .select("id, order_number, status, updated_at, created_at, customer_id, customer_phone")
+        .select("id, order_number, status, updated_at, created_at, owner_user_id")
+        .eq("owner_user_id", ownerUserId)
         .order("updated_at", { ascending: false })
         .limit(50);
-
-      if (userPhone) {
-        query = query.or(`customer_id.eq.${userId},customer_phone.eq.${userPhone}`);
-      } else if (userId) {
-        query = query.eq("customer_id", userId);
-      }
 
       const { data, error } = await query;
       if (error) throw error;
@@ -149,21 +136,11 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
       // Also fetch admin-sent customer notifications (broadcasts + targeted)
       let dbNotifs: CustomerNotification[] = [];
       try {
-        const filters: string[] = [
-          "broadcast.eq.true"
-        ];
-        if (userId) {
-          filters.push(`customer_id.eq.${userId}`);
-        }
-        if (userPhone) {
-          filters.push(`customer_phone.eq.${userPhone}`);
-        }
-
-        type NotificationRow = { id: string; title: string; body: string; type: string; link: string | null; is_read: boolean; created_at: string; customer_id: string | null; customer_phone: string | null; broadcast: boolean };
+        type NotificationRow = { id: string; title: string; body: string; type: string; link: string | null; is_read: boolean; created_at: string; user_id: string | null; broadcast: boolean };
         const { data: notifRows } = await supabase
           .from("customer_notifications")
-          .select("id, title, body, type, link, is_read, created_at, customer_id, customer_phone, broadcast")
-          .or(filters.join(","))
+          .select("id, title, body, type, link, is_read, created_at, user_id, broadcast")
+          .or(`broadcast.eq.true,user_id.eq.${ownerUserId}`)
           .order("created_at", { ascending: false })
           .limit(50);
           
@@ -188,17 +165,16 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
   });
 
   useEffect(() => {
-    if (!enabled || !enableToasts || !(userId || userPhone)) return;
+    if (!enabled || !enableToasts || !ownerUserId) return;
 
     const channel = supabase
-      .channel(`customer-orders-live-${userId || "anon"}`)
+      .channel(`customer-orders-live-${ownerUserId}`)
       .on(
         "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "orders" },
+        { event: "UPDATE", schema: "public", table: "orders", filter: `owner_user_id=eq.${ownerUserId}` },
         (payload) => {
-          const next = payload.new as { customer_id?: string | null; customer_phone?: string | null; status?: string | null; order_number?: string | null };
-          const ownerMatch = (userId && String(next.customer_id || "") === userId) || (userPhone && String(next.customer_phone || "") === userPhone);
-          if (!ownerMatch) return;
+          const next = payload.new as { owner_user_id?: string | null; status?: string | null; order_number?: string | null };
+          if (String(next.owner_user_id || "") !== ownerUserId) return;
 
           const status = normalizeStatus(next.status);
           toast({
@@ -214,7 +190,7 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
     return () => {
       supabase.removeChannel(channel);
     };
-  }, [enabled, enableToasts, userId, userPhone, notificationsQuery]);
+  }, [enabled, enableToasts, ownerUserId, notificationsQuery]);
 
   const notifications = useMemo(
     () => [...(notificationsQuery.data || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),

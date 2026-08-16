@@ -14,6 +14,8 @@ const analyticsSource = readSource("../src/lib/analytics.ts");
 const reviewsSource = readSource("../src/components/ProductReviews.tsx");
 const customerAuthSource = readSource("../src/lib/customerAuth.ts");
 const customerAuthPageSource = readSource("../src/pages/CustomerAuthPage.tsx");
+const checkoutSource = readSource("../src/pages/CheckoutPage.tsx");
+const createOrderFunctionSource = readSource("../supabase/functions/create-order/index.ts");
 const customerAuthFunctionSource = readSource("../supabase/functions/customer-auth-bootstrap/index.ts");
 const migrationSource = readSource("../supabase/migrations/20260816090723_p0_customer_phone_auth_orders_security.sql");
 const configSource = readSource("../supabase/config.toml");
@@ -31,6 +33,36 @@ test("storefront product payloads cannot include acquisition cost", () => {
   assert.doesNotMatch(storeSource, /costPrice/);
   assert.match(migrationSource, /REVOKE SELECT \(cost_price\) ON public\.products/);
   assert.match(migrationSource, /get_admin_product_costs/);
+});
+
+test("checkout uses the Edge order service and keeps the RPC contract server-side", () => {
+  assert.match(checkoutSource, /functions\.invoke\("create-order"/);
+  assert.doesNotMatch(checkoutSource, /\.rpc\("create_secure_order"/);
+  assert.doesNotMatch(checkoutSource, /p_subtotal|p_delivery_fee|p_total|p_total_base|p_discount_amount|p_exchange_rate_snapshot/);
+
+  assert.match(createOrderFunctionSource, /service\.rpc\("quote_secure_order"/);
+  assert.match(createOrderFunctionSource, /service\.rpc\("create_secure_order"/);
+
+  for (const parameter of [
+    "p_owner_user_id",
+    "p_customer_id",
+    "p_customer_name",
+    "p_customer_phone",
+    "p_customer_address",
+    "p_customer_city",
+    "p_customer_region",
+    "p_customer_notes",
+    "p_payment_method",
+    "p_delivery_company_id",
+    "p_coupon_code",
+    "p_currency_mode",
+    "p_items",
+  ]) {
+    assert.match(createOrderFunctionSource, new RegExp(`${parameter}:`));
+    assert.match(migrationSource, new RegExp(parameter));
+  }
+
+  assert.match(configSource, /\[functions\.create-order\][\s\S]*?verify_jwt\s*=\s*false/);
 });
 
 test("analytics and customer reviews use rate-limited Edge Functions", () => {

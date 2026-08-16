@@ -63,7 +63,7 @@ const OrderTrackingPage = () => {
     refetchOnWindowFocus: true,
     refetchOnMount: "always",
     queryFn: async () => {
-      const { data, error } = await (supabase as any).rpc("get_order_tracking", {
+      const { data, error } = await supabase.rpc("get_order_tracking", {
         p_order_number: selectedOrder,
         p_tracking_token: trackingToken,
       });

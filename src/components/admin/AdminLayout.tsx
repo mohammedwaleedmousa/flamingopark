@@ -190,7 +190,6 @@ const pageMetaRules: PageMetaRule[] = [
   { match: "/admin/categories", title: "الفئات", section: "الكتالوج", exact: true },
   { match: "/admin/brands", title: "الماركات", section: "الكتالوج", exact: true },
   { match: "/admin/brand-category-map", title: "ربط الماركات بالفئات", section: "الكتالوج", exact: true },
-  { match: "/admin/catalog-workflow", title: "سير عمل الكتالوج", section: "الكتالوج", exact: true },
   { match: "/admin/inventory-adjustments", title: "تعديلات المخزون", section: "الكتالوج", exact: true },
 
   { match: "/admin/banners", title: "البانرات", section: "واجهة المتجر", exact: true },
@@ -212,7 +211,6 @@ const pageMetaRules: PageMetaRule[] = [
   { match: "/admin/ledger", title: "دفتر اليومية", section: "المالية", exact: true },
   { match: "/admin/refunds", title: "المرتجعات", section: "المالية", exact: true },
   { match: "/admin/currencies", title: "العملات", section: "المالية", exact: true },
-  { match: "/admin/countries", title: "الدول", section: "المالية", exact: true },
 
   { match: "/admin/campaigns", title: "الحملات", section: "التسويق", exact: true },
   { match: "/admin/offers", title: "العروض", section: "التسويق", exact: true },

@@ -129,7 +129,7 @@ export default function ReportsFinancePage() {
 
       if (error) throw error;
 
-      return (data || []).map((row: any) => ({
+      return (data || []).map((row) => ({
         ...row,
         total: Number(row.total || 0),
         total_base: row.total_base == null ? null : Number(row.total_base),
@@ -146,11 +146,11 @@ export default function ReportsFinancePage() {
   const expensesQuery = useQuery({
     queryKey: ["reports-finance-expenses-v2", period.previousStartKey, period.currentEndKey],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("expenses").select("id,expense_date,amount,amount_base,currency_code,description,vendor,category_id,created_at,expense_categories!expenses_category_id_fkey(name_ar,name)").gte("expense_date", period.previousStartKey).lte("expense_date", period.currentEndKey).order("expense_date", { ascending: false }).order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("expenses").select("id,expense_date,amount,amount_base,currency_code,description,vendor,category_id,created_at,expense_categories!expenses_category_id_fkey(name_ar,name)").gte("expense_date", period.previousStartKey).lte("expense_date", period.currentEndKey).order("expense_date", { ascending: false }).order("created_at", { ascending: false });
 
       if (error) throw error;
 
-      return (data || []).map((row: any) => ({
+      return (data || []).map((row) => ({
         ...row,
         amount: Number(row.amount || 0),
         amount_base: row.amount_base == null ? null : Number(row.amount_base),
@@ -165,17 +165,17 @@ export default function ReportsFinancePage() {
     queryKey: ["reports-finance-refunds-v2", period.previousStartISO, period.currentEndExclusiveISO],
     queryFn: async () => {
       const [processedResult, fallbackResult] = await Promise.all([
-        (supabase as any).from("refunds").select("id,refund_number,amount,amount_base,currency_code,status,processed_at,created_at").eq("status", "completed").gte("processed_at", period.previousStartISO).lt("processed_at", period.currentEndExclusiveISO),
-        (supabase as any).from("refunds").select("id,refund_number,amount,amount_base,currency_code,status,processed_at,created_at").eq("status", "completed").is("processed_at", null).gte("created_at", period.previousStartISO).lt("created_at", period.currentEndExclusiveISO),
+        supabase.from("refunds").select("id,refund_number,amount,amount_base,currency_code,status,processed_at,created_at").eq("status", "completed").gte("processed_at", period.previousStartISO).lt("processed_at", period.currentEndExclusiveISO),
+        supabase.from("refunds").select("id,refund_number,amount,amount_base,currency_code,status,processed_at,created_at").eq("status", "completed").is("processed_at", null).gte("created_at", period.previousStartISO).lt("created_at", period.currentEndExclusiveISO),
       ]);
 
       if (processedResult.error) throw processedResult.error;
       if (fallbackResult.error) throw fallbackResult.error;
 
       const merged = [...(processedResult.data || []), ...(fallbackResult.data || [])];
-      const unique = Array.from(new Map(merged.map((row: any) => [row.id, row])).values());
+      const unique = Array.from(new Map(merged.map((row) => [row.id, row])).values());
 
-      return unique.map((row: any) => ({
+      return unique.map((row) => ({
         ...row,
         amount: Number(row.amount || 0),
         amount_base: row.amount_base == null ? null : Number(row.amount_base),
@@ -194,7 +194,7 @@ export default function ReportsFinancePage() {
 
       const costs = await fetchAdminProductCostMap();
 
-      return (data || []).map((row: any) => ({
+      return (data || []).map((row) => ({
         ...row,
         cost_price: costs.get(row.id) ?? null,
         price: Number(row.price || 0),

@@ -688,6 +688,62 @@ export type Database = {
         }
         Relationships: []
       }
+      customer_addresses: {
+        Row: {
+          address_line1: string
+          address_line2: string | null
+          city: string
+          created_at: string
+          customer_id: string | null
+          id: string
+          is_default: boolean
+          label: string
+          notes: string | null
+          phone: string
+          recipient_name: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          address_line1: string
+          address_line2?: string | null
+          city: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          is_default?: boolean
+          label: string
+          notes?: string | null
+          phone: string
+          recipient_name: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          address_line1?: string
+          address_line2?: string | null
+          city?: string
+          created_at?: string
+          customer_id?: string | null
+          id?: string
+          is_default?: boolean
+          label?: string
+          notes?: string | null
+          phone?: string
+          recipient_name?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "customer_addresses_customer_id_fkey"
+            columns: ["customer_id"]
+            isOneToOne: false
+            referencedRelation: "customers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       customer_notifications: {
         Row: {
           body: string
@@ -1011,9 +1067,12 @@ export type Database = {
           created_at: string
           created_by: string | null
           id: string
+          inventory_sku_id: string | null
           notes: string | null
           product_id: string | null
           product_name: string | null
+          product_quantity_after: number | null
+          product_quantity_before: number | null
           quantity_after: number
           quantity_before: number
           quantity_change: number
@@ -1021,15 +1080,19 @@ export type Database = {
           reference: string | null
           total_cost: number | null
           unit_cost: number | null
+          variant_label: string | null
         }
         Insert: {
           adjustment_type: string
           created_at?: string
           created_by?: string | null
           id?: string
+          inventory_sku_id?: string | null
           notes?: string | null
           product_id?: string | null
           product_name?: string | null
+          product_quantity_after?: number | null
+          product_quantity_before?: number | null
           quantity_after: number
           quantity_before?: number
           quantity_change: number
@@ -1037,15 +1100,19 @@ export type Database = {
           reference?: string | null
           total_cost?: number | null
           unit_cost?: number | null
+          variant_label?: string | null
         }
         Update: {
           adjustment_type?: string
           created_at?: string
           created_by?: string | null
           id?: string
+          inventory_sku_id?: string | null
           notes?: string | null
           product_id?: string | null
           product_name?: string | null
+          product_quantity_after?: number | null
+          product_quantity_before?: number | null
           quantity_after?: number
           quantity_before?: number
           quantity_change?: number
@@ -1053,10 +1120,64 @@ export type Database = {
           reference?: string | null
           total_cost?: number | null
           unit_cost?: number | null
+          variant_label?: string | null
         }
         Relationships: [
           {
             foreignKeyName: "inventory_adjustments_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      inventory_skus: {
+        Row: {
+          color_hex: string | null
+          color_hex2: string | null
+          color_name: string | null
+          created_at: string
+          id: string
+          is_default: boolean
+          label: string
+          product_id: string
+          size: string | null
+          stock_quantity: number
+          updated_at: string
+          variant_key: string
+        }
+        Insert: {
+          color_hex?: string | null
+          color_hex2?: string | null
+          color_name?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label: string
+          product_id: string
+          size?: string | null
+          stock_quantity?: number
+          updated_at?: string
+          variant_key: string
+        }
+        Update: {
+          color_hex?: string | null
+          color_hex2?: string | null
+          color_name?: string | null
+          created_at?: string
+          id?: string
+          is_default?: boolean
+          label?: string
+          product_id?: string
+          size?: string | null
+          stock_quantity?: number
+          updated_at?: string
+          variant_key?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_skus_product_id_fkey"
             columns: ["product_id"]
             isOneToOne: false
             referencedRelation: "products"
@@ -2005,11 +2126,52 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      apply_inventory_adjustment: {
+        Args: {
+          p_adjustment_type: string
+          p_inventory_sku_id: string | null
+          p_notes: string | null
+          p_product_id: string
+          p_quantity: number
+          p_reason: string
+          p_reference: string | null
+        }
+        Returns: Json
+      }
+      delete_product_from_inventory: {
+        Args: { p_product_id: string }
+        Returns: Json
+      }
+      get_order_tracking: {
+        Args: {
+          p_order_number: string
+          p_tracking_token?: string | null
+        }
+        Returns: {
+          created_at: string
+          delivery_company_id: string | null
+          delivery_company_name: string | null
+          order_number: string
+          status: string
+        }[]
+      }
       get_admin_product_costs: {
         Args: { p_product_ids: string[] | null }
         Returns: {
           cost_price: number | null
           product_id: string
+        }[]
+      }
+      get_inventory_summary: {
+        Args: never
+        Returns: {
+          active_products: number
+          inventory_value: number
+          low_stock: number
+          out_of_stock: number
+          sku_tracked: number
+          total_products: number
+          total_units: number
         }[]
       }
       has_role: {
@@ -2019,8 +2181,23 @@ export type Database = {
         }
         Returns: boolean
       }
+      replace_product_inventory_skus: {
+        Args: {
+          p_items: Json
+          p_product_id: string
+        }
+        Returns: Json
+      }
       show_limit: { Args: never; Returns: number }
       show_trgm: { Args: { "": string }; Returns: string[] }
+      update_customer_profile: {
+        Args: {
+          p_avatar_url?: string | null
+          p_name: string
+          p_region: string
+        }
+        Returns: Database["public"]["Tables"]["customers"]["Row"]
+      }
     }
     Enums: {
       account_type: "asset" | "liability" | "equity" | "revenue" | "expense"

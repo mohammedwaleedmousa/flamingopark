@@ -233,13 +233,13 @@ const HomePage = () => {
       return fallbackFeaturedCategories;
     }
 
-    const parentCategories = categories.filter((category: any) => !category.parent_id);
+    const parentCategories = categories.filter((category) => !category.parent_id);
 
     if (parentCategories.length === 0) {
       return fallbackFeaturedCategories;
     }
 
-    return parentCategories.map((category: any) => ({
+    return parentCategories.map((category) => ({
       title: category.name_ar || category.name || category.slug,
       subtitle: category.name || category.name_ar || category.slug,
       image: category.image_url || fallbackCategoryImages[category.slug] || fallbackFeaturedCategories[0].image,
@@ -263,7 +263,7 @@ const HomePage = () => {
     queryKey: ["home-products"],
     enabled: showHomeSection("featuredProducts") && featuredViewport.isNearViewport,
     queryFn: async () => {
-      const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).contains("home_collections", ["curated"] as any).order("sort_order", { ascending: true }).limit(8);
+      const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).contains("home_collections", ["curated"]).order("sort_order", { ascending: true }).limit(8);
 
       if (error) throw error;
 
@@ -281,7 +281,7 @@ const HomePage = () => {
     queryKey: ["home-best-sellers"],
     enabled: showHomeSection("bestSellers") && bestSellersViewport.isNearViewport,
     queryFn: async () => {
-      const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).contains("home_collections", ["best_sellers"] as any).order("sort_order", { ascending: true }).limit(8);
+      const { data, error } = await supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).contains("home_collections", ["best_sellers"]).order("sort_order", { ascending: true }).limit(8);
 
       if (error) throw error;
 

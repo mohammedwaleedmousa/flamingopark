@@ -177,7 +177,7 @@ const CheckoutPage = () => {
   });
 
   const bankAccounts = useMemo(() => {
-    let value: any = checkoutSettings.bank_accounts ?? checkoutSettings.bank_accounts_ye ?? checkoutSettings.bank_accounts_sa;
+    let value: unknown = checkoutSettings.bank_accounts ?? checkoutSettings.bank_accounts_ye ?? checkoutSettings.bank_accounts_sa;
 
     if (typeof value === "string") {
       try {
@@ -191,11 +191,15 @@ const CheckoutPage = () => {
       return [] as BankAccount[];
     }
 
-    return value.map((item: any) => ({
-      bank: String(item?.bank || ""),
-      account: String(item?.account || ""),
-      name: String(item?.name || ""),
-    })) as BankAccount[];
+    return value.map((item) => {
+      const account = item && typeof item === "object" && !Array.isArray(item) ? item as Record<string, unknown> : {};
+
+      return {
+        bank: String(account.bank || ""),
+        account: String(account.account || ""),
+        name: String(account.name || ""),
+      };
+    }) as BankAccount[];
   }, [checkoutSettings]);
 
   /* =========================================================

@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 
 export interface InventorySkuRow {
   id: string;
@@ -139,9 +140,9 @@ export const syncProductInventory = async (productId: string, colorVariants: Inv
     }
   }
 
-  const { error } = await (supabase as any).rpc("replace_product_inventory_skus", {
+  const { error } = await supabase.rpc("replace_product_inventory_skus", {
     p_product_id: productId,
-    p_items: items,
+    p_items: items as unknown as Json,
   });
 
   if (error) throw error;
@@ -149,7 +150,7 @@ export const syncProductInventory = async (productId: string, colorVariants: Inv
 };
 
 export const fetchProductInventory = async (productId: string): Promise<InventorySkuRow[]> => {
-  const { data, error } = await (supabase as any).from("inventory_skus").select("id,product_id,variant_key,label,color_name,color_hex,color_hex2,size,stock_quantity,is_default").eq("product_id", productId).order("is_default", { ascending: true }).order("label", { ascending: true });
+  const { data, error } = await supabase.from("inventory_skus").select("id,product_id,variant_key,label,color_name,color_hex,color_hex2,size,stock_quantity,is_default").eq("product_id", productId).order("is_default", { ascending: true }).order("label", { ascending: true });
 
   if (error) throw error;
   return (data || []) as InventorySkuRow[];

@@ -189,7 +189,7 @@ const AccountPage = () => {
     let active = true;
 
     const syncAddresses = async () => {
-      const { data: existing, error } = await (supabase as any).from("customer_addresses").select("*").eq("user_id", user.id).order("updated_at", { ascending: false });
+      const { data: existing, error } = await supabase.from("customer_addresses").select("*").eq("user_id", user.id).order("updated_at", { ascending: false });
 
       if (error) {
         if (active) {
@@ -213,7 +213,7 @@ const AccountPage = () => {
         const legacy = migrateLegacyCheckoutInfo(user.id);
 
         if (legacy.length) {
-          const { data: inserted, error: insertError } = await (supabase as any).from("customer_addresses").insert(
+          const { data: inserted, error: insertError } = await supabase.from("customer_addresses").insert(
             legacy.map((address) => ({
               id: address.id,
               user_id: user.id,
@@ -239,7 +239,7 @@ const AccountPage = () => {
 
       if (active) {
         setSavedAddresses(
-          rows.map((address: any) => ({
+          rows.map((address) => ({
             id: address.id,
             label: address.label,
             name: address.recipient_name,
@@ -386,10 +386,10 @@ const AccountPage = () => {
     const isDefault = savedAddresses.length === 0 || currentAddress?.isDefault === true;
 
     if (isDefault) {
-      await (supabase as any).from("customer_addresses").update({ is_default: false }).eq("user_id", user.id);
+      await supabase.from("customer_addresses").update({ is_default: false }).eq("user_id", user.id);
     }
 
-    const { data, error } = await (supabase as any).from("customer_addresses").upsert({
+    const { data, error } = await supabase.from("customer_addresses").upsert({
       id,
       user_id: user.id,
       label: addressForm.label.trim() || `عنوان ${savedAddresses.length + 1}`,
@@ -452,7 +452,7 @@ const AccountPage = () => {
   const deleteAddress = async (id: string) => {
     if (!user?.id) return;
 
-    const { error } = await (supabase as any).from("customer_addresses").delete().eq("id", id).eq("user_id", user.id);
+    const { error } = await supabase.from("customer_addresses").delete().eq("id", id).eq("user_id", user.id);
 
     if (error) {
       setNotification({
@@ -480,9 +480,9 @@ const AccountPage = () => {
   const setDefaultAddress = async (address: SavedAddress) => {
     if (!user?.id) return;
 
-    await (supabase as any).from("customer_addresses").update({ is_default: false }).eq("user_id", user.id);
+    await supabase.from("customer_addresses").update({ is_default: false }).eq("user_id", user.id);
 
-    const { error } = await (supabase as any).from("customer_addresses").update({ is_default: true }).eq("id", address.id).eq("user_id", user.id);
+    const { error } = await supabase.from("customer_addresses").update({ is_default: true }).eq("id", address.id).eq("user_id", user.id);
 
     if (error) {
       setNotification({
@@ -605,7 +605,7 @@ const AccountPage = () => {
         avatarUrl = avatarPreview;
       }
 
-      const { data, error } = await (supabase as any).rpc("update_customer_profile", {
+      const { data, error } = await supabase.rpc("update_customer_profile", {
         p_name: normalizedName,
         p_region: normalizedRegion,
         p_avatar_url: avatarUrl || null,
@@ -613,7 +613,7 @@ const AccountPage = () => {
 
       if (error) throw error;
 
-      const profile = Array.isArray(data) ? data[0] : data;
+      const profile = data;
       const updatedCustomer: CustomerSession = {
         id: profile?.id || customer.id,
         userId: user.id,

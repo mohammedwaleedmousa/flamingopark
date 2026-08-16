@@ -1,0 +1,56 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate storefront and admin launch paths
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install locked dependencies
+        run: npm ci
+
+      - name: Check TypeScript
+        run: npm run typecheck
+
+      - name: Lint launch-critical paths
+        run: npm run lint:launch
+
+      - name: Run security regressions
+        run: npm run test:security
+
+      - name: Audit production dependencies
+        run: npm run audit:prod
+
+      - name: Build production bundle
+        run: npm run build
+
+      - name: Set up Deno
+        uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+
+      - name: Type-check Edge Functions
+        run: deno check supabase/functions/customer-auth-bootstrap/index.ts supabase/functions/create-order/index.ts supabase/functions/invoice-access/index.ts supabase/functions/analytics-event/index.ts supabase/functions/submit-review/index.ts

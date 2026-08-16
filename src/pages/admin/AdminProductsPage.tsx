@@ -36,7 +36,7 @@ interface DbProduct {
   is_active: boolean;
   is_featured: boolean;
   is_best_seller: boolean;
-  color_variants?: any[];
+  color_variants?: { images?: string[] }[];
   sort_order: number | null;
 }
 

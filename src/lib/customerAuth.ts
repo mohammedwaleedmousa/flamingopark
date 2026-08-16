@@ -6,8 +6,6 @@ import { normalizeInternationalPhone } from "@/lib/internationalPhone";
 import { loadCustomerSession, type CustomerSession } from "@/lib/customerSession";
 import { normalizeYemenPhone } from "@/lib/yemenPhone";
 
-export type VerificationChannel = "sms" | "whatsapp" | "email";
-
 type RegistrationInput = {
   name: string;
   phone: string;
@@ -15,17 +13,15 @@ type RegistrationInput = {
   password: string;
   region: string;
   country: string;
-  channel: VerificationChannel;
 };
 
-export type PendingCustomerRegistration = {
+type NormalizedRegistration = {
   name: string;
   phone: string;
   email: string;
   password: string;
   region: string;
   country: string;
-  channel: VerificationChannel;
 };
 
 const INVALID_CREDENTIALS = "بيانات الدخول غير صحيحة.";
@@ -67,7 +63,7 @@ export const loginCustomer = async (identifier: string, password: string): Promi
   const trimmed = identifier.trim();
   const email = EMAIL_PATTERN.test(trimmed) ? trimmed.toLowerCase() : null;
   const phone = email ? null : normalizeInternationalPhone(trimmed);
-  if (!email && !phone) throw new Error("أدخل بريدًا إلكترونيًا صحيحًا أو رقم هاتف دوليًا يبدأ بعلامة +.");
+  if (!email && !phone) throw new Error("أدخل رقم هاتف دوليًا صحيحًا يبدأ بعلامة + أو بريد حساب سابق.");
 
   const credentials = email ? { email, password } : { phone: phone!, password };
   const { data, error } = await supabase.auth.signInWithPassword(credentials);
@@ -84,7 +80,7 @@ export const loginCustomer = async (identifier: string, password: string): Promi
   return finishSignedInCustomer();
 };
 
-const validateRegistration = (input: RegistrationInput): PendingCustomerRegistration => {
+const validateRegistration = (input: RegistrationInput): NormalizedRegistration => {
   const name = input.name.trim().replace(/\s+/g, " ");
   const region = input.region.trim().replace(/\s+/g, " ");
   const country = input.country.trim().toUpperCase();
@@ -96,58 +92,45 @@ const validateRegistration = (input: RegistrationInput): PendingCustomerRegistra
   if (!/^[A-Z]{2}$/.test(country)) throw new Error("اختر الدولة.");
   if (region.length < 2 || region.length > 100) throw new Error("أدخل المدينة أو المنطقة.");
   if (!isValidCustomerPassword(input.password)) throw new Error(customerPasswordRequirements);
-  if (input.channel === "email" && !EMAIL_PATTERN.test(email)) throw new Error("أدخل بريدًا إلكترونيًا صحيحًا لاستلام رمز التحقق.");
   if (email && !EMAIL_PATTERN.test(email)) throw new Error("البريد الإلكتروني غير صحيح.");
 
-  return { name, phone, email, password: input.password, region, country, channel: input.channel };
+  return { name, phone, email, password: input.password, region, country };
 };
 
-export const registerCustomer = async (input: RegistrationInput): Promise<PendingCustomerRegistration> => {
+const registrationErrorMessage = (error: AuthApiError) => {
+  if (error.code === "user_already_exists" || error.code === "phone_exists") return "رقم الهاتف مستخدم بالفعل. سجّل الدخول بدل إنشاء حساب جديد.";
+  if (error.code === "weak_password") return customerPasswordRequirements;
+  if (error.code === "signup_disabled") return "إنشاء الحسابات متوقف مؤقتًا.";
+  return "تعذر إنشاء الحساب. تأكد من البيانات وحاول مرة أخرى.";
+};
+
+export const registerCustomer = async (input: RegistrationInput): Promise<CustomerSession> => {
   const registration = validateRegistration(input);
-  const metadata = {
-    full_name: registration.name,
-    contact_phone: registration.phone,
-    contact_email: registration.email || null,
-    region: registration.region,
-    country: registration.country,
-    verification_channel: registration.channel,
-  };
 
-  const request = registration.channel === "email"
-    ? supabase.auth.signInWithOtp({ email: registration.email, options: { shouldCreateUser: true, data: metadata } })
-    : supabase.auth.signInWithOtp({ phone: registration.phone, options: { shouldCreateUser: true, channel: registration.channel, data: metadata } });
-
-  const { error } = await request;
-  if (error) throw new Error("تعذر إرسال رمز التحقق. تأكد من البيانات أو جرّب وسيلة أخرى.");
-  return registration;
-};
-
-export const verifyCustomerRegistration = async (registration: PendingCustomerRegistration, rawToken: string): Promise<CustomerSession> => {
-  const token = rawToken.replace(/\D/g, "");
-  if (!/^\d{6,10}$/.test(token)) throw new Error("أدخل رمز التحقق بشكل صحيح.");
-
-  const verification = registration.channel === "email"
-    ? await supabase.auth.verifyOtp({ email: registration.email, token, type: "email" })
-    : await supabase.auth.verifyOtp({ phone: registration.phone, token, type: "sms" });
-
-  if (verification.error || !verification.data.user || !verification.data.session) {
-    throw new Error("رمز التحقق غير صحيح أو انتهت صلاحيته.");
-  }
-
-  const { error: passwordError } = await supabase.auth.updateUser({
+  const { data, error } = await supabase.auth.signUp({
+    phone: registration.phone,
     password: registration.password,
-    data: {
-      full_name: registration.name,
-      contact_phone: registration.phone,
-      contact_email: registration.email || null,
-      region: registration.region,
-      country: registration.country,
-      verification_channel: registration.channel,
+    options: {
+      data: {
+        full_name: registration.name,
+        contact_phone: registration.phone,
+        contact_email: registration.email || null,
+        region: registration.region,
+        country: registration.country,
+        verification_channel: "none",
+        contact_verification: "unverified",
+      },
     },
   });
-  if (passwordError) {
+
+  if (error) {
+    if (error instanceof AuthApiError) throw new Error(registrationErrorMessage(error));
+    throw new Error("تعذر إنشاء الحساب الآن. حاول مرة أخرى.");
+  }
+
+  if (!data.user || !data.session) {
     await supabase.auth.signOut();
-    throw new Error("تم التحقق لكن تعذر حفظ كلمة المرور. حاول مرة أخرى.");
+    throw new Error("تأكيد الهاتف ما زال مفعّلًا في إعدادات Supabase. عطّله من مزود Phone ثم حاول مرة أخرى.");
   }
 
   const { error: finalizeError } = await supabase.functions.invoke("customer-registration-finalize", {
@@ -157,7 +140,7 @@ export const verifyCustomerRegistration = async (registration: PendingCustomerRe
       email: registration.email || null,
       region: registration.region,
       country: registration.country,
-      channel: registration.channel,
+      channel: "none",
     },
   });
 
@@ -168,13 +151,4 @@ export const verifyCustomerRegistration = async (registration: PendingCustomerRe
   }
 
   return finishSignedInCustomer();
-};
-
-export const resendCustomerRegistrationOtp = async (registration: PendingCustomerRegistration) => {
-  const request = registration.channel === "email"
-    ? supabase.auth.resend({ type: "signup", email: registration.email })
-    : supabase.auth.signInWithOtp({ phone: registration.phone, options: { shouldCreateUser: true, channel: registration.channel } });
-
-  const { error } = await request;
-  if (error) throw new Error("تعذر إعادة إرسال الرمز الآن. حاول بعد قليل أو اختر وسيلة أخرى.");
 };

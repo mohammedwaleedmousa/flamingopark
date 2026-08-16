@@ -1,5 +1,6 @@
 export type CustomerSession = {
   id: string;
+  user_id?: string;
   name: string;
   phone: string;
   region?: string;

@@ -78,7 +78,7 @@ test("analytics and customer reviews use rate-limited Edge Functions", () => {
   assert.match(migrationSource, /DROP POLICY IF EXISTS "Anyone can create product reviews"/);
 });
 
-test("new customer signup is global and requires verified OTP before profile creation", () => {
+test("new customer signup is global and uses password auth without paid OTP", () => {
   const passwordInput = customerAuthPageSource.match(/<input id="auth-password"[^>]+>/)?.[0] || "";
 
   assert.match(internationalPhoneSource, /\^\\\+\[1-9\]\\d\{7,14\}\$/);
@@ -87,23 +87,26 @@ test("new customer signup is global and requires verified OTP before profile cre
   assert.match(countriesSource, /US/);
   assert.match(countriesSource, /YE/);
 
-  assert.match(customerAuthSource, /type VerificationChannel = "sms" \| "whatsapp" \| "email"/);
-  assert.match(customerAuthSource, /auth\.signInWithOtp/);
-  assert.match(customerAuthSource, /channel:\s*registration\.channel/);
-  assert.match(customerAuthSource, /auth\.verifyOtp/);
-  assert.match(customerAuthSource, /auth\.updateUser\(\{/);
+  assert.match(customerAuthSource, /auth\.signUp\(\{/);
+  assert.match(customerAuthSource, /phone:\s*registration\.phone/);
   assert.match(customerAuthSource, /password:\s*registration\.password/);
+  assert.match(customerAuthSource, /verification_channel:\s*"none"/);
   assert.match(customerAuthSource, /functions\.invoke\("customer-registration-finalize"/);
+  assert.match(customerAuthSource, /channel:\s*"none"/);
+  assert.doesNotMatch(customerAuthSource, /signInWithOtp|verifyOtp|resendCustomerRegistrationOtp/);
   assert.doesNotMatch(customerAuthSource, /phone_confirm:\s*true/);
 
   assert.match(customerAuthPageSource, /COUNTRIES\.map/);
-  assert.match(customerAuthPageSource, /"whatsapp", "sms", "email"/);
-  assert.match(customerAuthPageSource, /autoComplete="one-time-code"/);
+  assert.match(customerAuthPageSource, /country:\s*"YE"/);
+  assert.match(customerAuthPageSource, /"إنشاء الحساب"/);
+  assert.doesNotMatch(customerAuthPageSource, /one-time-code|إرسال رمز التحقق|إعادة الإرسال|VerificationChannel/);
   assert.doesNotMatch(customerAuthPageSource, /toYemenLocalPhone|\+967\$\{formData\.phone\}/);
   assert.match(passwordInput, /minLength=\{6\}/);
 
-  assert.match(customerRegistrationFinalizeSource, /user\.phone_confirmed_at/);
-  assert.match(customerRegistrationFinalizeSource, /user\.email_confirmed_at/);
+  assert.match(customerRegistrationFinalizeSource, /"none" \| "sms" \| "whatsapp" \| "email"/);
+  assert.match(customerRegistrationFinalizeSource, /channel === "email"/);
+  assert.match(customerRegistrationFinalizeSource, /channel === "sms" \|\| channel === "whatsapp"/);
+  assert.match(customerRegistrationFinalizeSource, /normalizePhone\(user\.phone\) !== phone/);
   assert.match(customerRegistrationFinalizeSource, /from\("customers"\)\.insert/);
   assert.match(customerRegistrationFinalizeSource, /existingByPhone/);
   assert.match(customerRegistrationFinalizeSource, /\^\\\+\[1-9\]\\d\{7,14\}\$/);

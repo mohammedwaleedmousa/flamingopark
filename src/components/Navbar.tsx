@@ -85,6 +85,7 @@ const Navbar = () => {
   const { openCart, getCartCount, customer, setCustomer } = useStore();
   const { favorites } = useFavorites();
   const { logout } = useAuthActions();
+  const isAuthenticatedCustomer = Boolean(customer?.userId && customer.id !== "guest");
 
   const cartCount = getCartCount();
 
@@ -210,7 +211,7 @@ const Navbar = () => {
                 {/* MENU FOOTER */}
 
                 <div className="border-t border-[#EEE4E0] bg-[#FFFDFC] p-4">
-                  {customer ? (
+                  {isAuthenticatedCustomer ? (
                     <button type="button" onClick={handleLogout} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl border border-[#E4D8D4] bg-white text-sm font-medium text-[#70625D] transition-colors hover:border-[#E2B9B5] hover:bg-[#FFF8F6] hover:text-[#B86168]">
                       <SignOut size={18} />
                       تسجيل الخروج

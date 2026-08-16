@@ -1191,6 +1191,12 @@ BEGIN
 END;
 $$;
 
+-- Browser roles never need schema-maintenance table privileges. Row-level
+-- security does not govern these privileges, so remove inherited broad grants.
+REVOKE TRUNCATE, REFERENCES, TRIGGER ON ALL TABLES IN SCHEMA public FROM PUBLIC, anon, authenticated;
+ALTER DEFAULT PRIVILEGES IN SCHEMA public
+  REVOKE TRUNCATE, REFERENCES, TRIGGER ON TABLES FROM PUBLIC, anon, authenticated;
+
 ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE EXECUTE ON FUNCTIONS FROM PUBLIC, anon, authenticated;
 
 COMMIT;

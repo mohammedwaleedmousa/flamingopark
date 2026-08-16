@@ -19,13 +19,15 @@ const AdminLoginPage = () => {
   // Check if user is already logged in
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
+      const { data: { user }, error } = await supabase.auth.getUser();
+      if (error || !user) return;
+
+      if (user) {
         // Check if user has admin role
         const { data: roleData } = await supabase
           .from('user_roles')
           .select('role')
-          .eq('user_id', session.user.id)
+          .eq('user_id', user.id)
           .eq('role', 'admin')
           .maybeSingle();
 
@@ -79,14 +81,16 @@ const AdminLoginPage = () => {
       });
 
       navigate('/admin');
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Auth error:', error);
       let errorMessage = 'حدث خطأ أثناء العملية';
-      
-      if (error.message?.includes('Invalid login credentials')) {
+
+      const message = error instanceof Error ? error.message : '';
+
+      if (message.includes('Invalid login credentials')) {
         errorMessage = 'البريد الإلكتروني أو كلمة المرور غير صحيحة';
-      } else if (error.message) {
-        errorMessage = error.message;
+      } else if (message) {
+        errorMessage = message;
       }
 
       toast({

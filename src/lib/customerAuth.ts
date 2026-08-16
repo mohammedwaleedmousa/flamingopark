@@ -172,7 +172,7 @@ export const verifyCustomerRegistration = async (registration: PendingCustomerRe
 
 export const resendCustomerRegistrationOtp = async (registration: PendingCustomerRegistration) => {
   const request = registration.channel === "email"
-    ? supabase.auth.resend({ type: "email", email: registration.email })
+    ? supabase.auth.resend({ type: "signup", email: registration.email })
     : supabase.auth.signInWithOtp({ phone: registration.phone, options: { shouldCreateUser: true, channel: registration.channel } });
 
   const { error } = await request;

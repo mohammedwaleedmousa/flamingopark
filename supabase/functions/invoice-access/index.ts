@@ -9,6 +9,7 @@ const DEFAULT_ORIGINS = [
   "https://flamingoparkaden.com",
   "https://www.flamingoparkaden.com",
   "http://localhost:5173",
+  "http://localhost:8080",
 ];
 const MAX_BODY_BYTES = 8_100_000;
 const MAX_PDF_BYTES = 6_000_000;
@@ -36,6 +37,7 @@ Deno.serve(async (req) => {
   if (origin && !allowedOrigins().has(origin)) return json({ error: "Origin not allowed" }, 403, origin);
   if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: headers(origin) });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, origin);
+
   const declaredLength = Number(req.headers.get("content-length") || 0);
   if (declaredLength > MAX_BODY_BYTES) return json({ error: "Invoice request is too large" }, 413, origin);
 
@@ -65,12 +67,9 @@ Deno.serve(async (req) => {
     auth: { autoRefreshToken: false, persistSession: false },
     global: { headers: { Authorization: req.headers.get("authorization") || "" } },
   });
+
   const { data: { user } } = await auth.auth.getUser();
-  const { data: order, error: orderError } = await service
-    .from("orders")
-    .select("id,order_number,invoice_url,owner_user_id,tracking_token_hash")
-    .eq("id", orderId)
-    .maybeSingle();
+  const { data: order, error: orderError } = await service.from("orders").select("id,order_number,invoice_url,owner_user_id,tracking_token_hash").eq("id", orderId).maybeSingle();
   if (orderError || !order) return json({ error: "Invoice access denied" }, 403, origin);
 
   let isAdmin = false;
@@ -78,8 +77,11 @@ Deno.serve(async (req) => {
     const { data: role } = await service.from("user_roles").select("id").eq("user_id", user.id).eq("role", "admin").maybeSingle();
     isAdmin = Boolean(role);
   }
+
   const isOwner = Boolean(user && order.owner_user_id === user.id);
   const validTrackingToken = Boolean(trackingToken && order.tracking_token_hash && await hashToken(trackingToken) === order.tracking_token_hash);
+
+  if (action === "upload" && !isAdmin) return json({ error: "Invoice upload requires admin access" }, 403, origin);
   if (!isAdmin && !isOwner && !validTrackingToken) return json({ error: "Invoice access denied" }, 403, origin);
 
   if (action === "signed_url") {
@@ -87,10 +89,6 @@ Deno.serve(async (req) => {
     return signedUrl ? json({ signedUrl }, 200, origin) : json({ error: "Invoice unavailable" }, 404, origin);
   }
 
-  if (!isAdmin && order.invoice_url) {
-    const signedUrl = await signInvoice(service, order.invoice_url);
-    return signedUrl ? json({ path: order.invoice_url, signedUrl }, 200, origin) : json({ error: "Invoice unavailable" }, 409, origin);
-  }
   if (typeof body.pdfBase64 !== "string" || body.pdfBase64.length < 8 || body.pdfBase64.length > 8_000_000) {
     return json({ error: "Invalid invoice request" }, 400, origin);
   }
@@ -109,14 +107,10 @@ Deno.serve(async (req) => {
   const { error: uploadError } = await service.storage.from("invoices").upload(path, binary, { contentType: "application/pdf", cacheControl: "3600", upsert: false });
   if (uploadError) return json({ error: "Invoice upload failed" }, 500, origin);
 
-  let updateQuery = service.from("orders").update({ invoice_url: path }).eq("id", order.id);
-  if (!isAdmin) updateQuery = updateQuery.is("invoice_url", null);
-  const { data: updated, error: updateError } = await updateQuery.select("id").maybeSingle();
+  const { data: updated, error: updateError } = await service.from("orders").update({ invoice_url: path }).eq("id", order.id).select("id").maybeSingle();
   if (updateError || !updated) {
     await service.storage.from("invoices").remove([path]);
-    const { data: current } = await service.from("orders").select("invoice_url").eq("id", order.id).maybeSingle();
-    const signedUrl = await signInvoice(service, current?.invoice_url || "");
-    return signedUrl ? json({ path: current?.invoice_url, signedUrl }, 200, origin) : json({ error: "Invoice upload failed" }, 500, origin);
+    return json({ error: "Invoice upload failed" }, 500, origin);
   }
 
   const signedUrl = await signInvoice(service, path);

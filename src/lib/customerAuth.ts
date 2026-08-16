@@ -9,7 +9,6 @@ import { normalizeYemenPhone } from "@/lib/yemenPhone";
 type RegistrationInput = {
   name: string;
   phone: string;
-  email?: string;
   password: string;
   region: string;
   country: string;
@@ -18,14 +17,12 @@ type RegistrationInput = {
 type NormalizedRegistration = {
   name: string;
   phone: string;
-  email: string;
   password: string;
   region: string;
   country: string;
 };
 
 const INVALID_CREDENTIALS = "بيانات الدخول غير صحيحة.";
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 const readFunctionError = async (error: unknown, fallback: string) => {
   if (error instanceof FunctionsHttpError) {
@@ -60,22 +57,17 @@ const finishSignedInCustomer = async (): Promise<CustomerSession> => {
 export const loginCustomer = async (identifier: string, password: string): Promise<CustomerSession> => {
   if (!isValidCustomerPassword(password)) throw new Error(customerPasswordRequirements);
 
-  const trimmed = identifier.trim();
-  const email = EMAIL_PATTERN.test(trimmed) ? trimmed.toLowerCase() : null;
-  const phone = email ? null : normalizeInternationalPhone(trimmed);
-  if (!email && !phone) throw new Error("أدخل رقم هاتف دوليًا صحيحًا يبدأ بعلامة + أو بريد حساب سابق.");
+  const phone = normalizeInternationalPhone(identifier.trim());
+  if (!phone) throw new Error("أدخل رقم الهاتف بصيغة دولية صحيحة مثل +967 أو +966 أو +1.");
 
-  const credentials = email ? { email, password } : { phone: phone!, password };
-  const { data, error } = await supabase.auth.signInWithPassword(credentials);
+  const { data, error } = await supabase.auth.signInWithPassword({ phone, password });
   if (!error && data.user) return finishSignedInCustomer();
 
-  if (email || !(error instanceof AuthApiError) || error.code !== "invalid_credentials") {
-    throw new Error(INVALID_CREDENTIALS);
-  }
+  if (!(error instanceof AuthApiError) || error.code !== "invalid_credentials") throw new Error(INVALID_CREDENTIALS);
 
   // Legacy bridge is intentionally Yemen-only. New global accounts never use it.
-  await invokeLegacyMigration(phone!, password);
-  const retry = await supabase.auth.signInWithPassword({ phone: phone!, password });
+  await invokeLegacyMigration(phone, password);
+  const retry = await supabase.auth.signInWithPassword({ phone, password });
   if (retry.error || !retry.data.user) throw new Error(INVALID_CREDENTIALS);
   return finishSignedInCustomer();
 };
@@ -85,16 +77,14 @@ const validateRegistration = (input: RegistrationInput): NormalizedRegistration 
   const region = input.region.trim().replace(/\s+/g, " ");
   const country = input.country.trim().toUpperCase();
   const phone = normalizeInternationalPhone(input.phone);
-  const email = (input.email || "").trim().toLowerCase();
 
   if (name.length < 2 || name.length > 100) throw new Error("أدخل الاسم الكامل بشكل صحيح.");
   if (!phone) throw new Error("أدخل رقم الهاتف بصيغة دولية صحيحة مثل +967 أو +966 أو +1.");
   if (!/^[A-Z]{2}$/.test(country)) throw new Error("اختر الدولة.");
   if (region.length < 2 || region.length > 100) throw new Error("أدخل المدينة أو المنطقة.");
   if (!isValidCustomerPassword(input.password)) throw new Error(customerPasswordRequirements);
-  if (email && !EMAIL_PATTERN.test(email)) throw new Error("البريد الإلكتروني غير صحيح.");
 
-  return { name, phone, email, password: input.password, region, country };
+  return { name, phone, password: input.password, region, country };
 };
 
 const registrationErrorMessage = (error: AuthApiError) => {
@@ -115,7 +105,6 @@ export const registerCustomer = async (input: RegistrationInput): Promise<Custom
       data: {
         full_name: registration.name,
         contact_phone: registration.phone,
-        contact_email: registration.email || null,
         region: registration.region,
         country: registration.country,
         verification_channel: "none",
@@ -138,7 +127,6 @@ export const registerCustomer = async (input: RegistrationInput): Promise<Custom
     body: {
       name: registration.name,
       phone: registration.phone,
-      email: registration.email || null,
       region: registration.region,
       country: registration.country,
       channel: "none",

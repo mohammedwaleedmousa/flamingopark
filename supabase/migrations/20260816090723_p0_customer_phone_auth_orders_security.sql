@@ -1141,6 +1141,209 @@ CREATE TRIGGER protect_customer_notification_update_trigger
   BEFORE UPDATE ON public.customer_notifications
   FOR EACH ROW EXECUTE FUNCTION private.protect_customer_notification_update();
 
+DROP POLICY IF EXISTS "Customers view own deliveries" ON public.notification_deliveries;
+DROP POLICY IF EXISTS "Customers mark own delivery read" ON public.notification_deliveries;
+CREATE POLICY "Customers view own deliveries" ON public.notification_deliveries
+  FOR SELECT TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM public.customers customer
+    WHERE customer.id = notification_deliveries.customer_id
+      AND customer.user_id = (SELECT auth.uid())
+  ));
+CREATE POLICY "Customers mark own delivery read" ON public.notification_deliveries
+  FOR UPDATE TO authenticated
+  USING (EXISTS (
+    SELECT 1 FROM public.customers customer
+    WHERE customer.id = notification_deliveries.customer_id
+      AND customer.user_id = (SELECT auth.uid())
+  ))
+  WITH CHECK (EXISTS (
+    SELECT 1 FROM public.customers customer
+    WHERE customer.id = notification_deliveries.customer_id
+      AND customer.user_id = (SELECT auth.uid())
+  ));
+
+CREATE OR REPLACE FUNCTION private.protect_notification_delivery_update()
+RETURNS trigger
+LANGUAGE plpgsql
+SECURITY INVOKER
+SET search_path = public, pg_catalog
+AS $$
+BEGIN
+  IF public.has_role((SELECT auth.uid()), 'admin'::public.app_role) THEN RETURN NEW; END IF;
+  IF NOT EXISTS (
+       SELECT 1 FROM public.customers customer
+       WHERE customer.id = OLD.customer_id AND customer.user_id = (SELECT auth.uid())
+     )
+     OR NEW.id IS DISTINCT FROM OLD.id
+     OR NEW.notification_id IS DISTINCT FROM OLD.notification_id
+     OR NEW.customer_id IS DISTINCT FROM OLD.customer_id
+     OR NEW.customer_phone IS DISTINCT FROM OLD.customer_phone
+     OR NEW.channel IS DISTINCT FROM OLD.channel
+     OR NEW.attempts IS DISTINCT FROM OLD.attempts
+     OR NEW.last_error IS DISTINCT FROM OLD.last_error
+     OR NEW.delivered_at IS DISTINCT FROM OLD.delivered_at
+     OR NEW.payload IS DISTINCT FROM OLD.payload
+     OR NEW.created_at IS DISTINCT FROM OLD.created_at
+     OR NEW.status NOT IN (OLD.status, 'read')
+     OR (OLD.read_at IS NOT NULL AND NEW.read_at IS NULL) THEN
+    RAISE EXCEPTION 'delivery_fields_are_immutable' USING ERRCODE = '42501';
+  END IF;
+  IF NEW.status = 'read' AND NEW.read_at IS NULL THEN NEW.read_at := now(); END IF;
+  NEW.updated_at := now();
+  RETURN NEW;
+END;
+$$;
+DROP TRIGGER IF EXISTS protect_notification_delivery_update_trigger ON public.notification_deliveries;
+CREATE TRIGGER protect_notification_delivery_update_trigger
+  BEFORE UPDATE ON public.notification_deliveries
+  FOR EACH ROW EXECUTE FUNCTION private.protect_notification_delivery_update();
+
+-- Public telemetry and review submission share a service-only limiter. Browser
+-- clients cannot write the limiter or bypass the validated Edge Functions.
+CREATE TABLE IF NOT EXISTS private.public_submission_attempts (
+  id bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  scope text NOT NULL CHECK (scope IN ('analytics', 'review', 'review_upload')),
+  fingerprint_hash text NOT NULL CHECK (fingerprint_hash ~ '^[0-9a-f]{64}$'),
+  subject_hash text NOT NULL CHECK (subject_hash ~ '^[0-9a-f]{64}$'),
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS public_submission_attempts_client_idx
+  ON private.public_submission_attempts(scope, fingerprint_hash, created_at DESC);
+CREATE INDEX IF NOT EXISTS public_submission_attempts_subject_idx
+  ON private.public_submission_attempts(scope, subject_hash, created_at DESC);
+REVOKE ALL ON private.public_submission_attempts FROM PUBLIC, anon, authenticated;
+GRANT ALL ON private.public_submission_attempts TO service_role;
+
+CREATE OR REPLACE FUNCTION public.consume_public_submission_rate_limit(
+  p_scope text,
+  p_fingerprint_hash text,
+  p_subject text
+)
+RETURNS TABLE(allowed boolean, retry_after_seconds integer)
+LANGUAGE plpgsql
+SECURITY DEFINER
+SET search_path = private, extensions, pg_catalog
+AS $$
+DECLARE
+  v_subject_hash text;
+  v_window_seconds integer;
+  v_client_limit integer;
+  v_subject_limit integer;
+  v_client_count integer;
+  v_subject_count integer;
+BEGIN
+  IF coalesce(nullif(current_setting('request.jwt.claims', true), '')::jsonb->>'role', current_setting('request.jwt.claim.role', true), '') <> 'service_role' THEN
+    RAISE EXCEPTION 'service_role_required' USING ERRCODE = '42501';
+  END IF;
+  IF p_scope NOT IN ('analytics', 'review', 'review_upload')
+     OR p_fingerprint_hash !~ '^[0-9a-f]{64}$'
+     OR length(coalesce(p_subject, '')) NOT BETWEEN 1 AND 300 THEN
+    RAISE EXCEPTION 'invalid_input' USING ERRCODE = '22023';
+  END IF;
+
+  v_subject_hash := encode(digest(p_subject, 'sha256'), 'hex');
+  v_window_seconds := CASE WHEN p_scope = 'analytics' THEN 600 WHEN p_scope = 'review_upload' THEN 3600 ELSE 86400 END;
+  v_client_limit := CASE WHEN p_scope = 'analytics' THEN 120 WHEN p_scope = 'review_upload' THEN 15 ELSE 8 END;
+  v_subject_limit := CASE WHEN p_scope = 'analytics' THEN 80 WHEN p_scope = 'review_upload' THEN 7 ELSE 2 END;
+
+  PERFORM pg_advisory_xact_lock(hashtextextended('submission-client:' || p_scope || ':' || p_fingerprint_hash, 0));
+  PERFORM pg_advisory_xact_lock(hashtextextended('submission-subject:' || p_scope || ':' || v_subject_hash, 0));
+  DELETE FROM private.public_submission_attempts WHERE created_at < now() - interval '2 days';
+
+  SELECT count(*) INTO v_client_count
+  FROM private.public_submission_attempts
+  WHERE scope = p_scope
+    AND fingerprint_hash = p_fingerprint_hash
+    AND created_at >= now() - make_interval(secs => v_window_seconds);
+  SELECT count(*) INTO v_subject_count
+  FROM private.public_submission_attempts
+  WHERE scope = p_scope
+    AND subject_hash = v_subject_hash
+    AND created_at >= now() - make_interval(secs => v_window_seconds);
+
+  IF v_client_count >= v_client_limit OR v_subject_count >= v_subject_limit THEN
+    RETURN QUERY SELECT false, v_window_seconds;
+    RETURN;
+  END IF;
+
+  INSERT INTO private.public_submission_attempts(scope, fingerprint_hash, subject_hash)
+  VALUES (p_scope, p_fingerprint_hash, v_subject_hash);
+  RETURN QUERY SELECT true, v_window_seconds;
+END;
+$$;
+REVOKE ALL ON FUNCTION public.consume_public_submission_rate_limit(text, text, text) FROM PUBLIC, anon, authenticated;
+GRANT EXECUTE ON FUNCTION public.consume_public_submission_rate_limit(text, text, text) TO service_role;
+
+DROP POLICY IF EXISTS "Anyone can insert events" ON public.analytics_events;
+REVOKE INSERT ON public.analytics_events FROM PUBLIC, anon, authenticated;
+REVOKE USAGE, SELECT ON SEQUENCE public.analytics_events_id_seq FROM PUBLIC, anon, authenticated;
+GRANT SELECT ON public.analytics_events TO authenticated;
+GRANT INSERT, SELECT, UPDATE, DELETE ON public.analytics_events TO service_role;
+GRANT USAGE, SELECT ON SEQUENCE public.analytics_events_id_seq TO service_role;
+
+ALTER TABLE public.product_reviews
+  ADD COLUMN IF NOT EXISTS user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
+  ADD COLUMN IF NOT EXISTS customer_id uuid REFERENCES public.customers(id) ON DELETE SET NULL;
+CREATE UNIQUE INDEX IF NOT EXISTS product_reviews_user_product_unique_idx
+  ON public.product_reviews(product_id, user_id)
+  WHERE user_id IS NOT NULL;
+CREATE INDEX IF NOT EXISTS product_reviews_customer_idx
+  ON public.product_reviews(customer_id, created_at DESC)
+  WHERE customer_id IS NOT NULL;
+
+DROP POLICY IF EXISTS "Anyone can create product reviews" ON public.product_reviews;
+DROP POLICY IF EXISTS "Customers can create product reviews" ON public.product_reviews;
+REVOKE ALL ON public.product_reviews FROM anon;
+GRANT SELECT ON public.product_reviews TO anon;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.product_reviews TO authenticated;
+GRANT ALL ON public.product_reviews TO service_role;
+
+-- Product acquisition cost is private commercial data. Storefront users may
+-- read every public catalogue field except cost_price; admins retrieve cost
+-- through a role-checked function so customers cannot request it via Data API.
+ALTER TABLE public.products
+  ADD COLUMN IF NOT EXISTS home_collections text[] NOT NULL DEFAULT '{}'::text[];
+DROP POLICY IF EXISTS "Products are viewable by everyone" ON public.products;
+DROP POLICY IF EXISTS "Active products are viewable by everyone" ON public.products;
+CREATE POLICY "Active products are viewable by everyone" ON public.products
+  FOR SELECT TO anon, authenticated
+  USING (is_active = true);
+
+REVOKE SELECT ON public.products FROM PUBLIC, anon, authenticated;
+REVOKE SELECT (cost_price) ON public.products FROM PUBLIC, anon, authenticated;
+GRANT SELECT (
+  id, name, name_ar, slug, price, original_price, discount,
+  description, description_ar, images, category, category_id, brand, brand_id,
+  in_stock, stock_quantity, countries, is_featured, is_best_seller, is_active,
+  created_at, updated_at, section_ids, home_collections, has_sizes, sizes,
+  accessories, features, sort_order, color_variants, return_policy, specs,
+  has_quality_variants, quality_variants
+) ON public.products TO anon, authenticated;
+
+CREATE OR REPLACE FUNCTION public.get_admin_product_costs(p_product_ids uuid[] DEFAULT NULL)
+RETURNS TABLE(product_id uuid, cost_price numeric)
+LANGUAGE plpgsql
+STABLE
+SECURITY DEFINER
+SET search_path = public, pg_catalog
+AS $$
+BEGIN
+  IF auth.uid() IS NULL OR NOT public.has_role(auth.uid(), 'admin'::public.app_role) THEN
+    RAISE EXCEPTION 'admin_required' USING ERRCODE = '42501';
+  END IF;
+  IF p_product_ids IS NOT NULL AND cardinality(p_product_ids) > 5000 THEN
+    RAISE EXCEPTION 'too_many_products' USING ERRCODE = '22023';
+  END IF;
+
+  RETURN QUERY
+  SELECT product.id, product.cost_price
+  FROM public.products AS product
+  WHERE p_product_ids IS NULL OR product.id = ANY(p_product_ids);
+END;
+$$;
+REVOKE ALL ON FUNCTION public.get_admin_product_costs(uuid[]) FROM PUBLIC, anon;
+
 -- SECURITY DEFINER functions are not browser-callable by default. Only the
 -- narrowly reviewed customer and administrator entry points are re-granted.
 DO $$
@@ -1178,6 +1381,7 @@ BEGIN
     'public.delete_product_from_inventory(uuid)',
     'public.delete_refund_safe(uuid)',
     'public.get_inventory_summary()',
+    'public.get_admin_product_costs(uuid[])',
     'public.replace_product_inventory_skus(uuid,jsonb)',
     'public.reverse_journal_entry(uuid,date,text)',
     'public.update_refund_status(uuid,text,text)'

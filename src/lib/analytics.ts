@@ -46,9 +46,10 @@ export function captureUTM() {
   try {
     const url = new URL(window.location.href);
     const utm: UTM = {};
-    ["utm_source", "utm_medium", "utm_campaign", "utm_content"].forEach((k) => {
-      const v = url.searchParams.get(k);
-      if (v) (utm as any)[k] = v;
+    const keys: Array<"utm_source" | "utm_medium" | "utm_campaign" | "utm_content"> = ["utm_source", "utm_medium", "utm_campaign", "utm_content"];
+    keys.forEach((key) => {
+      const value = url.searchParams.get(key);
+      if (value) utm[key] = value;
     });
     if (document.referrer && !document.referrer.includes(window.location.host)) {
       utm.referrer = document.referrer;
@@ -86,33 +87,39 @@ type TrackPayload = {
   product_id?: string | null;
   order_id?: string | null;
   value?: number | null;
-  metadata?: Record<string, any>;
+  metadata?: Record<string, unknown>;
 };
 
 export async function track(payload: TrackPayload) {
   try {
-    const utm = getStoredUTM();
-    const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from("analytics_events").insert({
-      event_type: payload.event_type,
-      session_id: getSessionId(),
-      user_id: user?.id ?? null,
-      path: payload.path ?? window.location.pathname,
-      referrer: utm.referrer ?? null,
-      utm_source: utm.utm_source ?? null,
-      utm_medium: utm.utm_medium ?? null,
-      utm_campaign: utm.utm_campaign ?? null,
-      utm_content: utm.utm_content ?? null,
-      device: getDevice(),
-      country: null,
-      product_id: payload.product_id ?? null,
-      order_id: payload.order_id ?? null,
-      value: payload.value ?? null,
-      metadata: payload.metadata ?? {},
-    });
+    const { data: { session } } = await supabase.auth.getSession();
+    if (session) {
+      const utm = getStoredUTM();
+      const { error } = await supabase.functions.invoke("analytics-event", { body: {
+        eventType: payload.event_type,
+        sessionId: getSessionId(),
+        path: payload.path ?? window.location.pathname,
+        referrer: utm.referrer ?? null,
+        utmSource: utm.utm_source ?? null,
+        utmMedium: utm.utm_medium ?? null,
+        utmCampaign: utm.utm_campaign ?? null,
+        utmContent: utm.utm_content ?? null,
+        device: getDevice(),
+        productId: payload.product_id ?? null,
+        orderId: payload.order_id ?? null,
+        value: payload.value ?? null,
+        metadata: payload.metadata ?? {},
+      } });
+      if (error) throw error;
+    }
+  } catch (err) {
+    // Never let analytics break the app
+    if (import.meta.env.DEV) console.warn("[analytics] track failed", err);
+  }
 
+  try {
     // Forward to Google Analytics (gtag) when present
-    const gtag = (window as any).gtag;
+    const gtag = (window as Window & { gtag?: (...args: unknown[]) => void }).gtag;
     if (typeof gtag === "function") {
       gtag("event", payload.event_type, {
         page_path: payload.path,
@@ -123,12 +130,11 @@ export async function track(payload: TrackPayload) {
       });
     }
   } catch (err) {
-    // Never let analytics break the app
-    if (import.meta.env.DEV) console.warn("[analytics] track failed", err);
+    if (import.meta.env.DEV) console.warn("[analytics] gtag failed", err);
   }
 }
 
-export async function logAudit(action: string, entity_type: string, entity_id?: string, details?: Record<string, any>) {
+export async function logAudit(action: string, entity_type: string, entity_id?: string, details?: Record<string, unknown>) {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;

@@ -10,6 +10,7 @@ import { currencyOptions, fmtMoney, orderTotalBase } from "./reportHelpers";
 import { Bar, BarChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import { CalendarDays, CheckCircle2, CircleDollarSign, Loader2, Package, ReceiptText, RefreshCw, RotateCcw, TrendingDown, TrendingUp, WalletCards, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fetchAdminProductCostMap } from "@/lib/admin/productCosts";
 
 type OrderItem = {
   product_id?: string | null;
@@ -187,13 +188,15 @@ export default function ReportsFinancePage() {
   const productsQuery = useQuery({
     queryKey: ["reports-finance-products-cost-v2"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("products").select("id,cost_price,price");
+      const { data, error } = await supabase.from("products").select("id,price");
 
       if (error) throw error;
 
+      const costs = await fetchAdminProductCostMap();
+
       return (data || []).map((row: any) => ({
         ...row,
-        cost_price: row.cost_price == null ? null : Number(row.cost_price),
+        cost_price: costs.get(row.id) ?? null,
         price: Number(row.price || 0),
       })) as ProductRow[];
     },

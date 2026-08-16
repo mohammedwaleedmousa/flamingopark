@@ -5,6 +5,7 @@ import { Product } from "@/store/useStore";
 import { useStore } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
 import { toast } from "@/hooks/use-toast";
+import { useCurrency } from "@/lib/currency";
 
 interface ProductCardMinimalProps {
   product: Product;
@@ -14,7 +15,7 @@ interface ProductCardMinimalProps {
 const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => {
   const { addToCart } = useStore();
   const { isFavorite, toggleFavorite } = useFavorites();
-  const currency = "ر.ي";
+  const { format: formatCurrency } = useCurrency();
   const isLiked = isFavorite(product.id);
 
   const handleAddToCart = (e: React.MouseEvent) => {
@@ -123,10 +124,10 @@ const ProductCardMinimal = ({ product, index = 0 }: ProductCardMinimalProps) => 
 
             <div className="flex items-center gap-2 mt-auto">
               <span className="font-heading font-semibold text-base text-foreground">
-                {discountedPrice.toFixed(0)} <span className="text-xs font-normal">{currency}</span>
+                {formatCurrency(discountedPrice)}
               </span>
               {product.originalPrice && (
-                <span className="text-muted-foreground line-through text-xs">{product.originalPrice.toFixed(0)}</span>
+                <span className="text-muted-foreground line-through text-xs">{formatCurrency(product.originalPrice)}</span>
               )}
             </div>
           </div>

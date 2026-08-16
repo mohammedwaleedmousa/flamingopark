@@ -111,7 +111,7 @@ const ProductDetailPage = () => {
   const { data: product, isLoading } = useQuery({
     queryKey: ["product", slug],
     queryFn: async () => {
-      const { data, error } = await supabase.from("products").select("id,name,name_ar,slug,price,cost_price,original_price,discount,description,description_ar,images,category,category_id,brand,in_stock,stock_quantity,countries,is_featured,is_best_seller,accessories,has_sizes,sizes,features,color_variants,specs,return_policy,has_quality_variants,quality_variants").eq("slug", slug).eq("is_active", true).maybeSingle();
+      const { data, error } = await supabase.from("products").select("id,name,name_ar,slug,price,original_price,discount,description,description_ar,images,category,category_id,brand,in_stock,stock_quantity,countries,is_featured,is_best_seller,accessories,has_sizes,sizes,features,color_variants,specs,return_policy,has_quality_variants,quality_variants").eq("slug", slug).eq("is_active", true).maybeSingle();
 
       if (error) throw error;
       if (!data) return null;
@@ -126,7 +126,6 @@ const ProductDetailPage = () => {
         nameAr: data.name_ar,
         slug: data.slug,
         price: Number(data.price),
-        costPrice: data.cost_price ? Number(data.cost_price) : undefined,
         originalPrice: data.original_price ? Number(data.original_price) : undefined,
         discount: data.discount || undefined,
         description: data.description || "",

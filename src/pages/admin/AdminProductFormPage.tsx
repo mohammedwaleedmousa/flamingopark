@@ -13,6 +13,7 @@ import { ArrowRight, BadgeDollarSign, Boxes, ClipboardList, Eye, Layers3, Loader
 import type { ColorVariant } from '@/components/admin/ColorVariantsEditor';
 import { syncProductInventory } from '@/lib/productInventory';
 import AdminPageHeader from '@/components/admin/AdminPageHeader';
+import { fetchAdminProductCostMap } from '@/lib/admin/productCosts';
 
 const ColorVariantsEditor = lazy(() => import('@/components/admin/ColorVariantsEditor'));
 
@@ -233,7 +234,7 @@ const AdminProductFormPage = () => {
     setIsLoading(true);
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select('id,name,name_ar,slug,price,original_price,discount,description,description_ar,category,category_id,brand,brand_id,in_stock,is_featured,is_best_seller,is_active,countries,section_ids,home_collections,accessories,features,color_variants,stock_quantity,return_policy,specs,has_quality_variants,quality_variants')
       .eq('id', id)
       .single();
 
@@ -241,6 +242,19 @@ const AdminProductFormPage = () => {
       toast({ title: 'خطأ', description: 'فشل في تحميل المنتج', variant: 'destructive' });
       navigate('/admin/products');
     } else {
+      let protectedCost: number | null;
+
+      try {
+        const costs = await fetchAdminProductCostMap([data.id]);
+        protectedCost = costs.get(data.id) ?? null;
+      } catch (costError) {
+        console.error('Failed to load protected product cost', costError);
+        toast({ title: 'خطأ', description: 'تعذر تحميل تكلفة المنتج المحمية؛ لن يتم فتح التعديل حتى لا تُستبدل التكلفة.', variant: 'destructive' });
+        navigate('/admin/products');
+        setIsLoading(false);
+        return;
+      }
+
       setSelectedCategoryId(data.category_id || null);
       let brandName = data.brand?.trim() || '';
       if (!brandName && data.brand_id) {
@@ -256,7 +270,7 @@ const AdminProductFormPage = () => {
         name_ar: data.name_ar || '',
         slug: data.slug || '',
         price: data.price?.toString() || '',
-        cost_price: data.cost_price?.toString() || '',
+        cost_price: protectedCost?.toString() || '',
         original_price: data.original_price?.toString() || '',
         discount: data.discount?.toString() || '0',
         description: data.description || '',

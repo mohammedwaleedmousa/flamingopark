@@ -1570,6 +1570,7 @@ export type Database = {
           comment: string | null
           country: string
           created_at: string
+          customer_id: string | null
           customer_name: string
           id: string
           images: string[] | null
@@ -1577,11 +1578,13 @@ export type Database = {
           product_id: string
           rating: number
           updated_at: string
+          user_id: string | null
         }
         Insert: {
           comment?: string | null
           country: string
           created_at?: string
+          customer_id?: string | null
           customer_name: string
           id?: string
           images?: string[] | null
@@ -1589,11 +1592,13 @@ export type Database = {
           product_id: string
           rating: number
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
           comment?: string | null
           country?: string
           created_at?: string
+          customer_id?: string | null
           customer_name?: string
           id?: string
           images?: string[] | null
@@ -1601,6 +1606,7 @@ export type Database = {
           product_id?: string
           rating?: number
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -1621,6 +1627,7 @@ export type Database = {
           features: Json | null
           has_quality_variants: boolean
           has_sizes: boolean | null
+          home_collections: string[]
           id: string
           images: string[] | null
           in_stock: boolean | null
@@ -1657,6 +1664,7 @@ export type Database = {
           features?: Json | null
           has_quality_variants?: boolean
           has_sizes?: boolean | null
+          home_collections?: string[]
           id?: string
           images?: string[] | null
           in_stock?: boolean | null
@@ -1693,6 +1701,7 @@ export type Database = {
           features?: Json | null
           has_quality_variants?: boolean
           has_sizes?: boolean | null
+          home_collections?: string[]
           id?: string
           images?: string[] | null
           in_stock?: boolean | null
@@ -1996,27 +2005,11 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      customer_login: {
-        Args: { _password: string; _phone: string }
+      get_admin_product_costs: {
+        Args: { p_product_ids: string[] | null }
         Returns: {
-          country: string
-          id: string
-          name: string
-          phone: string
-        }[]
-      }
-      customer_register: {
-        Args: {
-          _country: string
-          _name: string
-          _password: string
-          _phone: string
-        }
-        Returns: {
-          country: string
-          id: string
-          name: string
-          phone: string
+          cost_price: number | null
+          product_id: string
         }[]
       }
       has_role: {

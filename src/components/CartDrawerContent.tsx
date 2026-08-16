@@ -3,14 +3,15 @@ import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { useStore } from "@/store/useStore";
+import { useCurrency } from "@/lib/currency";
 
 const CartDrawerContent = () => {
   const { cart, isCartOpen, closeCart, removeFromCart, updateQuantity, getCartTotal, clearCart } = useStore();
+  const { format: formatCurrency } = useCurrency();
 
   const navigate = useNavigate();
 
   const total = getCartTotal();
-  const currency = "ر.ي";
 
   const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
 
@@ -192,9 +193,9 @@ const CartDrawerContent = () => {
                       {/* PRICE */}
 
                       <div className="mt-2 flex items-end gap-1.5">
-                        <span className="text-[13px] font-semibold leading-none text-[#C65F68]">{unitTotal.toFixed(2)} {currency}</span>
+                        <span className="text-[13px] font-semibold leading-none text-[#C65F68]">{formatCurrency(unitTotal)}</span>
 
-                        {!!discount && <span className="text-[7px] leading-none text-[#AEA19C] line-through">{basePrice.toFixed(2)}</span>}
+                        {!!discount && <span className="text-[7px] leading-none text-[#AEA19C] line-through">{formatCurrency(basePrice)}</span>}
                       </div>
 
                       {/* QUANTITY */}
@@ -212,7 +213,7 @@ const CartDrawerContent = () => {
                           </button>
                         </div>
 
-                        <span className="text-[7px] text-[#AA9C97]">الإجمالي: {(unitTotal * item.quantity).toFixed(2)} {currency}</span>
+                        <span className="text-[7px] text-[#AA9C97]">الإجمالي: {formatCurrency(unitTotal * item.quantity)}</span>
                       </div>
                     </div>
 
@@ -241,8 +242,7 @@ const CartDrawerContent = () => {
               </div>
 
               <div className="text-left">
-                <span className="text-[20px] font-semibold leading-none text-[#B85E66]">{total.toFixed(2)}</span>
-                <span className="mr-1 text-[8px] font-medium text-[#8D7975]">{currency}</span>
+                <span className="text-[20px] font-semibold leading-none text-[#B85E66]">{formatCurrency(total)}</span>
               </div>
             </div>
 

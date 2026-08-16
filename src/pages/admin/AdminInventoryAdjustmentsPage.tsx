@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { AlertTriangle, Boxes, CheckCircle2, ClipboardCheck, History, Layers3, Loader2, Minus, Package, PackagePlus, Pencil, Plus, RefreshCw, RotateCcw, Save, Search, SlidersHorizontal, Trash2, TrendingDown, TrendingUp, Wallet, X } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { fetchAdminProductCostMap } from "@/lib/admin/productCosts";
 
 type VariantSizeEntry = string | { size?: string; stock?: number };
 
@@ -202,7 +203,7 @@ const AdminInventoryAdjustmentsPage = () => {
   const { data: productResult, isLoading: productsLoading, isFetching: productsFetching } = useQuery({
     queryKey: ["inventory-products", page, search, filter],
     queryFn: async () => {
-      let query = supabase.from("products").select("id,name,name_ar,brand,cost_price,price,stock_quantity,in_stock,is_active,images,color_variants,has_sizes,sizes,has_quality_variants", { count: "exact" });
+      let query = supabase.from("products").select("id,name,name_ar,brand,price,stock_quantity,in_stock,is_active,images,color_variants,has_sizes,sizes,has_quality_variants", { count: "exact" });
 
       if (search.trim()) {
         const safe = search.trim().replace(/[,%()]/g, " ");
@@ -218,7 +219,10 @@ const AdminInventoryAdjustmentsPage = () => {
       const { data, count, error } = await query.order("stock_quantity", { ascending: true }).order("name_ar", { ascending: true }).range(from, from + PRODUCT_PAGE_SIZE - 1);
       if (error) throw error;
 
-      return { rows: (data || []) as Product[], total: count || 0 };
+      const rows = (data || []) as Omit<Product, "cost_price">[];
+      const costs = await fetchAdminProductCostMap(rows.map((product) => product.id));
+
+      return { rows: rows.map((product) => ({ ...product, cost_price: costs.get(product.id) ?? null })), total: count || 0 };
     },
     staleTime: 15_000,
   });

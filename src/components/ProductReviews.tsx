@@ -5,7 +5,7 @@ import { Link } from "react-router-dom";
 import type { User as SupaUser } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
-import { uploadOptimizedImage } from "@/lib/prepareImageUpload";
+import { prepareImageUpload } from "@/lib/prepareImageUpload";
 import { useStore } from "@/store/useStore";
 import { toast } from "@/hooks/use-toast";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
@@ -60,7 +60,7 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
 
   const [zoomImg, setZoomImg] = useState<string | null>(null);
 
-  const canReview = Boolean(customer) || Boolean(authUser);
+  const canReview = Boolean(authUser && customer?.userId === authUser.id && customer.id !== "guest");
 
   /* =========================================================
      AUTH
@@ -168,10 +168,21 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
       if (!file.type.startsWith("image/")) continue;
 
       try {
-        const url = await uploadOptimizedImage(file, `reviews/${productId}`, {
+        if (!authUser) throw new Error("يجب تسجيل الدخول أولاً");
+
+        const prepared = await prepareImageUpload(file, {
           maxSizeMB: 0.6,
           maxWidthOrHeight: 1200,
         });
+        if (prepared.size > 1024 * 1024) throw new Error("حجم الصورة بعد الضغط أكبر من 1MB");
+
+        const { data: uploadGrant, error: grantError } = await supabase.functions.invoke("submit-review", { body: { action: "upload-url", productId } });
+        if (grantError || !uploadGrant?.path || !uploadGrant?.token) throw grantError || new Error("تعذر تجهيز رفع الصورة");
+
+        const { error: uploadError } = await supabase.storage.from("uploads").uploadToSignedUrl(uploadGrant.path, uploadGrant.token, prepared, { contentType: "image/webp" });
+        if (uploadError) throw uploadError;
+
+        const url = supabase.storage.from("uploads").getPublicUrl(uploadGrant.path).data.publicUrl;
 
         uploaded.push(url);
       } catch (error: unknown) {
@@ -206,17 +217,13 @@ const ProductReviews = ({ productId, productName }: ProductReviewsProps) => {
 
       const cleanComment = comment.trim();
 
-      const authorName = customer?.name || authUser?.user_metadata?.full_name || authUser?.email?.split("@")[0] || customer?.phone || "عميل فلامنجو";
-
-      const { error } = await supabase.from("product_reviews").insert({
-        product_id: productId,
-        customer_name: authorName,
+      const { error } = await supabase.functions.invoke("submit-review", { body: {
+        action: "submit",
+        productId,
         rating,
-        comment: cleanComment || null,
-        is_approved: false,
+        comment: cleanComment,
         images,
-        country: "YE",
-      });
+      } });
 
       if (error) throw error;
     },

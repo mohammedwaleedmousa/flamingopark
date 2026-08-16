@@ -7,7 +7,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { loginCustomer, registerCustomer } from "@/lib/customerAuth";
 import { clearCustomerSession, type CustomerSession } from "@/lib/customerSession";
-import { normalizeNumericPin, toYemenLocalPhone } from "@/lib/yemenPhone";
+import { toYemenLocalPhone } from "@/lib/yemenPhone";
 
 type AuthMode = "login" | "register";
 
@@ -103,6 +103,7 @@ const CustomerAuthPage = () => {
   const persistCustomer = (customerData: CustomerSession) => {
     setCustomer({
       id: customerData.id,
+      userId: customerData.userId,
       name: customerData.name,
       phone: customerData.phone,
       region: customerData.region,
@@ -116,11 +117,11 @@ const CustomerAuthPage = () => {
     event.preventDefault();
 
     const phone = `+967${formData.phone}`;
-    const pin = formData.password;
+    const password = formData.password;
     const name = formData.name.trim();
     const selectedRegion = formData.region.trim();
 
-    if (!formData.phone || !pin || (mode === "register" && !name) || (mode === "register" && !selectedRegion)) {
+    if (!formData.phone || !password || (mode === "register" && !name) || (mode === "register" && !selectedRegion)) {
       toast({
         title: "البيانات غير مكتملة",
         description: "يرجى تعبئة جميع الحقول المطلوبة.",
@@ -134,7 +135,7 @@ const CustomerAuthPage = () => {
 
     try {
       if (mode === "register") {
-        const customerData = persistCustomer(await registerCustomer({ name, phone, pin, region: selectedRegion }));
+        const customerData = persistCustomer(await registerCustomer({ name, phone, password, region: selectedRegion }));
 
         toast({
           title: "تم إنشاء الحساب",
@@ -146,7 +147,7 @@ const CustomerAuthPage = () => {
         return;
       }
 
-      const customerData = persistCustomer(await loginCustomer(phone, pin));
+      const customerData = persistCustomer(await loginCustomer(phone, password));
 
       toast({
         title: "مرحباً بعودتك",
@@ -243,7 +244,7 @@ const CustomerAuthPage = () => {
           <div className="text-center">
             <h1 className="text-[25px] font-semibold tracking-[-0.035em] text-[#382F2C] sm:text-[28px]">{mode === "login" ? "مرحباً بعودتك" : "إنشاء حساب جديد"}</h1>
 
-            <p className="mx-auto mt-2 max-w-[320px] text-[10px] leading-5 text-[#958883] sm:text-[11px] sm:leading-6">{mode === "login" ? "سجّل برقم هاتفك اليمني ورمزك السري لمتابعة طلباتك." : "أنشئ حساباً آمناً برقم هاتف يمني ورمز سري رقمي."}</p>
+            <p className="mx-auto mt-2 max-w-[320px] text-[10px] leading-5 text-[#958883] sm:text-[11px] sm:leading-6">{mode === "login" ? "سجّل برقم هاتفك اليمني وكلمة المرور لمتابعة طلباتك." : "أنشئ حساباً برقم هاتف يمني وكلمة مرور من اختيارك."}</p>
           </div>
 
           {/* =====================================================
@@ -308,14 +309,14 @@ const CustomerAuthPage = () => {
             {/* PASSWORD */}
 
             <div>
-              <label htmlFor="auth-password" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">الرمز السري</label>
+              <label htmlFor="auth-password" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">كلمة المرور</label>
 
               <div className="group relative">
                 <LockKeyhole className="pointer-events-none absolute right-4 top-1/2 h-[16px] w-[16px] -translate-y-1/2 text-[#A99D98] transition-colors group-focus-within:text-[#B86168]" strokeWidth={1.5} />
 
-                <input id="auth-password" type={showPassword ? "text" : "password"} inputMode="numeric" pattern="[0-9]*" minLength={6} maxLength={12} autoComplete={mode === "login" ? "current-password" : "new-password"} value={formData.password} onChange={(event) => updateField("password", normalizeNumericPin(event.target.value))} placeholder="6 إلى 12 رقماً" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-12 text-left text-[12px] tracking-[0.12em] text-[#443936] outline-none transition-colors placeholder:tracking-normal placeholder:text-[#B8ADA8] focus:border-[#D7AAA7]" />
+                <input id="auth-password" type={showPassword ? "text" : "password"} minLength={6} maxLength={72} autoComplete={mode === "login" ? "current-password" : "new-password"} value={formData.password} onChange={(event) => updateField("password", event.target.value)} placeholder="6 خانات على الأقل" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-12 text-left text-[12px] tracking-[0.12em] text-[#443936] outline-none transition-colors placeholder:tracking-normal placeholder:text-[#B8ADA8] focus:border-[#D7AAA7]" />
 
-                <button type="button" onClick={() => setShowPassword((previous) => !previous)} aria-label={showPassword ? "إخفاء الرمز السري" : "إظهار الرمز السري"} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-[8px] text-[#A99D98] transition-colors hover:bg-[#FFF7F5] hover:text-[#B86168]">
+                <button type="button" onClick={() => setShowPassword((previous) => !previous)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-[8px] text-[#A99D98] transition-colors hover:bg-[#FFF7F5] hover:text-[#B86168]">
                   {showPassword ? <EyeOff className="h-[15px] w-[15px]" strokeWidth={1.5} /> : <Eye className="h-[15px] w-[15px]" strokeWidth={1.5} />}
                 </button>
               </div>
@@ -329,7 +330,7 @@ const CustomerAuthPage = () => {
                   <Check className="h-2.5 w-2.5 text-[#A95B61]" strokeWidth={2} />
                 </span>
 
-                <p className="text-[8.5px] leading-5 text-[#8F817C]">اختر رمزاً من 6 إلى 12 رقماً غير متكرر ولا يحتوي على جزء من رقم هاتفك.</p>
+                <p className="text-[8.5px] leading-5 text-[#8F817C]">تقبل أحرفاً أو أرقاماً أو رموزاً من 6 خانات فأكثر، ولا تُخزن كنص مكشوف. يُفضّل اختيار كلمة يصعب تخمينها.</p>
               </div>
             )}
 

@@ -1,7 +1,7 @@
 import { createClient } from "npm:@supabase/supabase-js@2.112.0";
 
 type BootstrapMode = "register" | "migrate";
-type BootstrapBody = { mode?: unknown; name?: unknown; phone?: unknown; pin?: unknown; region?: unknown };
+type BootstrapBody = { mode?: unknown; name?: unknown; phone?: unknown; password?: unknown; pin?: unknown; region?: unknown };
 
 const DEFAULT_ORIGINS = [
   "https://flamingopark.vercel.app",
@@ -12,6 +12,8 @@ const DEFAULT_ORIGINS = [
   "http://localhost:5173",
 ];
 const MAX_BODY_BYTES = 4096;
+const MIN_PASSWORD_LENGTH = 6;
+const MAX_PASSWORD_BYTES = 72;
 
 const allowedOrigins = () => new Set(
   (Deno.env.get("ALLOWED_ORIGINS") || DEFAULT_ORIGINS.join(","))
@@ -52,6 +54,13 @@ const cleanText = (value: unknown, maxLength: number) => typeof value === "strin
   ? value.trim().replaceAll(String.fromCharCode(0), "").replace(/\s+/g, " ").slice(0, maxLength)
   : "";
 
+const isValidPassword = (value: string) => (
+  value.length >= MIN_PASSWORD_LENGTH
+  && value.trim().length > 0
+  && new TextEncoder().encode(value).byteLength <= MAX_PASSWORD_BYTES
+  && !value.includes(String.fromCharCode(0))
+);
+
 const sha256 = async (value: string) => {
   const bytes = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value));
   return [...new Uint8Array(bytes)].map((byte) => byte.toString(16).padStart(2, "0")).join("");
@@ -67,10 +76,9 @@ const fingerprint = async (req: Request) => {
 
 const publicError = (message: string) => {
   if (message.includes("rate_limited")) return { message: "محاولات كثيرة. انتظر قليلاً ثم حاول مرة أخرى.", status: 429 };
-  if (message.includes("weak_pin")) return { message: "اختر رمزاً سرياً أصعب وغير متكرر.", status: 400 };
   if (message.includes("already_registered")) return { message: "تعذر إنشاء الحساب. جرّب تسجيل الدخول بهذا الرقم.", status: 409 };
-  if (message.includes("invalid_input")) return { message: "تحقق من رقم الهاتف والرمز السري والبيانات المدخلة.", status: 400 };
-  if (message.includes("invalid_credentials")) return { message: "رقم الهاتف أو الرمز السري غير صحيح.", status: 401 };
+  if (message.includes("invalid_input")) return { message: "تحقق من رقم الهاتف وكلمة المرور والبيانات المدخلة.", status: 400 };
+  if (message.includes("invalid_credentials")) return { message: "رقم الهاتف أو كلمة المرور غير صحيحة.", status: 401 };
   return { message: "تعذر إكمال تسجيل الدخول حالياً. حاول مرة أخرى.", status: 500 };
 };
 
@@ -94,11 +102,12 @@ Deno.serve(async (req) => {
 
   const mode: BootstrapMode | null = body.mode === "register" || body.mode === "migrate" ? body.mode : null;
   const phone = normalizePhone(body.phone);
-  const pin = typeof body.pin === "string" ? toLatinDigits(body.pin) : "";
+  // Accept the old `pin` key during the rollout so cached clients do not break.
+  const password = typeof body.password === "string" ? body.password : typeof body.pin === "string" ? body.pin : "";
   const name = cleanText(body.name, 100);
   const region = cleanText(body.region, 80);
-  if (!mode || !phone || !/^\d{6,12}$/.test(pin) || (mode === "register" && (name.length < 2 || region.length < 2))) {
-    return json({ error: "تحقق من رقم الهاتف والرمز السري والبيانات المدخلة." }, 400, origin);
+  if (!mode || !phone || !isValidPassword(password) || (mode === "register" && (name.length < 2 || region.length < 2))) {
+    return json({ error: "تحقق من رقم الهاتف وكلمة المرور والبيانات المدخلة." }, 400, origin);
   }
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL");
@@ -112,7 +121,7 @@ Deno.serve(async (req) => {
     const { data: prepared, error: prepareError } = await service.rpc("prepare_customer_phone_auth", {
       p_mode: mode,
       p_phone: phone,
-      p_pin: pin,
+      p_password: password,
       p_fingerprint_hash: await fingerprint(req),
     });
     if (prepareError) throw prepareError;
@@ -124,7 +133,7 @@ Deno.serve(async (req) => {
     const customerId = preparedRow.customer_id || null;
     const { data: created, error: createError } = await service.auth.admin.createUser({
       phone,
-      password: pin,
+      password,
       phone_confirm: true,
       user_metadata: mode === "register" ? { full_name: name, region, country: "YE" } : { country: "YE" },
     });

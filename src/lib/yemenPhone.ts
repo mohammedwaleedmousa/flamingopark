@@ -28,17 +28,3 @@ export const toYemenLocalPhone = (raw: string): string => {
   else if (value.startsWith("0")) value = value.slice(1);
   return value.slice(0, 9);
 };
-
-export const normalizeNumericPin = (raw: string): string => toLatinDigits(raw).replace(/\D/g, "").slice(0, 12);
-
-export const isValidNumericPin = (pin: string): boolean => /^\d{6,12}$/.test(pin);
-
-export const isWeakRegistrationPin = (pin: string, phone: string): boolean => {
-  if (!isValidNumericPin(pin)) return true;
-  if (/^(\d)\1+$/.test(pin) || /^(.{1,3})\1+$/.test(pin)) return true;
-  if ("0123456789012".includes(pin) || "9876543210987".includes(pin)) return true;
-
-  const phoneDigits = normalizeYemenPhone(phone)?.replace(/\D/g, "") || "";
-  return Boolean(phoneDigits && phoneDigits.endsWith(pin));
-};
-

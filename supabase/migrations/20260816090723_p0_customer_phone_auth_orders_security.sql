@@ -141,7 +141,7 @@ CREATE INDEX IF NOT EXISTS customer_auth_attempts_fingerprint_created_idx
 CREATE OR REPLACE FUNCTION public.prepare_customer_phone_auth(
   p_mode text,
   p_phone text,
-  p_pin text,
+  p_password text,
   p_fingerprint_hash text
 )
 RETURNS TABLE(normalized_phone text, customer_id uuid, result_code text)
@@ -163,7 +163,10 @@ BEGIN
 
   IF p_mode NOT IN ('register', 'migrate')
      OR v_phone IS NULL
-     OR p_pin !~ '^[0-9]{6,12}$'
+     OR p_password IS NULL
+     OR char_length(p_password) < 6
+     OR btrim(p_password) = ''
+     OR octet_length(p_password) > 72
      OR p_fingerprint_hash !~ '^[0-9a-f]{64}$' THEN
     RETURN QUERY SELECT v_phone, NULL::uuid, 'invalid_input'::text;
     RETURN;
@@ -192,19 +195,6 @@ BEGIN
     RETURN;
   END IF;
 
-  IF p_mode = 'register' AND (
-    p_pin ~ '^([0-9])\1+$'
-    OR p_pin ~ '^([0-9]{1,3})\1+$'
-    OR position(p_pin IN '0123456789012') > 0
-    OR position(p_pin IN '9876543210987') > 0
-    OR right(replace(v_phone, '+', ''), length(p_pin)) = p_pin
-  ) THEN
-    INSERT INTO private.customer_auth_attempts(phone_hash, fingerprint_hash, action, succeeded)
-    VALUES (v_phone_hash, p_fingerprint_hash, p_mode, false);
-    RETURN QUERY SELECT v_phone, NULL::uuid, 'weak_pin'::text;
-    RETURN;
-  END IF;
-
   SELECT c.id, c.user_id, credentials.password_hash
   INTO v_customer_id, v_user_id, v_password_hash
   FROM public.customers c
@@ -222,7 +212,7 @@ BEGIN
   ELSIF v_customer_id IS NULL
         OR v_user_id IS NOT NULL
         OR v_password_hash IS NULL
-        OR crypt(p_pin, v_password_hash) <> v_password_hash THEN
+        OR crypt(p_password, v_password_hash) <> v_password_hash THEN
     INSERT INTO private.customer_auth_attempts(phone_hash, fingerprint_hash, action, succeeded)
     VALUES (v_phone_hash, p_fingerprint_hash, p_mode, false);
     RETURN QUERY SELECT v_phone, NULL::uuid, 'invalid_credentials'::text;

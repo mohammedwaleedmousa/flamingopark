@@ -2,8 +2,6 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
-  isWeakRegistrationPin,
-  normalizeNumericPin,
   normalizeYemenPhone,
   toYemenLocalPhone,
 } from "../src/lib/yemenPhone.ts";
@@ -20,17 +18,6 @@ test("rejects malformed, non-mobile, and overlong phone numbers", () => {
   }
 });
 
-test("bounds UI phone and PIN input to numeric values", () => {
+test("bounds UI phone input to nine local numeric digits", () => {
   assert.equal(toYemenLocalPhone("+967 ٧٧١-٢٣٤-٥٦٧99"), "771234567");
-  assert.equal(normalizeNumericPin("١٢a٣٤-٥٦٧٨٩٠١٢٣٤"), "123456789012");
 });
-
-test("rejects weak registration PINs", () => {
-  assert.equal(isWeakRegistrationPin("111111", "+967771234567"), true);
-  assert.equal(isWeakRegistrationPin("123456", "+967771234567"), true);
-  assert.equal(isWeakRegistrationPin("234567", "+967771234567"), true);
-  assert.equal(isWeakRegistrationPin("121212", "+967771234567"), true);
-  assert.equal(isWeakRegistrationPin("234567", "+967712234567"), true);
-  assert.equal(isWeakRegistrationPin("804271", "+967771234567"), false);
-});
-

@@ -1,24 +1,20 @@
 import { AuthApiError, FunctionsHttpError } from "@supabase/supabase-js";
 
 import { supabase } from "@/integrations/supabase/client";
+import { customerPasswordRequirements, isValidCustomerPassword } from "@/lib/customerPassword";
 import { loadCustomerSession, type CustomerSession } from "@/lib/customerSession";
-import {
-  isValidNumericPin,
-  isWeakRegistrationPin,
-  normalizeNumericPin,
-  normalizeYemenPhone,
-} from "@/lib/yemenPhone";
+import { normalizeYemenPhone } from "@/lib/yemenPhone";
 
 type BootstrapMode = "register" | "migrate";
 
 type RegistrationInput = {
   name: string;
   phone: string;
-  pin: string;
+  password: string;
   region: string;
 };
 
-const INVALID_CREDENTIALS = "رقم الهاتف أو الرمز السري غير صحيح.";
+const INVALID_CREDENTIALS = "رقم الهاتف أو كلمة المرور غير صحيحة.";
 
 const invokeBootstrap = async (mode: BootstrapMode, input: RegistrationInput) => {
   const { data, error } = await supabase.functions.invoke("customer-auth-bootstrap", {
@@ -26,7 +22,7 @@ const invokeBootstrap = async (mode: BootstrapMode, input: RegistrationInput) =>
       mode,
       name: mode === "register" ? input.name : undefined,
       phone: input.phone,
-      pin: input.pin,
+      password: input.password,
       region: mode === "register" ? input.region : undefined,
     },
   });
@@ -44,8 +40,8 @@ const invokeBootstrap = async (mode: BootstrapMode, input: RegistrationInput) =>
   throw new Error("تعذر الاتصال بخدمة تسجيل الدخول. حاول مرة أخرى.");
 };
 
-const signIn = async (phone: string, pin: string): Promise<CustomerSession> => {
-  const { data, error } = await supabase.auth.signInWithPassword({ phone, password: pin });
+const signIn = async (phone: string, password: string): Promise<CustomerSession> => {
+  const { data, error } = await supabase.auth.signInWithPassword({ phone, password });
   if (error) throw error;
   if (!data.user) throw new Error(INVALID_CREDENTIALS);
 
@@ -57,19 +53,18 @@ const signIn = async (phone: string, pin: string): Promise<CustomerSession> => {
   return customer;
 };
 
-const validateCredentials = (rawPhone: string, rawPin: string) => {
+const validateCredentials = (rawPhone: string, password: string) => {
   const phone = normalizeYemenPhone(rawPhone);
-  const pin = normalizeNumericPin(rawPin);
   if (!phone) throw new Error("أدخل رقم جوال يمني صحيح يبدأ بالرقم 7.");
-  if (!isValidNumericPin(pin)) throw new Error("الرمز السري يجب أن يتكون من 6 إلى 12 رقماً.");
-  return { phone, pin };
+  if (!isValidCustomerPassword(password)) throw new Error(customerPasswordRequirements);
+  return { phone, password };
 };
 
-export const loginCustomer = async (rawPhone: string, rawPin: string): Promise<CustomerSession> => {
-  const credentials = validateCredentials(rawPhone, rawPin);
+export const loginCustomer = async (rawPhone: string, password: string): Promise<CustomerSession> => {
+  const credentials = validateCredentials(rawPhone, password);
 
   try {
-    return await signIn(credentials.phone, credentials.pin);
+    return await signIn(credentials.phone, credentials.password);
   } catch (error) {
     if (!(error instanceof AuthApiError) || error.code !== "invalid_credentials") {
       if (error instanceof AuthApiError) throw new Error(INVALID_CREDENTIALS);
@@ -82,7 +77,7 @@ export const loginCustomer = async (rawPhone: string, rawPin: string): Promise<C
   await invokeBootstrap("migrate", { ...credentials, name: "", region: "" });
 
   try {
-    return await signIn(credentials.phone, credentials.pin);
+    return await signIn(credentials.phone, credentials.password);
   } catch (error) {
     if (error instanceof AuthApiError) throw new Error(INVALID_CREDENTIALS);
     throw error;
@@ -92,18 +87,15 @@ export const loginCustomer = async (rawPhone: string, rawPin: string): Promise<C
 export const registerCustomer = async (input: RegistrationInput): Promise<CustomerSession> => {
   const name = input.name.trim().replace(/\s+/g, " ");
   const region = input.region.trim();
-  const credentials = validateCredentials(input.phone, input.pin);
+  const credentials = validateCredentials(input.phone, input.password);
 
   if (name.length < 2 || name.length > 100) throw new Error("أدخل الاسم الكامل بشكل صحيح.");
   if (region.length < 2 || region.length > 80) throw new Error("اختر المحافظة.");
-  if (isWeakRegistrationPin(credentials.pin, credentials.phone)) {
-    throw new Error("اختر رمزاً سرياً أصعب ولا تستخدم أرقاماً متكررة أو متسلسلة أو جزءاً من رقم هاتفك.");
-  }
 
   await invokeBootstrap("register", { name, region, ...credentials });
 
   try {
-    return await signIn(credentials.phone, credentials.pin);
+    return await signIn(credentials.phone, credentials.password);
   } catch (error) {
     if (error instanceof AuthApiError) throw new Error("تم إنشاء الحساب لكن تعذر تسجيل الدخول. حاول مرة أخرى.");
     throw error;

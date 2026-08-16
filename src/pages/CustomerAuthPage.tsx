@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Globe2, Loader2, LockKeyhole, Mail, MapPin, Phone, ShieldCheck, UserRound } from "lucide-react";
+import { ArrowLeft, Check, CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, Eye, EyeOff, Globe2, Loader2, LockKeyhole, MapPin, Phone, ShieldCheck, UserRound } from "lucide-react";
 
 import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -27,7 +27,7 @@ const CustomerAuthPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [formData, setFormData] = useState({ name: "", identifier: "", phone: "", email: "", password: "", country: "YE", region: "" });
+  const [formData, setFormData] = useState({ name: "", identifier: "", phone: "", password: "", country: "YE", region: "" });
 
   useEffect(() => {
     const previousBodyOverflow = document.body.style.overflow;
@@ -78,7 +78,7 @@ const CustomerAuthPage = () => {
 
     try {
       if (mode === "register") {
-        const customerData = persistCustomer(await registerCustomer({ name: formData.name, phone: formData.phone, email: formData.email, password: formData.password, country: formData.country, region: formData.region }));
+        const customerData = persistCustomer(await registerCustomer({ name: formData.name, phone: formData.phone, password: formData.password, country: formData.country, region: formData.region }));
         toast({ title: "تم إنشاء الحساب", description: `أهلًا ${customerData.name}` });
         navigate("/home");
         return;
@@ -128,7 +128,7 @@ const CustomerAuthPage = () => {
           <div className="flex min-h-0 flex-1 items-center justify-center px-5 pb-[max(12px,env(safe-area-inset-bottom))] pt-2 sm:px-7 sm:py-5 lg:px-10 lg:py-8">
             <div className="w-full max-w-[420px] lg:max-w-[500px]">
               <section className="mx-auto w-full rounded-[24px] bg-transparent px-0 py-1 sm:border sm:border-[#ECE7E4] sm:bg-white sm:p-6 sm:shadow-[0_16px_50px_rgba(68,50,45,0.04)] lg:p-7">
-                <div className="text-center"><p className="mb-1 text-[9px] font-semibold tracking-[0.18em] text-[#B1787C]">FLAMINGO PARK</p><h1 className="text-[25px] font-semibold tracking-[-0.04em] text-[#302A28]">{mode === "login" ? "أهلًا بك" : "إنشاء حساب"}</h1><p className="mt-1 text-[11px] leading-5 text-[#8A7F7A]">{mode === "login" ? "ادخل بحسابك للمتابعة." : registerStage === 1 ? "بيانات بسيطة للبدء." : "أدخل وسيلة التواصل وكلمة المرور."}</p></div>
+                <div className="text-center"><p className="mb-1 text-[9px] font-semibold tracking-[0.18em] text-[#B1787C]">FLAMINGO PARK</p><h1 className="text-[25px] font-semibold tracking-[-0.04em] text-[#302A28]">{mode === "login" ? "أهلًا بك" : "إنشاء حساب"}</h1><p className="mt-1 text-[11px] leading-5 text-[#8A7F7A]">{mode === "login" ? "ادخل برقم هاتفك للمتابعة." : registerStage === 1 ? "بيانات بسيطة للبدء." : "أدخل رقم الهاتف وكلمة المرور."}</p></div>
 
                 <div className="mt-3 grid grid-cols-2 rounded-[13px] bg-[#F5F2F0] p-1"><button type="button" onClick={() => changeMode("login")} className={`h-9 rounded-[10px] text-[12px] font-medium transition-all ${mode === "login" ? "bg-white text-[#3B3330] shadow-[0_2px_8px_rgba(56,42,37,0.06)]" : "text-[#938884]"}`}>تسجيل الدخول</button><button type="button" onClick={() => changeMode("register")} className={`h-9 rounded-[10px] text-[12px] font-medium transition-all ${mode === "register" ? "bg-white text-[#3B3330] shadow-[0_2px_8px_rgba(56,42,37,0.06)]" : "text-[#938884]"}`}>حساب جديد</button></div>
 
@@ -136,7 +136,7 @@ const CustomerAuthPage = () => {
 
                 {mode === "login" ? (
                   <form onSubmit={handleCredentials} className="mt-4 space-y-3">
-                    <div><label htmlFor="auth-identifier" className={labelClass}>رقم الهاتف أو البريد</label><div className="relative"><UserRound className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A89D98]" /><input id="auth-identifier" value={formData.identifier} onChange={(event) => updateField("identifier", event.target.value)} autoComplete="username" placeholder="+967 7XX XXX XXX أو name@example.com" dir="ltr" className={`${fieldClass} pr-10 text-left`} /></div></div>
+                    <div><label htmlFor="auth-identifier" className={labelClass}>رقم الهاتف</label><div className="relative"><Phone className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A89D98]" /><input id="auth-identifier" type="tel" value={formData.identifier} onChange={(event) => updateField("identifier", event.target.value)} autoComplete="tel" placeholder="+967 7XX XXX XXX" dir="ltr" className={`${fieldClass} pr-10 text-left`} /></div></div>
                     <div><label htmlFor="auth-password" className={labelClass}>كلمة المرور</label><div className="relative"><LockKeyhole className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A89D98]" /><input id="auth-password" type={showPassword ? "text" : "password"} minLength={6} maxLength={72} autoComplete="current-password" value={formData.password} onChange={(event) => updateField("password", event.target.value)} placeholder="كلمة المرور" dir="ltr" className={`${fieldClass} pr-10 pl-11 text-left`} /><button type="button" onClick={() => setShowPassword((previous) => !previous)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-[#958A85]">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
                     <button type="submit" disabled={isLoading} className="flex h-11 w-full items-center justify-center rounded-[14px] bg-[#B96C73] text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(185,108,115,0.16)] transition-colors hover:bg-[#AA6068] disabled:cursor-not-allowed disabled:opacity-50">{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "تسجيل الدخول"}</button>
                   </form>
@@ -152,7 +152,6 @@ const CustomerAuthPage = () => {
                 ) : (
                   <form onSubmit={handleCredentials} className="mt-3 space-y-2.5">
                     <div><label htmlFor="auth-phone" className={labelClass}>رقم الهاتف الدولي</label><div className="relative"><Phone className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A89D98]" /><input id="auth-phone" type="tel" autoComplete="tel" value={formData.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder={formData.country === "YE" ? "+967 7XX XXX XXX" : "+966 5XX XXX XXX"} dir="ltr" className={`${fieldClass} pr-10 text-left`} /></div></div>
-                    <div><label htmlFor="auth-email" className={labelClass}>البريد الإلكتروني <span className="font-normal text-[#A79D98]">(اختياري للتواصل)</span></label><div className="relative"><Mail className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A89D98]" /><input id="auth-email" type="email" autoComplete="email" value={formData.email} onChange={(event) => updateField("email", event.target.value)} placeholder="name@example.com" dir="ltr" className={`${fieldClass} pr-10 text-left`} /></div></div>
                     <div><label htmlFor="auth-password" className={labelClass}>كلمة المرور</label><div className="relative"><LockKeyhole className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A89D98]" /><input id="auth-password" type={showPassword ? "text" : "password"} minLength={6} maxLength={72} autoComplete="new-password" value={formData.password} onChange={(event) => updateField("password", event.target.value)} placeholder="6 خانات على الأقل" dir="ltr" className={`${fieldClass} pr-10 pl-11 text-left`} /><button type="button" onClick={() => setShowPassword((previous) => !previous)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-lg text-[#958A85]">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
                     <p className="px-1 text-[10px] leading-4 text-[#978C87]">لن نرسل رمز SMS عند إنشاء الحساب. يمكن طلب التحقق لاحقًا فقط للحالات الحساسة.</p>
                     <button type="submit" disabled={isLoading} className="flex h-11 w-full items-center justify-center rounded-[14px] bg-[#B96C73] text-[13px] font-semibold text-white shadow-[0_8px_20px_rgba(185,108,115,0.14)] transition-colors hover:bg-[#AA6068] disabled:cursor-not-allowed disabled:opacity-50">{isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : "إنشاء الحساب"}</button>

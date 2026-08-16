@@ -14,6 +14,7 @@ import { Product, VariantSize, useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
+import { toast } from "@/hooks/use-toast";
 import { clearCatalogScroll, restoreCatalogScroll } from "@/lib/catalogScroll";
 
 if ("scrollRestoration" in window.history) {
@@ -197,6 +198,17 @@ const QuickView = ({ product, onClose, isMobile }: { product: CatalogProduct | n
   };
 
   const handleAdd = () => {
+    if (sizesForActiveVariant.length > 0 && !selectedSize) {
+      toast({ title: "اختر المقاس", description: "حدد المقاس قبل إضافة المنتج للسلة.", variant: "destructive" });
+      return;
+    }
+
+    const activeStock = selectedSize ? stockForSize(selectedSize) : typeof product.stockQuantity === "number" ? product.stockQuantity : product.inStock ? 999 : 0;
+    if (activeStock <= 0 || qty > activeStock) {
+      toast({ title: "الكمية غير متوفرة", description: "اختر كمية متاحة من هذا المنتج.", variant: "destructive" });
+      return;
+    }
+
     addToCart(product, qty, selectedSize ?? undefined, undefined, activeVariant?.id, activeVariant?.colorName || activeVariant?.name);
     onClose();
   };
@@ -274,7 +286,7 @@ const QuickView = ({ product, onClose, isMobile }: { product: CatalogProduct | n
             <div className="flex h-[46px] items-center rounded-xl border border-[#E5DBD7] bg-white">
               <button onClick={() => setQty(Math.max(1, qty - 1))} className="h-full w-10 text-lg">−</button>
               <span className="w-7 text-center text-xs">{qty}</span>
-              <button onClick={() => setQty(qty + 1)} className="h-full w-10 text-lg">+</button>
+              <button onClick={() => { const max = selectedSize ? stockForSize(selectedSize) : typeof product.stockQuantity === "number" ? product.stockQuantity : 999; setQty(Math.min(qty + 1, Math.max(1, max))); }} className="h-full w-10 text-lg">+</button>
             </div>
 
             <button onClick={handleAdd} className="flex-1 rounded-xl bg-[#D4777D] text-[12px] font-semibold text-white shadow-[0_8px_24px_rgba(212,119,125,.20)]">إضافة للسلة</button>

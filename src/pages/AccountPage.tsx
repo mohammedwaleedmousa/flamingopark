@@ -32,6 +32,8 @@ import LoadingScreen from "@/components/LoadingScreen";
 import { supabase } from "@/integrations/supabase/client";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useAuthActions } from "@/hooks/useAuthActions";
+import { loadCustomerSession, setCustomerSession, type CustomerSession } from "@/lib/customerSession";
+import { useStore } from "@/store/useStore";
 
 import {
   SavedAddress,
@@ -77,10 +79,10 @@ const AccountPage = () => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [user, setUser] = useState<any>(null);
+  const [user, setUser] = useState<{ id: string; user_metadata: Record<string, unknown>; created_at: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [editMode, setEditMode] = useState(false);
-  const [customer, setCustomer] = useState<any>(null);
+  const [customer, setCustomer] = useState<CustomerSession | null>(null);
   const [formLoading, setFormLoading] = useState(false);
 
   const [fullName, setFullName] = useState("");
@@ -106,6 +108,7 @@ const AccountPage = () => {
 
   const { favorites, syncWithDatabase } = useFavorites();
   const { logout } = useAuthActions();
+  const setStoreCustomer = useStore((state) => state.setCustomer);
 
   const latestOrderNumber = invoices[0]?.order_number || "";
 
@@ -123,20 +126,16 @@ const AccountPage = () => {
 
   useEffect(() => {
     const loadCustomer = async () => {
-      const savedCustomer = localStorage.getItem("customer");
-
-      if (!savedCustomer) {
-        navigate("/auth", { replace: true });
-        return;
-      }
-
       try {
-        const customerData = JSON.parse(savedCustomer);
+        const customerData = await loadCustomerSession();
+        if (!customerData) {
+          navigate("/auth", { replace: true });
+          return;
+        }
 
         setCustomer(customerData);
-
         setUser({
-          id: customerData.id,
+          id: customerData.userId,
           user_metadata: {
             full_name: customerData.name,
             phone_number: customerData.phone,
@@ -145,40 +144,8 @@ const AccountPage = () => {
           },
           created_at: customerData.created_at || new Date().toISOString(),
         });
-
-        if (customerData.phone && customerData.id) {
-          const { data, error } = await (supabase as any).rpc("customer_self", {
-            _id: customerData.id,
-            _phone: customerData.phone,
-          });
-
-          if (!error && data && data.length) {
-            const fresh = {
-              ...data[0],
-              region: data[0].region || data[0].country,
-            };
-
-            setCustomer(fresh);
-
-            setUser({
-              id: fresh.id || customerData.id,
-              user_metadata: {
-                full_name: fresh.name,
-                phone_number: fresh.phone,
-                region: fresh.region,
-                avatar_url: fresh.avatar_url,
-              },
-              created_at: fresh.created_at || customerData.created_at || new Date().toISOString(),
-            });
-
-            localStorage.setItem("customer", JSON.stringify(fresh));
-          }
-        }
       } catch (error) {
         console.error(error);
-
-        localStorage.removeItem("customer");
-
         navigate("/auth", { replace: true });
       } finally {
         setLoading(false);
@@ -193,25 +160,10 @@ const AccountPage = () => {
   ========================================================= */
 
   const fetchCustomer = async () => {
-    const phone = localStorage.getItem("customer_phone") || user?.user_metadata?.phone_number;
-
-    if (!phone || !customer?.id) return;
-
-    const { data, error } = await (supabase as any).rpc("customer_self", {
-      _id: customer.id,
-      _phone: phone,
-    });
-
-    if (!error && data && data.length) {
-      const fresh = {
-        ...data[0],
-        region: data[0].region || data[0].country,
-      };
-
-      setCustomer(fresh);
-
-      localStorage.setItem("customer", JSON.stringify(fresh));
-    }
+    const fresh = await loadCustomerSession();
+    if (!fresh) return;
+    setCustomer(fresh);
+    setStoreCustomer({ id: fresh.id, userId: fresh.userId, name: fresh.name, phone: fresh.phone, region: fresh.region });
   };
 
   /* =========================================================
@@ -303,12 +255,12 @@ const AccountPage = () => {
     };
 
     void syncAddresses();
-    void syncWithDatabase(user.id);
+    void syncWithDatabase(user.id, customer?.id);
 
     return () => {
       active = false;
     };
-  }, [user?.id, syncWithDatabase]);
+  }, [user?.id, customer?.id, syncWithDatabase]);
 
   /* =========================================================
      INVOICES
@@ -316,12 +268,17 @@ const AccountPage = () => {
 
   useEffect(() => {
     const fetchInvoices = async () => {
-      if (!customer?.id) return;
+      if (!user?.id) return;
 
       setInvoicesLoading(true);
 
       try {
-        const { data, error } = await supabase.from("orders").select("id, order_number, total, status, created_at, invoice_url").eq("customer_id", customer.id).order("created_at", { ascending: false }).limit(20);
+        const { data, error } = await supabase
+          .from("orders")
+          .select("id, order_number, total, status, created_at, invoice_url")
+          .eq("owner_user_id", user.id)
+          .order("created_at", { ascending: false })
+          .limit(20);
 
         if (error) throw error;
 
@@ -356,7 +313,7 @@ const AccountPage = () => {
       window.removeEventListener("focus", onFocus);
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [customer?.id, customer?.phone]);
+  }, [user?.id]);
 
   /* =========================================================
      ORDERS HASH
@@ -563,7 +520,22 @@ const AccountPage = () => {
 
     if (!file) return;
 
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+
+    if (!allowedTypes.has(file.type)) {
+      setNotification({ type: "error", message: "الصورة يجب أن تكون بصيغة JPG أو PNG أو WebP" });
+      event.target.value = "";
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      setNotification({ type: "error", message: "حجم الصورة يجب ألا يتجاوز 5 ميجابايت" });
+      event.target.value = "";
+      return;
+    }
+
     setAvatar(file);
+    setNotification(null);
 
     const reader = new FileReader();
 
@@ -581,12 +553,22 @@ const AccountPage = () => {
   const handleSaveProfile = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!fullName.trim()) {
+    if (!user || !customer) return;
+
+    const normalizedName = fullName.trim();
+    const normalizedRegion = region.trim();
+
+    if (normalizedName.length < 2 || normalizedName.length > 100) {
       setNotification({
         type: "error",
-        message: "الاسم الكامل مطلوب",
+        message: "الاسم يجب أن يكون بين حرفين و100 حرف",
       });
 
+      return;
+    }
+
+    if (!YEMEN_REGIONS.includes(normalizedRegion)) {
+      setNotification({ type: "error", message: "اختر محافظة يمنية صحيحة" });
       return;
     }
 
@@ -596,84 +578,92 @@ const AccountPage = () => {
       let avatarUrl = String(customer?.avatar_url || user?.user_metadata?.avatar_url || "");
 
       if (avatar) {
-        const safeName = avatar.name.replace(/[^a-zA-Z0-9._-]/g, "_");
+        const extensionByType: Record<string, string> = {
+          "image/jpeg": "jpg",
+          "image/png": "png",
+          "image/webp": "webp",
+        };
+        const extension = extensionByType[avatar.type];
 
-        const path = `avatars/${user.id}/${Date.now()}-${safeName}`;
+        if (!extension || avatar.size > 5 * 1024 * 1024) {
+          throw new Error("invalid_avatar");
+        }
+
+        const path = `avatars/${user.id}/avatar.${extension}`;
 
         const { error: uploadError } = await supabase.storage.from("uploads").upload(path, avatar, {
           upsert: true,
           cacheControl: "3600",
+          contentType: avatar.type,
         });
 
-        if (!uploadError) {
-          const { data: publicData } = supabase.storage.from("uploads").getPublicUrl(path);
+        if (uploadError) throw uploadError;
 
-          avatarUrl = publicData.publicUrl;
-        } else {
-          setNotification({
-            type: "error",
-            message: `فشل رفع الصورة: ${uploadError.message}`,
-          });
-        }
+        const { data: publicData } = supabase.storage.from("uploads").getPublicUrl(path);
+        avatarUrl = `${publicData.publicUrl}?v=${Date.now()}`;
       } else if (avatarPreview && !avatarPreview.startsWith("data:")) {
         avatarUrl = avatarPreview;
       }
 
-      const { error } = await (supabase as any).rpc("customer_update_self", {
-        _id: customer.id,
-        _phone: customer.phone,
-        _name: fullName.trim(),
-        _region: region.trim(),
-        _avatar_url: avatarUrl || "",
+      const { data, error } = await (supabase as any).rpc("update_customer_profile", {
+        p_name: normalizedName,
+        p_region: normalizedRegion,
+        p_avatar_url: avatarUrl || null,
       });
 
-      if (error) {
-        setNotification({
-          type: "error",
-          message: `فشل تحديث البيانات: ${error.message}`,
-        });
-      } else {
-        const updatedCustomer = {
-          ...customer,
-          name: fullName.trim(),
-          phone: phoneNumber.trim(),
-          region: region.trim(),
-          avatar_url: avatarUrl || customer.avatar_url || null,
-        };
+      if (error) throw error;
 
-        setCustomer(updatedCustomer);
+      const profile = Array.isArray(data) ? data[0] : data;
+      const updatedCustomer: CustomerSession = {
+        id: profile?.id || customer.id,
+        userId: user.id,
+        name: profile?.name || normalizedName,
+        phone: customer.phone,
+        country: profile?.country || customer.country || "YE",
+        region: profile?.region || normalizedRegion,
+        avatar_url: profile?.avatar_url ?? avatarUrl ?? null,
+        created_at: profile?.created_at || customer.created_at,
+      };
 
-        setUser((current: any) => ({
-          ...current,
-          user_metadata: {
-            ...current?.user_metadata,
-            full_name: updatedCustomer.name,
-            phone_number: updatedCustomer.phone,
-            region: updatedCustomer.region,
-            avatar_url: updatedCustomer.avatar_url,
-          },
-        }));
+      setCustomer(updatedCustomer);
 
-        localStorage.setItem("customer", JSON.stringify(updatedCustomer));
+      setUser((current) => current ? ({
+        ...current,
+        user_metadata: {
+          ...current.user_metadata,
+          full_name: updatedCustomer.name,
+          phone_number: updatedCustomer.phone,
+          region: updatedCustomer.region,
+          avatar_url: updatedCustomer.avatar_url,
+        },
+      }) : current);
 
-        setNotification({
-          type: "success",
-          message: "تم تحديث بياناتك بنجاح",
-        });
+      setCustomerSession(updatedCustomer);
+      setStoreCustomer({
+        id: updatedCustomer.id,
+        userId: updatedCustomer.userId,
+        name: updatedCustomer.name,
+        phone: updatedCustomer.phone,
+        region: updatedCustomer.region,
+      });
 
-        void fetchCustomer();
+      setNotification({
+        type: "success",
+        message: "تم تحديث بياناتك بنجاح",
+      });
 
-        window.setTimeout(() => {
-          setEditMode(false);
-          setAvatar(null);
-        }, 900);
-      }
+      void fetchCustomer();
+
+      window.setTimeout(() => {
+        setEditMode(false);
+        setAvatar(null);
+      }, 900);
     } catch (error) {
       console.error("Error updating profile:", error);
 
       setNotification({
         type: "error",
-        message: "حدث خطأ أثناء التحديث",
+        message: error instanceof Error && error.message === "invalid_avatar" ? "ملف الصورة غير صالح" : "تعذر تحديث البيانات الآن",
       });
     } finally {
       setFormLoading(false);
@@ -712,9 +702,6 @@ const AccountPage = () => {
   ========================================================= */
 
   const handleLogout = async () => {
-    localStorage.removeItem("customer");
-    localStorage.removeItem("customer_phone");
-
     await logout({
       redirectTo: "/home",
     });
@@ -909,7 +896,7 @@ const AccountPage = () => {
               </div>
             </div>
 
-            <p className="mt-3 text-center text-[6px] text-[#AA9C97]">عضو منذ {new Date(user?.created_at).toLocaleDateString("ar-EG")}</p>
+            <p className="mt-3 text-center text-[6px] text-[#AA9C97]">عضو منذ {new Date(user?.created_at || Date.now()).toLocaleDateString("ar-EG")}</p>
           </section>
 
           {/* =====================================================
@@ -1267,7 +1254,7 @@ const AccountPage = () => {
                       )}
                     </div>
 
-                    <input ref={fileInputRef} type="file" accept="image/*" onChange={handleAvatarChange} className="hidden" />
+                    <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" onChange={handleAvatarChange} className="hidden" />
 
                     <button type="button" onClick={() => fileInputRef.current?.click()} disabled={formLoading} className="mt-2 flex items-center gap-1.5 text-[7px] font-medium text-[#B86168] disabled:opacity-50">
                       <Upload className="h-3 w-3" />
@@ -1288,7 +1275,8 @@ const AccountPage = () => {
                   <label className="block">
                     <span className="mb-1.5 block text-[8px] font-medium text-[#655651]">رقم الهاتف</span>
 
-                    <input type="tel" value={phoneNumber} onChange={(event) => setPhoneNumber(event.target.value)} placeholder="أدخل رقم الهاتف" disabled={formLoading} className="h-[46px] w-full rounded-[13px] border border-[#E6DBD7] bg-white px-3 text-[9px] text-[#4F423E] outline-none placeholder:text-[#AA9D97] focus:border-[#D8AAA8] disabled:opacity-50" />
+                    <input type="tel" value={phoneNumber} readOnly aria-readonly="true" className="h-[46px] w-full cursor-not-allowed rounded-[13px] border border-[#E6DBD7] bg-[#F7F3F1] px-3 text-[9px] text-[#766965] outline-none" />
+                    <span className="mt-1 block text-[6px] text-[#9F918C]">رقم الدخول ثابت لحماية الحساب. تغييره يتطلب إجراء تحقق منفصل.</span>
                   </label>
 
                   {/* CUSTOM REGION */}

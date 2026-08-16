@@ -9,7 +9,7 @@ import CartDrawer from "@/components/CartDrawer";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { track } from "@/lib/analytics";
-import { CURRENCY_RATES, convertPrice, hydrateCurrencies } from "@/lib/currency";
+import { CURRENCY_RATES, hydrateCurrencies } from "@/lib/currency";
 import { handleImageError, optimizeImage } from "@/lib/imageUrl";
 
 const STORE_WHATSAPP = "967778579777";
@@ -78,7 +78,7 @@ const OrderConfirmationPage = () => {
 
   const fmt = (amount: number) => {
     try {
-      return convertPrice(amount, currencyMode as any).toLocaleString("en-US", {
+      return Number(amount || 0).toLocaleString("en-US", {
         maximumFractionDigits: 2,
       });
     } catch {

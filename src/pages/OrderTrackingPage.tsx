@@ -58,7 +58,7 @@ const OrderTrackingPage = () => {
 
   const { data: order, isLoading, isFetching, isError, refetch } = useQuery({
     queryKey: ["tracking-order", selectedOrder, trackingToken],
-    enabled: Boolean(selectedOrder && trackingToken),
+    enabled: Boolean(selectedOrder),
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
     refetchOnMount: "always",
@@ -176,7 +176,7 @@ const OrderTrackingPage = () => {
      INVALID LINK
   ========================================================= */
 
-  const missingTrackingInfo = !selectedOrder || !trackingToken;
+  const missingTrackingInfo = !selectedOrder;
 
   return (
     <div className="min-h-screen bg-[#FFFDFC]" dir="rtl">
@@ -222,7 +222,7 @@ const OrderTrackingPage = () => {
 
               <h2 className="mt-3 text-[11px] font-semibold text-[#4A3E3A]">رابط التتبع غير مكتمل</h2>
 
-              <p className="mx-auto mt-1.5 max-w-[320px] text-[7px] leading-5 text-[#998B86]">استخدم رابط التتبع الموجود في صفحة تأكيد الطلب. يجب أن يحتوي على رقم الطلب ورمز التتبع الآمن.</p>
+              <p className="mx-auto mt-1.5 max-w-[320px] text-[7px] leading-5 text-[#998B86]">استخدم رقم الطلب من حسابك، أو رابط التتبع الآمن الموجود في صفحة تأكيد طلب الضيف.</p>
 
               <Link to="/home" className="mx-auto mt-4 flex h-[38px] w-fit items-center justify-center gap-1.5 rounded-[9px] border border-[#D9AEAA] bg-white px-5 text-[8px] font-semibold text-[#A95B61]">
                 <Home className="h-3.5 w-3.5" strokeWidth={1.5} />

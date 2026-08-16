@@ -9,3 +9,9 @@ verify_jwt = false
 
 [functions.customer-auth-bootstrap]
 verify_jwt = false
+
+[functions.create-order]
+verify_jwt = false
+
+[functions.invoice-access]
+verify_jwt = false

@@ -14,6 +14,8 @@ const analyticsSource = readSource("../src/lib/analytics.ts");
 const reviewsSource = readSource("../src/components/ProductReviews.tsx");
 const customerAuthSource = readSource("../src/lib/customerAuth.ts");
 const customerAuthPageSource = readSource("../src/pages/CustomerAuthPage.tsx");
+const internationalPhoneSource = readSource("../src/lib/internationalPhone.ts");
+const countriesSource = readSource("../src/lib/countries.ts");
 const checkoutSource = readSource("../src/pages/CheckoutPage.tsx");
 const myOrdersSource = readSource("../src/pages/MyOrdersPage.tsx");
 const orderTrackingSource = readSource("../src/pages/OrderTrackingPage.tsx");
@@ -76,30 +78,47 @@ test("analytics and customer reviews use rate-limited Edge Functions", () => {
   assert.match(migrationSource, /DROP POLICY IF EXISTS "Anyone can create product reviews"/);
 });
 
-test("new customer signup requires verified SMS OTP before customer profile creation", () => {
+test("new customer signup is global and requires verified OTP before profile creation", () => {
   const passwordInput = customerAuthPageSource.match(/<input id="auth-password"[^>]+>/)?.[0] || "";
-  assert.match(customerAuthSource, /auth\.signUp\(\{/);
-  assert.match(customerAuthSource, /channel:\s*"sms"/);
-  assert.match(customerAuthSource, /auth\.verifyOtp\(\{/);
-  assert.match(customerAuthSource, /type:\s*"sms"/);
+
+  assert.match(internationalPhoneSource, /\^\\\+\[1-9\]\\d\{7,14\}\$/);
+  assert.match(countriesSource, /AD AE AF/);
+  assert.match(countriesSource, /SA/);
+  assert.match(countriesSource, /US/);
+  assert.match(countriesSource, /YE/);
+
+  assert.match(customerAuthSource, /type VerificationChannel = "sms" \| "whatsapp" \| "email"/);
+  assert.match(customerAuthSource, /auth\.signInWithOtp/);
+  assert.match(customerAuthSource, /channel:\s*registration\.channel/);
+  assert.match(customerAuthSource, /auth\.verifyOtp/);
+  assert.match(customerAuthSource, /auth\.updateUser\(\{/);
+  assert.match(customerAuthSource, /password:\s*registration\.password/);
   assert.match(customerAuthSource, /functions\.invoke\("customer-registration-finalize"/);
+  assert.doesNotMatch(customerAuthSource, /phone_confirm:\s*true/);
+
+  assert.match(customerAuthPageSource, /COUNTRIES\.map/);
+  assert.match(customerAuthPageSource, /"whatsapp", "sms", "email"/);
   assert.match(customerAuthPageSource, /autoComplete="one-time-code"/);
-  assert.match(customerAuthPageSource, /تأكيد رقم الهاتف/);
+  assert.doesNotMatch(customerAuthPageSource, /toYemenLocalPhone|\+967\$\{formData\.phone\}/);
   assert.match(passwordInput, /minLength=\{6\}/);
+
   assert.match(customerRegistrationFinalizeSource, /user\.phone_confirmed_at/);
+  assert.match(customerRegistrationFinalizeSource, /user\.email_confirmed_at/);
   assert.match(customerRegistrationFinalizeSource, /from\("customers"\)\.insert/);
   assert.match(customerRegistrationFinalizeSource, /existingByPhone/);
+  assert.match(customerRegistrationFinalizeSource, /\^\\\+\[1-9\]\\d\{7,14\}\$/);
+
   assert.match(configSource, /enable_signup\s*=\s*true/);
   assert.match(configSource, /\[functions\.customer-registration-finalize\][\s\S]*?verify_jwt\s*=\s*true/);
-  assert.match(customerAuthFunctionSource, /body\.mode !== "migrate"/);
-  assert.doesNotMatch(customerAuthFunctionSource, /mode === "register"/);
 });
 
-test("legacy customer passwords stay on the isolated migration bridge", () => {
-  assert.match(customerAuthSource, /signInWithPassword\(\{ phone, password \}\)/);
+test("legacy customer passwords stay on the isolated Yemen-only migration bridge", () => {
+  assert.match(customerAuthSource, /normalizeYemenPhone/);
   assert.match(customerAuthSource, /functions\.invoke\("customer-auth-bootstrap"/);
   assert.match(customerAuthFunctionSource, /service\.auth\.admin\.createUser/);
   assert.match(customerAuthFunctionSource, /p_mode:\s*"migrate"/);
+  assert.match(customerAuthFunctionSource, /body\.mode !== "migrate"/);
+  assert.doesNotMatch(customerAuthFunctionSource, /mode === "register"/);
   assert.match(migrationSource, /char_length\(p_password\) < 6/);
   assert.doesNotMatch(migrationSource, /weak_pin|p_pin/);
 });

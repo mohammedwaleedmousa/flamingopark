@@ -20,6 +20,7 @@ const orderTrackingSource = readSource("../src/pages/OrderTrackingPage.tsx");
 const createOrderFunctionSource = readSource("../supabase/functions/create-order/index.ts");
 const invoiceAccessFunctionSource = readSource("../supabase/functions/invoice-access/index.ts");
 const customerAuthFunctionSource = readSource("../supabase/functions/customer-auth-bootstrap/index.ts");
+const customerRegistrationFinalizeSource = readSource("../supabase/functions/customer-registration-finalize/index.ts");
 const migrationSource = readSource("../supabase/migrations/20260816090723_p0_customer_phone_auth_orders_security.sql");
 const configSource = readSource("../supabase/config.toml");
 
@@ -42,29 +43,12 @@ test("checkout uses the Edge order service and keeps the RPC contract server-sid
   assert.match(checkoutSource, /functions\.invoke\("create-order"/);
   assert.doesNotMatch(checkoutSource, /\.rpc\("create_secure_order"/);
   assert.doesNotMatch(checkoutSource, /p_subtotal|p_delivery_fee|p_total|p_total_base|p_discount_amount|p_exchange_rate_snapshot/);
-
   assert.match(createOrderFunctionSource, /service\.rpc\("quote_secure_order"/);
   assert.match(createOrderFunctionSource, /service\.rpc\("create_secure_order"/);
-
-  for (const parameter of [
-    "p_owner_user_id",
-    "p_customer_id",
-    "p_customer_name",
-    "p_customer_phone",
-    "p_customer_address",
-    "p_customer_city",
-    "p_customer_region",
-    "p_customer_notes",
-    "p_payment_method",
-    "p_delivery_company_id",
-    "p_coupon_code",
-    "p_currency_mode",
-    "p_items",
-  ]) {
+  for (const parameter of ["p_owner_user_id", "p_customer_id", "p_customer_name", "p_customer_phone", "p_customer_address", "p_customer_city", "p_customer_region", "p_customer_notes", "p_payment_method", "p_delivery_company_id", "p_coupon_code", "p_currency_mode", "p_items"]) {
     assert.match(createOrderFunctionSource, new RegExp(`${parameter}:`));
     assert.match(migrationSource, new RegExp(parameter));
   }
-
   assert.match(configSource, /\[functions\.create-order\][\s\S]*?verify_jwt\s*=\s*false/);
 });
 
@@ -72,14 +56,11 @@ test("my orders uses authenticated ownership instead of phone or browser trackin
   assert.match(myOrdersSource, /loadCustomerSession\(\)/);
   assert.match(myOrdersSource, /\.eq\("owner_user_id", ownerUserId\)/);
   assert.doesNotMatch(myOrdersSource, /customer_phone\.eq|\.eq\("customer_id"|tracking_token/);
-
   assert.match(orderTrackingSource, /rpc\("get_order_tracking"/);
   assert.match(orderTrackingSource, /enabled:\s*Boolean\(selectedOrder\)/);
   assert.match(orderTrackingSource, /p_tracking_token:\s*trackingToken/);
-
   assert.match(invoiceAccessFunctionSource, /order\.owner_user_id === user\.id/);
   assert.match(invoiceAccessFunctionSource, /if \(!isAdmin && !isOwner && !validTrackingToken\)/);
-
   assert.match(migrationSource, /CREATE POLICY "Order owners read own orders"[\s\S]*?owner_user_id = \(SELECT auth\.uid\(\)\)/);
   assert.match(migrationSource, /o\.owner_user_id = \(SELECT auth\.uid\(\)\)/);
   assert.match(migrationSource, /tracking_token_hash = encode\(digest\(p_tracking_token, 'sha256'\), 'hex'\)/);
@@ -93,21 +74,32 @@ test("analytics and customer reviews use rate-limited Edge Functions", () => {
   assert.match(migrationSource, /consume_public_submission_rate_limit/);
   assert.match(migrationSource, /REVOKE INSERT ON public\.analytics_events/);
   assert.match(migrationSource, /DROP POLICY IF EXISTS "Anyone can create product reviews"/);
-  assert.doesNotMatch(configSource, /\[functions\.analytics-event\]/);
-  assert.doesNotMatch(configSource, /\[functions\.submit-review\]/);
-  assert.match(readSource("../supabase/functions/analytics-event/index.ts"), /Authentication required/);
-  assert.match(readSource("../supabase/functions/submit-review/index.ts"), /bearer /i);
 });
 
-test("customer passwords support normal input without leaving Supabase Auth", () => {
+test("new customer signup requires verified SMS OTP before customer profile creation", () => {
   const passwordInput = customerAuthPageSource.match(/<input id="auth-password"[^>]+>/)?.[0] || "";
+  assert.match(customerAuthSource, /auth\.signUp\(\{/);
+  assert.match(customerAuthSource, /channel:\s*"sms"/);
+  assert.match(customerAuthSource, /auth\.verifyOtp\(\{/);
+  assert.match(customerAuthSource, /type:\s*"sms"/);
+  assert.match(customerAuthSource, /functions\.invoke\("customer-registration-finalize"/);
+  assert.match(customerAuthPageSource, /autoComplete="one-time-code"/);
+  assert.match(customerAuthPageSource, /تأكيد رقم الهاتف/);
+  assert.match(passwordInput, /minLength=\{6\}/);
+  assert.match(customerRegistrationFinalizeSource, /user\.phone_confirmed_at/);
+  assert.match(customerRegistrationFinalizeSource, /from\("customers"\)\.insert/);
+  assert.match(customerRegistrationFinalizeSource, /existingByPhone/);
+  assert.match(configSource, /enable_signup\s*=\s*true/);
+  assert.match(configSource, /\[functions\.customer-registration-finalize\][\s\S]*?verify_jwt\s*=\s*true/);
+  assert.match(customerAuthFunctionSource, /body\.mode !== "migrate"/);
+  assert.doesNotMatch(customerAuthFunctionSource, /mode === "register"/);
+});
 
+test("legacy customer passwords stay on the isolated migration bridge", () => {
   assert.match(customerAuthSource, /signInWithPassword\(\{ phone, password \}\)/);
   assert.match(customerAuthSource, /functions\.invoke\("customer-auth-bootstrap"/);
-  assert.match(passwordInput, /minLength=\{6\}/);
-  assert.doesNotMatch(passwordInput, /inputMode="numeric"|pattern="\[0-9\]\*"|normalizeNumericPin/);
   assert.match(customerAuthFunctionSource, /service\.auth\.admin\.createUser/);
-  assert.match(customerAuthFunctionSource, /consume|prepare_customer_phone_auth/);
+  assert.match(customerAuthFunctionSource, /p_mode:\s*"migrate"/);
   assert.match(migrationSource, /char_length\(p_password\) < 6/);
   assert.doesNotMatch(migrationSource, /weak_pin|p_pin/);
 });

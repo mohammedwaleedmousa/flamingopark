@@ -1,14 +1,12 @@
-import { motion } from 'framer-motion';
-import { useInfiniteQuery } from '@tanstack/react-query';
-import { Sparkles, Crown, Percent, Star, ChevronDown, Loader2 } from 'lucide-react';
-import ProductCard from '@/components/ProductCard';
-import { supabase } from '@/integrations/supabase/client';
-import { Product } from '@/store/useStore';
-import { PRODUCT_CARD_SELECT, mapProductCard } from '@/lib/productCardData';
-import { useNearViewport } from '@/hooks/useNearViewport';
-import { Button } from '@/components/ui/button';
+import { Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, Crown, Percent, Sparkles, Star } from "lucide-react";
+import ProductCard from "@/components/ProductCard";
+import { supabase } from "@/integrations/supabase/client";
+import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
+import { useNearViewport } from "@/hooks/useNearViewport";
 
-interface HomepageSection {
+export interface HomepageSection {
   id: string;
   title: string;
   title_ar: string;
@@ -20,7 +18,7 @@ interface HomepageSection {
 
 interface DynamicSectionProps {
   section: HomepageSection;
-  country: string;
+  country?: string;
   index: number;
 }
 
@@ -32,152 +30,55 @@ const filterIcons: Record<string, typeof Sparkles> = {
   all: Star,
 };
 
-const INITIAL_DISPLAY = 8;
-const LOAD_MORE_COUNT = 8;
-
-type ProductPage = {
-  products: Product[];
-  useDirect: boolean;
-};
-
-const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
+const DynamicSection = ({ section, country = "GLOBAL", index }: DynamicSectionProps) => {
   const Icon = filterIcons[section.filter_type] || Sparkles;
-  const isDiscounted = section.filter_type === 'discounted';
   const { ref, isNearViewport } = useNearViewport<HTMLElement>();
+  const maxProducts = Math.min(60, Math.max(1, Number(section.max_products || 8)));
 
-  const productsQuery = useInfiniteQuery<ProductPage>({
-    queryKey: ['section-products', section.id, country, section.filter_type],
-    enabled: !!country && isNearViewport,
-    initialPageParam: { offset: 0, limit: INITIAL_DISPLAY, useDirect: null as boolean | null },
-    queryFn: async ({ pageParam }) => {
-      const { offset, limit, useDirect } = pageParam as { offset: number; limit: number; useDirect: boolean | null };
-      const baseQuery = () => supabase
-        .from('products')
-        .select(PRODUCT_CARD_SELECT)
-        .eq('is_active', true)
-        .contains('countries', [country]);
-
-      // Only products explicitly assigned to this section from the admin are shown.
-      const { data, error } = await baseQuery()
-        .contains('section_ids', [section.id])
-        .order('sort_order', { ascending: true })
-        .range(offset, offset + limit - 1);
+  const { data: products = [], isLoading } = useQuery({
+    queryKey: ["section-products", section.id, country, maxProducts],
+    enabled: isNearViewport,
+    queryFn: async () => {
+      let query = supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).contains("section_ids", [section.id]).order("sort_order", { ascending: true }).limit(maxProducts);
+      if (country) query = query.contains("countries", [country]);
+      const { data, error } = await query;
       if (error) throw error;
-      return { products: (data || []).map(mapProductCard), useDirect: true };
+      return (data || []).map(mapProductCard);
     },
-    getNextPageParam: (lastPage, allPages) => {
-      const loaded = allPages.reduce((sum, page) => sum + page.products.length, 0);
-      if (lastPage.products.length < LOAD_MORE_COUNT) return undefined;
-      return { offset: loaded, limit: LOAD_MORE_COUNT, useDirect: lastPage.useDirect };
-    },
+    staleTime: 1000 * 60 * 5,
+    refetchOnWindowFocus: false,
   });
-  const products = productsQuery.data?.pages.flatMap((page) => page.products) ?? [];
 
-  if (products.length === 0) return <section ref={ref} className="min-h-px" aria-hidden="true" />;
-
-  const isEven = index % 2 === 0;
-  const hasMore = productsQuery.hasNextPage;
-
-  const handleLoadMore = async () => {
-    if (!productsQuery.hasNextPage || productsQuery.isFetchingNextPage) return;
-
-    // Prevent the browser from "following" the focused button downward when items are appended
-    const currentY = window.scrollY;
-    await productsQuery.fetchNextPage();
-    requestAnimationFrame(() => window.scrollTo({ top: currentY }));
-  };
+  if (!isLoading && products.length === 0) return <section ref={ref} className="min-h-px" aria-hidden="true" />;
 
   return (
-    <section
-      ref={ref}
-      className={`py-16 md:py-20 ${isEven ? '' : 'bg-gradient-to-b from-muted/50 to-muted'} ${
-        isDiscounted ? 'relative overflow-hidden' : ''
-      }`}
-    >
-      {isDiscounted && <div className="absolute inset-0 bg-gradient-to-br from-gold/5 via-transparent to-gold/5" />}
-
-      <div className="container mx-auto px-4 relative z-10">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          className={`flex items-center justify-between mb-10 ${!isEven ? 'flex-col text-center' : ''}`}
-        >
-          <div className={!isEven ? 'mb-6' : ''}>
-            {!isEven ? (
-              <>
-                <div className="inline-flex items-center gap-2 px-4 py-2 bg-gold/10 rounded-full mb-4">
-                  <Icon className="w-4 h-4 text-gold" />
-                  <span className="text-gold font-body text-sm">{section.title}</span>
-                </div>
-                <h2 className="font-heading text-3xl md:text-4xl text-foreground mb-4">
-                  {section.title_ar.split(' ').map((word, i, arr) =>
-                    i === arr.length - 1 ? (
-                      <span key={i} className="text-gold">
-                        {word}
-                      </span>
-                    ) : (
-                      <span key={i}>{word} </span>
-                    )
-                  )}
-                </h2>
-                <div className="w-24 h-1 bg-gradient-to-r from-transparent via-gold to-transparent mx-auto" />
-              </>
-            ) : (
-              <>
-                <div className="flex items-center gap-2 mb-2">
-                  <Icon className={`w-5 h-5 ${isDiscounted ? 'text-destructive' : 'text-gold'}`} />
-                  <span
-                    className={`font-body text-sm tracking-widest uppercase ${
-                      isDiscounted ? 'text-destructive' : 'text-gold'
-                    }`}
-                  >
-                    {section.title}
-                  </span>
-                </div>
-                <h2 className="font-heading text-3xl md:text-4xl text-foreground">
-                  {section.title_ar.split(' ').map((word, i, arr) =>
-                    i === arr.length - 1 ? (
-                      <span key={i} className="text-gold">
-                        {word}
-                      </span>
-                    ) : (
-                      <span key={i}>{word} </span>
-                    )
-                  )}
-                </h2>
-              </>
-            )}
+    <section ref={ref} className={index % 2 === 0 ? "bg-background py-7 md:py-12" : "bg-muted/20 py-7 md:py-12"} dir="rtl">
+      <div className="mx-auto w-full max-w-[1400px] px-3 md:px-6">
+        <div className="mb-4 flex items-end justify-between gap-3 md:mb-7">
+          <div className="min-w-0">
+            <div className="mb-1 flex items-center gap-2">
+              <Icon className="h-3 w-3 shrink-0 text-[#B86168]" strokeWidth={1.6} />
+              <span className="truncate font-serif text-[6px] uppercase tracking-[0.2em] text-[#B86168] md:text-[7px]">{section.title || "FLAMINGO EDIT"}</span>
+            </div>
+            <h2 className="text-[17px] font-semibold tracking-[-0.025em] text-foreground md:text-[26px]">{section.title_ar}</h2>
           </div>
-        </motion.div>
 
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
-          {products.map((product, idx) => (
-            <ProductCard key={product.id} product={product} index={idx} />
-          ))}
+          {section.show_view_all && (
+            <Link to={section.view_all_link || "/products"} className="flex shrink-0 items-center gap-1 border-b border-border pb-0.5 text-[7px] font-medium text-[#A95B61] transition-opacity active:opacity-60 md:text-[8px]">
+              عرض الكل
+              <ArrowLeft className="h-3 w-3" strokeWidth={1.5} />
+            </Link>
+          )}
         </div>
 
-        {/* Load More Button */}
-        {hasMore && (
-          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="text-center mt-8">
-            <Button
-              onMouseDown={(e) => e.preventDefault()}
-              onClick={(e) => {
-                (e.currentTarget as HTMLButtonElement).blur();
-                void handleLoadMore();
-              }}
-              disabled={productsQuery.isFetchingNextPage}
-              variant="outline"
-              className="gap-2 border-gold/30 text-gold hover:bg-gold hover:text-secondary px-8 py-6"
-            >
-              {productsQuery.isFetchingNextPage ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <ChevronDown className="w-4 h-4" />
-              )}
-              عرض المزيد
-            </Button>
-          </motion.div>
+        {isLoading ? (
+          <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 md:grid-cols-4 md:gap-x-5 md:gap-y-7">
+            {Array.from({ length: Math.min(maxProducts, 8) }).map((_, itemIndex) => <div key={itemIndex} className="aspect-[4/5] animate-pulse rounded-[14px] bg-muted" />)}
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 md:grid-cols-4 md:gap-x-5 md:gap-y-7">
+            {products.map((product, productIndex) => <ProductCard key={product.id} product={product} index={productIndex} />)}
+          </div>
         )}
       </div>
     </section>
@@ -185,4 +86,3 @@ const DynamicSection = ({ section, country, index }: DynamicSectionProps) => {
 };
 
 export default DynamicSection;
-

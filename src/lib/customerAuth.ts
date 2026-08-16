@@ -99,6 +99,7 @@ const validateRegistration = (input: RegistrationInput): NormalizedRegistration 
 
 const registrationErrorMessage = (error: AuthApiError) => {
   if (error.code === "user_already_exists" || error.code === "phone_exists") return "رقم الهاتف مستخدم بالفعل. سجّل الدخول بدل إنشاء حساب جديد.";
+  if (error.code === "phone_provider_disabled") return "تسجيل الحساب برقم الهاتف غير مفعّل في Supabase. فعّل Phone provider وأبقِ تأكيد الهاتف متوقفًا.";
   if (error.code === "weak_password") return customerPasswordRequirements;
   if (error.code === "signup_disabled") return "إنشاء الحسابات متوقف مؤقتًا.";
   return "تعذر إنشاء الحساب. تأكد من البيانات وحاول مرة أخرى.";

@@ -14,6 +14,8 @@ import { SpeedInsights } from "@vercel/speed-insights/react";
 import { MotionConfig } from "framer-motion";
 import CustomerAssistantEntry from "@/components/CustomerAssistantEntry";
 import { ThemeProvider } from "next-themes";
+import { supabase } from "@/integrations/supabase/client";
+import { clearCustomerSession, loadCustomerSession } from "@/lib/customerSession";
 
 // Temporary launch switch: keep the assistant implementation ready without showing its entry button.
 const SHOW_CUSTOMER_ASSISTANT = false;
@@ -158,6 +160,51 @@ const ScrollToTop = () => {
   return null;
 };
 
+const CustomerAuthBridge = () => {
+  const setCustomer = useStore((state) => state.setCustomer);
+  const setRegion = useStore((state) => state.setRegion);
+
+  useEffect(() => {
+    let active = true;
+
+    const clearVerifiedCustomer = () => {
+      clearCustomerSession();
+      if (useStore.getState().customer?.id !== "guest") setCustomer(null);
+    };
+
+    const syncCustomer = async () => {
+      try {
+        const customer = await loadCustomerSession();
+        if (!active) return;
+        if (!customer) {
+          clearVerifiedCustomer();
+          return;
+        }
+        setCustomer({ id: customer.id, userId: customer.userId, name: customer.name, phone: customer.phone, region: customer.region });
+        setRegion(customer.region);
+      } catch {
+        if (active) clearVerifiedCustomer();
+      }
+    };
+
+    void syncCustomer();
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (!session) {
+        clearVerifiedCustomer();
+        return;
+      }
+      window.setTimeout(() => void syncCustomer(), 0);
+    });
+
+    return () => {
+      active = false;
+      subscription.unsubscribe();
+    };
+  }, [setCustomer, setRegion]);
+
+  return null;
+};
+
 const App = () => {
   const [isMobile, setIsMobile] = useState(() => typeof window !== "undefined" && window.matchMedia("(max-width: 767px)").matches);
 
@@ -183,6 +230,7 @@ const App = () => {
       <Sonner />
       <DateRangeProvider>
         <BrowserRouter>
+          <CustomerAuthBridge />
           <ScrollToTop />
           <AnalyticsTracker />
           <SpeedInsights />

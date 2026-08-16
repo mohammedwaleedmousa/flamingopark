@@ -5,6 +5,9 @@ import { Check, ChevronDown, Eye, EyeOff, Loader2, LockKeyhole, MapPin, Phone, S
 import { useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { loginCustomer, registerCustomer } from "@/lib/customerAuth";
+import { clearCustomerSession, type CustomerSession } from "@/lib/customerSession";
+import { normalizeNumericPin, toYemenLocalPhone } from "@/lib/yemenPhone";
 
 type AuthMode = "login" | "register";
 
@@ -38,7 +41,6 @@ const CustomerAuthPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [claimExisting, setClaimExisting] = useState(false);
 
   const [regionOpen, setRegionOpen] = useState(false);
   const [regionSearch, setRegionSearch] = useState("");
@@ -98,12 +100,7 @@ const CustomerAuthPage = () => {
     }));
   };
 
-  const persistCustomer = (raw: any) => {
-    const customerData = {
-      ...raw,
-      region: raw.region || raw.country || "عدن",
-    };
-
+  const persistCustomer = (customerData: CustomerSession) => {
     setCustomer({
       id: customerData.id,
       name: customerData.name,
@@ -112,22 +109,18 @@ const CustomerAuthPage = () => {
     });
 
     setRegion(customerData.region);
-
-    localStorage.setItem("customer", JSON.stringify(customerData));
-    localStorage.setItem("customer_phone", customerData.phone);
-
     return customerData;
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    const phone = formData.phone.trim();
-    const password = formData.password.trim();
+    const phone = `+967${formData.phone}`;
+    const pin = formData.password;
     const name = formData.name.trim();
     const selectedRegion = formData.region.trim();
 
-    if (!phone || !password || (mode === "register" && !name) || (mode === "register" && !selectedRegion)) {
+    if (!formData.phone || !pin || (mode === "register" && !name) || (mode === "register" && !selectedRegion)) {
       toast({
         title: "البيانات غير مكتملة",
         description: "يرجى تعبئة جميع الحقول المطلوبة.",
@@ -141,21 +134,7 @@ const CustomerAuthPage = () => {
 
     try {
       if (mode === "register") {
-        const { data: registerData, error } = await (supabase as any).rpc("customer_register", {
-          _name: name,
-          _phone: phone,
-          _country: selectedRegion,
-          _region: selectedRegion,
-          _password: password,
-        });
-
-        if (error) throw error;
-
-        if (!registerData || registerData.length === 0) {
-          throw new Error("تعذر إنشاء الحساب");
-        }
-
-        const customerData = persistCustomer(registerData[0]);
+        const customerData = persistCustomer(await registerCustomer({ name, phone, pin, region: selectedRegion }));
 
         toast({
           title: "تم إنشاء الحساب",
@@ -167,18 +146,7 @@ const CustomerAuthPage = () => {
         return;
       }
 
-      const { data: loginData, error } = await (supabase as any).rpc("customer_login", {
-        _phone: phone,
-        _password: password,
-      });
-
-      if (error) throw error;
-
-      if (!loginData || loginData.length === 0) {
-        throw new Error("رقم الهاتف أو كلمة المرور غير صحيحة");
-      }
-
-      const customerData = persistCustomer(loginData[0]);
+      const customerData = persistCustomer(await loginCustomer(phone, pin));
 
       toast({
         title: "مرحباً بعودتك",
@@ -186,10 +154,10 @@ const CustomerAuthPage = () => {
       });
 
       navigate("/home");
-    } catch (error: any) {
+    } catch (error: unknown) {
       toast({
         title: "تعذر المتابعة",
-        description: error?.message || "حدث خطأ أثناء تسجيل الدخول.",
+        description: error instanceof Error ? error.message : "حدث خطأ أثناء تسجيل الدخول.",
         variant: "destructive",
       });
     } finally {
@@ -201,6 +169,8 @@ const CustomerAuthPage = () => {
     setIsGuestLoading(true);
 
     try {
+      await supabase.auth.signOut();
+      clearCustomerSession();
       setCustomer({
         id: "guest",
         name: "ضيف",
@@ -273,7 +243,7 @@ const CustomerAuthPage = () => {
           <div className="text-center">
             <h1 className="text-[25px] font-semibold tracking-[-0.035em] text-[#382F2C] sm:text-[28px]">{mode === "login" ? "مرحباً بعودتك" : "إنشاء حساب جديد"}</h1>
 
-            <p className="mx-auto mt-2 max-w-[320px] text-[10px] leading-5 text-[#958883] sm:text-[11px] sm:leading-6">{mode === "login" ? "سجّل دخولك لمتابعة طلباتك والوصول إلى مفضلاتك." : "أنشئ حسابك لتجربة تسوق أسرع وأسهل."}</p>
+            <p className="mx-auto mt-2 max-w-[320px] text-[10px] leading-5 text-[#958883] sm:text-[11px] sm:leading-6">{mode === "login" ? "سجّل برقم هاتفك اليمني ورمزك السري لمتابعة طلباتك." : "أنشئ حساباً آمناً برقم هاتف يمني ورمز سري رقمي."}</p>
           </div>
 
           {/* =====================================================
@@ -329,35 +299,27 @@ const CustomerAuthPage = () => {
               <div className="group relative">
                 <Phone className="pointer-events-none absolute right-4 top-1/2 h-[16px] w-[16px] -translate-y-1/2 text-[#A99D98] transition-colors group-focus-within:text-[#B86168]" strokeWidth={1.5} />
 
-                <input id="auth-phone" type="tel" inputMode="tel" autoComplete="tel" value={formData.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder="رقم الهاتف" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-left text-[12px] text-[#443936] outline-none transition-colors placeholder:text-[#B8ADA8] focus:border-[#D7AAA7]" />
+                <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-[12px] font-medium text-[#746761]" dir="ltr">+967</span>
+
+                <input id="auth-phone" type="tel" inputMode="numeric" autoComplete="tel-national" maxLength={9} value={formData.phone} onChange={(event) => updateField("phone", toYemenLocalPhone(event.target.value))} placeholder="7XXXXXXXX" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-[68px] text-left text-[12px] tracking-[0.08em] text-[#443936] outline-none transition-colors placeholder:text-[#B8ADA8] focus:border-[#D7AAA7]" />
               </div>
             </div>
 
             {/* PASSWORD */}
 
             <div>
-              <label htmlFor="auth-password" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">كلمة المرور</label>
+              <label htmlFor="auth-password" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">الرمز السري</label>
 
               <div className="group relative">
                 <LockKeyhole className="pointer-events-none absolute right-4 top-1/2 h-[16px] w-[16px] -translate-y-1/2 text-[#A99D98] transition-colors group-focus-within:text-[#B86168]" strokeWidth={1.5} />
 
-                <input id="auth-password" type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} value={formData.password} onChange={(event) => updateField("password", event.target.value)} placeholder="كلمة المرور" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-12 text-left text-[12px] text-[#443936] outline-none transition-colors placeholder:text-[#B8ADA8] focus:border-[#D7AAA7]" />
+                <input id="auth-password" type={showPassword ? "text" : "password"} inputMode="numeric" pattern="[0-9]*" minLength={6} maxLength={12} autoComplete={mode === "login" ? "current-password" : "new-password"} value={formData.password} onChange={(event) => updateField("password", normalizeNumericPin(event.target.value))} placeholder="6 إلى 12 رقماً" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-12 text-left text-[12px] tracking-[0.12em] text-[#443936] outline-none transition-colors placeholder:tracking-normal placeholder:text-[#B8ADA8] focus:border-[#D7AAA7]" />
 
-                <button type="button" onClick={() => setShowPassword((previous) => !previous)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-[8px] text-[#A99D98] transition-colors hover:bg-[#FFF7F5] hover:text-[#B86168]">
+                <button type="button" onClick={() => setShowPassword((previous) => !previous)} aria-label={showPassword ? "إخفاء الرمز السري" : "إظهار الرمز السري"} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-[8px] text-[#A99D98] transition-colors hover:bg-[#FFF7F5] hover:text-[#B86168]">
                   {showPassword ? <EyeOff className="h-[15px] w-[15px]" strokeWidth={1.5} /> : <Eye className="h-[15px] w-[15px]" strokeWidth={1.5} />}
                 </button>
               </div>
             </div>
-
-            {/* OLD CUSTOMER */}
-
-            {mode === "login" && (
-              <button type="button" onClick={() => setClaimExisting((previous) => !previous)} className="flex w-full items-center gap-2.5 px-1 py-1 text-right">
-                <span className={`flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-[5px] border transition-colors ${claimExisting ? "border-[#D4777D] bg-[#D4777D]" : "border-[#D8CECA] bg-white"}`}>{claimExisting && <Check className="h-2.5 w-2.5 text-white" strokeWidth={2.2} />}</span>
-
-                <span className="text-[9px] leading-5 text-[#978984]">ربط سجل العميل السابق المطابق لرقم الهاتف</span>
-              </button>
-            )}
 
             {/* REGISTER NOTE */}
 
@@ -367,7 +329,7 @@ const CustomerAuthPage = () => {
                   <Check className="h-2.5 w-2.5 text-[#A95B61]" strokeWidth={2} />
                 </span>
 
-                <p className="text-[8.5px] leading-5 text-[#8F817C]">سيتم حفظ بياناتك لتسهيل الطلبات القادمة ومتابعة مشترياتك.</p>
+                <p className="text-[8.5px] leading-5 text-[#8F817C]">اختر رمزاً من 6 إلى 12 رقماً غير متكرر ولا يحتوي على جزء من رقم هاتفك.</p>
               </div>
             )}
 

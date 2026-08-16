@@ -8,6 +8,7 @@
     "build": "vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
+    "test:security": "node --experimental-strip-types --test tests/yemenPhone.test.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

@@ -9,6 +9,7 @@ export const detectCountryFromPhone = (_phone?: string): Country => "GLOBAL";
 
 export interface Customer {
   id: string;
+  userId?: string;
   name: string;
   phone: string;
   region?: string;

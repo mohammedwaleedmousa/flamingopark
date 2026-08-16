@@ -746,31 +746,37 @@ export type Database = {
       }
       customers: {
         Row: {
+          avatar_url: string | null
           country: string
           created_at: string
           id: string
           name: string
-          password_hash: string | null
           phone: string
+          region: string | null
           updated_at: string
+          user_id: string | null
         }
         Insert: {
+          avatar_url?: string | null
           country: string
           created_at?: string
           id?: string
           name: string
-          password_hash?: string | null
           phone: string
+          region?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Update: {
+          avatar_url?: string | null
           country?: string
           created_at?: string
           id?: string
           name?: string
-          password_hash?: string | null
           phone?: string
+          region?: string | null
           updated_at?: string
+          user_id?: string | null
         }
         Relationships: []
       }

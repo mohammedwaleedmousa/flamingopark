@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.112.0";
 
-type VerificationChannel = "sms" | "whatsapp" | "email";
+type VerificationChannel = "none" | "sms" | "whatsapp" | "email";
 type RegistrationBody = { name?: unknown; phone?: unknown; email?: unknown; region?: unknown; country?: unknown; channel?: unknown };
 
 const DEFAULT_ORIGINS = [
@@ -55,9 +55,9 @@ Deno.serve(async (req) => {
   const email = cleanText(body.email, 254).toLowerCase();
   const region = cleanText(body.region, 100);
   const country = cleanText(body.country, 2).toUpperCase();
-  const channel: VerificationChannel | null = body.channel === "sms" || body.channel === "whatsapp" || body.channel === "email" ? body.channel : null;
+  const channel: VerificationChannel | null = body.channel === "none" || body.channel === "sms" || body.channel === "whatsapp" || body.channel === "email" ? body.channel : null;
 
-  if (name.length < 2 || !phone || region.length < 2 || !/^[A-Z]{2}$/.test(country) || !channel || (channel === "email" && !EMAIL_PATTERN.test(email))) {
+  if (name.length < 2 || !phone || region.length < 2 || !/^[A-Z]{2}$/.test(country) || !channel || (email && !EMAIL_PATTERN.test(email))) {
     return json({ error: "بيانات العميل غير مكتملة." }, 400, origin);
   }
 
@@ -71,12 +71,14 @@ Deno.serve(async (req) => {
   const service = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
   const { data: { user }, error: userError } = await auth.auth.getUser();
-  if (userError || !user) return json({ error: "يجب تأكيد وسيلة التسجيل أولاً." }, 401, origin);
+  if (userError || !user) return json({ error: "جلسة التسجيل غير صالحة." }, 401, origin);
 
   if (channel === "email") {
     if (!user.email || !user.email_confirmed_at || user.email.toLowerCase() !== email) return json({ error: "يجب تأكيد البريد الإلكتروني أولاً." }, 401, origin);
+  } else if (channel === "sms" || channel === "whatsapp") {
+    if (!user.phone || !user.phone_confirmed_at || normalizePhone(user.phone) !== phone) return json({ error: "يجب تأكيد رقم الهاتف أولاً." }, 401, origin);
   } else {
-    if (!user.phone || !user.phone_confirmed_at || user.phone !== phone) return json({ error: "يجب تأكيد رقم الهاتف أولاً." }, 401, origin);
+    if (!user.phone || normalizePhone(user.phone) !== phone) return json({ error: "رقم الهاتف لا يطابق جلسة التسجيل." }, 401, origin);
   }
 
   const { data: existingByUser } = await service.from("customers").select("id,user_id,name,phone,region,country").eq("user_id", user.id).maybeSingle();
@@ -84,16 +86,10 @@ Deno.serve(async (req) => {
 
   const { data: existingByPhone, error: phoneLookupError } = await service.from("customers").select("id,user_id").eq("phone", phone).maybeSingle();
   if (phoneLookupError) return json({ error: "تعذر التحقق من الحساب." }, 500, origin);
-  if (existingByPhone) return json({ error: "رقم الهاتف مرتبط بحساب سابق. استخدم تسجيل الدخول أو استعادة الحساب." }, 409, origin);
+  if (existingByPhone) return json({ error: "رقم الهاتف مرتبط بحساب سابق. استخدم تسجيل الدخول." }, 409, origin);
 
-  const { data: created, error: createError } = await service.from("customers").insert({
-    user_id: user.id,
-    name,
-    phone,
-    country,
-    region,
-  }).select("id,user_id,name,phone,region,country,avatar_url,created_at").single();
-
+  const { data: created, error: createError } = await service.from("customers").insert({ user_id: user.id, name, phone, country, region }).select("id,user_id,name,phone,region,country,avatar_url,created_at").single();
   if (createError || !created) return json({ error: "تعذر إنشاء ملف العميل." }, 500, origin);
+
   return json({ ok: true, customer: created }, 201, origin);
 });

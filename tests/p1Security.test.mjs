@@ -15,7 +15,10 @@ const reviewsSource = readSource("../src/components/ProductReviews.tsx");
 const customerAuthSource = readSource("../src/lib/customerAuth.ts");
 const customerAuthPageSource = readSource("../src/pages/CustomerAuthPage.tsx");
 const checkoutSource = readSource("../src/pages/CheckoutPage.tsx");
+const myOrdersSource = readSource("../src/pages/MyOrdersPage.tsx");
+const orderTrackingSource = readSource("../src/pages/OrderTrackingPage.tsx");
 const createOrderFunctionSource = readSource("../supabase/functions/create-order/index.ts");
+const invoiceAccessFunctionSource = readSource("../supabase/functions/invoice-access/index.ts");
 const customerAuthFunctionSource = readSource("../supabase/functions/customer-auth-bootstrap/index.ts");
 const migrationSource = readSource("../supabase/migrations/20260816090723_p0_customer_phone_auth_orders_security.sql");
 const configSource = readSource("../supabase/config.toml");
@@ -63,6 +66,23 @@ test("checkout uses the Edge order service and keeps the RPC contract server-sid
   }
 
   assert.match(configSource, /\[functions\.create-order\][\s\S]*?verify_jwt\s*=\s*false/);
+});
+
+test("my orders uses authenticated ownership instead of phone or browser tracking tokens", () => {
+  assert.match(myOrdersSource, /loadCustomerSession\(\)/);
+  assert.match(myOrdersSource, /\.eq\("owner_user_id", ownerUserId\)/);
+  assert.doesNotMatch(myOrdersSource, /customer_phone\.eq|\.eq\("customer_id"|tracking_token/);
+
+  assert.match(orderTrackingSource, /rpc\("get_order_tracking"/);
+  assert.match(orderTrackingSource, /enabled:\s*Boolean\(selectedOrder\)/);
+  assert.match(orderTrackingSource, /p_tracking_token:\s*trackingToken/);
+
+  assert.match(invoiceAccessFunctionSource, /order\.owner_user_id === user\.id/);
+  assert.match(invoiceAccessFunctionSource, /if \(!isAdmin && !isOwner && !validTrackingToken\)/);
+
+  assert.match(migrationSource, /CREATE POLICY "Order owners read own orders"[\s\S]*?owner_user_id = \(SELECT auth\.uid\(\)\)/);
+  assert.match(migrationSource, /o\.owner_user_id = \(SELECT auth\.uid\(\)\)/);
+  assert.match(migrationSource, /tracking_token_hash = encode\(digest\(p_tracking_token, 'sha256'\), 'hex'\)/);
 });
 
 test("analytics and customer reviews use rate-limited Edge Functions", () => {

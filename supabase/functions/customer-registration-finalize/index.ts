@@ -10,6 +10,7 @@ const DEFAULT_ORIGINS = [
   "https://flamingoparkaden.com",
   "https://www.flamingoparkaden.com",
   "http://localhost:5173",
+  "http://localhost:8080",
 ];
 const MAX_BODY_BYTES = 4096;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;

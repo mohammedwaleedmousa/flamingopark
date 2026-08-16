@@ -5,12 +5,11 @@ export const customerPageOptions = [
   { id: "products", label: "المنتجات", path: "/products" },
   { id: "categories", label: "الأقسام", path: "/categories" },
   { id: "brands", label: "الماركات", path: "/brands" },
-  { id: "offers", label: "العروض", path: "/offers" },
+  { id: "offers", label: "العروض", path: "/seasonal-offers" },
   { id: "best-sellers", label: "الأكثر مبيعاً", path: "/best-sellers" },
   { id: "new-arrivals", label: "وصل حديثاً", path: "/new-arrivals" },
   { id: "new-season", label: "جديد الموسم", path: "/new-season" },
   { id: "top-selling", label: "الأكثر طلباً", path: "/top-selling" },
-  { id: "curated", label: "مختاراتنا", path: "/curated" },
   { id: "search", label: "البحث", path: "/search" },
   { id: "favorites", label: "المفضلة", path: "/favorites" },
   { id: "cart", label: "السلة", path: "/cart" },
@@ -25,14 +24,13 @@ export const customerPageOptions = [
 
 export const homeSectionOptions = [
   { id: "hero", label: "البانر الرئيسي" },
-  { id: "brands", label: "شريط الماركات" },
   { id: "categories", label: "الأقسام" },
-  { id: "editorial", label: "رسالة العلامة" },
-  { id: "featuredProducts", label: "المنتجات المختارة" },
-  { id: "collections", label: "المجموعات" },
-  { id: "newArrivals", label: "وصل حديثاً" },
-  { id: "bestSellers", label: "الأكثر مبيعاً" },
+  { id: "brands", label: "شريط الماركات" },
+  { id: "dynamicSections", label: "أقسام المنتجات الديناميكية" },
+  { id: "featuredProducts", label: "مختارات فلامنجو" },
   { id: "services", label: "مزايا المتجر" },
+  { id: "bestSellers", label: "الأكثر مبيعاً" },
+  { id: "editorial", label: "رسالة العلامة" },
 ] as const;
 
 type ToggleMap = Record<string, boolean>;
@@ -48,10 +46,7 @@ export const defaultCustomerExperienceSettings: CustomerExperienceSettings = {
 };
 
 export const parseCustomerExperienceSettings = (value: unknown): CustomerExperienceSettings => {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return defaultCustomerExperienceSettings;
-  }
-
+  if (!value || typeof value !== "object" || Array.isArray(value)) return defaultCustomerExperienceSettings;
   const settings = value as Partial<CustomerExperienceSettings>;
   return {
     pages: { ...defaultCustomerExperienceSettings.pages, ...(settings.pages || {}) },

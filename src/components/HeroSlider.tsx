@@ -62,7 +62,7 @@ const HeroSlider = () => {
             {slides.map((slide, index) => (
               <SwiperSlide key={`${slide.image}-${index}`}>
                 <div className="relative h-[230px] w-full overflow-hidden bg-muted/30 sm:h-[285px] md:h-[390px] lg:h-[450px]">
-                  {loadedSlides.has(index) && <img src={slide.image} alt={slide.title || "Flamingo Park"} loading={index === 0 ? "eager" : "lazy"} decoding="async" fetchPriority={index === 0 ? "high" : "auto"} className="absolute inset-0 h-full w-full object-cover will-change-transform" style={{ objectPosition: `${slide.positionX}% ${slide.positionY}%`, transform: `scale(${slide.zoom})` }} />}
+                  {loadedSlides.has(index) && <img src={slide.image} alt={slide.title || "Flamingo Park"} loading={index === 0 ? "eager" : "lazy"} decoding="async" fetchPriority={index === 0 ? "high" : "auto"} className="absolute inset-0 h-full w-full object-cover will-change-transform" style={{ objectPosition: `${slide.positionX}% ${slide.positionY}%`, transform: `scale(${slide.zoom})`, transformOrigin: `${slide.positionX}% ${slide.positionY}%` }} />}
                   <div className="absolute inset-0 bg-gradient-to-l from-background/95 via-background/65 to-transparent sm:from-background/92 sm:via-background/52 md:via-background/42" />
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/[0.05] to-transparent" />
                   <div className="absolute inset-0 flex items-center">

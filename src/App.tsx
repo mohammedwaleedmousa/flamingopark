@@ -4,7 +4,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigationType } from "react-router-dom";
-import { useStore } from "@/store/useStore";
 import { useCustomerExperience } from "@/hooks/useCustomerExperience";
 import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
@@ -15,7 +14,6 @@ import { MotionConfig } from "framer-motion";
 import CustomerAssistantEntry from "@/components/CustomerAssistantEntry";
 import { ThemeProvider } from "next-themes";
 
-// Temporary launch switch: keep the assistant implementation ready without showing its entry button.
 const SHOW_CUSTOMER_ASSISTANT = false;
 
 const CustomerAuthPage = lazy(() => import("./pages/CustomerAuthPage"));
@@ -37,6 +35,7 @@ const BestSellersPage = lazy(() => import("./pages/BestSellersPage"));
 const NewArrivalsPage = lazy(() => import("./pages/NewArrivalsPage"));
 const NewSeasonPage = lazy(() => import("./pages/NewSeasonPage"));
 const TopSellingPage = lazy(() => import("./pages/TopSellingPage"));
+const CuratedPage = lazy(() => import("./pages/CuratedPage"));
 const SearchPage = lazy(() => import("./pages/SearchPage"));
 const SeasonalOffersPage = lazy(() => import("./pages/SeasonalOffersPage"));
 const CartPage = lazy(() => import("./pages/CartPage"));
@@ -49,7 +48,6 @@ const BannerPage = lazy(() => import("./pages/bannerPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const OrderTrackingPage = lazy(() => import("./pages/OrderTrackingPage"));
 
-// Admin pages
 const AdminLoginPage = lazy(() => import("./pages/admin/AdminLoginPage"));
 const AdminLayout = lazy(() => import("./components/admin/AdminLayout"));
 const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
@@ -67,6 +65,7 @@ const AdminDeliveryPage = lazy(() => import("./pages/admin/AdminDeliveryPage"));
 const AdminReviewsPage = lazy(() => import("./pages/admin/AdminReviewsPage"));
 const AdminSectionsPage = lazy(() => import("./pages/admin/AdminSectionsPage"));
 const AdminContentPage = lazy(() => import("./pages/admin/AdminContentPage"));
+const AdminCustomerExperiencePage = lazy(() => import("./pages/admin/AdminCustomerExperiencePage"));
 const AdminInvoicesPage = lazy(() => import("./pages/admin/AdminInvoicesPage"));
 const AdminCODRegionsPage = lazy(() => import("./pages/admin/AdminCODRegionsPage"));
 const AdminOffersPage = lazy(() => import("./pages/admin/AdminOffersPage"));
@@ -95,13 +94,13 @@ const AdminCampaignsPage = lazy(() => import("./pages/admin/AdminCampaignsPage")
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // Default pages stay light; sensitive pages override this.
-      gcTime: 30 * 60 * 1000, // 30 minutes - keep unused data in cache for 30 minutes
-      retry: 1, // محاولة واحدة فقط حتى لا تتجمد الصفحة دقيقة كاملة عند فشل الطلب
-      retryDelay: attemptIndex => Math.min(500 * 2 ** attemptIndex, 2000), // انتظار قصير جداً
+      staleTime: 5 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
+      retry: 1,
+      retryDelay: attemptIndex => Math.min(500 * 2 ** attemptIndex, 2000),
       refetchOnWindowFocus: false,
       refetchOnMount: false,
-      refetchOnReconnect: true, // refetch when connection is restored
+      refetchOnReconnect: true,
     },
   },
 });
@@ -113,7 +112,8 @@ const customerPageForPath = (pathname: string) => {
   if (pathname.startsWith("/brand")) return "brands";
   if (pathname === "/order-confirmation") return "checkout";
   if (pathname === "/order-tracking") return "my-orders";
-  if (pathname === "/seasonal-offers") return "offers";
+  if (pathname === "/seasonal-offers" || pathname === "/offers") return "offers";
+  if (pathname === "/curated") return "products";
   return pathname.slice(1);
 };
 
@@ -131,7 +131,6 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
   const { pathname } = useLocation();
   const { data: customerExperience } = useCustomerExperience();
   const pageId = customerPageForPath(pathname);
-
   if (customerExperience?.pages[pageId] === false) return <CustomerPageUnavailable />;
   return <>{children}</>;
 };
@@ -139,22 +138,17 @@ const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
 const AuthRedirect = () => {
   const searchParams = new URLSearchParams(window.location.search);
   const refCode = searchParams.get("ref");
-
   if (!refCode) return <Navigate to="/home" replace />;
-
   return <CustomerAuthPage />;
 };
 
 const ScrollToTop = () => {
   const { pathname } = useLocation();
   const navType = useNavigationType();
-
   useEffect(() => {
-    // On POP (back/forward) let the browser restore the previous scroll position.
     if (navType === "POP") return;
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [pathname, navType]);
-
   return null;
 };
 
@@ -169,128 +163,129 @@ const App = () => {
     return () => media.removeEventListener("change", update);
   }, []);
 
-  // هنا يتم تجهيز العملات عند تشغيل الموقع
   useEffect(() => {
     hydrateCurrencies();
   }, []);
 
   return (
-  <QueryClientProvider client={queryClient}>
-    <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
-    <MotionConfig reducedMotion={isMobile ? "always" : "user"}>
-    <TooltipProvider>
-      <Toaster />
-      <Sonner />
-      <DateRangeProvider>
-        <BrowserRouter>
-          <ScrollToTop />
-          <AnalyticsTracker />
-          <SpeedInsights />
-          {SHOW_CUSTOMER_ASSISTANT && <CustomerAssistantEntry />}
-          <Suspense fallback={<RouteFallback />}>
-            <Routes>
-            <Route path="/" element={<AuthRedirect />} />
-            <Route path="/index" element={<AuthRedirect />} />
-            <Route path="/index.html" element={<AuthRedirect />} />
-            <Route path="/auth" element={<CustomerAuthPage />} />
-            <Route path="/signin" element={<CustomerAuthPage />} />
-            <Route path="/signup" element={<CustomerAuthPage />} />
-            <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
-            <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
-            <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
-            <Route path="/seasonal-offers" element={<ProtectedRoute><SeasonalOffersPage /></ProtectedRoute>} />
-            <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
-            <Route path="/best-sellers" element={<ProtectedRoute><BestSellersPage /></ProtectedRoute>} />
-            <Route path="/new-arrivals" element={<ProtectedRoute><NewArrivalsPage /></ProtectedRoute>} />
-            <Route path="/new-season" element={<ProtectedRoute><NewSeasonPage /></ProtectedRoute>} />
-            <Route path="/top-selling" element={<ProtectedRoute><TopSellingPage /></ProtectedRoute>} />
-            <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
-            <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
-            <Route path="/my-orders" element={<ProtectedRoute><MyOrdersPage /></ProtectedRoute>} />
-            <Route path="/my-shipments" element={<ProtectedRoute><MyShipmentsPage /></ProtectedRoute>} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route path="/product/:slug" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
-            <Route path="/brand/:slug" element={ <ProtectedRoute><BrandPage /></ProtectedRoute> } />
-            <Route path="/brands" element={ <ProtectedRoute><AllBrandsPage /></ProtectedRoute> } />
-            <Route path="/brands/:slug" element={ <ProtectedRoute><BrandPage /></ProtectedRoute> } />
-            <Route path="/brands/:slug/products" element={<ProtectedRoute><BrandProductsPage /></ProtectedRoute>} />
-            <Route path="/brands/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />
-            <Route path="/brand/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />
-            <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
-            <Route path="/order-confirmation" element={<ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>} />
-            <Route path="/reviews" element={<ProtectedRoute><ReviewsPage /></ProtectedRoute>} />
-            <Route path="/favorites" element={<ProtectedRoute><FavoritesPage /></ProtectedRoute>} />
-            <Route path="/qr-code" element={<QRCodePage />} />
-            <Route path="/store-info" element={<ProtectedRoute><StoreInfoPage /></ProtectedRoute>} />
-            <Route path="/banner/:slug" element={<ProtectedRoute><BannerPage /></ProtectedRoute>} />
-            <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-            <Route path="/order-tracking" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
-            <Route path="/brands/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />
-            <Route path="/brand/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />
-            {/* Admin Routes */}
-            <Route path="/admin/login" element={<AdminLoginPage />} />
-            <Route path="/admin" element={<AdminLayout />}>
-              <Route index element={<AdminDashboard />} />
-              <Route path="products" element={<AdminProductsPage />} />
-              <Route path="products/new" element={<AdminProductFormPage />} />
-              <Route path="products/:id" element={<AdminProductFormPage />} />
-              <Route path="orders" element={<AdminOrdersPage />} />
-              <Route path="customers" element={<AdminCustomersPage />} />
-              <Route path="banners" element={<AdminBannersPage />} />
-              <Route path="campaigns" element={<AdminCampaignsPage />} />
-              <Route path="brands" element={<AdminBrandsPage />} />
-              <Route path="brand-category-map" element={<AdminBrandCategoryMapPage />} />
-              <Route path="catalog-workflow" element={<AdminCatalogWorkflowPage />} />
-              <Route path="categories" element={<AdminCategoriesPage />} />
-              <Route path="delivery" element={<AdminDeliveryPage />} />
-              <Route path="cod-regions" element={<AdminCODRegionsPage />} />
-              <Route path="reviews" element={<AdminReviewsPage />} />
-              <Route path="sections" element={<AdminSectionsPage />} />
-              <Route path="content" element={<AdminContentPage />} />
-              <Route path="invoices" element={<AdminInvoicesPage />} />
-              <Route path="reports" element={<ReportsOverviewPage />} />
-              <Route path="reports/finance" element={<ReportsFinancePage />} />
-              <Route path="reports/customers" element={<ReportsCustomersPage />} />
-              {/* Legacy aliases */}
-              <Route path="analytics" element={<Navigate to="/admin/reports" replace />} />
-              <Route path="revenue" element={<Navigate to="/admin/reports" replace />} />
-              <Route path="profit-report" element={<Navigate to="/admin/reports/finance" replace />} />
-              <Route path="finance" element={<Navigate to="/admin/reports/finance" replace />} />
-              <Route path="customer-intelligence" element={<Navigate to="/admin/reports/customers" replace />} />
-              <Route path="offers" element={<AdminOffersPage />} />
-              <Route path="coupons" element={<AdminCouponsPage />} />
-              <Route path="audit-log" element={<AdminAuditLogPage />} />
-              <Route path="ledger" element={<AdminLedgerPage />} />
-              <Route path="refunds" element={<AdminRefundsPage />} />
-              <Route path="expenses" element={<AdminExpensesPage />} />
-              <Route path="payment-methods" element={<AdminPaymentMethodsPage />} />
-              <Route path="inventory-adjustments" element={<AdminInventoryAdjustmentsPage />} />
-              <Route path="settings" element={<AdminSettingsPage />} />
-              <Route path="brand-pages" element={<AdminBrandPagesPage />} />
-              <Route path="brand-pages/new" element={<AdminBrandPageEditor />} />
-              <Route path="brand-pages/:id" element={<AdminBrandPageEditor />} />
-              <Route path="brand-section-products/:id" element={<AdminBrandSectionProductsPage />} />
-              <Route path="brand-filters/:id" element={<AdminBrandFiltersPage />} />
-              <Route path="brand-sections" element={<AdminBrandSectionsPage />} />
-              <Route path="brand-filters" element={<AdminBrandFiltersPage />} />
-              <Route path="customer-notifications" element={<AdminCustomerNotificationsPage />} />
-              <Route path="notification-deliveries" element={<AdminNotificationDeliveriesPage />} />
-              <Route path="customers/:id" element={<AdminCustomerDetailPage />} />
-              <Route path="currencies" element={<AdminCurrenciesPage />} />
-              <Route path="countries" element={<AdminCountriesPage />} />
-              <Route path="brand-sections/:id/products" element={<AdminBrandSectionProductsPage />} />
-            </Route>
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider attribute="class" defaultTheme="light" enableSystem={false} disableTransitionOnChange>
+        <MotionConfig reducedMotion={isMobile ? "always" : "user"}>
+          <TooltipProvider>
+            <Toaster />
+            <Sonner />
+            <DateRangeProvider>
+              <BrowserRouter>
+                <ScrollToTop />
+                <AnalyticsTracker />
+                <SpeedInsights />
+                {SHOW_CUSTOMER_ASSISTANT && <CustomerAssistantEntry />}
+                <Suspense fallback={<RouteFallback />}>
+                  <Routes>
+                    <Route path="/" element={<AuthRedirect />} />
+                    <Route path="/index" element={<AuthRedirect />} />
+                    <Route path="/index.html" element={<AuthRedirect />} />
+                    <Route path="/auth" element={<CustomerAuthPage />} />
+                    <Route path="/signin" element={<CustomerAuthPage />} />
+                    <Route path="/signup" element={<CustomerAuthPage />} />
+                    <Route path="/home" element={<ProtectedRoute><HomePage /></ProtectedRoute>} />
+                    <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
+                    <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
+                    <Route path="/seasonal-offers" element={<ProtectedRoute><SeasonalOffersPage /></ProtectedRoute>} />
+                    <Route path="/offers" element={<Navigate to="/seasonal-offers" replace />} />
+                    <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
+                    <Route path="/best-sellers" element={<ProtectedRoute><BestSellersPage /></ProtectedRoute>} />
+                    <Route path="/new-arrivals" element={<ProtectedRoute><NewArrivalsPage /></ProtectedRoute>} />
+                    <Route path="/new-season" element={<ProtectedRoute><NewSeasonPage /></ProtectedRoute>} />
+                    <Route path="/top-selling" element={<ProtectedRoute><TopSellingPage /></ProtectedRoute>} />
+                    <Route path="/curated" element={<ProtectedRoute><CuratedPage /></ProtectedRoute>} />
+                    <Route path="/cart" element={<ProtectedRoute><CartPage /></ProtectedRoute>} />
+                    <Route path="/account" element={<ProtectedRoute><AccountPage /></ProtectedRoute>} />
+                    <Route path="/my-orders" element={<ProtectedRoute><MyOrdersPage /></ProtectedRoute>} />
+                    <Route path="/my-shipments" element={<ProtectedRoute><MyShipmentsPage /></ProtectedRoute>} />
+                    <Route path="/reset-password" element={<ResetPasswordPage />} />
+                    <Route path="/product/:slug" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
+                    <Route path="/brand/:slug" element={<ProtectedRoute><BrandPage /></ProtectedRoute>} />
+                    <Route path="/brands" element={<ProtectedRoute><AllBrandsPage /></ProtectedRoute>} />
+                    <Route path="/brands/:slug" element={<ProtectedRoute><BrandPage /></ProtectedRoute>} />
+                    <Route path="/brands/:slug/products" element={<ProtectedRoute><BrandProductsPage /></ProtectedRoute>} />
+                    <Route path="/brands/:slug/sections/:sectionSlug" element={<ProtectedRoute><BrandSectionPage /></ProtectedRoute>} />
+                    <Route path="/brand/:slug/sections/:sectionSlug" element={<ProtectedRoute><BrandSectionPage /></ProtectedRoute>} />
+                    <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+                    <Route path="/order-confirmation" element={<ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>} />
+                    <Route path="/reviews" element={<ProtectedRoute><ReviewsPage /></ProtectedRoute>} />
+                    <Route path="/favorites" element={<ProtectedRoute><FavoritesPage /></ProtectedRoute>} />
+                    <Route path="/qr-code" element={<QRCodePage />} />
+                    <Route path="/store-info" element={<ProtectedRoute><StoreInfoPage /></ProtectedRoute>} />
+                    <Route path="/banner/:slug" element={<ProtectedRoute><BannerPage /></ProtectedRoute>} />
+                    <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
+                    <Route path="/order-tracking" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
 
-            <Route path="*" element={<NotFound />} />
-            </Routes>
-          </Suspense>
-        </BrowserRouter>
-      </DateRangeProvider>
-    </TooltipProvider>
-    </MotionConfig>
-    </ThemeProvider>
-  </QueryClientProvider>
-);
+                    <Route path="/admin/login" element={<AdminLoginPage />} />
+                    <Route path="/admin" element={<AdminLayout />}>
+                      <Route index element={<AdminDashboard />} />
+                      <Route path="products" element={<AdminProductsPage />} />
+                      <Route path="products/new" element={<AdminProductFormPage />} />
+                      <Route path="products/:id" element={<AdminProductFormPage />} />
+                      <Route path="product-experience" element={<Navigate to="/admin/products" replace />} />
+                      <Route path="orders" element={<AdminOrdersPage />} />
+                      <Route path="customers" element={<AdminCustomersPage />} />
+                      <Route path="banners" element={<AdminBannersPage />} />
+                      <Route path="campaigns" element={<AdminCampaignsPage />} />
+                      <Route path="brands" element={<AdminBrandsPage />} />
+                      <Route path="brand-category-map" element={<AdminBrandCategoryMapPage />} />
+                      <Route path="catalog-workflow" element={<AdminCatalogWorkflowPage />} />
+                      <Route path="categories" element={<AdminCategoriesPage />} />
+                      <Route path="delivery" element={<AdminDeliveryPage />} />
+                      <Route path="cod-regions" element={<AdminCODRegionsPage />} />
+                      <Route path="reviews" element={<AdminReviewsPage />} />
+                      <Route path="sections" element={<AdminSectionsPage />} />
+                      <Route path="storefront-map" element={<Navigate to="/admin/sections" replace />} />
+                      <Route path="customer-experience" element={<AdminCustomerExperiencePage />} />
+                      <Route path="content" element={<AdminContentPage />} />
+                      <Route path="invoices" element={<AdminInvoicesPage />} />
+                      <Route path="reports" element={<ReportsOverviewPage />} />
+                      <Route path="reports/finance" element={<ReportsFinancePage />} />
+                      <Route path="reports/customers" element={<ReportsCustomersPage />} />
+                      <Route path="analytics" element={<Navigate to="/admin/reports" replace />} />
+                      <Route path="revenue" element={<Navigate to="/admin/reports" replace />} />
+                      <Route path="profit-report" element={<Navigate to="/admin/reports/finance" replace />} />
+                      <Route path="finance" element={<Navigate to="/admin/reports/finance" replace />} />
+                      <Route path="customer-intelligence" element={<Navigate to="/admin/reports/customers" replace />} />
+                      <Route path="offers" element={<AdminOffersPage />} />
+                      <Route path="coupons" element={<AdminCouponsPage />} />
+                      <Route path="audit-log" element={<AdminAuditLogPage />} />
+                      <Route path="ledger" element={<AdminLedgerPage />} />
+                      <Route path="refunds" element={<AdminRefundsPage />} />
+                      <Route path="expenses" element={<AdminExpensesPage />} />
+                      <Route path="payment-methods" element={<AdminPaymentMethodsPage />} />
+                      <Route path="inventory-adjustments" element={<AdminInventoryAdjustmentsPage />} />
+                      <Route path="settings" element={<AdminSettingsPage />} />
+                      <Route path="brand-pages" element={<AdminBrandPagesPage />} />
+                      <Route path="brand-pages/new" element={<AdminBrandPageEditor />} />
+                      <Route path="brand-pages/:id" element={<AdminBrandPageEditor />} />
+                      <Route path="brand-section-products/:id" element={<AdminBrandSectionProductsPage />} />
+                      <Route path="brand-filters/:id" element={<AdminBrandFiltersPage />} />
+                      <Route path="brand-sections" element={<AdminBrandSectionsPage />} />
+                      <Route path="brand-filters" element={<AdminBrandFiltersPage />} />
+                      <Route path="customer-notifications" element={<AdminCustomerNotificationsPage />} />
+                      <Route path="notification-deliveries" element={<AdminNotificationDeliveriesPage />} />
+                      <Route path="customers/:id" element={<AdminCustomerDetailPage />} />
+                      <Route path="currencies" element={<AdminCurrenciesPage />} />
+                      <Route path="countries" element={<AdminCountriesPage />} />
+                      <Route path="brand-sections/:id/products" element={<AdminBrandSectionProductsPage />} />
+                    </Route>
+
+                    <Route path="*" element={<NotFound />} />
+                  </Routes>
+                </Suspense>
+              </BrowserRouter>
+            </DateRangeProvider>
+          </TooltipProvider>
+        </MotionConfig>
+      </ThemeProvider>
+    </QueryClientProvider>
+  );
 };
 
 export default App;

@@ -1,0 +1,44 @@
+name: Customer functional verify
+on:
+  push:
+    branches: [agent/customer-functional-fixes]
+permissions:
+  contents: write
+jobs:
+  verify:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/customer-functional-fixes
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - name: Restore Favorites formatting and patch behavior
+        shell: python
+        run: |
+          from pathlib import Path
+          import subprocess
+          subprocess.run(['git','checkout','origin/main','--','src/pages/FavoritesPage.tsx'], check=True)
+          p = Path('src/pages/FavoritesPage.tsx')
+          text = p.read_text(encoding='utf-8')
+          old_import = 'import { useSiteContent, getSiteText, formatSiteText } from "@/hooks/useSiteContent";\n'
+          assert text.count(old_import) == 1
+          text = text.replace(old_import, old_import + 'import { toast } from "@/hooks/use-toast";\n', 1)
+          old = '''  const handleAddAllToCart = () => {\n    favorites.forEach((product) => {\n      addToCart(product, 1);\n    });\n  };'''
+          new = '''  const handleAddAllToCart = () => {\n    let added = 0;\n    let needsSelection = 0;\n    let unavailable = 0;\n\n    favorites.forEach((product) => {\n      const colorVariants = Array.isArray(product.color_variants) ? product.color_variants : Array.isArray(product.colorVariants) ? product.colorVariants : [];\n      const hasSizes = Array.isArray(product.sizes) && product.sizes.length > 0;\n      const hasVariantSizes = colorVariants.some((variant: any) => Array.isArray(variant?.sizes) && variant.sizes.length > 0);\n      const hasColorChoice = colorVariants.length > 1;\n\n      if (!product.inStock || (typeof product.stockQuantity === "number" && product.stockQuantity <= 0)) { unavailable += 1; return; }\n      if (hasSizes || hasVariantSizes || hasColorChoice) { needsSelection += 1; return; }\n\n      addToCart(product, 1, undefined, undefined, colorVariants[0]?.id, colorVariants[0]?.colorName || colorVariants[0]?.name);\n      added += 1;\n    });\n\n    if (added > 0) toast({ title: "تمت الإضافة للسلة", description: `تمت إضافة ${added} منتج بدون خيارات إلزامية.` });\n    if (needsSelection > 0) toast({ title: "بعض المنتجات تحتاج اختياراً", description: `${needsSelection} منتج يحتاج اختيار المقاس أو اللون من صفحة المنتج قبل إضافته للسلة.` });\n    if (unavailable > 0) toast({ title: "منتجات غير متوفرة", description: `${unavailable} منتج غير متوفر حالياً ولم تتم إضافته.` });\n  };'''
+          assert text.count(old) == 1
+          p.write_text(text.replace(old, new, 1), encoding='utf-8')
+      - run: npm ci
+      - run: npm run build
+      - name: Commit verified patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/FavoritesPage.tsx
+          git diff --cached --check
+          git commit -m "Keep favorites UI while validating bulk cart add"
+          git push origin HEAD:agent/customer-functional-fixes

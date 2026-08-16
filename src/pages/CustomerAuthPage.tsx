@@ -5,193 +5,191 @@ import { Check, ChevronDown, Eye, EyeOff, Loader2, LockKeyhole, MapPin, Phone, S
 import { useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
+import { clearCustomerSession, setCustomerSession } from "@/lib/customerSession";
 
 type AuthMode = "login" | "register";
 
-const REGIONS = [
-  "عدن",
-  "صنعاء",
-  "تعز",
-  "حضرموت",
-  "إب",
-  "الحديدة",
-  "لحج",
-  "أبين",
-  "شبوة",
-  "مأرب",
-  "ذمار",
-  "البيضاء",
-  "الضالع",
-  "صعدة",
-  "عمران",
-  "ريمة",
-  "المحويت",
-  "الجوف",
-];
+type CustomerRow = {
+  id: string;
+  user_id?: string | null;
+  name: string;
+  phone: string;
+  country?: string | null;
+  region?: string | null;
+  avatar_url?: string | null;
+  created_at?: string;
+};
+
+const REGIONS = ["عدن", "صنعاء", "تعز", "حضرموت", "إب", "الحديدة", "لحج", "أبين", "شبوة", "مأرب", "ذمار", "البيضاء", "الضالع", "صعدة", "عمران", "ريمة", "المحويت", "الجوف"];
+
+const arabicDigitsToLatin = (value: string) => value.replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))).replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)));
+
+const normalizeYemenPhone = (value: string) => {
+  let digits = arabicDigitsToLatin(value).replace(/\D/g, "");
+  if (digits.startsWith("00967")) digits = digits.slice(5);
+  else if (digits.startsWith("967")) digits = digits.slice(3);
+  else if (digits.startsWith("0")) digits = digits.slice(1);
+  if (!/^7\d{8}$/.test(digits)) throw new Error("أدخل رقم جوال يمني صحيح مثل 77xxxxxxx");
+  return `+967${digits}`;
+};
+
+const authPasswordFor = async (phone: string, password: string) => {
+  if (password.length >= 6) return password;
+  const source = new TextEncoder().encode(`flamingopark:v1:${phone}:${password}`);
+  const digest = await crypto.subtle.digest("SHA-256", source);
+  return Array.from(new Uint8Array(digest)).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+};
 
 const CustomerAuthPage = () => {
   const navigate = useNavigate();
-
   const { setCustomer, setRegion } = useStore();
 
   const [mode, setMode] = useState<AuthMode>("login");
   const [isLoading, setIsLoading] = useState(false);
   const [isGuestLoading, setIsGuestLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
-  const [claimExisting, setClaimExisting] = useState(false);
-
+  const [claimExisting, setClaimExisting] = useState(true);
   const [regionOpen, setRegionOpen] = useState(false);
   const [regionSearch, setRegionSearch] = useState("");
-
-  const [formData, setFormData] = useState({
-    name: "",
-    phone: "",
-    password: "",
-    region: "",
-  });
+  const [formData, setFormData] = useState({ name: "", phone: "", password: "", region: "" });
 
   const filteredRegions = useMemo(() => {
     const value = regionSearch.trim();
-
-    if (!value) return REGIONS;
-
-    return REGIONS.filter((region) => region.includes(value));
+    return value ? REGIONS.filter((region) => region.includes(value)) : REGIONS;
   }, [regionSearch]);
-
-  /* =========================================================
-     REGION SHEET BODY LOCK
-  ========================================================= */
 
   useEffect(() => {
     if (!regionOpen) return;
-
     const scrollY = window.scrollY;
-    const body = document.body;
-
-    const previousPosition = body.style.position;
-    const previousTop = body.style.top;
-    const previousWidth = body.style.width;
-    const previousOverflow = body.style.overflow;
-
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.width = "100%";
-    body.style.overflow = "hidden";
-
+    const previous = { position: document.body.style.position, top: document.body.style.top, width: document.body.style.width, overflow: document.body.style.overflow };
+    document.body.style.position = "fixed";
+    document.body.style.top = `-${scrollY}px`;
+    document.body.style.width = "100%";
+    document.body.style.overflow = "hidden";
     return () => {
-      body.style.position = previousPosition;
-      body.style.top = previousTop;
-      body.style.width = previousWidth;
-      body.style.overflow = previousOverflow;
-
-      window.scrollTo({
-        top: scrollY,
-        behavior: "auto",
-      });
+      document.body.style.position = previous.position;
+      document.body.style.top = previous.top;
+      document.body.style.width = previous.width;
+      document.body.style.overflow = previous.overflow;
+      window.scrollTo({ top: scrollY, behavior: "auto" });
     };
   }, [regionOpen]);
 
-  const updateField = (field: keyof typeof formData, value: string) => {
-    setFormData((previous) => ({
-      ...previous,
-      [field]: value,
-    }));
+  const persistCustomer = (raw: CustomerRow) => {
+    const customerData = { ...raw, region: raw.region || "عدن", country: raw.country || "YE" };
+    setCustomer({ id: customerData.id, name: customerData.name, phone: customerData.phone, region: customerData.region || "عدن" });
+    setRegion(customerData.region || "عدن");
+    setCustomerSession({ id: customerData.id, name: customerData.name, phone: customerData.phone, region: customerData.region || undefined, country: customerData.country || undefined, avatar_url: customerData.avatar_url || null, user_id: customerData.user_id || undefined });
+    return customerData;
   };
 
-  const persistCustomer = (raw: any) => {
-    const customerData = {
-      ...raw,
-      region: raw.region || raw.country || "عدن",
+  const getOwnCustomer = async (userId: string) => {
+    const { data, error } = await (supabase as any).from("customers").select("id,user_id,name,phone,country,region,avatar_url,created_at").eq("user_id", userId).maybeSingle();
+    if (error) throw error;
+    return data as CustomerRow | null;
+  };
+
+  const finalizeRegistration = async (body: Record<string, unknown>) => {
+    const { data, error } = await supabase.functions.invoke("customer-registration-finalize", { body });
+    if (error) throw error;
+    if (!data?.customer) throw new Error(data?.error || "تعذر إنشاء ملف العميل");
+    return data.customer as CustomerRow;
+  };
+
+  useEffect(() => {
+    let active = true;
+    const restore = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!active || !data.user) return;
+      try {
+        const own = await getOwnCustomer(data.user.id);
+        if (!active || !own) return;
+        persistCustomer(own);
+        navigate("/home", { replace: true });
+      } catch {
+        // Keep the auth page open when a profile needs recovery.
+      }
     };
+    void restore();
+    return () => { active = false; };
+  }, [navigate]);
 
-    setCustomer({
-      id: customerData.id,
-      name: customerData.name,
-      phone: customerData.phone,
-      region: customerData.region,
-    });
+  const updateField = (field: keyof typeof formData, value: string) => setFormData((previous) => ({ ...previous, [field]: value }));
 
-    setRegion(customerData.region);
+  const migrateLegacyCustomer = async (phone: string, rawPassword: string, authPassword: string) => {
+    const { data: legacy, error: legacyError } = await (supabase as any).rpc("customer_login", { _phone: phone, _password: rawPassword });
+    if (legacyError || !legacy?.length) return null;
 
-    localStorage.setItem("customer", JSON.stringify(customerData));
-    localStorage.setItem("customer_phone", customerData.phone);
+    const legacyCustomer = legacy[0] as CustomerRow;
+    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ phone, password: authPassword, options: { data: { name: legacyCustomer.name, region: legacyCustomer.region || "عدن", country: "YE" } } });
+    if (signUpError) throw signUpError;
+    if (!signUpData.session || !signUpData.user) throw new Error("تعذر بدء جلسة الحساب. حاول تسجيل الدخول مرة أخرى.");
 
-    return customerData;
+    return finalizeRegistration({ name: legacyCustomer.name, phone, region: legacyCustomer.region || "عدن", country: "YE", channel: "none", legacyPassword: rawPassword });
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-
-    const phone = formData.phone.trim();
-    const password = formData.password.trim();
     const name = formData.name.trim();
+    const password = formData.password;
     const selectedRegion = formData.region.trim();
 
-    if (!phone || !password || (mode === "register" && !name) || (mode === "register" && !selectedRegion)) {
-      toast({
-        title: "البيانات غير مكتملة",
-        description: "يرجى تعبئة جميع الحقول المطلوبة.",
-        variant: "destructive",
-      });
+    if (!password || (mode === "register" && (!name || !selectedRegion))) {
+      toast({ title: "البيانات غير مكتملة", description: "يرجى تعبئة جميع الحقول المطلوبة.", variant: "destructive" });
+      return;
+    }
 
+    let phone = "";
+    try { phone = normalizeYemenPhone(formData.phone); } catch (error: any) {
+      toast({ title: "رقم الهاتف غير صحيح", description: error?.message, variant: "destructive" });
       return;
     }
 
     setIsLoading(true);
-
     try {
+      const authPassword = await authPasswordFor(phone, password);
+
       if (mode === "register") {
-        const { data: registerData, error } = await (supabase as any).rpc("customer_register", {
-          _name: name,
-          _phone: phone,
-          _country: selectedRegion,
-          _region: selectedRegion,
-          _password: password,
-        });
-
+        await supabase.auth.signOut();
+        const { data, error } = await supabase.auth.signUp({ phone, password: authPassword, options: { data: { name, region: selectedRegion, country: "YE" } } });
         if (error) throw error;
+        if (!data.session || !data.user) throw new Error("تعذر بدء جلسة الحساب. حاول تسجيل الدخول مرة أخرى.");
 
-        if (!registerData || registerData.length === 0) {
-          throw new Error("تعذر إنشاء الحساب");
-        }
-
-        const customerData = persistCustomer(registerData[0]);
-
-        toast({
-          title: "تم إنشاء الحساب",
-          description: `أهلاً ${customerData.name}`,
-        });
-
-        navigate("/home");
-
+        const customerData = await finalizeRegistration({ name, phone, region: selectedRegion, country: "YE", channel: "none" });
+        persistCustomer(customerData);
+        toast({ title: "تم إنشاء الحساب", description: `أهلاً ${customerData.name}` });
+        navigate("/home", { replace: true });
         return;
       }
 
-      const { data: loginData, error } = await (supabase as any).rpc("customer_login", {
-        _phone: phone,
-        _password: password,
-      });
+      await supabase.auth.signOut();
+      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ phone, password: authPassword });
 
-      if (error) throw error;
-
-      if (!loginData || loginData.length === 0) {
-        throw new Error("رقم الهاتف أو كلمة المرور غير صحيحة");
+      if (!loginError && loginData.user) {
+        let customerData = await getOwnCustomer(loginData.user.id);
+        if (!customerData && claimExisting) customerData = await finalizeRegistration({ name: "عميل فلامنجو", phone, region: "عدن", country: "YE", channel: "none", legacyPassword: password });
+        if (!customerData) throw new Error("ملف العميل غير مكتمل. تواصل مع خدمة العملاء.");
+        persistCustomer(customerData);
+        toast({ title: "مرحباً بعودتك", description: `أهلاً ${customerData.name}` });
+        navigate("/home", { replace: true });
+        return;
       }
 
-      const customerData = persistCustomer(loginData[0]);
+      if (claimExisting) {
+        const migrated = await migrateLegacyCustomer(phone, password, authPassword);
+        if (migrated) {
+          persistCustomer(migrated);
+          toast({ title: "تم ربط حسابك القديم", description: `أهلاً ${migrated.name}` });
+          navigate("/home", { replace: true });
+          return;
+        }
+      }
 
-      toast({
-        title: "مرحباً بعودتك",
-        description: `أهلاً ${customerData.name}`,
-      });
-
-      navigate("/home");
+      throw new Error("رقم الهاتف أو كلمة المرور غير صحيحة");
     } catch (error: any) {
-      toast({
-        title: "تعذر المتابعة",
-        description: error?.message || "حدث خطأ أثناء تسجيل الدخول.",
-        variant: "destructive",
-      });
+      await supabase.auth.signOut().catch(() => undefined);
+      const message = String(error?.message || "حدث خطأ أثناء تسجيل الدخول.");
+      toast({ title: "تعذر المتابعة", description: message.includes("already registered") ? "رقم الهاتف مستخدم مسبقاً. استخدم تسجيل الدخول." : message, variant: "destructive" });
     } finally {
       setIsLoading(false);
     }
@@ -199,304 +197,53 @@ const CustomerAuthPage = () => {
 
   const handleGuest = async () => {
     setIsGuestLoading(true);
-
     try {
-      setCustomer({
-        id: "guest",
-        name: "ضيف",
-        phone: "",
-        region: "عدن",
-      });
-
+      await supabase.auth.signOut();
+      clearCustomerSession();
+      setCustomer({ id: "guest", name: "ضيف", phone: "", region: "عدن" });
       setRegion("عدن");
-
-      toast({
-        title: "مرحباً بك",
-        description: "يمكنك الآن تصفح المتجر.",
-      });
-
       navigate("/home");
-    } finally {
-      setIsGuestLoading(false);
-    }
+    } finally { setIsGuestLoading(false); }
   };
 
   const changeMode = (nextMode: AuthMode) => {
     if (isLoading) return;
-
     setMode(nextMode);
     setShowPassword(false);
     setRegionOpen(false);
     setRegionSearch("");
   };
 
-  const selectRegion = (region: string) => {
-    updateField("region", region);
-    setRegionOpen(false);
-    setRegionSearch("");
-  };
-
   return (
     <main className="min-h-[100svh] bg-background" dir="rtl">
-      {/* =====================================================
-          TOP
-      ===================================================== */}
-
       <div className="mx-auto flex min-h-[100svh] w-full max-w-[520px] flex-col px-5 pb-7 pt-5 sm:px-7 md:justify-center md:py-10">
-        {/* LOGO */}
-
-        <div className="flex justify-center">
-          <button type="button" onClick={() => navigate("/home")} aria-label="العودة إلى المتجر" className="flex h-[78px] w-[78px] items-center justify-center">
-            <img src="/icons/flamingo.jpeg" alt="Flamingo Park" width={78} height={78} fetchPriority="high" className="h-[78px] w-[78px] object-contain" />
-          </button>
-        </div>
-
-        {/* BRAND */}
-
-        <div className="mt-2 text-center">
-          <div className="flex items-center justify-center gap-2.5">
-            <span className="h-px w-5 bg-[#E0B7B4]" />
-
-            <span className="font-serif text-[8px] tracking-[0.26em] text-[#B86168]">FLAMINGO PARK</span>
-
-            <span className="h-px w-5 bg-[#E0B7B4]" />
-          </div>
-        </div>
-
-        {/* =====================================================
-            AUTH CARD
-        ===================================================== */}
+        <div className="flex justify-center"><button type="button" onClick={() => navigate("/home")} aria-label="العودة إلى المتجر" className="flex h-[78px] w-[78px] items-center justify-center"><img src="/icons/flamingo.jpeg" alt="Flamingo Park" width={78} height={78} fetchPriority="high" className="h-[78px] w-[78px] object-contain" /></button></div>
+        <div className="mt-2 flex items-center justify-center gap-2.5"><span className="h-px w-5 bg-[#E0B7B4]" /><span className="font-serif text-[8px] tracking-[0.26em] text-[#B86168]">FLAMINGO PARK</span><span className="h-px w-5 bg-[#E0B7B4]" /></div>
 
         <section className="mt-8 rounded-[22px] border border-[#EEE4E0] bg-[#FFFDFC] px-4 pb-5 pt-6 sm:px-6 sm:pb-6 sm:pt-7">
-          {/* TITLE */}
+          <div className="text-center"><h1 className="text-[25px] font-semibold tracking-[-0.035em] text-[#382F2C] sm:text-[28px]">{mode === "login" ? "مرحباً بعودتك" : "إنشاء حساب جديد"}</h1><p className="mx-auto mt-2 max-w-[320px] text-[10px] leading-5 text-[#958883] sm:text-[11px] sm:leading-6">{mode === "login" ? "سجّل دخولك برقم هاتفك لمتابعة الطلبات والمفضلة." : "أنشئ حسابك برقم هاتف يمني وكلمة المرور التي تختارها."}</p></div>
 
-          <div className="text-center">
-            <h1 className="text-[25px] font-semibold tracking-[-0.035em] text-[#382F2C] sm:text-[28px]">{mode === "login" ? "مرحباً بعودتك" : "إنشاء حساب جديد"}</h1>
-
-            <p className="mx-auto mt-2 max-w-[320px] text-[10px] leading-5 text-[#958883] sm:text-[11px] sm:leading-6">{mode === "login" ? "سجّل دخولك لمتابعة طلباتك والوصول إلى مفضلاتك." : "أنشئ حسابك لتجربة تسوق أسرع وأسهل."}</p>
-          </div>
-
-          {/* =====================================================
-              TABS
-          ===================================================== */}
-
-          <div className="mt-6 grid grid-cols-2 rounded-[13px] bg-[#F7F3F1] p-1">
-            <button type="button" onClick={() => changeMode("login")} className={`h-[42px] rounded-[10px] text-[11px] font-medium transition-colors ${mode === "login" ? "bg-white text-[#443936] shadow-[0_1px_4px_rgba(49,39,35,0.06)]" : "text-[#9F928D]"}`}>تسجيل الدخول</button>
-
-            <button type="button" onClick={() => changeMode("register")} className={`h-[42px] rounded-[10px] text-[11px] font-medium transition-colors ${mode === "register" ? "bg-white text-[#443936] shadow-[0_1px_4px_rgba(49,39,35,0.06)]" : "text-[#9F928D]"}`}>حساب جديد</button>
-          </div>
-
-          {/* =====================================================
-              FORM
-          ===================================================== */}
+          <div className="mt-6 grid grid-cols-2 rounded-[13px] bg-[#F7F3F1] p-1"><button type="button" onClick={() => changeMode("login")} className={`h-[42px] rounded-[10px] text-[11px] font-medium ${mode === "login" ? "bg-white text-[#443936] shadow-[0_1px_4px_rgba(49,39,35,0.06)]" : "text-[#9F928D]"}`}>تسجيل الدخول</button><button type="button" onClick={() => changeMode("register")} className={`h-[42px] rounded-[10px] text-[11px] font-medium ${mode === "register" ? "bg-white text-[#443936] shadow-[0_1px_4px_rgba(49,39,35,0.06)]" : "text-[#9F928D]"}`}>حساب جديد</button></div>
 
           <form onSubmit={handleSubmit} className="mt-5 space-y-3">
-            {/* NAME */}
+            {mode === "register" && <div><label htmlFor="auth-name" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">الاسم الكامل</label><div className="relative"><UserRound className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-name" value={formData.name} onChange={(event) => updateField("name", event.target.value)} autoComplete="name" placeholder="أدخل اسمك الكامل" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div></div>}
 
-            {mode === "register" && (
-              <div>
-                <label htmlFor="auth-name" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">الاسم الكامل</label>
+            {mode === "register" && <div><label className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">المحافظة</label><button type="button" onClick={() => setRegionOpen(true)} className="relative flex h-[50px] w-full items-center rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-11 text-right"><MapPin className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><span className={`flex-1 text-[12px] ${formData.region ? "text-[#443936]" : "text-[#B8ADA8]"}`}>{formData.region || "اختر المحافظة"}</span><ChevronDown className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" /></button></div>}
 
-                <div className="group relative">
-                  <UserRound className="pointer-events-none absolute right-4 top-1/2 h-[16px] w-[16px] -translate-y-1/2 text-[#A99D98] transition-colors group-focus-within:text-[#B86168]" strokeWidth={1.5} />
+            <div><label htmlFor="auth-phone" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">رقم الهاتف</label><div className="relative"><Phone className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-phone" type="tel" inputMode="tel" autoComplete="tel" value={formData.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder="77xxxxxxx" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-left text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div></div>
 
-                  <input id="auth-name" type="text" autoComplete="name" value={formData.name} onChange={(event) => updateField("name", event.target.value)} placeholder="أدخل اسمك الكامل" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-[12px] text-[#443936] outline-none transition-colors placeholder:text-[#B8ADA8] focus:border-[#D7AAA7]" />
-                </div>
-              </div>
-            )}
+            <div><label htmlFor="auth-password" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">كلمة المرور</label><div className="relative"><LockKeyhole className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-password" type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} value={formData.password} onChange={(event) => updateField("password", event.target.value)} placeholder="كلمة المرور" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-12 text-left text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-[#A99D98]">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
 
-            {/* REGION */}
+            {mode === "login" && <button type="button" onClick={() => setClaimExisting((value) => !value)} className="flex w-full items-center gap-2.5 px-1 py-1 text-right"><span className={`flex h-[17px] w-[17px] items-center justify-center rounded-[5px] border ${claimExisting ? "border-[#D4777D] bg-[#D4777D]" : "border-[#D8CECA] bg-white"}`}>{claimExisting && <Check className="h-2.5 w-2.5 text-white" />}</span><span className="text-[9px] leading-5 text-[#978984]">ربط الحساب القديم تلقائياً عند أول دخول</span></button>}
 
-            {mode === "register" && (
-              <div>
-                <label className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">المحافظة</label>
-
-                <button type="button" onClick={() => setRegionOpen(true)} className="relative flex h-[50px] w-full items-center rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-11 text-right transition-colors hover:border-[#D9B9B5]">
-                  <MapPin className="absolute right-4 top-1/2 h-[16px] w-[16px] -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} />
-
-                  <span className={`flex-1 text-[12px] ${formData.region ? "text-[#443936]" : "text-[#B8ADA8]"}`}>{formData.region || "اختر المحافظة"}</span>
-
-                  <ChevronDown className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} />
-                </button>
-              </div>
-            )}
-
-            {/* PHONE */}
-
-            <div>
-              <label htmlFor="auth-phone" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">رقم الهاتف</label>
-
-              <div className="group relative">
-                <Phone className="pointer-events-none absolute right-4 top-1/2 h-[16px] w-[16px] -translate-y-1/2 text-[#A99D98] transition-colors group-focus-within:text-[#B86168]" strokeWidth={1.5} />
-
-                <input id="auth-phone" type="tel" inputMode="tel" autoComplete="tel" value={formData.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder="رقم الهاتف" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-left text-[12px] text-[#443936] outline-none transition-colors placeholder:text-[#B8ADA8] focus:border-[#D7AAA7]" />
-              </div>
-            </div>
-
-            {/* PASSWORD */}
-
-            <div>
-              <label htmlFor="auth-password" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">كلمة المرور</label>
-
-              <div className="group relative">
-                <LockKeyhole className="pointer-events-none absolute right-4 top-1/2 h-[16px] w-[16px] -translate-y-1/2 text-[#A99D98] transition-colors group-focus-within:text-[#B86168]" strokeWidth={1.5} />
-
-                <input id="auth-password" type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} value={formData.password} onChange={(event) => updateField("password", event.target.value)} placeholder="كلمة المرور" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-12 text-left text-[12px] text-[#443936] outline-none transition-colors placeholder:text-[#B8ADA8] focus:border-[#D7AAA7]" />
-
-                <button type="button" onClick={() => setShowPassword((previous) => !previous)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center rounded-[8px] text-[#A99D98] transition-colors hover:bg-[#FFF7F5] hover:text-[#B86168]">
-                  {showPassword ? <EyeOff className="h-[15px] w-[15px]" strokeWidth={1.5} /> : <Eye className="h-[15px] w-[15px]" strokeWidth={1.5} />}
-                </button>
-              </div>
-            </div>
-
-            {/* OLD CUSTOMER */}
-
-            {mode === "login" && (
-              <button type="button" onClick={() => setClaimExisting((previous) => !previous)} className="flex w-full items-center gap-2.5 px-1 py-1 text-right">
-                <span className={`flex h-[17px] w-[17px] shrink-0 items-center justify-center rounded-[5px] border transition-colors ${claimExisting ? "border-[#D4777D] bg-[#D4777D]" : "border-[#D8CECA] bg-white"}`}>{claimExisting && <Check className="h-2.5 w-2.5 text-white" strokeWidth={2.2} />}</span>
-
-                <span className="text-[9px] leading-5 text-[#978984]">ربط سجل العميل السابق المطابق لرقم الهاتف</span>
-              </button>
-            )}
-
-            {/* REGISTER NOTE */}
-
-            {mode === "register" && (
-              <div className="flex items-start gap-2.5 rounded-[10px] bg-[#FFF8F6] px-3 py-2.5">
-                <span className="mt-[2px] flex h-[16px] w-[16px] shrink-0 items-center justify-center rounded-full bg-[#F1DAD7]">
-                  <Check className="h-2.5 w-2.5 text-[#A95B61]" strokeWidth={2} />
-                </span>
-
-                <p className="text-[8.5px] leading-5 text-[#8F817C]">سيتم حفظ بياناتك لتسهيل الطلبات القادمة ومتابعة مشترياتك.</p>
-              </div>
-            )}
-
-            {/* SUBMIT */}
-
-            <button type="submit" disabled={isLoading} className="mt-1 flex h-[50px] w-full items-center justify-center rounded-[12px] bg-[#D4777D] px-4 text-[11px] font-semibold text-white transition-colors hover:bg-[#C96F79] active:bg-[#B86168] disabled:cursor-not-allowed disabled:opacity-60">
-              {isLoading ? <Loader2 className="h-4 w-4 animate-spin" strokeWidth={1.6} /> : mode === "login" ? "تسجيل الدخول" : "إنشاء الحساب"}
-            </button>
+            <button type="submit" disabled={isLoading} className="mt-2 flex h-[50px] w-full items-center justify-center gap-2 rounded-[12px] bg-[#D4777D] text-[11px] font-semibold text-white disabled:opacity-60">{isLoading && <Loader2 className="h-4 w-4 animate-spin" />}{mode === "login" ? "تسجيل الدخول" : "إنشاء الحساب"}</button>
           </form>
 
-          {/* =====================================================
-              CHANGE MODE
-          ===================================================== */}
-
-          <div className="mt-4 text-center">
-            <button type="button" onClick={() => changeMode(mode === "login" ? "register" : "login")} className="text-[9.5px] text-[#938681] transition-colors hover:text-[#A95B61]">
-              {mode === "login" ? (
-                <>
-                  ليس لديك حساب؟
-                  <span className="mr-1 font-semibold text-[#A95B61]">إنشاء حساب</span>
-                </>
-              ) : (
-                <>
-                  لديك حساب؟
-                  <span className="mr-1 font-semibold text-[#A95B61]">تسجيل الدخول</span>
-                </>
-              )}
-            </button>
-          </div>
-
-          {/* =====================================================
-              GUEST
-          ===================================================== */}
-
-          <div className="my-5 flex items-center gap-3">
-            <span className="h-px flex-1 bg-[#EDE5E1]" />
-            <span className="text-[8px] text-[#B2A7A2]">أو</span>
-            <span className="h-px flex-1 bg-[#EDE5E1]" />
-          </div>
-
-          <button type="button" onClick={handleGuest} disabled={isGuestLoading || isLoading} className="flex h-[46px] w-full items-center justify-center gap-2 rounded-[11px] border border-[#E6DDD9] bg-white text-[10px] font-medium text-[#655853] transition-colors hover:border-[#D9B5B2] hover:bg-[#FFF8F6] hover:text-[#A95B61] disabled:opacity-50">
-            {isGuestLoading ? (
-              <>
-                <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={1.5} />
-                جاري الدخول...
-              </>
-            ) : (
-              "متابعة التصفح كضيف"
-            )}
-          </button>
+          <button type="button" onClick={handleGuest} disabled={isGuestLoading || isLoading} className="mt-3 flex h-[46px] w-full items-center justify-center gap-2 rounded-[12px] border border-[#E8DEDA] bg-white text-[10px] font-medium text-[#746761] disabled:opacity-60">{isGuestLoading && <Loader2 className="h-4 w-4 animate-spin" />}الدخول كضيف</button>
         </section>
-
-        {/* =====================================================
-            FOOT
-        ===================================================== */}
-
-        <div className="mt-auto pt-7 text-center md:mt-6">
-          <p className="font-serif text-[7px] tracking-[0.25em] text-[#B1A49F]">FLAMINGO PARK · ADEN</p>
-
-          <p className="mt-2 text-[8px] text-[#B7ABA6]">تسوق بأناقة، بسهولة.</p>
-        </div>
       </div>
 
-      {/* =====================================================
-          REGION PICKER
-      ===================================================== */}
-
-      {regionOpen && (
-        <div className="fixed inset-0 z-[150]" dir="rtl">
-          <button type="button" onClick={() => setRegionOpen(false)} aria-label="إغلاق اختيار المحافظة" className="absolute inset-0 bg-black/25" />
-
-          <div className="absolute inset-x-0 bottom-0 mx-auto flex max-h-[78svh] w-full max-w-[480px] flex-col overflow-hidden rounded-t-[22px] bg-[#FFFDFC] shadow-[0_-10px_40px_rgba(54,42,37,0.10)] sm:bottom-6 sm:rounded-[20px]">
-            {/* HANDLE */}
-
-            <div className="flex h-6 shrink-0 items-center justify-center sm:hidden">
-              <span className="h-1 w-9 rounded-full bg-[#DDD3CE]" />
-            </div>
-
-            {/* HEADER */}
-
-            <div className="flex shrink-0 items-center justify-between border-b border-[#EEE5E1] px-4 pb-4 pt-2 sm:pt-4">
-              <div>
-                <h2 className="text-[15px] font-semibold text-[#403633]">اختر المحافظة</h2>
-                <p className="mt-1 text-[9px] text-[#9B8E89]">حدد موقعك لإكمال إنشاء الحساب</p>
-              </div>
-
-              <button type="button" onClick={() => setRegionOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-full text-[#8E817B] transition-colors hover:bg-[#FFF6F4] hover:text-[#B86168]">
-                <X className="h-4 w-4" strokeWidth={1.5} />
-              </button>
-            </div>
-
-            {/* SEARCH */}
-
-            <div className="shrink-0 px-4 py-3">
-              <div className="relative">
-                <Search className="pointer-events-none absolute right-3.5 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} />
-
-                <input value={regionSearch} onChange={(event) => setRegionSearch(event.target.value)} placeholder="ابحث عن المحافظة..." autoFocus className="h-11 w-full rounded-[11px] border border-[#E7DEDA] bg-white pr-10 pl-4 text-[11px] text-[#443936] outline-none placeholder:text-[#B4A9A4] focus:border-[#D5AAA6]" />
-              </div>
-            </div>
-
-            {/* REGIONS */}
-
-            <div className="flex-1 overflow-y-auto overscroll-contain px-4 pb-[max(16px,env(safe-area-inset-bottom))]">
-              {filteredRegions.length > 0 ? (
-                <div className="overflow-hidden rounded-[13px] border border-[#ECE3DF] bg-white">
-                  {filteredRegions.map((region, index) => {
-                    const selected = formData.region === region;
-
-                    return (
-                      <button key={region} type="button" onClick={() => selectRegion(region)} className={`flex h-[47px] w-full items-center justify-between px-4 text-right transition-colors ${index !== filteredRegions.length - 1 ? "border-b border-[#F0E9E6]" : ""} ${selected ? "bg-[#FFF7F5]" : "bg-white hover:bg-[#FCF9F8]"}`}>
-                        <span className={`text-[11px] font-medium ${selected ? "text-[#A95B61]" : "text-[#554945]"}`}>{region}</span>
-
-                        {selected && <Check className="h-4 w-4 text-[#D4777D]" strokeWidth={1.8} />}
-                      </button>
-                    );
-                  })}
-                </div>
-              ) : (
-                <div className="py-12 text-center">
-                  <MapPin className="mx-auto h-5 w-5 text-[#B4A9A4]" strokeWidth={1.5} />
-
-                  <p className="mt-3 text-[10px] text-[#938681]">لم نجد هذه المحافظة</p>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      {regionOpen && <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/30 p-3 sm:items-center"><button type="button" aria-label="إغلاق" onClick={() => setRegionOpen(false)} className="absolute inset-0" /><div className="relative z-10 w-full max-w-[430px] overflow-hidden rounded-[20px] bg-white shadow-xl"><div className="flex items-center justify-between border-b border-[#EEE4E0] px-4 py-4"><div><h2 className="text-[14px] font-semibold text-[#443936]">اختر المحافظة</h2><p className="mt-1 text-[8px] text-[#9F928D]">حدد المحافظة التابعة لعنوانك.</p></div><button type="button" onClick={() => setRegionOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F3F1]"><X className="h-4 w-4" /></button></div><div className="p-3"><div className="relative"><Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" /><input value={regionSearch} onChange={(event) => setRegionSearch(event.target.value)} placeholder="ابحث عن المحافظة" className="h-10 w-full rounded-[10px] border border-[#E8DEDA] pr-10 pl-3 text-[10px] outline-none" /></div><div className="mt-3 max-h-[52svh] overflow-y-auto">{filteredRegions.map((region) => <button key={region} type="button" onClick={() => { updateField("region", region); setRegionOpen(false); setRegionSearch(""); }} className="flex h-11 w-full items-center justify-between border-b border-[#F4EFEC] px-2 text-[10px] text-[#514540]"><span>{region}</span>{formData.region === region && <Check className="h-4 w-4 text-[#D4777D]" />}</button>)}</div></div></div></div>}
     </main>
   );
 };

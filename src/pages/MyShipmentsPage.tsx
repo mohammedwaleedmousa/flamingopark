@@ -12,6 +12,7 @@ type ShipmentRow = {
   order_number: string;
   status: string;
   created_at: string;
+  tracking_token: string | null;
 };
 
 const statusText: Record<string, string> = {
@@ -84,7 +85,7 @@ const MyShipmentsPage = () => {
       try {
         let query = supabase
           .from("orders")
-          .select("id, order_number, status, created_at")
+          .select("id, order_number, status, created_at, tracking_token")
           .order("created_at", { ascending: false })
           .limit(100);
 
@@ -135,6 +136,7 @@ const MyShipmentsPage = () => {
                 const progress = progressMap[status] ?? 15;
                 const tone = toneMap[status] || "bg-muted text-muted-foreground";
                 const bar = barMap[status] || "bg-primary";
+                const canTrack = Boolean(inv.tracking_token);
                 return (
                   <div key={`ship-${inv.id}`} className="p-4 flex items-center justify-between gap-3">
                     <div className="flex-1">
@@ -149,10 +151,11 @@ const MyShipmentsPage = () => {
                     </div>
                     <button
                       type="button"
-                      onClick={() => navigate(`/order-tracking?order=${encodeURIComponent(inv.order_number)}`)}
-                      className="text-xs px-2.5 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors"
+                      disabled={!canTrack}
+                      onClick={() => canTrack && navigate(`/order-tracking?order=${encodeURIComponent(inv.order_number)}&token=${encodeURIComponent(inv.tracking_token!)}`)}
+                      className="text-xs px-2.5 py-1 rounded border border-primary/30 text-primary hover:bg-primary/10 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
                     >
-                      تتبع الآن
+                      {canTrack ? "تتبع الآن" : "التتبع غير متاح"}
                     </button>
                   </div>
                 );

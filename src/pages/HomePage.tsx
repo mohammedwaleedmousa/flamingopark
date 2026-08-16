@@ -325,7 +325,7 @@ const HomePage = () => {
 
         {showHomeSection("featuredProducts") && (
           <div ref={featuredViewport.ref} className="min-h-px bg-background">
-            <ProductSection eyebrow="FLAMINGO PICKS" title="مختارات فلامنجو" products={products} link="/curated" />
+            <ProductSection eyebrow="FLAMINGO PICKS" title="مختارات فلامنجو" products={products} link="/products" />
           </div>
         )}
 

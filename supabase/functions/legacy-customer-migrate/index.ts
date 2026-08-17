@@ -8,11 +8,15 @@ const corsHeaders = (origin: string | null) => ({ "Access-Control-Allow-Origin":
 const json = (body: unknown, status: number, origin: string | null) => Response.json(body, { status, headers: { ...corsHeaders(origin), "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff" } });
 const normalizePhone = (value: unknown) => {
   if (typeof value !== "string") return null;
-  let digits = value.trim().replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))).replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))).replace(/\D/g, "");
-  if (digits.startsWith("00967")) digits = digits.slice(5);
-  else if (digits.startsWith("967")) digits = digits.slice(3);
-  else if (digits.startsWith("0")) digits = digits.slice(1);
-  return /^7\d{8}$/.test(digits) ? `+967${digits}` : null;
+  const latin = value.trim().replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))).replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)));
+  let compact = latin.replace(/[\s().-]/g, "");
+  if (compact.startsWith("00")) compact = `+${compact.slice(2)}`;
+  if (!compact.startsWith("+")) {
+    let digits = compact.replace(/\D/g, "");
+    if (/^0?7\d{8}$/.test(digits)) { if (digits.startsWith("0")) digits = digits.slice(1); return `+967${digits}`; }
+    return null;
+  }
+  return /^\+[1-9]\d{7,14}$/.test(compact) ? compact : null;
 };
 const authPasswordFor = async (phone: string, password: string) => {
   if (password.length >= 6) return password;

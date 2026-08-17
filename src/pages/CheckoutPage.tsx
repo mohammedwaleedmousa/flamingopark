@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { SavedAddress, migrateLegacyCheckoutInfo, upsertSavedAddress } from "@/lib/savedAddresses";
 import { optimizeImage, handleImageError } from "@/lib/imageUrl";
+import { useCurrency } from "@/lib/currency";
 
 const orderAccessorySchema = z.object({
   name: z.string().max(200).optional(),
@@ -67,7 +68,7 @@ const CheckoutPage = () => {
 
   const isGuestLike = !customer || customer.id === "guest";
   const subtotal = getCartTotal();
-  const currency = "ر.ي";
+  const { format: formatCurrency, symbol: currency } = useCurrency();
 
   const [currentStep, setCurrentStep] = useState(0);
   const [paymentMethod, setPaymentMethod] = useState<"cod" | "bank">("cod");
@@ -226,19 +227,6 @@ const CheckoutPage = () => {
   const total = Math.max(0, subtotal + deliveryFee - discountAmount);
 
   /* =========================================================
-     COST TOTAL
-  ========================================================= */
-
-  const getCostPriceTotal = () => {
-    return cart.reduce((totalCost, item) => {
-      const costPrice = item.product.costPrice || item.product.price;
-      const accessoriesTotal = item.selectedAccessories?.reduce((sum, accessory) => sum + accessory.price * accessory.quantity, 0) || 0;
-
-      return totalCost + (costPrice + accessoriesTotal) * item.quantity;
-    }, 0);
-  };
-
-  /* =========================================================
      COUPON
   ========================================================= */
 
@@ -254,35 +242,19 @@ const CheckoutPage = () => {
       return;
     }
 
-    const costPriceTotal = getCostPriceTotal();
-
     try {
-      const { data: couponData, error } = await supabase.from("coupons").select("code,type,value").eq("is_active", true).limit(100);
-
+      const { data, error } = await (supabase as any).rpc("validate_customer_coupon", { p_code: normalized });
       if (error) throw error;
 
-      const match = couponData?.find((coupon) => coupon.code?.trim().toUpperCase() === normalized);
-
-      if (!match) {
+      if (!data?.valid) {
         setDiscountAmount(0);
         setAppliedCoupon(null);
-
-        toast({
-          title: "الكود غير صالح",
-          description: "كود الخصم غير موجود.",
-          variant: "destructive",
-        });
-
+        toast({ title: "الكود غير صالح", description: "كود الخصم غير موجود أو غير فعال.", variant: "destructive" });
         return;
       }
 
-      const coupon = match as {
-        type: "percentage" | "fixed";
-        value: number;
-      };
-
-      let discount = coupon.type === "percentage" ? (costPriceTotal * coupon.value) / 100 : coupon.value;
-
+      const value = Number(data.value) || 0;
+      let discount = data.type === "percentage" ? (subtotal * value) / 100 : value;
       discount = Math.min(discount, subtotal);
 
       setDiscountAmount(discount);
@@ -290,7 +262,7 @@ const CheckoutPage = () => {
 
       toast({
         title: "تم تطبيق الكوبون",
-        description: `خصم ${discount.toFixed(2)} ${currency}`,
+        description: `خصم ${formatCurrency(discount)}`,
       });
     } catch {
       setDiscountAmount(0);
@@ -1145,18 +1117,18 @@ const CheckoutPage = () => {
                   <div className="space-y-2.5">
                     <div className="flex items-center justify-between text-[7px] text-[#746661]">
                       <span>المجموع الفرعي</span>
-                      <span>{subtotal.toFixed(2)} {currency}</span>
+                      <span>{formatCurrency(subtotal)}</span>
                     </div>
 
                     <div className="flex items-center justify-between text-[7px] text-[#746661]">
                       <span>رسوم التوصيل</span>
-                      <span>{deliveryFee > 0 ? `${deliveryFee.toFixed(2)} ${currency}` : "—"}</span>
+                      <span>{deliveryFee > 0 ? formatCurrency(deliveryFee) : "—"}</span>
                     </div>
 
                     {discountAmount > 0 && (
                       <div className="flex items-center justify-between text-[7px] font-medium text-[#63806A]">
                         <span>الخصم</span>
-                        <span>-{discountAmount.toFixed(2)} {currency}</span>
+                        <span>-{formatCurrency(discountAmount)}</span>
                       </div>
                     )}
                   </div>
@@ -1167,7 +1139,7 @@ const CheckoutPage = () => {
                       <span className="mt-0.5 block text-[6px] text-[#B1A49F]">شامل رسوم التوصيل</span>
                     </div>
 
-                    <span className="text-[15px] font-bold text-[#B86168]">{total.toFixed(2)} {currency}</span>
+                    <span className="text-[15px] font-bold text-[#B86168]">{formatCurrency(total)}</span>
                   </div>
                 </div>
               </div>

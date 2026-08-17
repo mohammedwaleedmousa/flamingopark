@@ -10,6 +10,7 @@ import ProductCard from "@/components/ProductCard";
 import { useFavorites } from "@/hooks/useFavorites";
 import { useStore } from "@/store/useStore";
 import { useSiteContent, getSiteText, formatSiteText } from "@/hooks/useSiteContent";
+import { toast } from "@/hooks/use-toast";
 
 type SortOption = "newest" | "priceLow" | "priceHigh" | "name";
 
@@ -72,9 +73,26 @@ const FavoritesPage = () => {
   }, []);
 
   const handleAddAllToCart = () => {
+    let added = 0;
+    let needsSelection = 0;
+    let unavailable = 0;
+
     favorites.forEach((product) => {
-      addToCart(product, 1);
+      const colorVariants = Array.isArray(product.color_variants) ? product.color_variants : Array.isArray(product.colorVariants) ? product.colorVariants : [];
+      const hasSizes = Array.isArray(product.sizes) && product.sizes.length > 0;
+      const hasVariantSizes = colorVariants.some((variant: any) => Array.isArray(variant?.sizes) && variant.sizes.length > 0);
+      const hasColorChoice = colorVariants.length > 1;
+
+      if (!product.inStock || (typeof product.stockQuantity === "number" && product.stockQuantity <= 0)) { unavailable += 1; return; }
+      if (hasSizes || hasVariantSizes || hasColorChoice) { needsSelection += 1; return; }
+
+      addToCart(product, 1, undefined, undefined, colorVariants[0]?.id, colorVariants[0]?.colorName || colorVariants[0]?.name);
+      added += 1;
     });
+
+    if (added > 0) toast({ title: "تمت الإضافة للسلة", description: `تمت إضافة ${added} منتج بدون خيارات إلزامية.` });
+    if (needsSelection > 0) toast({ title: "بعض المنتجات تحتاج اختياراً", description: `${needsSelection} منتج يحتاج اختيار المقاس أو اللون من صفحة المنتج قبل إضافته للسلة.` });
+    if (unavailable > 0) toast({ title: "منتجات غير متوفرة", description: `${unavailable} منتج غير متوفر حالياً ولم تتم إضافته.` });
   };
 
   return (

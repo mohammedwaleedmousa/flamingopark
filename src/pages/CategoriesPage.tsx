@@ -261,12 +261,39 @@ const CategoriesPage = () => {
   /* =========================================================
      AVAILABLE BRANDS
 
-     يعتمد على المنتجات المحملة الحالية، بدون طلب ثقيل إضافي.
+     طلب خفيف لأسماء الماركات في كامل نطاق القسم حتى لا تعتمد
+     الفلاتر على أول 24 منتجاً فقط.
   ========================================================= */
 
-  const availableBrands = useMemo(() => {
-    return Array.from(new Set(products.map((product) => product.brand?.trim()).filter((brand): brand is string => Boolean(brand)))).sort((a, b) => a.localeCompare(b, "ar"));
-  }, [products]);
+  const brandScopeKey = useMemo(() => [scopedCategoryIds.join(","), productQuery, inStockOnly ? "1" : "0", minPrice, maxPrice].join("|"), [scopedCategoryIds, productQuery, inStockOnly, minPrice, maxPrice]);
+
+  const { data: availableBrands = [] } = useQuery({
+    queryKey: ["category-available-brands", brandScopeKey],
+    enabled: scopedCategoryIds.length > 0,
+    queryFn: async () => {
+      const brands = new Set<string>();
+      const batchSize = 1000;
+
+      for (let page = 0; page < 20; page += 1) {
+        let query = supabase.from("products").select("brand").eq("is_active", true).in("category_id", scopedCategoryIds);
+        if (productQuery.trim()) { const term = productQuery.trim(); query = query.or(`name_ar.ilike.%${term}%,name.ilike.%${term}%,description_ar.ilike.%${term}%`); }
+        if (inStockOnly) query = query.eq("in_stock", true);
+        if (Number(minPrice) > 0) query = query.gte("price", Number(minPrice));
+        if (Number(maxPrice) > 0) query = query.lte("price", Number(maxPrice));
+
+        const from = page * batchSize;
+        const { data, error } = await query.range(from, from + batchSize - 1);
+        if (error) throw error;
+        (data || []).forEach((row: any) => { const brand = String(row.brand || "").trim(); if (brand) brands.add(brand); });
+        if ((data || []).length < batchSize) break;
+      }
+
+      return Array.from(brands).sort((a, b) => a.localeCompare(b, "ar"));
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 20 * 60 * 1000,
+    refetchOnWindowFocus: false,
+  });
 
   /* =========================================================
      CLOSE BRAND MENU

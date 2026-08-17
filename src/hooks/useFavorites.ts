@@ -10,7 +10,7 @@ interface FavoritesState { favorites: Product[]; addFavorite: (product: Product)
 
 export const useFavorites = create<FavoritesState>()(persist((set, get) => ({
   favorites: [],
-  addFavorite: (product) => { if (!get().favorites.some((p) => p.id === product.id)) set({ favorites: [...get().favorites, product] }); },
+  addFavorite: (product) => { if (!get().favorites.some((p) => p.id === product.id)) set({ favorites: [product, ...get().favorites] }); },
   removeFavorite: (productId) => set({ favorites: get().favorites.filter((p) => p.id !== productId) }),
   isFavorite: (productId) => get().favorites.some((p) => p.id === productId),
   toggleFavorite: (product) => {

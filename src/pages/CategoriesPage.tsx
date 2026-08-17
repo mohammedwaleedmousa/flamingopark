@@ -21,6 +21,7 @@ interface Category {
   parent_id: string | null;
   image_url: string | null;
   sort_order: number;
+  category_kind?: string | null;
 }
 
 const PAGE_SIZE = 24;
@@ -47,6 +48,7 @@ const CategoriesPage = () => {
      PARAMS
   ========================================================= */
 
+  const audienceSlug = searchParams.get("audience") || "";
   const parentSlug = searchParams.get("parent") || "";
   const subSlug = searchParams.get("sub") || "";
   const brandFilter = searchParams.get("brand") || "all";
@@ -63,7 +65,7 @@ const CategoriesPage = () => {
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
     queryKey: ["categories-all-active"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order", { ascending: true });
+      const { data, error } = await (supabase as any).from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order,category_kind").eq("is_active", true).order("sort_order", { ascending: true });
 
       if (error) throw error;
 
@@ -75,15 +77,19 @@ const CategoriesPage = () => {
     refetchOnReconnect: false,
   });
 
-  const parents = useMemo(() => categories.filter((category) => !category.parent_id), [categories]);
+  const audienceCategories = useMemo(() => categories.filter((category) => category.category_kind === "audience"), [categories]);
+  const catalogCategories = useMemo(() => categories.filter((category) => category.category_kind !== "audience"), [categories]);
+  const legacyAudience = useMemo(() => audienceCategories.find((category) => category.slug === parentSlug) || null, [audienceCategories, parentSlug]);
+  const selectedAudience = useMemo(() => audienceCategories.find((category) => category.slug === (audienceSlug || legacyAudience?.slug)) || null, [audienceCategories, audienceSlug, legacyAudience?.slug]);
+  const parents = useMemo(() => catalogCategories.filter((category) => !category.parent_id), [catalogCategories]);
 
   const selectedParent = useMemo(() => parents.find((parent) => parent.slug === parentSlug) || null, [parents, parentSlug]);
 
   const subCategories = useMemo(() => {
     if (!selectedParent) return [];
 
-    return categories.filter((category) => category.parent_id === selectedParent.id);
-  }, [categories, selectedParent]);
+    return catalogCategories.filter((category) => category.parent_id === selectedParent.id);
+  }, [catalogCategories, selectedParent]);
 
   const selectedSub = useMemo(() => subCategories.find((sub) => sub.slug === subSlug) || null, [subCategories, subSlug]);
 
@@ -94,6 +100,14 @@ const CategoriesPage = () => {
 
     return [activeProductCategory.id];
   }, [activeProductCategory]);
+
+  const audienceValues = useMemo(() => {
+    if (!selectedAudience) return [] as string[];
+    if (selectedAudience.slug === "men") return ["men", "unisex"];
+    if (selectedAudience.slug === "women") return ["women", "unisex"];
+    if (["kids", "babes"].includes(selectedAudience.slug)) return ["kids", "unisex"];
+    return ["unisex"];
+  }, [selectedAudience]);
 
   /* =========================================================
      INVALID SUB CATEGORY
@@ -119,6 +133,7 @@ const CategoriesPage = () => {
 
   const productScopeKey = useMemo(() => {
     return [
+      selectedAudience?.slug || "",
       scopedCategoryIds.join(","),
       brandFilter,
       productQuery,
@@ -127,7 +142,7 @@ const CategoriesPage = () => {
       minPrice,
       maxPrice,
     ].join("|");
-  }, [scopedCategoryIds, brandFilter, productQuery, productSort, inStockOnly, minPrice, maxPrice]);
+  }, [selectedAudience?.slug, scopedCategoryIds, brandFilter, productQuery, productSort, inStockOnly, minPrice, maxPrice]);
 
   useEffect(() => {
     if (previousScopeRef.current && previousScopeRef.current !== productScopeKey) {
@@ -143,9 +158,9 @@ const CategoriesPage = () => {
 
   const { data: totalProductCount = 0 } = useQuery({
     queryKey: ["category-products-count", productScopeKey],
-    enabled: scopedCategoryIds.length > 0,
+    enabled: scopedCategoryIds.length > 0 && audienceValues.length > 0,
     queryFn: async () => {
-      let query = supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", true).in("category_id", scopedCategoryIds);
+      let query = (supabase as any).from("products").select("id", { count: "exact", head: true }).eq("is_active", true).in("category_id", scopedCategoryIds).in("audience", audienceValues);
 
       if (brandFilter !== "all") {
         query = query.eq("brand", brandFilter);
@@ -187,12 +202,12 @@ const CategoriesPage = () => {
   const productQueries = useQueries({
     queries: Array.from({ length: loadedPage }, (_, pageIndex) => ({
       queryKey: ["categories-products", productScopeKey, pageIndex + 1],
-      enabled: scopedCategoryIds.length > 0,
+      enabled: scopedCategoryIds.length > 0 && audienceValues.length > 0,
 
       queryFn: async () => {
         const from = pageIndex * PAGE_SIZE;
 
-        let query = supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).in("category_id", scopedCategoryIds);
+        let query = (supabase as any).from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).in("category_id", scopedCategoryIds).in("audience", audienceValues);
 
         if (brandFilter !== "all") {
           query = query.eq("brand", brandFilter);
@@ -265,17 +280,17 @@ const CategoriesPage = () => {
      الفلاتر على أول 24 منتجاً فقط.
   ========================================================= */
 
-  const brandScopeKey = useMemo(() => [scopedCategoryIds.join(","), productQuery, inStockOnly ? "1" : "0", minPrice, maxPrice].join("|"), [scopedCategoryIds, productQuery, inStockOnly, minPrice, maxPrice]);
+  const brandScopeKey = useMemo(() => [selectedAudience?.slug || "", scopedCategoryIds.join(","), productQuery, inStockOnly ? "1" : "0", minPrice, maxPrice].join("|"), [scopedCategoryIds, productQuery, inStockOnly, minPrice, maxPrice]);
 
   const { data: availableBrands = [] } = useQuery({
     queryKey: ["category-available-brands", brandScopeKey],
-    enabled: scopedCategoryIds.length > 0,
+    enabled: scopedCategoryIds.length > 0 && audienceValues.length > 0,
     queryFn: async () => {
       const brands = new Set<string>();
       const batchSize = 1000;
 
       for (let page = 0; page < 20; page += 1) {
-        let query = supabase.from("products").select("brand").eq("is_active", true).in("category_id", scopedCategoryIds);
+        let query = (supabase as any).from("products").select("brand").eq("is_active", true).in("category_id", scopedCategoryIds).in("audience", audienceValues);
         if (productQuery.trim()) { const term = productQuery.trim(); query = query.or(`name_ar.ilike.%${term}%,name.ilike.%${term}%,description_ar.ilike.%${term}%`); }
         if (inStockOnly) query = query.eq("in_stock", true);
         if (Number(minPrice) > 0) query = query.gte("price", Number(minPrice));
@@ -384,7 +399,7 @@ const CategoriesPage = () => {
             MAIN INTRO
         ========================================================= */}
 
-        {!selectedParent && (
+        {!selectedAudience && !selectedParent && (
           <section className="border-b border-[#F0E7E3] bg-[#FFF8F6]">
             <div className="mx-auto w-full max-w-[1500px] px-4 pb-5 pt-6 md:px-6 md:pb-8 md:pt-9">
               <div>
@@ -405,11 +420,11 @@ const CategoriesPage = () => {
             BREADCRUMB
         ========================================================= */}
 
-        {selectedParent && (
+        {selectedAudience && selectedParent && (
           <section className="border-b border-[#F0E7E3] bg-[#FFFDFC]">
             <div className="mx-auto flex h-[46px] w-full max-w-[1500px] items-center justify-between gap-3 px-3 md:h-[50px] md:px-6">
               <div className="flex min-w-0 items-center gap-1.5 overflow-hidden text-[9px] text-[#A0938E] md:text-[10px]">
-                <button type="button" onClick={() => setStepParams({ parent: null, sub: null, brand: null })} className="shrink-0 transition-colors hover:text-[#B86168]">الأقسام</button>
+                <button type="button" onClick={() => setStepParams({ audience: selectedAudience?.slug || null, parent: null, sub: null, brand: null })} className="shrink-0 transition-colors hover:text-[#B86168]">الأقسام</button>
 
                 <ChevronLeft className="h-3 w-3 shrink-0 stroke-[1.4] text-[#C9BBB6]" />
 
@@ -450,7 +465,7 @@ const CategoriesPage = () => {
             PARENT CATEGORIES
         ========================================================= */}
 
-        {!selectedParent && (
+        {!selectedAudience && !selectedParent && (
           <section className="mx-auto w-full max-w-[1500px] px-2.5 pb-8 pt-3 md:px-6 md:pb-12 md:pt-6">
             {categoriesLoading ? (
               <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-5">
@@ -460,8 +475,8 @@ const CategoriesPage = () => {
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-5">
-                {parents.map((category, index) => (
-                  <Link key={category.id} to={`/categories?parent=${category.slug}`} className="group relative aspect-[4/5] overflow-hidden rounded-[17px] bg-[#F4F1EF] md:rounded-[20px]">
+                {audienceCategories.map((category, index) => (
+                  <Link key={category.id} to={`/categories?audience=${category.slug}`} className="group relative aspect-[4/5] overflow-hidden rounded-[17px] bg-[#F4F1EF] md:rounded-[20px]">
                     <img src={category.image_url || FALLBACK[category.slug] || FALLBACK.women} alt={category.name_ar} loading={index < 2 ? "eager" : "lazy"} fetchPriority={index < 2 ? "high" : "auto"} decoding="async" className="h-full w-full object-cover md:transition-transform md:duration-300 md:group-hover:scale-[1.02]" />
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
@@ -484,11 +499,34 @@ const CategoriesPage = () => {
           </section>
         )}
 
+        {selectedAudience && !selectedParent && (
+          <section className="mx-auto w-full max-w-[1500px] px-2.5 pb-9 pt-4 md:px-6 md:pb-12 md:pt-6">
+            <div className="mb-4 px-1">
+              <p className="text-[8px] text-[#9C8D88]">القسم</p>
+              <h1 className="mt-1 text-[22px] font-semibold text-[#403132]">{selectedAudience.name_ar}</h1>
+              <p className="mt-1 text-[8px] text-[#9C8D88]">اختر الفئة — المنتجات للجنسين تظهر ضمن هذا القسم تلقائيًا.</p>
+            </div>
+            <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 md:gap-5">
+              {parents.map((category, index) => (
+                <Link key={category.id} to={`/categories?audience=${selectedAudience.slug}&parent=${category.slug}`} className="group overflow-hidden rounded-[16px] border border-[#EEE5E1] bg-white">
+                  <div className="aspect-square overflow-hidden bg-[#F4F1EF]">
+                    <img src={category.image_url || FALLBACK[category.slug] || FALLBACK.women} alt={category.name_ar} loading={index < 2 ? "eager" : "lazy"} decoding="async" className="h-full w-full object-cover md:transition-transform md:duration-300 md:group-hover:scale-[1.02]" />
+                  </div>
+                  <div className="flex min-h-[52px] items-center justify-between gap-2 px-3 py-2.5">
+                    <h2 className="truncate text-[11px] font-semibold text-[#453937] md:text-[13px]">{category.name_ar}</h2>
+                    <ChevronLeft className="h-3.5 w-3.5 shrink-0 stroke-[1.5] text-[#C96F79]" />
+                  </div>
+                </Link>
+              ))}
+            </div>
+          </section>
+        )}
+
         {/* =========================================================
             SUB CATEGORIES
         ========================================================= */}
 
-        {selectedParent && !selectedSub && subCategories.length > 0 && (
+        {selectedAudience && selectedParent && !selectedSub && subCategories.length > 0 && (
           <>
             <section className="mx-auto w-full max-w-[1500px] px-4 pb-3 pt-5 md:px-6 md:pb-5 md:pt-7">
               <div className="flex items-end justify-between">
@@ -510,7 +548,7 @@ const CategoriesPage = () => {
             <section className="mx-auto w-full max-w-[1500px] px-2.5 pb-9 md:px-6 md:pb-12">
               <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:grid-cols-4 md:gap-5">
                 {subCategories.map((category, index) => (
-                  <Link key={category.id} to={`/categories?parent=${selectedParent.slug}&sub=${category.slug}`} className="group overflow-hidden rounded-[16px] border border-[#EEE5E1] bg-white">
+                  <Link key={category.id} to={`/categories?audience=${selectedAudience?.slug || ""}&parent=${selectedParent.slug}&sub=${category.slug}`} className="group overflow-hidden rounded-[16px] border border-[#EEE5E1] bg-white">
                     <div className="aspect-square overflow-hidden bg-[#F4F1EF]">
                       <img src={category.image_url || FALLBACK[category.slug] || FALLBACK.women} alt={category.name_ar} loading={index < 2 ? "eager" : "lazy"} decoding="async" className="h-full w-full object-cover md:transition-transform md:duration-300 md:group-hover:scale-[1.02]" />
                     </div>
@@ -535,7 +573,7 @@ const CategoriesPage = () => {
             PRODUCTS
         ========================================================= */}
 
-        {!!activeProductCategory && (
+        {selectedAudience && !!activeProductCategory && (
           <section className="mx-auto w-full max-w-[1500px] pb-9">
             {/* CATEGORY TITLE */}
 

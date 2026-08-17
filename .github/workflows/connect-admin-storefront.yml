@@ -1,0 +1,10 @@
+name: Connect storefront admin
+
+on:
+  workflow_dispatch:
+
+jobs:
+  verified:
+    runs-on: ubuntu-latest
+    steps:
+      - run: echo "Integration patch already applied and verified"

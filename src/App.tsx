@@ -1,4 +1,4 @@
-import { useEffect, lazy, Suspense, useState } from "react";
+import { useEffect, lazy as reactLazy, Suspense, useState, type ComponentType } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -15,6 +15,35 @@ import { MotionConfig } from "framer-motion";
 import CustomerAssistantEntry from "@/components/CustomerAssistantEntry";
 import CustomerSessionSync from "@/components/CustomerSessionSync";
 import { ThemeProvider } from "next-themes";
+
+const isLazyImportError = (error: unknown) => {
+  const message = String((error as { message?: unknown })?.message || error || "");
+  return /Failed to fetch dynamically imported module|Importing a module script failed|ChunkLoadError|Loading chunk|Load failed/i.test(message);
+};
+
+const lazy = <T extends ComponentType<any>>(factory: () => Promise<{ default: T }>) =>
+  reactLazy(async () => {
+    const retryKey = typeof window !== "undefined" ? `flamingo-lazy-retry:${window.location.pathname}` : "flamingo-lazy-retry";
+    try {
+      const module = await factory();
+      if (typeof window !== "undefined") window.sessionStorage.removeItem(retryKey);
+      return module;
+    } catch {
+      await new Promise((resolve) => window.setTimeout(resolve, 300));
+      try {
+        const module = await factory();
+        if (typeof window !== "undefined") window.sessionStorage.removeItem(retryKey);
+        return module;
+      } catch (error) {
+        if (typeof window !== "undefined" && isLazyImportError(error) && !window.sessionStorage.getItem(retryKey)) {
+          window.sessionStorage.setItem(retryKey, "1");
+          window.location.reload();
+          return await new Promise<never>(() => undefined);
+        }
+        throw error;
+      }
+    }
+  });
 
 // Temporary launch switch: keep the assistant implementation ready without showing its entry button.
 const SHOW_CUSTOMER_ASSISTANT = false;

@@ -3,6 +3,7 @@ import { Minus, Plus, ShoppingBag, Trash2, X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 import { useStore } from "@/store/useStore";
+import { useCurrency } from "@/lib/currency";
 
 const CartDrawerContent = () => {
   const { cart, isCartOpen, closeCart, removeFromCart, updateQuantity, getCartTotal, clearCart } = useStore();
@@ -10,7 +11,7 @@ const CartDrawerContent = () => {
   const navigate = useNavigate();
 
   const total = getCartTotal();
-  const currency = "ر.ي";
+  const { symbol: currency } = useCurrency();
 
   const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
 

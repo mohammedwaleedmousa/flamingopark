@@ -13,6 +13,7 @@ import { hydrateCurrencies } from "@/lib/currency";
 import { SpeedInsights } from "@vercel/speed-insights/react";
 import { MotionConfig } from "framer-motion";
 import CustomerAssistantEntry from "@/components/CustomerAssistantEntry";
+import CustomerSessionSync from "@/components/CustomerSessionSync";
 import { ThemeProvider } from "next-themes";
 
 // Temporary launch switch: keep the assistant implementation ready without showing its entry button.
@@ -184,6 +185,7 @@ const App = () => {
     <TooltipProvider>
       <Toaster />
       <Sonner />
+      <CustomerSessionSync />
       <DateRangeProvider>
         <BrowserRouter>
           <ScrollToTop />

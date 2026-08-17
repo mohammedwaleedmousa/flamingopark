@@ -33,10 +33,15 @@ Deno.serve(async (req) => {
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL"); const anonKey = Deno.env.get("SUPABASE_ANON_KEY"); const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY");
   if (!supabaseUrl || !anonKey || !serviceRoleKey) return json({ error: "الخدمة غير مهيأة." }, 500, origin);
+
   const authorization = req.headers.get("authorization") || "";
-  const auth = createClient(supabaseUrl, anonKey, { auth: { autoRefreshToken: false, persistSession: false }, global: { headers: { Authorization: authorization } } });
+  const tokenMatch = authorization.match(/^Bearer\s+(.+)$/i);
+  const accessToken = tokenMatch?.[1]?.trim() || "";
+  if (!accessToken) return json({ error: "جلسة التسجيل غير صالحة." }, 401, origin);
+
+  const auth = createClient(supabaseUrl, anonKey, { auth: { autoRefreshToken: false, persistSession: false } });
   const service = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
-  const { data: { user }, error: userError } = await auth.auth.getUser();
+  const { data: { user }, error: userError } = await auth.auth.getUser(accessToken);
   if (userError || !user) return json({ error: "جلسة التسجيل غير صالحة." }, 401, origin);
 
   if (channel === "email") { if (!user.email || !user.email_confirmed_at || user.email.toLowerCase() !== email) return json({ error: "يجب تأكيد البريد الإلكتروني أولاً." }, 401, origin); }

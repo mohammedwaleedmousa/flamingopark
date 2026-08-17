@@ -131,7 +131,7 @@ const AdminCategoriesPage = () => {
   const filteredCategories = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();
 
-    return categories.filter((category) => {
+    return catalogCategories.filter((category) => {
       const matchesSearch = !normalizedSearch || category.name.toLowerCase().includes(normalizedSearch) || category.name_ar.toLowerCase().includes(normalizedSearch) || category.slug.toLowerCase().includes(normalizedSearch);
 
       const matchesStatus = statusFilter === "all" || (statusFilter === "active" && Boolean(category.is_active)) || (statusFilter === "inactive" && !category.is_active);
@@ -140,7 +140,7 @@ const AdminCategoriesPage = () => {
 
       return matchesSearch && matchesStatus && matchesType;
     });
-  }, [categories, search, statusFilter, typeFilter]);
+  }, [catalogCategories, search, statusFilter, typeFilter]);
 
   const parentOptions = useMemo(() => rootCategories.filter((category) => category.id !== editingCategory?.id), [rootCategories, editingCategory?.id]);
 

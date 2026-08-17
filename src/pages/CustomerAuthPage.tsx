@@ -22,6 +22,29 @@ type CustomerRow = {
 
 const REGIONS = ["عدن", "صنعاء", "تعز", "حضرموت", "إب", "الحديدة", "لحج", "أبين", "شبوة", "مأرب", "ذمار", "البيضاء", "الضالع", "صعدة", "عمران", "ريمة", "المحويت", "الجوف"];
 
+const PHONE_COUNTRIES = [
+  { iso: "YE", name: "اليمن", dial: "+967", flag: "🇾🇪" },
+  { iso: "SA", name: "السعودية", dial: "+966", flag: "🇸🇦" },
+  { iso: "US", name: "أمريكا / كندا", dial: "+1", flag: "🇺🇸" },
+  { iso: "MY", name: "ماليزيا", dial: "+60", flag: "🇲🇾" },
+  { iso: "AE", name: "الإمارات", dial: "+971", flag: "🇦🇪" },
+  { iso: "OM", name: "عُمان", dial: "+968", flag: "🇴🇲" },
+  { iso: "QA", name: "قطر", dial: "+974", flag: "🇶🇦" },
+  { iso: "KW", name: "الكويت", dial: "+965", flag: "🇰🇼" },
+  { iso: "BH", name: "البحرين", dial: "+973", flag: "🇧🇭" },
+  { iso: "EG", name: "مصر", dial: "+20", flag: "🇪🇬" },
+  { iso: "JO", name: "الأردن", dial: "+962", flag: "🇯🇴" },
+  { iso: "GB", name: "بريطانيا", dial: "+44", flag: "🇬🇧" },
+  { iso: "DE", name: "ألمانيا", dial: "+49", flag: "🇩🇪" },
+  { iso: "NL", name: "هولندا", dial: "+31", flag: "🇳🇱" },
+  { iso: "TR", name: "تركيا", dial: "+90", flag: "🇹🇷" },
+  { iso: "IN", name: "الهند", dial: "+91", flag: "🇮🇳" },
+  { iso: "PK", name: "باكستان", dial: "+92", flag: "🇵🇰" },
+  { iso: "ID", name: "إندونيسيا", dial: "+62", flag: "🇮🇩" },
+  { iso: "CN", name: "الصين", dial: "+86", flag: "🇨🇳" },
+  { iso: "OTHER", name: "دولة أخرى", dial: "", flag: "🌍" },
+] as const;
+
 const arabicDigitsToLatin = (value: string) => value.replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))).replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)));
 
 const normalizePhone = (value: string) => {
@@ -66,7 +89,9 @@ const CustomerAuthPage = () => {
   const [claimExisting, setClaimExisting] = useState(true);
   const [regionOpen, setRegionOpen] = useState(false);
   const [regionSearch, setRegionSearch] = useState("");
-  const [formData, setFormData] = useState({ name: "", phone: "+967", password: "", region: "عدن" });
+  const [phoneCountry, setPhoneCountry] = useState("YE");
+  const [formData, setFormData] = useState({ name: "", phone: "", password: "", region: "عدن" });
+  const selectedPhoneCountry = PHONE_COUNTRIES.find((country) => country.iso === phoneCountry) || PHONE_COUNTRIES[0];
 
   const filteredRegions = useMemo(() => {
     const value = regionSearch.trim();
@@ -153,7 +178,11 @@ const handleSubmit = async (event: React.FormEvent) => {
     }
 
     let phone = "";
-    try { phone = normalizePhone(formData.phone); } catch (error: any) {
+    try {
+      const rawPhone = formData.phone.trim();
+      const composedPhone = rawPhone.startsWith("+") || rawPhone.startsWith("00") || phoneCountry === "OTHER" ? rawPhone : `${selectedPhoneCountry.dial}${arabicDigitsToLatin(rawPhone).replace(/\D/g, "").replace(/^0+/, "")}`;
+      phone = normalizePhone(composedPhone);
+    } catch (error: any) {
       toast({ title: "رقم الهاتف غير صحيح", description: error?.message, variant: "destructive" });
       return;
     }
@@ -175,19 +204,19 @@ const handleSubmit = async (event: React.FormEvent) => {
         const existing = await signInCompatible();
         if (existing?.data.user) {
           let existingCustomer = await getOwnCustomer(existing.data.user.id);
-          if (!existingCustomer) existingCustomer = await finalizeRegistration({ name, phone, region: selectedRegion, country: countryFromPhone(phone), channel: "none", legacyPassword: password });
+          if (!existingCustomer) existingCustomer = await finalizeRegistration({ name, phone, region: selectedRegion, country: phoneCountry === "OTHER" ? countryFromPhone(phone) : phoneCountry, channel: "none", legacyPassword: password });
           persistCustomer(existingCustomer);
           toast({ title: "الحساب موجود بالفعل", description: "تم تسجيل الدخول إلى حسابك الحالي بدلاً من إنشاء حساب مكرر." });
           navigate("/home", { replace: true });
           return;
         }
         await supabase.auth.signOut();
-        const country = countryFromPhone(phone);
+        const country = phoneCountry === "OTHER" ? countryFromPhone(phone) : phoneCountry;
         const { data, error } = await supabase.auth.signUp({ phone, password: authPassword, options: { data: { name, region: selectedRegion, country } } });
         if (error) throw error;
         if (!data.session || !data.user) throw new Error("تعذر بدء جلسة الحساب. حاول تسجيل الدخول مرة أخرى.");
 
-        const customerData = await finalizeRegistration({ name, phone, region: selectedRegion, country: countryFromPhone(phone), channel: "none" });
+        const customerData = await finalizeRegistration({ name, phone, region: selectedRegion, country: phoneCountry === "OTHER" ? countryFromPhone(phone) : phoneCountry, channel: "none" });
         persistCustomer(customerData);
         toast({ title: "تم إنشاء الحساب", description: `أهلاً ${customerData.name}` });
         navigate("/home", { replace: true });
@@ -200,7 +229,7 @@ const handleSubmit = async (event: React.FormEvent) => {
 
       if (loginData?.user) {
         let customerData = await getOwnCustomer(loginData.user.id);
-        if (!customerData && claimExisting) customerData = await finalizeRegistration({ name: "عميل فلامنجو", phone, region: "غير محدد", country: countryFromPhone(phone), channel: "none", legacyPassword: password });
+        if (!customerData && claimExisting) customerData = await finalizeRegistration({ name: "عميل فلامنجو", phone, region: "غير محدد", country: phoneCountry === "OTHER" ? countryFromPhone(phone) : phoneCountry, channel: "none", legacyPassword: password });
         if (!customerData) throw new Error("ملف العميل غير مكتمل. تواصل مع خدمة العملاء.");
         persistCustomer(customerData);
         toast({ title: "مرحباً بعودتك", description: `أهلاً ${customerData.name}` });
@@ -263,7 +292,7 @@ const handleSubmit = async (event: React.FormEvent) => {
 
             {mode === "register" && <div><label htmlFor="auth-region" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">المدينة / المنطقة</label><div className="relative"><MapPin className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-region" value={formData.region} onChange={(event) => updateField("region", event.target.value)} autoComplete="address-level2" placeholder="مثال: عدن، الرياض، كوالالمبور" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div></div>}
 
-            <div><label htmlFor="auth-phone" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">رقم الهاتف</label><div className="relative"><Phone className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-phone" type="tel" inputMode="tel" autoComplete="tel" value={formData.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder="+9677xxxxxxxx" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-left text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div></div>
+            <div><label htmlFor="auth-phone" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">الدولة ورقم الهاتف</label><div className="grid grid-cols-[145px_1fr] gap-2" dir="ltr"><select aria-label="الدولة" value={phoneCountry} onChange={(event) => { const next = event.target.value; setPhoneCountry(next); setFormData((previous) => ({ ...previous, region: next === "YE" && !previous.region ? "عدن" : next !== "YE" && previous.region === "عدن" ? "" : previous.region })); }} className="h-[50px] rounded-[12px] border border-[#E8DEDA] bg-white px-2 text-[11px] text-[#443936] outline-none focus:border-[#D7AAA7]" dir="rtl">{PHONE_COUNTRIES.map((country) => <option key={country.iso} value={country.iso}>{country.flag} {country.name}{country.dial ? ` ${country.dial}` : ""}</option>)}</select><div className="relative"><Phone className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-phone" type="tel" inputMode="tel" autoComplete="tel" value={formData.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder={phoneCountry === "OTHER" ? "+رمز الدولة والرقم" : phoneCountry === "YE" ? "77xxxxxxx" : "رقم الهاتف"} dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-left text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div></div><p className="mt-1.5 px-1 text-[8px] leading-4 text-[#A19590]">اليمن محددة افتراضيًا. غيّر الدولة فقط إذا كان رقمك من خارج اليمن.</p></div>
 
             <div><label htmlFor="auth-password" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">كلمة المرور</label><div className="relative"><LockKeyhole className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-password" type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} value={formData.password} onChange={(event) => updateField("password", event.target.value)} placeholder="كلمة المرور" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-12 text-left text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-[#A99D98]">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
 

@@ -109,17 +109,7 @@ const CheckoutPage = () => {
   ========================================================= */
 
   useEffect(() => {
-    let mounted = true;
-
-    supabase.auth.getUser().then(({ data }) => {
-      if (!mounted) return;
-
-      setAddressOwnerKey(data.user?.id || customer?.id || "guest");
-    });
-
-    return () => {
-      mounted = false;
-    };
+    setAddressOwnerKey(customer?.id && customer.id !== "guest" ? customer.id : "guest");
   }, [customer?.id]);
 
   /* =========================================================
@@ -127,25 +117,31 @@ const CheckoutPage = () => {
   ========================================================= */
 
   useEffect(() => {
-    const list = migrateLegacyCheckoutInfo(addressOwnerKey);
+    let active = true;
 
-    setSavedAddresses(list);
+    const loadAddresses = async () => {
+      let list: SavedAddress[] = [];
 
-    const defaultAddress = list.find((address) => address.isDefault) || list[0];
+      if (!isGuestLike && customer?.id) {
+        const { data, error } = await (supabase as any).from("customer_addresses").select("*").order("is_default", { ascending: false }).order("updated_at", { ascending: false });
+        if (!error) {
+          list = (data || []).map((address: any) => ({ id: address.id, label: address.label, name: address.recipient_name, phone: address.phone, city: address.city, address: address.address_line1, notes: address.notes || "", isDefault: Boolean(address.is_default), updatedAt: address.updated_at }));
+        }
+      } else {
+        list = migrateLegacyCheckoutInfo(addressOwnerKey);
+      }
 
-    if (!defaultAddress) return;
+      if (!active) return;
+      setSavedAddresses(list);
+      const defaultAddress = list.find((address) => address.isDefault) || list[0];
+      if (!defaultAddress) return;
+      setSelectedAddressId(defaultAddress.id);
+      setFormData((current) => ({ ...current, name: isGuestLike ? String(defaultAddress.name || current.name || "") : current.name, phone: isGuestLike ? String(defaultAddress.phone || current.phone || "") : current.phone, city: defaultAddress.city, address: defaultAddress.address, notes: defaultAddress.notes || "" }));
+    };
 
-    setSelectedAddressId(defaultAddress.id);
-
-    setFormData((current) => ({
-      ...current,
-      name: isGuestLike ? String(defaultAddress.name || current.name || "") : current.name,
-      phone: isGuestLike ? String(defaultAddress.phone || current.phone || "") : current.phone,
-      city: defaultAddress.city,
-      address: defaultAddress.address,
-      notes: defaultAddress.notes || "",
-    }));
-  }, [addressOwnerKey, isGuestLike]);
+    void loadAddresses();
+    return () => { active = false; };
+  }, [addressOwnerKey, isGuestLike, customer?.id]);
 
   /* =========================================================
      DELIVERY COMPANIES
@@ -326,26 +322,20 @@ const CheckoutPage = () => {
   ========================================================= */
 
   const createSecureOrder = async (items: unknown[]) => {
-    const { data, error } = await (supabase as any).rpc("create_secure_order", {
-      p_customer_id: customer?.id === "guest" ? null : customer?.id || null,
+    const { data, error } = await (supabase as any).rpc("create_secure_order_v2", {
       p_customer_name: String(customer?.name || formData.name || "").trim(),
       p_customer_phone: String(customer?.phone || formData.phone || "").trim(),
       p_customer_address: formData.address.trim(),
-      p_customer_city: formData.city.trim(),
-      p_customer_region: customer?.region || selectedRegion || null,
       p_customer_notes: formData.notes.trim() || null,
       p_country: "YE",
+      p_customer_city: formData.city.trim(),
+      p_customer_region: customer?.region || selectedRegion || null,
       p_items: items,
-      p_subtotal: subtotal,
-      p_delivery_fee: deliveryFee,
-      p_total: total,
       p_payment_method: paymentMethod,
       p_currency_mode: currencyMode,
       p_currency_code: currencyMode,
-      p_exchange_rate_snapshot: 1,
-      p_total_base: total,
       p_coupon_code: appliedCoupon || null,
-      p_discount_amount: discountAmount,
+      p_delivery_company_id: selectedDelivery || null,
     });
 
     if (error) {
@@ -433,17 +423,25 @@ const CheckoutPage = () => {
      SAVE ADDRESS
   ========================================================= */
 
-  const saveAddressToLocal = () => {
-    upsertSavedAddress(addressOwnerKey, {
-      id: selectedAddressId || `addr-${Date.now()}`,
+  const saveAddressForCheckout = async () => {
+    const draft = {
+      id: selectedAddressId || crypto.randomUUID(),
       label: selectedSavedAddress?.label || `عنوان ${savedAddresses.length + 1}`,
       name: String(customer?.name || formData.name || "").trim(),
       phone: String(customer?.phone || formData.phone || "").trim(),
       city: formData.city.trim(),
       address: formData.address.trim(),
       notes: formData.notes.trim(),
-      isDefault: true,
-    });
+      isDefault: selectedSavedAddress?.isDefault ?? savedAddresses.length === 0,
+    };
+
+    if (isGuestLike || !customer?.id) {
+      upsertSavedAddress(addressOwnerKey, draft);
+      return;
+    }
+
+    const { error } = await (supabase as any).from("customer_addresses").upsert({ id: draft.id, user_id: customer.id, label: draft.label, recipient_name: draft.name, phone: draft.phone, city: draft.city, address_line1: draft.address, notes: draft.notes || null, is_default: draft.isDefault }).select("id").single();
+    if (error) console.warn("ADDRESS SAVE ERROR:", error);
   };
 
   /* =========================================================
@@ -501,7 +499,7 @@ const CheckoutPage = () => {
       const customerName = String(customer?.name || formData.name || "").trim();
       const customerPhone = String(customer?.phone || formData.phone || "").trim();
 
-      saveAddressToLocal();
+      await saveAddressForCheckout();
 
       const createdOrder = await createSecureOrder(validation.data);
       const regionData = codRegions.find((region) => region.id === selectedRegion);
@@ -537,7 +535,22 @@ const CheckoutPage = () => {
         },
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "فشل إرسال الطلب";
+      const rawMessage = error instanceof Error ? error.message : "فشل إرسال الطلب";
+      const message = rawMessage.includes("invalid_yemen_phone")
+        ? "أدخل رقم جوال يمني صحيح."
+        : rawMessage.includes("order_rate_limit")
+          ? "تم إرسال عدة طلبات خلال فترة قصيرة. حاول مرة أخرى بعد قليل."
+          : rawMessage.includes("guest_order_capacity_limit")
+            ? "إنشاء الطلبات غير متاح مؤقتاً بسبب عدد كبير من المحاولات. حاول بعد قليل."
+            : rawMessage.includes("insufficient_stock")
+              ? "تغير مخزون أحد المنتجات في السلة. راجع الكمية وحاول مرة أخرى."
+              : rawMessage.includes("variant_selection_required")
+                ? "تحقق من اختيار المقاس أو اللون لجميع المنتجات."
+                : rawMessage.includes("invalid_coupon")
+                  ? "كود الخصم لم يعد صالحاً. أزله أو جرّب كوداً آخر."
+                  : rawMessage.includes("invalid_delivery_company") || rawMessage.includes("delivery_company_required")
+                    ? "شركة التوصيل المختارة غير متاحة حالياً. اختر شركة توصيل أخرى."
+                    : rawMessage;
 
       toast({
         title: "تعذر إنشاء الطلب",

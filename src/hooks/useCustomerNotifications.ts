@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -16,27 +16,7 @@ export interface CustomerNotification {
   actionUrl?: string;
 }
 
-const READ_KEY = "customer_notifications_read_v1";
-const DELETED_KEY = "customer_notifications_deleted_v1";
-
-const readLocalSet = (key: string): Set<string> => {
-  try {
-    const raw = localStorage.getItem(key);
-    if (!raw) return new Set();
-    const arr = JSON.parse(raw);
-    return new Set(Array.isArray(arr) ? arr.map(String) : []);
-  } catch {
-    return new Set();
-  }
-};
-
-const saveLocalSet = (key: string, values: Set<string>) => {
-  try {
-    localStorage.setItem(key, JSON.stringify(Array.from(values)));
-  } catch {
-    // Ignore localStorage errors.
-  }
-};
+type NotificationState = { notification_key: string; is_read: boolean; is_deleted: boolean };
 
 const statusTitleMap: Record<string, string> = {
   pending: "تم استلام طلبك",
@@ -70,8 +50,6 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
   const [authUserId, setAuthUserId] = useState("");
   const [userPhone, setUserPhone] = useState("");
   const [customerId, setCustomerId] = useState("");
-  const readIdsRef = useRef<Set<string>>(readLocalSet(READ_KEY));
-  const deletedIdsRef = useRef<Set<string>>(readLocalSet(DELETED_KEY));
 
   useEffect(() => {
     let mounted = true;
@@ -84,50 +62,36 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
       setUserPhone(String(session?.phone || data.user?.phone || "").trim());
     };
     void loadCustomer();
-    return () => {
-      mounted = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
   const notificationsQuery = useQuery({
     queryKey: ["customer-notifications", authUserId, userPhone, customerId],
     enabled: enabled && Boolean(authUserId),
-    refetchOnWindowFocus: false,
-    refetchOnMount: false,
+    refetchOnWindowFocus: true,
     queryFn: async (): Promise<CustomerNotification[]> => {
-      const { data, error } = await supabase
-        .from("orders")
-        .select("id, order_number, status, updated_at, created_at, customer_id, customer_phone, owner_user_id, tracking_token")
-        .order("updated_at", { ascending: false })
-        .limit(50);
+      const { data: stateRows } = await (supabase as any).from("customer_notification_states").select("notification_key,is_read,is_deleted").eq("user_id", authUserId);
+      const stateMap = new Map<string, NotificationState>(((stateRows || []) as NotificationState[]).map((row) => [String(row.notification_key), row]));
+
+      const { data, error } = await supabase.from("orders").select("id, order_number, status, updated_at, created_at, tracking_token").order("updated_at", { ascending: false }).limit(50);
       if (error) throw error;
 
-      const rows = (data || []) as Array<{
-        id: string;
-        order_number: string;
-        status: string;
-        updated_at: string;
-        created_at: string;
-        tracking_token: string | null;
-      }>;
-
-      const orderNotifs = rows
-        .map((row) => {
-          const status = normalizeStatus(row.status);
-          const key = `order-${row.id}-${status}`;
-          if (deletedIdsRef.current.has(key)) return null;
-
-          return {
-            id: key,
-            type: "order" as const,
-            title: statusTitleMap[status] || "تحديث على طلبك",
-            message: `${statusMessageMap[status] || "تم تحديث حالة طلبك."} (#${row.order_number})`,
-            timestamp: row.updated_at || row.created_at,
-            read: readIdsRef.current.has(key),
-            actionUrl: row.tracking_token ? `/order-tracking?order=${encodeURIComponent(row.order_number)}&token=${encodeURIComponent(row.tracking_token)}` : "/my-orders",
-          };
-        })
-        .filter(Boolean) as CustomerNotification[];
+      const rows = (data || []) as Array<{ id: string; order_number: string; status: string; updated_at: string; created_at: string; tracking_token: string | null }>;
+      const orderNotifs = rows.map((row) => {
+        const status = normalizeStatus(row.status);
+        const key = `order-${row.id}-${status}`;
+        const state = stateMap.get(key);
+        if (state?.is_deleted) return null;
+        return {
+          id: key,
+          type: "order" as const,
+          title: statusTitleMap[status] || "تحديث على طلبك",
+          message: `${statusMessageMap[status] || "تم تحديث حالة طلبك."} (#${row.order_number})`,
+          timestamp: row.updated_at || row.created_at,
+          read: Boolean(state?.is_read),
+          actionUrl: row.tracking_token ? `/order-tracking?order=${encodeURIComponent(row.order_number)}&token=${encodeURIComponent(row.tracking_token)}` : "/my-orders",
+        };
+      }).filter(Boolean) as CustomerNotification[];
 
       let dbNotifs: CustomerNotification[] = [];
       try {
@@ -136,25 +100,23 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
         if (customerId) filters.push(`customer_id.eq.${customerId}`);
         if (userPhone) filters.push(`customer_phone.eq.${userPhone}`);
 
-        type NotificationRow = { id: string; title: string; body: string; type: string; link: string | null; is_read: boolean; created_at: string; customer_id: string | null; customer_phone: string | null; broadcast: boolean };
-        const { data: notifRows } = await supabase
-          .from("customer_notifications")
-          .select("id, title, body, type, link, is_read, created_at, customer_id, customer_phone, broadcast")
-          .or(filters.join(","))
-          .order("created_at", { ascending: false })
-          .limit(50);
+        type NotificationRow = { id: string; title: string; body: string | null; message?: string | null; type: string; link: string | null; is_read: boolean; created_at: string };
+        const { data: notifRows } = await (supabase as any).from("customer_notifications").select("id,title,body,message,type,link,is_read,created_at").or(filters.join(",")).order("created_at", { ascending: false }).limit(50);
 
-        dbNotifs = ((notifRows || []) as NotificationRow[])
-          .filter((row) => !deletedIdsRef.current.has(String(row.id)))
-          .map((row) => ({
-            id: String(row.id),
+        dbNotifs = ((notifRows || []) as NotificationRow[]).map((row) => {
+          const key = String(row.id);
+          const state = stateMap.get(key);
+          if (state?.is_deleted) return null;
+          return {
+            id: key,
             type: (row.type === "order" ? "order" : "system") as NotificationType,
             title: String(row.title || ""),
-            message: String(row.body || ""),
+            message: String(row.body || row.message || ""),
             timestamp: String(row.created_at),
-            read: Boolean(row.is_read) || readIdsRef.current.has(String(row.id)),
+            read: Boolean(row.is_read) || Boolean(state?.is_read),
             actionUrl: row.link || undefined,
-          }));
+          };
+        }).filter(Boolean) as CustomerNotification[];
       } catch {
         dbNotifs = [];
       }
@@ -165,65 +127,38 @@ export const useCustomerNotifications = (options: UseCustomerNotificationsOption
 
   useEffect(() => {
     if (!enabled || !enableToasts || !authUserId) return;
-
-    const channel = supabase
-      .channel(`customer-orders-live-${authUserId}`)
-      .on(
-        "postgres_changes",
-        { event: "UPDATE", schema: "public", table: "orders" },
-        (payload) => {
-          const next = payload.new as { owner_user_id?: string | null; customer_id?: string | null; customer_phone?: string | null; status?: string | null; order_number?: string | null };
-          const ownerMatch = String(next.owner_user_id || "") === authUserId || Boolean(customerId && String(next.customer_id || "") === customerId) || Boolean(userPhone && String(next.customer_phone || "") === userPhone);
-          if (!ownerMatch) return;
-
-          const status = normalizeStatus(next.status);
-          toast({
-            title: statusTitleMap[status] || "تحديث على طلبك",
-            description: `${statusMessageMap[status] || "تم تحديث حالة طلبك."} (#${String(next.order_number || "")})`,
-          });
-
-          void notificationsQuery.refetch();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      void supabase.removeChannel(channel);
-    };
+    const channel = supabase.channel(`customer-orders-live-${authUserId}`).on("postgres_changes", { event: "UPDATE", schema: "public", table: "orders" }, (payload) => {
+      const next = payload.new as { owner_user_id?: string | null; customer_id?: string | null; customer_phone?: string | null; status?: string | null; order_number?: string | null };
+      const ownerMatch = String(next.owner_user_id || "") === authUserId || Boolean(customerId && String(next.customer_id || "") === customerId) || Boolean(userPhone && String(next.customer_phone || "") === userPhone);
+      if (!ownerMatch) return;
+      const status = normalizeStatus(next.status);
+      toast({ title: statusTitleMap[status] || "تحديث على طلبك", description: `${statusMessageMap[status] || "تم تحديث حالة طلبك."} (#${String(next.order_number || "")})` });
+      void notificationsQuery.refetch();
+    }).subscribe();
+    return () => { void supabase.removeChannel(channel); };
   }, [enabled, enableToasts, authUserId, customerId, userPhone]);
 
-  const notifications = useMemo(
-    () => [...(notificationsQuery.data || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()),
-    [notificationsQuery.data]
-  );
+  const notifications = useMemo(() => [...(notificationsQuery.data || [])].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()), [notificationsQuery.data]);
+  const unreadCount = notifications.filter((notification) => !notification.read).length;
 
-  const unreadCount = notifications.filter((n) => !n.read).length;
-
-  const markAsRead = (id: string) => {
-    readIdsRef.current.add(id);
-    saveLocalSet(READ_KEY, readIdsRef.current);
-    void notificationsQuery.refetch();
+  const saveState = async (id: string, patch: { is_read?: boolean; is_deleted?: boolean }) => {
+    if (!authUserId) return;
+    await (supabase as any).from("customer_notification_states").upsert({ user_id: authUserId, notification_key: id, ...patch, updated_at: new Date().toISOString() }, { onConflict: "user_id,notification_key" });
+    if (patch.is_read && !id.startsWith("order-")) await (supabase as any).from("customer_notifications").update({ is_read: true }).eq("id", id);
+    await notificationsQuery.refetch();
   };
 
+  const markAsRead = (id: string) => { void saveState(id, { is_read: true }); };
+  const deleteNotification = (id: string) => { void saveState(id, { is_deleted: true, is_read: true }); };
   const markAllAsRead = () => {
-    notifications.forEach((n) => readIdsRef.current.add(n.id));
-    saveLocalSet(READ_KEY, readIdsRef.current);
-    void notificationsQuery.refetch();
+    if (!authUserId || notifications.length === 0) return;
+    void (async () => {
+      await (supabase as any).from("customer_notification_states").upsert(notifications.map((notification) => ({ user_id: authUserId, notification_key: notification.id, is_read: true, is_deleted: false, updated_at: new Date().toISOString() })), { onConflict: "user_id,notification_key" });
+      const dbIds = notifications.filter((notification) => !notification.id.startsWith("order-")).map((notification) => notification.id);
+      if (dbIds.length) await (supabase as any).from("customer_notifications").update({ is_read: true }).in("id", dbIds);
+      await notificationsQuery.refetch();
+    })();
   };
 
-  const deleteNotification = (id: string) => {
-    deletedIdsRef.current.add(id);
-    saveLocalSet(DELETED_KEY, deletedIdsRef.current);
-    void notificationsQuery.refetch();
-  };
-
-  return {
-    notifications,
-    unreadCount,
-    isLoading: notificationsQuery.isLoading,
-    markAsRead,
-    markAllAsRead,
-    deleteNotification,
-    refetch: notificationsQuery.refetch,
-  };
+  return { notifications, unreadCount, isLoading: notificationsQuery.isLoading, markAsRead, markAllAsRead, deleteNotification, refetch: notificationsQuery.refetch };
 };

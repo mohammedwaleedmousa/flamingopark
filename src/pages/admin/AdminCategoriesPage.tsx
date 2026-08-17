@@ -25,6 +25,7 @@ interface Category {
   sort_order: number | null;
   countries: string[] | null;
   description_ar?: string | null;
+  category_kind?: string | null;
 }
 
 type CategoryForm = {
@@ -87,7 +88,7 @@ const AdminCategoriesPage = () => {
   const { data: categories = [], isLoading, isFetching } = useQuery({
     queryKey: ["admin-categories"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("id,name,name_ar,slug,parent_id,image_url,is_active,sort_order,countries,description_ar").order("sort_order", { ascending: true }).order("name_ar", { ascending: true });
+      const { data, error } = await (supabase as any).from("categories").select("id,name,name_ar,slug,parent_id,image_url,is_active,sort_order,countries,description_ar,category_kind").order("sort_order", { ascending: true }).order("name_ar", { ascending: true });
 
       if (error) throw error;
 
@@ -100,9 +101,11 @@ const AdminCategoriesPage = () => {
      DERIVED DATA
   ========================================================= */
 
-  const rootCategories = useMemo(() => categories.filter((category) => !category.parent_id), [categories]);
+  const catalogCategories = useMemo(() => categories.filter((category) => category.category_kind !== "audience"), [categories]);
 
-  const childCategories = useMemo(() => categories.filter((category) => Boolean(category.parent_id)), [categories]);
+  const rootCategories = useMemo(() => catalogCategories.filter((category) => !category.parent_id), [catalogCategories]);
+
+  const childCategories = useMemo(() => catalogCategories.filter((category) => Boolean(category.parent_id)), [catalogCategories]);
 
   const categoryNameById = useMemo(() => new Map(categories.map((category) => [category.id, category.name_ar])), [categories]);
 
@@ -120,13 +123,13 @@ const AdminCategoriesPage = () => {
 
   const stats = useMemo(() => {
     return {
-      total: categories.length,
-      active: categories.filter((category) => category.is_active).length,
-      inactive: categories.filter((category) => !category.is_active).length,
+      total: catalogCategories.length,
+      active: catalogCategories.filter((category) => category.is_active).length,
+      inactive: catalogCategories.filter((category) => !category.is_active).length,
       roots: rootCategories.length,
       children: childCategories.length,
     };
-  }, [categories, rootCategories.length, childCategories.length]);
+  }, [catalogCategories, rootCategories.length, childCategories.length]);
 
   const filteredCategories = useMemo(() => {
     const normalizedSearch = search.trim().toLowerCase();

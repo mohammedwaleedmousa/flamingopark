@@ -1,0 +1,39 @@
+name: Temporary country selector verifier
+
+on:
+  pull_request:
+    branches: [main]
+    types: [opened, reopened, synchronize]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build:
+    if: github.event.pull_request.head.ref == 'fix/visible-country-phone-selector'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/visible-country-phone-selector
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply country selector patch
+        run: python .github/scripts/add_country_phone_selector.py
+      - name: Install and build
+        run: |
+          npm install --package-lock-only
+          npm ci
+          npm run build
+      - name: Commit verified selector
+        run: |
+          rm -f .github/scripts/add_country_phone_selector.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Show country selector for customer phone auth"
+          git pull --rebase origin fix/visible-country-phone-selector
+          git push origin HEAD:fix/visible-country-phone-selector

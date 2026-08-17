@@ -1,0 +1,39 @@
+name: Temporary cart currency verifier
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/cart-currency-reference]
+
+permissions:
+  contents: write
+
+jobs:
+  patch-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/cart-currency-reference
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply fix
+        run: python .github/scripts/fix_cart_currency.py
+      - name: Install and build
+        run: |
+          npm install --package-lock-only
+          npm ci
+          npm run build
+      - name: Commit verified fix
+        run: |
+          git restore package-lock.json
+          rm -f .github/scripts/fix_cart_currency.py
+          rm -f .github/workflows/temp-cart-currency-fix.yml
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Fix cart currency reference"
+          git push origin HEAD:fix/cart-currency-reference

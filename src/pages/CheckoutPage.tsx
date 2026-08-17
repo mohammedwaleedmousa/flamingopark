@@ -49,6 +49,14 @@ interface BankAccount {
   name: string;
 }
 
+interface PaymentMethod {
+  id: string;
+  code: string;
+  name: string;
+  name_ar: string;
+  type: string;
+}
+
 interface CODRegion {
   id: string;
   region_name: string;
@@ -71,7 +79,7 @@ const CheckoutPage = () => {
   const { format: formatCurrency, symbol: currency } = useCurrency();
 
   const [currentStep, setCurrentStep] = useState(0);
-  const [paymentMethod, setPaymentMethod] = useState<"cod" | "bank">("cod");
+  const [paymentMethod, setPaymentMethod] = useState("");
   const [selectedDelivery, setSelectedDelivery] = useState("");
   const [selectedRegion, setSelectedRegion] = useState(customer?.region || "");
 
@@ -161,6 +169,26 @@ const CheckoutPage = () => {
   });
 
   /* =========================================================
+     PAYMENT METHODS
+  ========================================================= */
+
+  const { data: paymentMethods = [] } = useQuery({
+    queryKey: ["checkout-payment-methods"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any).from("payment_methods").select("id,code,name,name_ar,type").eq("is_active", true).order("sort_order", { ascending: true });
+      if (error) throw error;
+      return (data || []) as PaymentMethod[];
+    },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  useEffect(() => {
+    if (!paymentMethod && paymentMethods.length > 0) setPaymentMethod(paymentMethods[0].code);
+    else if (paymentMethod && paymentMethods.length > 0 && !paymentMethods.some((method) => method.code === paymentMethod)) setPaymentMethod(paymentMethods[0].code);
+  }, [paymentMethod, paymentMethods]);
+
+  /* =========================================================
      CHECKOUT SETTINGS
   ========================================================= */
 
@@ -221,6 +249,9 @@ const CheckoutPage = () => {
   const selectedCompany = deliveryCompanies.find((company) => company.id === selectedDelivery);
   const deliveryFee = selectedCompany?.base_fee || 0;
   const total = Math.max(0, subtotal + deliveryFee - discountAmount);
+  const selectedPaymentMethod = paymentMethods.find((method) => method.code === paymentMethod) || null;
+  const isCashPayment = selectedPaymentMethod?.type === "cash" || selectedPaymentMethod?.code === "cod" || selectedPaymentMethod?.code === "cash";
+  const isBankPayment = selectedPaymentMethod?.type === "bank" || selectedPaymentMethod?.code === "bank";
 
   /* =========================================================
      COUPON
@@ -386,7 +417,7 @@ const CheckoutPage = () => {
         return false;
       }
 
-      if (paymentMethod === "cod" && codRegions.length > 0 && !selectedRegion) {
+      if (isCashPayment && codRegions.length > 0 && !selectedRegion) {
         toast({
           title: "اختر منطقة الاستلام",
           variant: "destructive",
@@ -521,7 +552,7 @@ const CheckoutPage = () => {
         total: Number(createdOrder.total),
         paymentMethod,
         deliveryCompany: createdOrder.delivery_company || selectedCompany?.name || "",
-        selectedRegion: paymentMethod === "cod" && regionData ? regionData.region_name_ar : customer?.region || null,
+        selectedRegion: isCashPayment && regionData ? regionData.region_name_ar : customer?.region || null,
         country: "GLOBAL",
         currencyMode: createdOrder.currency_mode || currencyMode,
         createdAt: createdOrder.created_at || new Date().toISOString(),
@@ -842,32 +873,22 @@ const CheckoutPage = () => {
                     <div className="mt-5">
                       <p className="mb-2.5 text-[8px] font-semibold text-[#574A45]">طريقة الدفع *</p>
 
-                      <div className="grid grid-cols-2 gap-2">
-                        <button type="button" onClick={() => setPaymentMethod("cod")} className={`relative flex min-h-[72px] flex-col items-start justify-center rounded-[11px] border p-3 text-right ${paymentMethod === "cod" ? "border-[#D9A7A4] bg-[#FFF7F5]" : "border-[#E7DDD9] bg-white"}`}>
-                          <Banknote className={`h-4 w-4 ${paymentMethod === "cod" ? "text-[#C66C72]" : "text-[#8E817C]"}`} strokeWidth={1.5} />
-
-                          <p className="mt-2 text-[8px] font-semibold text-[#514540]">الدفع عند الاستلام</p>
-
-                          <p className="mt-0.5 text-[6px] text-[#A0938E]">Cash on Delivery</p>
-
-                          {paymentMethod === "cod" && <span className="absolute left-2.5 top-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#D4777D]"><Check className="h-2.5 w-2.5 text-white" /></span>}
-                        </button>
-
-                        <button type="button" onClick={() => setPaymentMethod("bank")} className={`relative flex min-h-[72px] flex-col items-start justify-center rounded-[11px] border p-3 text-right ${paymentMethod === "bank" ? "border-[#D9A7A4] bg-[#FFF7F5]" : "border-[#E7DDD9] bg-white"}`}>
-                          <CreditCard className={`h-4 w-4 ${paymentMethod === "bank" ? "text-[#C66C72]" : "text-[#8E817C]"}`} strokeWidth={1.5} />
-
-                          <p className="mt-2 text-[8px] font-semibold text-[#514540]">تحويل بنكي</p>
-
-                          <p className="mt-0.5 text-[6px] text-[#A0938E]">Bank Transfer</p>
-
-                          {paymentMethod === "bank" && <span className="absolute left-2.5 top-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#D4777D]"><Check className="h-2.5 w-2.5 text-white" /></span>}
-                        </button>
-                      </div>
+                      {paymentMethods.length > 0 ? (
+                        <div className="grid grid-cols-2 gap-2">
+                          {paymentMethods.map((method) => {
+                            const active = paymentMethod === method.code;
+                            const Icon = method.type === "cash" ? Banknote : CreditCard;
+                            return <button key={method.id} type="button" onClick={() => setPaymentMethod(method.code)} className={`relative flex min-h-[72px] flex-col items-start justify-center rounded-[11px] border p-3 text-right ${active ? "border-[#D9A7A4] bg-[#FFF7F5]" : "border-[#E7DDD9] bg-white"}`}><Icon className={`h-4 w-4 ${active ? "text-[#C66C72]" : "text-[#8E817C]"}`} strokeWidth={1.5} /><p className="mt-2 text-[8px] font-semibold text-[#514540]">{method.name_ar || method.name}</p><p className="mt-0.5 text-[6px] text-[#A0938E]">{method.name}</p>{active && <span className="absolute left-2.5 top-2.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#D4777D]"><Check className="h-2.5 w-2.5 text-white" /></span>}</button>;
+                          })}
+                        </div>
+                      ) : (
+                        <div className="rounded-[10px] bg-[#F8F5F3] px-3 py-3 text-[7px] text-[#887A75]">لا توجد طرق دفع مفعلة من لوحة الإدارة.</div>
+                      )}
                     </div>
 
                     {/* COD REGION */}
 
-                    {paymentMethod === "cod" && codRegions.length > 0 && !customer?.region && (
+                    {isCashPayment && codRegions.length > 0 && !customer?.region && (
                       <div className="mt-5 rounded-[12px] border border-[#EAE0DC] bg-[#FFFCFB] p-3">
                         <div className="mb-3 flex items-center gap-2">
                           <MapPin className="h-3.5 w-3.5 text-[#C66C72]" strokeWidth={1.5} />
@@ -890,7 +911,7 @@ const CheckoutPage = () => {
 
                     {/* BANK ACCOUNTS */}
 
-                    {paymentMethod === "bank" && bankAccounts.length > 0 && (
+                    {isBankPayment && bankAccounts.length > 0 && (
                       <div className="mt-5 rounded-[12px] border border-[#EAE0DC] bg-[#FFFCFB] p-3">
                         <p className="mb-2.5 text-[7px] text-[#958781]">حول المبلغ إلى أحد الحسابات التالية:</p>
 
@@ -996,7 +1017,7 @@ const CheckoutPage = () => {
                     <div className="border-b border-[#EEE5E1] py-3">
                       <p className="text-[7px] font-medium text-[#A0938E]">الشحن والدفع</p>
 
-                      <p className="mt-1.5 text-[9px] text-[#514540]">{selectedCompany?.name || "—"} <span className="mx-1 text-[#C9BDB8]">•</span> {paymentMethod === "cod" ? "الدفع عند الاستلام" : "تحويل بنكي"}</p>
+                      <p className="mt-1.5 text-[9px] text-[#514540]">{selectedCompany?.name || "—"} <span className="mx-1 text-[#C9BDB8]">•</span> {selectedPaymentMethod?.name_ar || selectedPaymentMethod?.name || paymentMethod || "—"}</p>
 
                       {appliedCoupon && <p className="mt-1.5 text-[7px] font-medium text-[#5C8063]">كوبون {appliedCoupon} — خصم {discountAmount.toFixed(2)} {currency}</p>}
                     </div>

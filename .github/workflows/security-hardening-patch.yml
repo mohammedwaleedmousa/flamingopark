@@ -1,0 +1,54 @@
+name: security-hardening-patch
+on:
+  push:
+    branches:
+      - agent/security-hardening-final
+permissions:
+  contents: write
+jobs:
+  patch-and-build:
+    if: github.actor != 'github-actions[bot]'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/security-hardening-final
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Patch legacy migration flow
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          import re
+          path = Path('src/pages/CustomerAuthPage.tsx')
+          text = path.read_text()
+          pattern = re.compile(r'  const migrateLegacyCustomer = async \(phone: string, rawPassword: string, authPassword: string\) => \{.*?\n  \};\n\n  const handleSubmit', re.S)
+          replacement = '''  const migrateLegacyCustomer = async (phone: string, rawPassword: string, authPassword: string) => {
+            const { data: migration, error: migrationError } = await supabase.functions.invoke("legacy-customer-migrate", { body: { phone, password: rawPassword } });
+            if (migrationError || !migration?.ok) return null;
+
+            const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ phone, password: authPassword });
+            if (loginError || !loginData.user) return null;
+
+            return getOwnCustomer(loginData.user.id);
+          };
+
+          const handleSubmit'''
+          updated, count = pattern.subn(replacement, text, count=1)
+          if count != 1:
+              raise SystemExit(f'Expected one legacy migration block, changed {count}')
+          path.write_text(updated)
+          PY
+      - run: npm ci
+      - run: npm run build
+      - name: Commit verified patch
+        run: |
+          git config user.name github-actions[bot]
+          git config user.email 41898282+github-actions[bot]@users.noreply.github.com
+          git add src/pages/CustomerAuthPage.tsx
+          git diff --cached --quiet && exit 0
+          git commit -m "Route legacy login migration through Edge Function"
+          git push origin HEAD:agent/security-hardening-final

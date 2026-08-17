@@ -29,15 +29,9 @@ jobs:
           from pathlib import Path
           p = Path('src/pages/ProductsPage.tsx')
           s = p.read_text(encoding='utf-8')
-          old = '''    /*
-           * لو لم يبدأ Metadata بعد، ابدأه فوراً.
-           */
-          setMetadataWarm(true);
-
-          setFiltersOpen(true);'''
-          if old not in s:
-              raise SystemExit('Target filter block was not found')
-          s = s.replace(old, '    setFiltersOpen(true);', 1)
+          if 'setMetadataWarm(true);' not in s:
+              raise SystemExit('Broken call not found')
+          s = s.replace('    setMetadataWarm(true);\n', '', 1)
           p.write_text(s, encoding='utf-8')
           PY
 

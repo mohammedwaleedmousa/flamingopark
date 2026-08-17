@@ -117,18 +117,16 @@ const CustomerAuthPage = () => {
   const updateField = (field: keyof typeof formData, value: string) => setFormData((previous) => ({ ...previous, [field]: value }));
 
   const migrateLegacyCustomer = async (phone: string, rawPassword: string, authPassword: string) => {
-    const { data: legacy, error: legacyError } = await (supabase as any).rpc("customer_login", { _phone: phone, _password: rawPassword });
-    if (legacyError || !legacy?.length) return null;
+  const { data: migration, error: migrationError } = await supabase.functions.invoke("legacy-customer-migrate", { body: { phone, password: rawPassword } });
+  if (migrationError || !migration?.ok) return null;
 
-    const legacyCustomer = legacy[0] as CustomerRow;
-    const { data: signUpData, error: signUpError } = await supabase.auth.signUp({ phone, password: authPassword, options: { data: { name: legacyCustomer.name, region: legacyCustomer.region || "عدن", country: "YE" } } });
-    if (signUpError) throw signUpError;
-    if (!signUpData.session || !signUpData.user) throw new Error("تعذر بدء جلسة الحساب. حاول تسجيل الدخول مرة أخرى.");
+  const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ phone, password: authPassword });
+  if (loginError || !loginData.user) return null;
 
-    return finalizeRegistration({ name: legacyCustomer.name, phone, region: legacyCustomer.region || "عدن", country: "YE", channel: "none", legacyPassword: rawPassword });
-  };
+  return getOwnCustomer(loginData.user.id);
+};
 
-  const handleSubmit = async (event: React.FormEvent) => {
+const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const name = formData.name.trim();
     const password = formData.password;

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Check, ChevronDown, Eye, EyeOff, Loader2, LockKeyhole, MapPin, Phone, Search, UserRound, X } from "lucide-react";
+import { Check, Eye, EyeOff, Loader2, LockKeyhole, MapPin, Phone, UserRound } from "lucide-react";
 
 import { useStore } from "@/store/useStore";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,6 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { clearCustomerSession, setCustomerSession } from "@/lib/customerSession";
 
 type AuthMode = "login" | "register";
+type RecoveryStep = "idle" | "code" | "password";
 
 type CustomerRow = {
   id: string;
@@ -19,8 +20,6 @@ type CustomerRow = {
   avatar_url?: string | null;
   created_at?: string;
 };
-
-const REGIONS = ["عدن", "صنعاء", "تعز", "حضرموت", "إب", "الحديدة", "لحج", "أبين", "شبوة", "مأرب", "ذمار", "البيضاء", "الضالع", "صعدة", "عمران", "ريمة", "المحويت", "الجوف"];
 
 const PHONE_COUNTRIES = [
   { iso: "YE", name: "اليمن", dial: "+967", flag: "🇾🇪" },
@@ -57,9 +56,9 @@ const normalizePhone = (value: string) => {
       if (digits.startsWith("0")) digits = digits.slice(1);
       return `+967${digits}`;
     }
-    throw new Error("أدخل رقم الهاتف مع رمز الدولة مثل +966 أو +1 أو +60");
+    throw new Error("أدخل رقم الهاتف مع رمز الدولة.");
   }
-  if (!/^\+[1-9]\d{7,14}$/.test(compact)) throw new Error("أدخل رقم هاتف دولي صحيح مع رمز الدولة");
+  if (!/^\+[1-9]\d{7,14}$/.test(compact)) throw new Error("أدخل رقم هاتف دولي صحيح.");
   return compact;
 };
 
@@ -87,33 +86,17 @@ const CustomerAuthPage = () => {
   const [isGuestLoading, setIsGuestLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [claimExisting, setClaimExisting] = useState(true);
-  const [regionOpen, setRegionOpen] = useState(false);
-  const [regionSearch, setRegionSearch] = useState("");
   const [phoneCountry, setPhoneCountry] = useState("YE");
   const [formData, setFormData] = useState({ name: "", phone: "", password: "", region: "عدن" });
-  const selectedPhoneCountry = PHONE_COUNTRIES.find((country) => country.iso === phoneCountry) || PHONE_COUNTRIES[0];
 
-  const filteredRegions = useMemo(() => {
-    const value = regionSearch.trim();
-    return value ? REGIONS.filter((region) => region.includes(value)) : REGIONS;
-  }, [regionSearch]);
+  const [recoveryStep, setRecoveryStep] = useState<RecoveryStep>("idle");
+  const [recoveryPhone, setRecoveryPhone] = useState("");
+  const [recoveryCode, setRecoveryCode] = useState("");
+  const [recoveryPassword, setRecoveryPassword] = useState("");
+  const [recoveryLoading, setRecoveryLoading] = useState(false);
+  const [showRecoveryPassword, setShowRecoveryPassword] = useState(false);
 
-  useEffect(() => {
-    if (!regionOpen) return;
-    const scrollY = window.scrollY;
-    const previous = { position: document.body.style.position, top: document.body.style.top, width: document.body.style.width, overflow: document.body.style.overflow };
-    document.body.style.position = "fixed";
-    document.body.style.top = `-${scrollY}px`;
-    document.body.style.width = "100%";
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.position = previous.position;
-      document.body.style.top = previous.top;
-      document.body.style.width = previous.width;
-      document.body.style.overflow = previous.overflow;
-      window.scrollTo({ top: scrollY, behavior: "auto" });
-    };
-  }, [regionOpen]);
+  const selectedPhoneCountry = useMemo(() => PHONE_COUNTRIES.find((country) => country.iso === phoneCountry) || PHONE_COUNTRIES[0], [phoneCountry]);
 
   const persistCustomer = (raw: CustomerRow) => {
     const customerData = { ...raw, region: raw.region || "عدن", country: raw.country || "YE" };
@@ -136,6 +119,12 @@ const CustomerAuthPage = () => {
     return data.customer as CustomerRow;
   };
 
+  const buildPhone = () => {
+    const rawPhone = formData.phone.trim();
+    const composedPhone = rawPhone.startsWith("+") || rawPhone.startsWith("00") || phoneCountry === "OTHER" ? rawPhone : `${selectedPhoneCountry.dial}${arabicDigitsToLatin(rawPhone).replace(/\D/g, "").replace(/^0+/, "")}`;
+    return normalizePhone(composedPhone);
+  };
+
   useEffect(() => {
     let active = true;
     const restore = async () => {
@@ -147,7 +136,7 @@ const CustomerAuthPage = () => {
         persistCustomer(own);
         navigate("/home", { replace: true });
       } catch {
-        // Keep the auth page open when a profile needs recovery.
+        // Keep auth page open if recovery is required.
       }
     };
     void restore();
@@ -157,16 +146,14 @@ const CustomerAuthPage = () => {
   const updateField = (field: keyof typeof formData, value: string) => setFormData((previous) => ({ ...previous, [field]: value }));
 
   const migrateLegacyCustomer = async (phone: string, rawPassword: string, authPassword: string) => {
-  const { data: migration, error: migrationError } = await supabase.functions.invoke("legacy-customer-migrate", { body: { phone, password: rawPassword } });
-  if (migrationError || !migration?.ok) return null;
+    const { data: migration, error: migrationError } = await supabase.functions.invoke("legacy-customer-migrate", { body: { phone, password: rawPassword } });
+    if (migrationError || !migration?.ok) return null;
+    const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ phone, password: authPassword });
+    if (loginError || !loginData.user) return null;
+    return getOwnCustomer(loginData.user.id);
+  };
 
-  const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ phone, password: authPassword });
-  if (loginError || !loginData.user) return null;
-
-  return getOwnCustomer(loginData.user.id);
-};
-
-const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     const name = formData.name.trim();
     const password = formData.password;
@@ -179,9 +166,7 @@ const handleSubmit = async (event: React.FormEvent) => {
 
     let phone = "";
     try {
-      const rawPhone = formData.phone.trim();
-      const composedPhone = rawPhone.startsWith("+") || rawPhone.startsWith("00") || phoneCountry === "OTHER" ? rawPhone : `${selectedPhoneCountry.dial}${arabicDigitsToLatin(rawPhone).replace(/\D/g, "").replace(/^0+/, "")}`;
-      phone = normalizePhone(composedPhone);
+      phone = buildPhone();
     } catch (error: any) {
       toast({ title: "رقم الهاتف غير صحيح", description: error?.message, variant: "destructive" });
       return;
@@ -206,17 +191,19 @@ const handleSubmit = async (event: React.FormEvent) => {
           let existingCustomer = await getOwnCustomer(existing.data.user.id);
           if (!existingCustomer) existingCustomer = await finalizeRegistration({ name, phone, region: selectedRegion, country: phoneCountry === "OTHER" ? countryFromPhone(phone) : phoneCountry, channel: "none", legacyPassword: password });
           persistCustomer(existingCustomer);
-          toast({ title: "الحساب موجود بالفعل", description: "تم تسجيل الدخول إلى حسابك الحالي بدلاً من إنشاء حساب مكرر." });
+          toast({ title: "الحساب موجود بالفعل", description: "تم تسجيل الدخول إلى حسابك الحالي." });
           navigate("/home", { replace: true });
           return;
         }
+
         await supabase.auth.signOut();
         const country = phoneCountry === "OTHER" ? countryFromPhone(phone) : phoneCountry;
-        const { data, error } = await supabase.auth.signUp({ phone, password: authPassword, options: { data: { name, region: selectedRegion, country } } });
+        const { data, error } = await supabase.auth.signUp({ phone, password: authPassword, options: { data: { name, full_name: name, contact_phone: phone, customer_signup: "flamingo_customer", region: selectedRegion, country } } });
         if (error) throw error;
         if (!data.session || !data.user) throw new Error("تعذر بدء جلسة الحساب. حاول تسجيل الدخول مرة أخرى.");
 
-        const customerData = await finalizeRegistration({ name, phone, region: selectedRegion, country: phoneCountry === "OTHER" ? countryFromPhone(phone) : phoneCountry, channel: "none" });
+        let customerData = await getOwnCustomer(data.user.id);
+        if (!customerData) customerData = await finalizeRegistration({ name, phone, region: selectedRegion, country, channel: "none" });
         persistCustomer(customerData);
         toast({ title: "تم إنشاء الحساب", description: `أهلاً ${customerData.name}` });
         navigate("/home", { replace: true });
@@ -251,9 +238,83 @@ const handleSubmit = async (event: React.FormEvent) => {
     } catch (error: any) {
       await supabase.auth.signOut().catch(() => undefined);
       const message = String(error?.message || "حدث خطأ أثناء تسجيل الدخول.");
-      toast({ title: "تعذر المتابعة", description: message.includes("already registered") ? "رقم الهاتف مستخدم مسبقاً. استخدم تسجيل الدخول." : message, variant: "destructive" });
+      toast({ title: "تعذر المتابعة", description: message.includes("already registered") ? "رقم الهاتف مستخدم مسبقاً. استخدم تسجيل الدخول أو استعادة كلمة المرور." : message, variant: "destructive" });
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const startRecovery = async () => {
+    let phone = "";
+    try {
+      phone = buildPhone();
+    } catch (error: any) {
+      toast({ title: "رقم الهاتف غير صحيح", description: error?.message, variant: "destructive" });
+      return;
+    }
+
+    setRecoveryLoading(true);
+    try {
+      await supabase.auth.signOut();
+      const { error } = await supabase.auth.signInWithOtp({ phone, options: { shouldCreateUser: false } });
+      if (error) throw error;
+      setRecoveryPhone(phone);
+      setRecoveryCode("");
+      setRecoveryPassword("");
+      setRecoveryStep("code");
+      toast({ title: "تم إرسال رمز التحقق", description: "أدخل الرمز المرسل إلى رقم هاتفك." });
+    } catch (error: any) {
+      toast({ title: "تعذر إرسال الرمز", description: String(error?.message || "حاول مرة أخرى."), variant: "destructive" });
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
+
+  const verifyRecoveryCode = async () => {
+    const token = arabicDigitsToLatin(recoveryCode).replace(/\D/g, "");
+    if (token.length < 4) {
+      toast({ title: "رمز التحقق غير مكتمل", variant: "destructive" });
+      return;
+    }
+
+    setRecoveryLoading(true);
+    try {
+      const { data, error } = await supabase.auth.verifyOtp({ phone: recoveryPhone, token, type: "sms" });
+      if (error || !data.session || !data.user) throw error || new Error("تعذر التحقق من الرمز.");
+      setRecoveryStep("password");
+      toast({ title: "تم التحقق من الرقم", description: "اختر كلمة المرور الجديدة." });
+    } catch (error: any) {
+      toast({ title: "رمز التحقق غير صحيح", description: String(error?.message || "أعد المحاولة."), variant: "destructive" });
+    } finally {
+      setRecoveryLoading(false);
+    }
+  };
+
+  const finishRecovery = async () => {
+    if (!recoveryPassword) {
+      toast({ title: "اكتب كلمة المرور الجديدة", variant: "destructive" });
+      return;
+    }
+
+    setRecoveryLoading(true);
+    try {
+      const authPassword = await authPasswordFor(recoveryPhone, recoveryPassword);
+      const { data, error } = await supabase.auth.updateUser({ password: authPassword });
+      if (error || !data.user) throw error || new Error("تعذر تحديث كلمة المرور.");
+
+      let customerData = await getOwnCustomer(data.user.id);
+      if (!customerData) {
+        const meta = data.user.user_metadata || {};
+        customerData = await finalizeRegistration({ name: String(meta.full_name || meta.name || "عميل فلامنجو"), phone: recoveryPhone, region: String(meta.region || "عدن"), country: String(meta.country || countryFromPhone(recoveryPhone)), channel: "none" });
+      }
+
+      persistCustomer(customerData);
+      toast({ title: "تم تغيير كلمة المرور", description: "تم تسجيل دخولك بنجاح." });
+      navigate("/home", { replace: true });
+    } catch (error: any) {
+      toast({ title: "تعذر تغيير كلمة المرور", description: String(error?.message || "حاول مرة أخرى."), variant: "destructive" });
+    } finally {
+      setRecoveryLoading(false);
     }
   };
 
@@ -265,15 +326,16 @@ const handleSubmit = async (event: React.FormEvent) => {
       setCustomer({ id: "guest", name: "ضيف", phone: "", region: "عدن" });
       setRegion("عدن");
       navigate("/home");
-    } finally { setIsGuestLoading(false); }
+    } finally {
+      setIsGuestLoading(false);
+    }
   };
 
   const changeMode = (nextMode: AuthMode) => {
-    if (isLoading) return;
+    if (isLoading || recoveryLoading) return;
     setMode(nextMode);
     setShowPassword(false);
-    setRegionOpen(false);
-    setRegionSearch("");
+    setRecoveryStep("idle");
   };
 
   return (
@@ -283,29 +345,42 @@ const handleSubmit = async (event: React.FormEvent) => {
         <div className="mt-2 flex items-center justify-center gap-2.5"><span className="h-px w-5 bg-[#E0B7B4]" /><span className="font-serif text-[8px] tracking-[0.26em] text-[#B86168]">FLAMINGO PARK</span><span className="h-px w-5 bg-[#E0B7B4]" /></div>
 
         <section className="mt-8 rounded-[22px] border border-[#EEE4E0] bg-[#FFFDFC] px-4 pb-5 pt-6 sm:px-6 sm:pb-6 sm:pt-7">
-          <div className="text-center"><h1 className="text-[25px] font-semibold tracking-[-0.035em] text-[#382F2C] sm:text-[28px]">{mode === "login" ? "مرحباً بعودتك" : "إنشاء حساب جديد"}</h1><p className="mx-auto mt-2 max-w-[320px] text-[10px] leading-5 text-[#958883] sm:text-[11px] sm:leading-6">{mode === "login" ? "سجّل دخولك برقم هاتفك لمتابعة الطلبات والمفضلة." : "أنشئ حسابك برقم هاتفك الدولي وكلمة المرور التي تختارها."}</p></div>
+          <div className="text-center"><h1 className="text-[25px] font-semibold tracking-[-0.035em] text-[#382F2C] sm:text-[28px]">{recoveryStep !== "idle" ? "استعادة كلمة المرور" : mode === "login" ? "مرحباً بعودتك" : "إنشاء حساب جديد"}</h1><p className="mx-auto mt-2 max-w-[340px] text-[10px] leading-5 text-[#958883] sm:text-[11px] sm:leading-6">{recoveryStep === "code" ? `أدخل رمز التحقق المرسل إلى ${recoveryPhone}` : recoveryStep === "password" ? "اختر كلمة مرور جديدة للحساب." : mode === "login" ? "سجّل دخولك برقم هاتفك لمتابعة الطلبات والمفضلة." : "أنشئ حسابك برقم هاتفك وكلمة المرور التي تختارها."}</p></div>
 
-          <div className="mt-6 grid grid-cols-2 rounded-[13px] bg-[#F7F3F1] p-1"><button type="button" onClick={() => changeMode("login")} className={`h-[42px] rounded-[10px] text-[11px] font-medium ${mode === "login" ? "bg-white text-[#443936] shadow-[0_1px_4px_rgba(49,39,35,0.06)]" : "text-[#9F928D]"}`}>تسجيل الدخول</button><button type="button" onClick={() => changeMode("register")} className={`h-[42px] rounded-[10px] text-[11px] font-medium ${mode === "register" ? "bg-white text-[#443936] shadow-[0_1px_4px_rgba(49,39,35,0.06)]" : "text-[#9F928D]"}`}>حساب جديد</button></div>
+          {recoveryStep === "idle" ? (
+            <>
+              <div className="mt-6 grid grid-cols-2 rounded-[13px] bg-[#F7F3F1] p-1"><button type="button" onClick={() => changeMode("login")} className={`h-[42px] rounded-[10px] text-[11px] font-medium ${mode === "login" ? "bg-white text-[#443936] shadow-[0_1px_4px_rgba(49,39,35,0.06)]" : "text-[#9F928D]"}`}>تسجيل الدخول</button><button type="button" onClick={() => changeMode("register")} className={`h-[42px] rounded-[10px] text-[11px] font-medium ${mode === "register" ? "bg-white text-[#443936] shadow-[0_1px_4px_rgba(49,39,35,0.06)]" : "text-[#9F928D]"}`}>حساب جديد</button></div>
 
-          <form onSubmit={handleSubmit} className="mt-5 space-y-3">
-            {mode === "register" && <div><label htmlFor="auth-name" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">الاسم الكامل</label><div className="relative"><UserRound className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-name" value={formData.name} onChange={(event) => updateField("name", event.target.value)} autoComplete="name" placeholder="أدخل اسمك الكامل" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div></div>}
+              <form onSubmit={handleSubmit} className="mt-5 space-y-3">
+                {mode === "register" && <div><label htmlFor="auth-name" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">الاسم الكامل</label><div className="relative"><UserRound className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-name" value={formData.name} onChange={(event) => updateField("name", event.target.value)} autoComplete="name" placeholder="أدخل اسمك الكامل" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div></div>}
 
-            {mode === "register" && <div><label htmlFor="auth-region" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">المدينة / المنطقة</label><div className="relative"><MapPin className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-region" value={formData.region} onChange={(event) => updateField("region", event.target.value)} autoComplete="address-level2" placeholder="مثال: عدن، الرياض، كوالالمبور" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div></div>}
+                {mode === "register" && <div><label htmlFor="auth-region" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">المدينة / المنطقة</label><div className="relative"><MapPin className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-region" value={formData.region} onChange={(event) => updateField("region", event.target.value)} autoComplete="address-level2" placeholder="مثال: عدن، الرياض" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div></div>}
 
-            <div><label htmlFor="auth-phone" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">الدولة ورقم الهاتف</label><div className="grid grid-cols-[145px_1fr] gap-2" dir="ltr"><select aria-label="الدولة" value={phoneCountry} onChange={(event) => { const next = event.target.value; setPhoneCountry(next); setFormData((previous) => ({ ...previous, region: next === "YE" && !previous.region ? "عدن" : next !== "YE" && previous.region === "عدن" ? "" : previous.region })); }} className="h-[50px] rounded-[12px] border border-[#E8DEDA] bg-white px-2 text-[11px] text-[#443936] outline-none focus:border-[#D7AAA7]" dir="rtl">{PHONE_COUNTRIES.map((country) => <option key={country.iso} value={country.iso}>{country.flag} {country.name}{country.dial ? ` ${country.dial}` : ""}</option>)}</select><div className="relative"><Phone className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-phone" type="tel" inputMode="tel" autoComplete="tel" value={formData.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder={phoneCountry === "OTHER" ? "+رمز الدولة والرقم" : phoneCountry === "YE" ? "77xxxxxxx" : "رقم الهاتف"} dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-left text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div></div><p className="mt-1.5 px-1 text-[8px] leading-4 text-[#A19590]">اليمن محددة افتراضيًا. غيّر الدولة فقط إذا كان رقمك من خارج اليمن.</p></div>
+                <div><label htmlFor="auth-phone" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">الدولة ورقم الهاتف</label><div className="grid grid-cols-[145px_1fr] gap-2" dir="ltr"><select aria-label="الدولة" value={phoneCountry} onChange={(event) => { const next = event.target.value; setPhoneCountry(next); setFormData((previous) => ({ ...previous, region: next === "YE" && !previous.region ? "عدن" : next !== "YE" && previous.region === "عدن" ? "" : previous.region })); }} className="h-[50px] rounded-[12px] border border-[#E8DEDA] bg-white px-2 text-[11px] text-[#443936] outline-none focus:border-[#D7AAA7]" dir="rtl">{PHONE_COUNTRIES.map((country) => <option key={country.iso} value={country.iso}>{country.flag} {country.name}{country.dial ? ` ${country.dial}` : ""}</option>)}</select><div className="relative"><Phone className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-phone" type="tel" inputMode="tel" autoComplete="tel" value={formData.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder={phoneCountry === "OTHER" ? "+رمز الدولة والرقم" : phoneCountry === "YE" ? "77xxxxxxx" : "رقم الهاتف"} dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-left text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div></div><p className="mt-1.5 px-1 text-[8px] leading-4 text-[#A19590]">اليمن محددة افتراضيًا. غيّر الدولة فقط إذا كان رقمك من خارج اليمن.</p></div>
 
-            <div><label htmlFor="auth-password" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">كلمة المرور</label><div className="relative"><LockKeyhole className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-password" type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} value={formData.password} onChange={(event) => updateField("password", event.target.value)} placeholder="كلمة المرور" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-12 text-left text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-[#A99D98]">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
+                <div><label htmlFor="auth-password" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">كلمة المرور</label><div className="relative"><LockKeyhole className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-password" type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} value={formData.password} onChange={(event) => updateField("password", event.target.value)} placeholder="كلمة المرور" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-12 text-left text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-[#A99D98]">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
 
-            {mode === "login" && <button type="button" onClick={() => setClaimExisting((value) => !value)} className="flex w-full items-center gap-2.5 px-1 py-1 text-right"><span className={`flex h-[17px] w-[17px] items-center justify-center rounded-[5px] border ${claimExisting ? "border-[#D4777D] bg-[#D4777D]" : "border-[#D8CECA] bg-white"}`}>{claimExisting && <Check className="h-2.5 w-2.5 text-white" />}</span><span className="text-[9px] leading-5 text-[#978984]">ربط الحساب القديم تلقائياً عند أول دخول</span></button>}
+                {mode === "login" && <div className="flex items-center justify-between px-1"><button type="button" onClick={() => setClaimExisting((value) => !value)} className="flex items-center gap-2.5 text-right"><span className={`flex h-[17px] w-[17px] items-center justify-center rounded-[5px] border ${claimExisting ? "border-[#D4777D] bg-[#D4777D]" : "border-[#D8CECA] bg-white"}`}>{claimExisting && <Check className="h-2.5 w-2.5 text-white" />}</span><span className="text-[9px] leading-5 text-[#978984]">ربط الحساب القديم تلقائياً</span></button><button type="button" onClick={startRecovery} disabled={recoveryLoading || isLoading} className="text-[9px] font-medium text-[#C1646C] disabled:opacity-50">نسيت كلمة المرور؟</button></div>}
 
-            <button type="submit" disabled={isLoading} className="mt-2 flex h-[50px] w-full items-center justify-center gap-2 rounded-[12px] bg-[#D4777D] text-[11px] font-semibold text-white disabled:opacity-60">{isLoading && <Loader2 className="h-4 w-4 animate-spin" />}{mode === "login" ? "تسجيل الدخول" : "إنشاء الحساب"}</button>
-          </form>
+                <button type="submit" disabled={isLoading || recoveryLoading} className="mt-2 flex h-[50px] w-full items-center justify-center gap-2 rounded-[12px] bg-[#D4777D] text-[11px] font-semibold text-white disabled:opacity-60">{isLoading && <Loader2 className="h-4 w-4 animate-spin" />}{mode === "login" ? "تسجيل الدخول" : "إنشاء الحساب"}</button>
+              </form>
 
-          <button type="button" onClick={handleGuest} disabled={isGuestLoading || isLoading} className="mt-3 flex h-[46px] w-full items-center justify-center gap-2 rounded-[12px] border border-[#E8DEDA] bg-white text-[10px] font-medium text-[#746761] disabled:opacity-60">{isGuestLoading && <Loader2 className="h-4 w-4 animate-spin" />}الدخول كضيف</button>
+              <button type="button" onClick={handleGuest} disabled={isGuestLoading || isLoading || recoveryLoading} className="mt-3 flex h-[46px] w-full items-center justify-center gap-2 rounded-[12px] border border-[#E8DEDA] bg-white text-[10px] font-medium text-[#746761] disabled:opacity-60">{isGuestLoading && <Loader2 className="h-4 w-4 animate-spin" />}الدخول كضيف</button>
+            </>
+          ) : recoveryStep === "code" ? (
+            <div className="mt-6 space-y-3">
+              <div><label htmlFor="recovery-code" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">رمز التحقق</label><input id="recovery-code" inputMode="numeric" autoComplete="one-time-code" value={recoveryCode} onChange={(event) => setRecoveryCode(event.target.value)} placeholder="أدخل الرمز" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white px-4 text-center text-[16px] tracking-[0.28em] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div>
+              <button type="button" onClick={verifyRecoveryCode} disabled={recoveryLoading} className="flex h-[50px] w-full items-center justify-center gap-2 rounded-[12px] bg-[#D4777D] text-[11px] font-semibold text-white disabled:opacity-60">{recoveryLoading && <Loader2 className="h-4 w-4 animate-spin" />}تحقق من الرمز</button>
+              <div className="grid grid-cols-2 gap-2"><button type="button" onClick={startRecovery} disabled={recoveryLoading} className="h-[44px] rounded-[12px] border border-[#E8DEDA] bg-white text-[9px] text-[#746761]">إعادة إرسال الرمز</button><button type="button" onClick={() => setRecoveryStep("idle")} disabled={recoveryLoading} className="h-[44px] rounded-[12px] border border-[#E8DEDA] bg-white text-[9px] text-[#746761]">العودة للدخول</button></div>
+            </div>
+          ) : (
+            <div className="mt-6 space-y-3">
+              <div><label htmlFor="recovery-password" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">كلمة المرور الجديدة</label><div className="relative"><LockKeyhole className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="recovery-password" type={showRecoveryPassword ? "text" : "password"} autoComplete="new-password" value={recoveryPassword} onChange={(event) => setRecoveryPassword(event.target.value)} placeholder="اختر كلمة المرور" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-12 text-left text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /><button type="button" onClick={() => setShowRecoveryPassword((value) => !value)} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-[#A99D98]">{showRecoveryPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div><p className="mt-1.5 px-1 text-[8px] text-[#A19590]">يمكنك اختيار كلمة مرور بسيطة؛ يتم تخزينها في نظام المصادقة بشكل آمن.</p></div>
+              <button type="button" onClick={finishRecovery} disabled={recoveryLoading} className="flex h-[50px] w-full items-center justify-center gap-2 rounded-[12px] bg-[#D4777D] text-[11px] font-semibold text-white disabled:opacity-60">{recoveryLoading && <Loader2 className="h-4 w-4 animate-spin" />}حفظ كلمة المرور والدخول</button>
+            </div>
+          )}
         </section>
       </div>
-
-      {regionOpen && <div className="fixed inset-0 z-[100] flex items-end justify-center bg-black/30 p-3 sm:items-center"><button type="button" aria-label="إغلاق" onClick={() => setRegionOpen(false)} className="absolute inset-0" /><div className="relative z-10 w-full max-w-[430px] overflow-hidden rounded-[20px] bg-white shadow-xl"><div className="flex items-center justify-between border-b border-[#EEE4E0] px-4 py-4"><div><h2 className="text-[14px] font-semibold text-[#443936]">اختر المحافظة</h2><p className="mt-1 text-[8px] text-[#9F928D]">حدد المحافظة التابعة لعنوانك.</p></div><button type="button" onClick={() => setRegionOpen(false)} className="flex h-8 w-8 items-center justify-center rounded-full bg-[#F7F3F1]"><X className="h-4 w-4" /></button></div><div className="p-3"><div className="relative"><Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" /><input value={regionSearch} onChange={(event) => setRegionSearch(event.target.value)} placeholder="ابحث عن المحافظة" className="h-10 w-full rounded-[10px] border border-[#E8DEDA] pr-10 pl-3 text-[10px] outline-none" /></div><div className="mt-3 max-h-[52svh] overflow-y-auto">{filteredRegions.map((region) => <button key={region} type="button" onClick={() => { updateField("region", region); setRegionOpen(false); setRegionSearch(""); }} className="flex h-11 w-full items-center justify-between border-b border-[#F4EFEC] px-2 text-[10px] text-[#514540]"><span>{region}</span>{formData.region === region && <Check className="h-4 w-4 text-[#D4777D]" />}</button>)}</div></div></div></div>}
     </main>
   );
 };

@@ -1,0 +1,315 @@
+/*
+ * Flamingo Park — desktop storefront enhancement layer
+ * IMPORTANT: every rule in this file starts at 1024px.
+ * The mobile/tablet base UI remains untouched.
+ */
+
+@media (min-width: 1024px) {
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) {
+    --fp-desktop-page: 1480px;
+    --fp-desktop-content: 1360px;
+    --fp-desktop-gutter: clamp(32px, 3.5vw, 56px);
+    --fp-desktop-section-y: clamp(38px, 4vw, 72px);
+    --fp-desktop-radius: 20px;
+    --fp-desktop-shadow: 0 14px 38px rgba(69, 48, 41, 0.07);
+    --fp-desktop-shadow-hover: 0 22px 52px rgba(69, 48, 41, 0.11);
+  }
+
+  /* ===== PAGE SHELL ===== */
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main {
+    width: 100%;
+    min-height: 66vh;
+    padding-bottom: 72px;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > section {
+    scroll-margin-top: 168px;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main .container {
+    width: min(100%, var(--fp-desktop-page));
+    max-width: var(--fp-desktop-page) !important;
+    padding-left: var(--fp-desktop-gutter) !important;
+    padding-right: var(--fp-desktop-gutter) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > :is(section, div) > div[class*="mx-auto"][class*="max-w"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="mx-auto"][class*="max-w"] {
+    padding-left: var(--fp-desktop-gutter) !important;
+    padding-right: var(--fp-desktop-gutter) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main [class*="max-w-[1600px]"] {
+    max-width: var(--fp-desktop-page) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main [class*="max-w-[1450px]"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main [class*="max-w-[1400px]"] {
+    max-width: var(--fp-desktop-content) !important;
+  }
+
+  /* Pages that were visually narrow/mobile-like on desktop */
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-3xl"] {
+    max-width: 1040px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-4xl"] {
+    max-width: 1180px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-5xl"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-6xl"] {
+    max-width: 1320px !important;
+  }
+
+  /* ===== TYPOGRAPHY ===== */
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main h1 {
+    font-size: clamp(30px, 2.35vw, 44px) !important;
+    line-height: 1.35 !important;
+    letter-spacing: -0.025em;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main h2 {
+    line-height: 1.45 !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > section > div > div:first-child h2 {
+    font-size: clamp(24px, 1.8vw, 32px);
+  }
+
+  /* ===== GENERIC DESKTOP PANELS ===== */
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main article[class*="border"] {
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main article[class*="border"]:hover {
+    border-color: #e4d5d0;
+    box-shadow: var(--fp-desktop-shadow);
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main [class*="rounded-2xl"][class*="border"][class*="bg-white"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main [class*="rounded-2xl"][class*="border"][class*="bg-card"] {
+    box-shadow: 0 8px 28px rgba(69, 48, 41, 0.045);
+  }
+
+  /* ===== PRODUCT GRIDS — all customer catalog surfaces ===== */
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main .grid:has(a[href^="/product/"]) {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    column-gap: clamp(18px, 2vw, 28px) !important;
+    row-gap: clamp(28px, 3vw, 42px) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) #products-grid .grid:has(a[href^="/product/"]) {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) a[href^="/product/"] > article {
+    overflow: hidden;
+    border-radius: 18px !important;
+    box-shadow: 0 5px 22px rgba(65, 45, 38, 0.045);
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) a[href^="/product/"]:hover > article {
+    transform: translateY(-4px);
+    border-color: #e3d2cc !important;
+    box-shadow: var(--fp-desktop-shadow-hover);
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) a[href^="/product/"] > article > div:last-child {
+    min-height: 106px !important;
+    padding: 12px 14px 14px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) a[href^="/product/"] > article h3 {
+    font-size: 13px !important;
+    line-height: 1.65 !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) a[href^="/product/"] > article p {
+    font-size: 9.5px !important;
+    line-height: 1.6 !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) a[href^="/product/"] > article button {
+    transition: transform 160ms ease, background-color 160ms ease, border-color 160ms ease;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) a[href^="/product/"] > article button:hover {
+    transform: scale(1.06);
+  }
+
+  /* ===== HOME / CATEGORY / BRAND SECTIONS ===== */
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الأقسام"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الماركات"] {
+    padding-top: 30px !important;
+    padding-bottom: 34px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الأقسام"] .swiper-slide,
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الماركات"] .swiper-slide {
+    width: 128px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الأقسام"] .swiper-wrapper,
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الماركات"] .swiper-wrapper {
+    gap: 8px;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الأقسام"] h2,
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الماركات"] h2 {
+    font-size: 25px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الأقسام"] .swiper-slide > a > div:first-child,
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الماركات"] .swiper-slide > a > div:first-child {
+    border-radius: 21px !important;
+    transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الأقسام"] .swiper-slide > a:hover > div:first-child,
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الماركات"] .swiper-slide > a:hover > div:first-child {
+    transform: translateY(-3px);
+    border-color: #dfccc6;
+    box-shadow: var(--fp-desktop-shadow);
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الأقسام"] .swiper-slide p:first-child,
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الماركات"] .swiper-slide p:first-child {
+    font-size: 11px !important;
+  }
+
+  /* ===== SECTION RHYTHM ===== */
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > section[class*="py-7"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > section[class*="py-8"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > section[class*="py-10"] {
+    padding-top: 56px !important;
+    padding-bottom: 56px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main .grid[class*="lg:grid-cols-2"] {
+    column-gap: clamp(32px, 4vw, 64px) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main .grid[class*="lg:grid-cols-3"] {
+    column-gap: clamp(22px, 2.5vw, 38px) !important;
+  }
+
+  /* ===== FILTER / TOOLBAR / STICKY DESKTOP FIX ===== */
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main section.sticky {
+    top: 138px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main [class*="lg:sticky"] {
+    top: 158px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) #products-grid {
+    padding-left: var(--fp-desktop-gutter) !important;
+    padding-right: var(--fp-desktop-gutter) !important;
+    padding-top: 28px !important;
+  }
+
+  /* ===== FORMS / CHECKOUT / ACCOUNT / TRACKING ===== */
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main input:not([type="checkbox"]):not([type="radio"]),
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main select,
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main textarea {
+    font-size: 14px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main textarea {
+    min-height: 108px;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main form > div[class*="space-y"] {
+    row-gap: 14px;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main table {
+    width: 100%;
+    font-size: 13px;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main th,
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main td {
+    padding-top: 13px;
+    padding-bottom: 13px;
+  }
+
+  /* ===== EMPTY STATES / STATUS BLOCKS ===== */
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main [class*="min-h-[52vh]"] {
+    min-height: 46vh !important;
+  }
+
+  /* ===== DESKTOP DRAWERS / OVERLAYS OPENED FROM CUSTOMER PAGES ===== */
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) [role="dialog"] {
+    font-size: 14px;
+  }
+}
+
+/* Large desktop / wide laptop */
+@media (min-width: 1440px) {
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) #products-grid .grid:has(a[href^="/product/"]) {
+    grid-template-columns: repeat(5, minmax(0, 1fr)) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الأقسام"] .swiper-slide,
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الماركات"] .swiper-slide {
+    width: 138px !important;
+  }
+}
+
+/* Customer authentication is a customer page but intentionally has no Navbar. */
+@media (min-width: 1024px) {
+  :where(body:has(#auth-phone)) main {
+    display: grid;
+    min-height: 100vh;
+    place-items: center;
+    padding: 44px;
+    background:
+      radial-gradient(circle at 18% 18%, rgba(212, 119, 125, 0.08), transparent 30%),
+      radial-gradient(circle at 82% 82%, rgba(184, 97, 104, 0.06), transparent 34%),
+      hsl(var(--background));
+  }
+
+  :where(body:has(#auth-phone)) main > div[class*="max-w-[520px]"] {
+    width: min(100%, 1040px) !important;
+    max-width: 1040px !important;
+    min-height: auto !important;
+    display: grid !important;
+    grid-template-columns: minmax(260px, 0.8fr) minmax(430px, 1.2fr);
+    align-items: center;
+    column-gap: 72px;
+    padding: 0 !important;
+  }
+
+  :where(body:has(#auth-phone)) main > div[class*="max-w-[520px]"] > div:first-child,
+  :where(body:has(#auth-phone)) main > div[class*="max-w-[520px]"] > div:nth-child(2),
+  :where(body:has(#auth-phone)) main > div[class*="max-w-[520px]"] > div:last-child {
+    grid-column: 1;
+  }
+
+  :where(body:has(#auth-phone)) main > div[class*="max-w-[520px]"] > section {
+    grid-column: 2;
+    grid-row: 1 / span 4;
+    margin-top: 0 !important;
+    padding: 32px 34px !important;
+    border-radius: 24px !important;
+    box-shadow: 0 26px 70px rgba(65, 45, 38, 0.09);
+  }
+
+  :where(body:has(#auth-phone)) #auth-name,
+  :where(body:has(#auth-phone)) #auth-phone,
+  :where(body:has(#auth-phone)) #auth-password {
+    height: 54px !important;
+    font-size: 14px !important;
+  }
+
+  :where(body:has(#auth-phone)) main h1 {
+    font-size: 32px !important;
+  }
+
+  :where(body:has(#auth-phone)) main label {
+    font-size: 11px !important;
+  }
+}

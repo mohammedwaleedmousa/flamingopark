@@ -7,7 +7,7 @@ import { toast } from "@/hooks/use-toast";
 
 const flamingoLogo = "/icons/flamingo.jpeg";
 
-const websiteUrl = typeof window !== "undefined" ? `${window.location.origin}/` : "https://flamingoparkaden.com/";
+const websiteUrl = "https://flamingoparkaden.com/";
 
 const QRCodePage = () => {
   const qrRef = useRef<HTMLDivElement>(null);
@@ -81,6 +81,8 @@ const QRCodePage = () => {
   return (
     <main className="flex min-h-screen items-center justify-center bg-background px-4 py-8" dir="rtl">
       <div className="w-full max-w-[390px]">
+        {/* BACK */}
+
         <div className="mb-6">
           <Link to="/home" className="inline-flex items-center gap-1.5 text-[11px] text-muted-foreground transition-colors hover:text-[#B86168]">
             <ArrowRight className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -88,11 +90,17 @@ const QRCodePage = () => {
           </Link>
         </div>
 
+        {/* HEADER */}
+
         <div className="mb-6 text-center">
           <img src={flamingoLogo} alt="Flamingo Park" className="mx-auto h-[64px] w-auto object-contain" />
+
           <h1 className="mt-4 text-[22px] font-semibold tracking-[-0.03em] text-[#403633]">فلامنجو بارك</h1>
+
           <p className="mx-auto mt-2 max-w-[280px] text-[11px] leading-6 text-muted-foreground">امسح الباركود لزيارة متجر فلامنجو بارك مباشرة.</p>
         </div>
+
+        {/* QR CARD */}
 
         <div className="overflow-hidden rounded-[20px] border border-[#E9DFDB] bg-white">
           <div ref={qrRef} className="bg-white px-7 pb-7 pt-8">
@@ -104,20 +112,27 @@ const QRCodePage = () => {
 
             <div className="mt-5 text-center">
               <p className="font-serif text-[9px] uppercase tracking-[0.24em] text-[#B86168]">FLAMINGO PARK</p>
+
               <p className="mt-1.5 text-[11px] text-[#766A65]">امسح للتسوق</p>
             </div>
           </div>
+
+          {/* WEBSITE */}
 
           <div className="border-t border-[#EEE5E1] px-4 py-3">
             <button type="button" onClick={handleCopy} className="flex w-full items-center justify-between gap-3 rounded-[10px] px-1 py-1 text-right">
               <div className="min-w-0">
                 <p className="text-[9px] text-muted-foreground">رابط المتجر</p>
-                <p dir="ltr" className="mt-1 truncate text-left text-[10px] font-medium text-[#574C48]">{websiteUrl.replace(/^https?:\/\//, "").replace(/\/$/, "")}</p>
+
+                <p dir="ltr" className="mt-1 truncate text-left text-[10px] font-medium text-[#574C48]">flamingoparkaden.com</p>
               </div>
+
               <Link2 className="h-4 w-4 shrink-0 text-[#B86168]" strokeWidth={1.5} />
             </button>
           </div>
         </div>
+
+        {/* ACTIONS */}
 
         <div className="mt-4 grid grid-cols-2 gap-2.5">
           <button type="button" onClick={handleDownload} className="flex h-[46px] w-full items-center justify-center gap-2 rounded-[11px] bg-[#D4777D] px-3 text-[11px] font-semibold text-white transition-colors hover:bg-[#C96F79] active:bg-[#B86168]">
@@ -130,6 +145,8 @@ const QRCodePage = () => {
             <span>مشاركة</span>
           </button>
         </div>
+
+        {/* NOTE */}
 
         <p className="mt-5 text-center text-[9px] leading-5 text-muted-foreground">وجّه كاميرا الهاتف نحو الباركود وسيظهر رابط المتجر مباشرة.</p>
       </div>

@@ -340,12 +340,6 @@ const ProductsPage = () => {
     return params;
   });
 
-  /*
-   * Metadata يبدأ بعد أول Paint بقليل.
-   * هذا يجعل أول Cards تظهر أسرع.
-   */
-  const [metadataWarm, setMetadataWarm] = useState(false);
-
   const previousCatalogSearch = useRef(location.search);
   const loadMoreScrollRef = useRef<number | null>(null);
   const previousProductsLengthRef = useRef(0);
@@ -381,18 +375,6 @@ const ProductsPage = () => {
     window.addEventListener("resize", update);
 
     return () => window.removeEventListener("resize", update);
-  }, []);
-
-  /* =========================================================
-     WARM METADATA AFTER INITIAL PAINT
-  ========================================================= */
-
-  useEffect(() => {
-    const timer = window.setTimeout(() => {
-      setMetadataWarm(true);
-    }, 450);
-
-    return () => window.clearTimeout(timer);
   }, []);
 
   /* =========================================================
@@ -574,7 +556,9 @@ const ProductsPage = () => {
 
   const needsClientFiltering = colorFilter !== "all" || sizeFilter !== "all" || minPriceParam > 0 || maxPriceParam > 0;
 
-  const shouldLoadMetadata = metadataWarm || filtersOpen || needsClientFiltering;
+  // Do not download metadata for the entire catalog during normal browsing.
+  // It is only needed when the filter UI is opened or a client-side filter is active.
+  const shouldLoadMetadata = filtersOpen || needsClientFiltering;
 
   const { data: catalogMetadata = [], isLoading: metadataLoading } = useQuery({
     queryKey: [

@@ -1,0 +1,317 @@
+/*
+ * Flamingo Park — customer desktop polish
+ * Desktop/laptop only. Mobile and tablet layouts below 1024px are untouched.
+ * This file intentionally loads after the existing desktop layers so it can
+ * refine spacing and proportions without changing the current visual identity.
+ */
+
+@media (min-width: 1024px) {
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) {
+    --fp-laptop-page: 1440px;
+    --fp-laptop-content: 1360px;
+    --fp-laptop-gutter: clamp(28px, 3vw, 48px);
+    --fp-laptop-border: #ede3df;
+    --fp-laptop-pink: #d4777d;
+    --fp-laptop-pink-dark: #b86168;
+    --fp-laptop-soft: #fff8f6;
+    --fp-laptop-shadow: 0 10px 30px rgba(65, 45, 38, 0.055);
+  }
+
+  /* =========================================================
+     GLOBAL CUSTOMER SHELL
+  ========================================================= */
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) {
+    overflow-x: clip;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main {
+    width: 100%;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > :is(section, div) > div[class*="max-w-[1600px]"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > :is(section, div) > div[class*="max-w-[1450px]"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > :is(section, div) > div[class*="max-w-[1400px]"] {
+    width: min(100%, var(--fp-laptop-content)) !important;
+    max-width: var(--fp-laptop-content) !important;
+    padding-left: var(--fp-laptop-gutter) !important;
+    padding-right: var(--fp-laptop-gutter) !important;
+  }
+
+  /* Pages that already sit inside their own max-width wrapper should not feel stretched. */
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1380px]"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1200px]"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1120px]"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1050px]"] {
+    width: min(100%, var(--fp-laptop-content)) !important;
+  }
+
+  /* =========================================================
+     NAVBAR — same design, better laptop proportions
+  ========================================================= */
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) header[dir="rtl"] {
+    box-shadow: 0 4px 16px rgba(65, 45, 38, 0.035);
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) header[dir="rtl"] > div {
+    max-width: var(--fp-laptop-page) !important;
+    padding-left: var(--fp-laptop-gutter) !important;
+    padding-right: var(--fp-laptop-gutter) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) header[dir="rtl"] > div > div:first-child {
+    height: 66px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) header[dir="rtl"] form {
+    padding-bottom: 12px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) header[dir="rtl"] form input {
+    height: 44px !important;
+    border-radius: 14px !important;
+    font-size: 13px !important;
+  }
+
+  /* =========================================================
+     HOME
+  ========================================================= */
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > section:first-child {
+    padding-top: 18px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > section:first-child > div {
+    max-width: var(--fp-laptop-content) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الأقسام"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الماركات"] {
+    padding-top: 28px !important;
+    padding-bottom: 30px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الأقسام"] .swiper-slide,
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الماركات"] .swiper-slide {
+    width: 116px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الأقسام"] h2,
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) section[aria-label="الماركات"] h2 {
+    font-size: 23px !important;
+  }
+
+  /* =========================================================
+     PRODUCT CATALOG
+  ========================================================= */
+
+  /* ProductsPage currently carries md:pt-24. On desktop the sticky navbar is already
+     in normal document flow, so that extra 96px makes the catalog feel detached. */
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main[class*="md:pt-24"] {
+    padding-top: 20px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) #products-grid {
+    width: min(100%, var(--fp-laptop-content)) !important;
+    max-width: var(--fp-laptop-content) !important;
+    padding-left: var(--fp-laptop-gutter) !important;
+    padding-right: var(--fp-laptop-gutter) !important;
+    padding-top: 24px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) #products-grid .grid:has(a[href^="/product/"]) {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    column-gap: clamp(16px, 1.7vw, 24px) !important;
+    row-gap: 32px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) a[href^="/product/"] > article {
+    border-radius: 16px !important;
+    box-shadow: none !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) a[href^="/product/"]:hover > article {
+    transform: translateY(-2px) !important;
+    border-color: #e4d5d0 !important;
+    box-shadow: var(--fp-laptop-shadow) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) a[href^="/product/"] > article > div:last-child {
+    min-height: 96px !important;
+    padding: 10px 12px 12px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) a[href^="/product/"] > article h3 {
+    font-size: 12px !important;
+    line-height: 1.55 !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) a[href^="/product/"] > article p {
+    font-size: 9px !important;
+  }
+
+  /* Keep toolbar below the actual desktop navbar/search block. */
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main section.sticky {
+    top: 122px !important;
+  }
+
+  /* The catalog toolbar becomes wide and calm rather than phone-like. */
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main section.sticky > div[class*="max-w-[1600px]"] {
+    max-width: var(--fp-laptop-content) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main section.sticky > div > div[class*="h-[48px]"] {
+    height: 52px !important;
+    border-radius: 14px !important;
+    box-shadow: 0 6px 20px rgba(65, 45, 38, 0.045) !important;
+  }
+
+  /* =========================================================
+     PRODUCT DETAIL
+  ========================================================= */
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1380px]"] {
+    max-width: 1320px !important;
+    padding-left: var(--fp-laptop-gutter) !important;
+    padding-right: var(--fp-laptop-gutter) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1380px]"] > div[class*="lg:grid-cols-"] {
+    grid-template-columns: minmax(0, 1.06fr) minmax(410px, 0.94fr) !important;
+    border-radius: 20px !important;
+    box-shadow: 0 10px 32px rgba(65, 45, 38, 0.045) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1380px]"] section[class*="lg:px-6"] {
+    padding: 28px 32px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1380px]"] section:first-of-type > div[class*="lg:sticky"] {
+    top: 138px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1380px]"] section:first-of-type div[class*="aspect-[4/5]"] {
+    max-height: 690px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1380px]"] section:last-of-type h1 {
+    font-size: clamp(24px, 1.7vw, 30px) !important;
+  }
+
+  /* =========================================================
+     CART
+  ========================================================= */
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main section[class*="max-w-[1200px]"] {
+    max-width: 1280px !important;
+    grid-template-columns: minmax(0, 1fr) 350px !important;
+    gap: 30px !important;
+    padding: 34px var(--fp-laptop-gutter) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main section[class*="max-w-[1200px]"] article {
+    padding: 16px !important;
+    border-radius: 18px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main section[class*="max-w-[1200px]"] article > a[href^="/product/"] {
+    width: 124px !important;
+    height: 156px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main section[class*="max-w-[1200px]"] aside > div {
+    top: 138px !important;
+    padding: 22px !important;
+    border-radius: 18px !important;
+  }
+
+  /* =========================================================
+     CHECKOUT
+  ========================================================= */
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1120px]"] {
+    max-width: 1220px !important;
+    padding-left: var(--fp-laptop-gutter) !important;
+    padding-right: var(--fp-laptop-gutter) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1120px]"] > div[class*="lg:grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr) 345px !important;
+    gap: 28px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1120px]"] section > div {
+    padding: 26px !important;
+  }
+
+  /* =========================================================
+     ACCOUNT / ORDERS / CUSTOMER PAGES
+  ========================================================= */
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1050px]"] {
+    max-width: 1180px !important;
+    padding-left: var(--fp-laptop-gutter) !important;
+    padding-right: var(--fp-laptop-gutter) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1050px]"] > section:first-child {
+    padding: 28px 30px !important;
+    border-radius: 20px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1050px]"] .grid.grid-cols-3 > a {
+    min-height: 124px !important;
+    border-radius: 17px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[900px]"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[920px]"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[960px]"] {
+    max-width: 1080px !important;
+    padding-left: var(--fp-laptop-gutter) !important;
+    padding-right: var(--fp-laptop-gutter) !important;
+  }
+
+  /* =========================================================
+     FORMS / TABLES / STATES
+  ========================================================= */
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main input:not([type="checkbox"]):not([type="radio"]),
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main select,
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main textarea {
+    font-size: 13px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main table {
+    font-size: 12px !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main th,
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main td {
+    padding-top: 12px !important;
+    padding-bottom: 12px !important;
+  }
+}
+
+/* Wide laptops keep four comfortable product cards instead of squeezing five. */
+@media (min-width: 1440px) {
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) #products-grid .grid:has(a[href^="/product/"]) {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  }
+}
+
+/* Slightly tighter laptop range such as 1024–1199px. */
+@media (min-width: 1024px) and (max-width: 1199px) {
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) {
+    --fp-laptop-gutter: 24px;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) #products-grid .grid:has(a[href^="/product/"]) {
+    grid-template-columns: repeat(3, minmax(0, 1fr)) !important;
+  }
+
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main > div[class*="max-w-[1380px]"] > div[class*="lg:grid-cols-"] {
+    grid-template-columns: minmax(0, 1fr) minmax(370px, 0.92fr) !important;
+  }
+}

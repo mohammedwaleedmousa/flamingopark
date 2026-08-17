@@ -9,6 +9,7 @@ import { useCurrency } from "@/lib/currency";
 import { useFavorites } from "@/hooks/useFavorites";
 import { saveCatalogScroll } from "@/lib/catalogScroll";
 import { optimizeImage } from "@/lib/imageUrl";
+import { prefetchProductDetailPage } from "@/lib/prefetchRoutes";
 
 type ColorVariant = {
   name?: string;
@@ -259,7 +260,7 @@ const ProductCard = ({ product, index = 0, badge, onQuickView }: ProductCardProp
   const cardBadge = badge || (discount > 0 ? `-${discount}%` : undefined);
 
   return (
-    <Link to={`/product/${product.slug}`} dir="rtl" onClick={() => saveCatalogScroll(`${location.pathname}${location.search}`)} className="block w-full min-w-0">
+    <Link to={`/product/${product.slug}`} dir="rtl" onPointerEnter={() => void prefetchProductDetailPage()} onPointerDown={() => void prefetchProductDetailPage()} onFocus={() => void prefetchProductDetailPage()} onClick={() => saveCatalogScroll(`${location.pathname}${location.search}`)} className="block w-full min-w-0">
       <article className="relative w-full min-w-0 overflow-hidden rounded-[15px] border border-[#EEE6E2] bg-white transition-transform duration-150 active:scale-[0.985]">
         {/* IMAGE */}
 

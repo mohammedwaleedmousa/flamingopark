@@ -1218,7 +1218,6 @@ const ProductsPage = () => {
     /*
      * لو لم يبدأ Metadata بعد، ابدأه فوراً.
      */
-    setMetadataWarm(true);
 
     setFiltersOpen(true);
   };

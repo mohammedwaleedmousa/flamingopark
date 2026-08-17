@@ -441,7 +441,7 @@ const CheckoutPage = () => {
     }
 
     const { error } = await (supabase as any).from("customer_addresses").upsert({ id: draft.id, user_id: customer.id, label: draft.label, recipient_name: draft.name, phone: draft.phone, city: draft.city, address_line1: draft.address, notes: draft.notes || null, is_default: draft.isDefault }).select("id").single();
-    if (error) throw error;
+    if (error) console.warn("ADDRESS SAVE ERROR:", error);
   };
 
   /* =========================================================
@@ -535,7 +535,22 @@ const CheckoutPage = () => {
         },
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "فشل إرسال الطلب";
+      const rawMessage = error instanceof Error ? error.message : "فشل إرسال الطلب";
+      const message = rawMessage.includes("invalid_yemen_phone")
+        ? "أدخل رقم جوال يمني صحيح."
+        : rawMessage.includes("order_rate_limit")
+          ? "تم إرسال عدة طلبات خلال فترة قصيرة. حاول مرة أخرى بعد قليل."
+          : rawMessage.includes("guest_order_capacity_limit")
+            ? "إنشاء الطلبات غير متاح مؤقتاً بسبب عدد كبير من المحاولات. حاول بعد قليل."
+            : rawMessage.includes("insufficient_stock")
+              ? "تغير مخزون أحد المنتجات في السلة. راجع الكمية وحاول مرة أخرى."
+              : rawMessage.includes("variant_selection_required")
+                ? "تحقق من اختيار المقاس أو اللون لجميع المنتجات."
+                : rawMessage.includes("invalid_coupon")
+                  ? "كود الخصم لم يعد صالحاً. أزله أو جرّب كوداً آخر."
+                  : rawMessage.includes("invalid_delivery_company") || rawMessage.includes("delivery_company_required")
+                    ? "شركة التوصيل المختارة غير متاحة حالياً. اختر شركة توصيل أخرى."
+                    : rawMessage;
 
       toast({
         title: "تعذر إنشاء الطلب",

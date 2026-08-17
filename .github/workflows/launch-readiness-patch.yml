@@ -1,0 +1,71 @@
+name: Launch readiness patch
+on:
+  push:
+    branches: [agent/launch-readiness-final]
+permissions:
+  contents: write
+jobs:
+  patch-and-build:
+    if: ${{ !contains(github.event.head_commit.message, '[launch-patched]') }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/launch-readiness-final
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Patch customer launch flows
+        run: |
+          python <<'PY'
+          from pathlib import Path
+          import re
+
+          checkout = Path('src/pages/CheckoutPage.tsx')
+          s = checkout.read_text()
+
+          old = '''  useEffect(() => {\n    let mounted = true;\n\n    supabase.auth.getUser().then(({ data }) => {\n      if (!mounted) return;\n\n      setAddressOwnerKey(data.user?.id || customer?.id || "guest");\n    });\n\n    return () => {\n      mounted = false;\n    };\n  }, [customer?.id]);'''
+          new = '''  useEffect(() => {\n    setAddressOwnerKey(customer?.id && customer.id !== "guest" ? customer.id : "guest");\n  }, [customer?.id]);'''
+          assert old in s, 'checkout address-owner block not found'
+          s = s.replace(old, new, 1)
+
+          pattern = re.compile(r'''  useEffect\(\(\) => \{\n    const list = migrateLegacyCheckoutInfo\(addressOwnerKey\);.*?  \}, \[addressOwnerKey, isGuestLike\]\);''', re.S)
+          replacement = '''  useEffect(() => {\n    let active = true;\n\n    const loadAddresses = async () => {\n      let list: SavedAddress[] = [];\n\n      if (!isGuestLike && customer?.id) {\n        const { data, error } = await (supabase as any).from("customer_addresses").select("*").order("is_default", { ascending: false }).order("updated_at", { ascending: false });\n        if (!error) {\n          list = (data || []).map((address: any) => ({ id: address.id, label: address.label, name: address.recipient_name, phone: address.phone, city: address.city, address: address.address_line1, notes: address.notes || "", isDefault: Boolean(address.is_default), updatedAt: address.updated_at }));\n        }\n      } else {\n        list = migrateLegacyCheckoutInfo(addressOwnerKey);\n      }\n\n      if (!active) return;\n      setSavedAddresses(list);\n      const defaultAddress = list.find((address) => address.isDefault) || list[0];\n      if (!defaultAddress) return;\n      setSelectedAddressId(defaultAddress.id);\n      setFormData((current) => ({ ...current, name: isGuestLike ? String(defaultAddress.name || current.name || "") : current.name, phone: isGuestLike ? String(defaultAddress.phone || current.phone || "") : current.phone, city: defaultAddress.city, address: defaultAddress.address, notes: defaultAddress.notes || "" }));\n    };\n\n    void loadAddresses();\n    return () => { active = false; };\n  }, [addressOwnerKey, isGuestLike, customer?.id]);'''
+          s, n = pattern.subn(replacement, s, count=1)
+          assert n == 1, 'checkout saved-address block not found'
+
+          pattern = re.compile(r'''  const createSecureOrder = async \(items: unknown\[\]\) => \{.*?    return data;\n  \};''', re.S)
+          replacement = '''  const createSecureOrder = async (items: unknown[]) => {\n    const { data, error } = await (supabase as any).rpc("create_secure_order_v2", {\n      p_customer_name: String(customer?.name || formData.name || "").trim(),\n      p_customer_phone: String(customer?.phone || formData.phone || "").trim(),\n      p_customer_address: formData.address.trim(),\n      p_customer_notes: formData.notes.trim() || null,\n      p_country: "YE",\n      p_customer_city: formData.city.trim(),\n      p_customer_region: customer?.region || selectedRegion || null,\n      p_items: items,\n      p_payment_method: paymentMethod,\n      p_currency_mode: currencyMode,\n      p_currency_code: currencyMode,\n      p_coupon_code: appliedCoupon || null,\n      p_delivery_company_id: selectedDelivery || null,\n    });\n\n    if (error) {\n      console.error("RPC ERROR FULL:", error);\n      throw error;\n    }\n\n    return data;\n  };'''
+          s, n = pattern.subn(replacement, s, count=1)
+          assert n == 1, 'checkout secure-order block not found'
+
+          pattern = re.compile(r'''  const saveAddressToLocal = \(\) => \{.*?  \};\n\n  /\* =========================================================\n     SUBMIT''', re.S)
+          replacement = '''  const saveAddressForCheckout = async () => {\n    const draft = {\n      id: selectedAddressId || crypto.randomUUID(),\n      label: selectedSavedAddress?.label || `عنوان ${savedAddresses.length + 1}`,\n      name: String(customer?.name || formData.name || "").trim(),\n      phone: String(customer?.phone || formData.phone || "").trim(),\n      city: formData.city.trim(),\n      address: formData.address.trim(),\n      notes: formData.notes.trim(),\n      isDefault: selectedSavedAddress?.isDefault ?? savedAddresses.length === 0,\n    };\n\n    if (isGuestLike || !customer?.id) {\n      upsertSavedAddress(addressOwnerKey, draft);\n      return;\n    }\n\n    const { error } = await (supabase as any).from("customer_addresses").upsert({ id: draft.id, user_id: customer.id, label: draft.label, recipient_name: draft.name, phone: draft.phone, city: draft.city, address_line1: draft.address, notes: draft.notes || null, is_default: draft.isDefault }).select("id").single();\n    if (error) throw error;\n  };\n\n  /* =========================================================\n     SUBMIT'''
+          s, n = pattern.subn(replacement, s, count=1)
+          assert n == 1, 'checkout save-address block not found'
+          assert '      saveAddressToLocal();' in s, 'checkout save call not found'
+          s = s.replace('      saveAddressToLocal();', '      await saveAddressForCheckout();', 1)
+          checkout.write_text(s)
+
+          account = Path('src/pages/AccountPage.tsx')
+          a = account.read_text()
+          pattern = re.compile(r'''  /\* =========================================================\n     LOAD CUSTOMER\n  ========================================================= \*/\n\n  useEffect\(\(\) => \{.*?  \}, \[navigate\]\);\n\n  /\* =========================================================\n     FETCH CUSTOMER''', re.S)
+          replacement = '''  /* =========================================================\n     LOAD CUSTOMER\n  ========================================================= */\n\n  useEffect(() => {\n    let active = true;\n\n    const loadCustomer = async () => {\n      try {\n        const { data: authData } = await supabase.auth.getUser();\n        if (!active) return;\n        if (!authData.user) {\n          localStorage.removeItem("customer");\n          navigate("/auth", { replace: true });\n          return;\n        }\n\n        const { data: fresh, error } = await (supabase as any).from("customers").select("id,user_id,name,phone,country,region,avatar_url,created_at").eq("user_id", authData.user.id).maybeSingle();\n        if (error) throw error;\n        if (!fresh) {\n          navigate("/auth", { replace: true });\n          return;\n        }\n\n        const customerData = { ...fresh, region: fresh.region || fresh.country || "عدن" };\n        if (!active) return;\n        setCustomer(customerData);\n        setUser({ id: customerData.id, auth_user_id: authData.user.id, user_metadata: { full_name: customerData.name, phone_number: customerData.phone, region: customerData.region, avatar_url: customerData.avatar_url }, created_at: customerData.created_at || authData.user.created_at });\n        localStorage.setItem("customer", JSON.stringify(customerData));\n        localStorage.setItem("customer_phone", customerData.phone || "");\n      } catch (error) {\n        console.error(error);\n        if (active) setNotification({ type: "error", message: "تعذر تحميل بيانات الحساب" });\n      } finally {\n        if (active) setLoading(false);\n      }\n    };\n\n    void loadCustomer();\n    return () => { active = false; };\n  }, [navigate]);\n\n  /* =========================================================\n     FETCH CUSTOMER'''
+          a, n = pattern.subn(replacement, a, count=1)
+          assert n == 1, 'account load-customer block not found'
+          account.write_text(a)
+          PY
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Commit verified patch
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/CheckoutPage.tsx src/pages/AccountPage.tsx
+          git diff --cached --exit-code && exit 0
+          git commit -m "Wire launch-safe customer flows [launch-patched]"
+          git push origin HEAD:agent/launch-readiness-final

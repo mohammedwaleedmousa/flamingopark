@@ -346,7 +346,6 @@ const AdminProductFormPage = () => {
       !formData.name_ar.trim() && 'الاسم العربي',
       !Number.isFinite(price) && 'سعر البيع',
       price < 0 && 'سعر البيع',
-      !formData.audience && 'قسم الظهور',
       !resolvedCategory && 'القسم الرئيسي',
     ].filter(Boolean);
 
@@ -390,7 +389,7 @@ const AdminProductFormPage = () => {
       category: selectedCat?.slug || resolvedCategory || null,
       brand: brandName || null,
       category_id: selectedCat?.id ?? null,
-      audience: formData.audience,
+      audience: formData.audience || null,
       brand_id: selectedBrand?.id ?? null,
       in_stock: stockQty > 0 ? formData.in_stock : false,
       stock_quantity: stockQty,
@@ -422,7 +421,7 @@ const AdminProductFormPage = () => {
           .select('id,category,category_id')
           .single();
         if (error) throw error;
-        if (savedProduct.category_id !== selectedCat?.id) {
+        if (selectedCat && savedProduct.category_id !== selectedCat.id) {
           throw new Error('لم يتم حفظ القسم الفرعي المحدد. أعد اختيار القسم ثم احفظ مرة أخرى.');
         }
         savedProductId = savedProduct.id;
@@ -598,17 +597,18 @@ const AdminProductFormPage = () => {
 
           <div className="grid grid-cols-1 gap-[10px] md:grid-cols-3">
             <div>
-              <label className="block text-[10px] font-medium text-[#6E7680] mb-[6px]">قسم ظهور المنتج *</label>
-              <Select value={formData.audience} onValueChange={(value) => setFormData((current) => ({ ...current, audience: value as 'men' | 'women' | 'kids' | 'unisex' }))}>
+              <label className="block text-[10px] font-medium text-[#6E7680] mb-[6px]">قسم ظهور المنتج (اختياري)</label>
+              <Select value={formData.audience || 'none'} onValueChange={(value) => setFormData((current) => ({ ...current, audience: value === 'none' ? '' : value as 'men' | 'women' | 'kids' | 'unisex' }))}>
                 <SelectTrigger><SelectValue placeholder="اختر أين يظهر المنتج" /></SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="none">غير محدد</SelectItem>
                   <SelectItem value="men">رجالي</SelectItem>
                   <SelectItem value="women">نسائي</SelectItem>
                   <SelectItem value="kids">أطفال</SelectItem>
                   <SelectItem value="unisex">للجنسين</SelectItem>
                 </SelectContent>
               </Select>
-              <p className="text-[8px] text-[#969DA7] mt-[4px]">لا يغيّر الفئة؛ يحدد فقط القسم الذي يظهر فيه المنتج للعميل.</p>
+              <p className="text-[8px] text-[#969DA7] mt-[4px]">يمكن تركه غير محدد للمنتجات القديمة؛ اختيارك هنا لا يغيّر الفئة.</p>
             </div>
 
             <div>

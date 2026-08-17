@@ -21,10 +21,12 @@ jobs:
       - run: npm ci
       - name: Remove unused vulnerable spreadsheet package
         run: npm uninstall xlsx
-      - name: Apply non-breaking security updates
-        run: npm audit fix
-      - name: Verify production audit
-        run: npm audit --omit=dev || true
+      - name: Apply safe transitive security updates
+        run: npm audit fix || true
+      - name: Upgrade React Router past security advisories
+        run: npm install react-router-dom@7.18.0
+      - name: Verify production dependencies
+        run: npm audit --omit=dev
       - run: npm run build
       - name: Commit verified dependency repair
         run: |
@@ -32,5 +34,5 @@ jobs:
           git config user.email 41898282+github-actions[bot]@users.noreply.github.com
           git add package.json package-lock.json
           git diff --cached --quiet && exit 0
-          git commit -m "Remove vulnerable unused dependency and apply security updates"
+          git commit -m "Remove vulnerable unused dependency and update secure runtime packages"
           git push origin HEAD:agent/security-hardening-final

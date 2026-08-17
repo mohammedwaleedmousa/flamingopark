@@ -1,0 +1,40 @@
+name: Temporary checkout cart navigation fixes
+
+on:
+  push:
+    branches:
+      - agent/checkout-cart-navigation-fixes
+
+permissions:
+  contents: write
+
+jobs:
+  apply-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: agent/checkout-cart-navigation-fixes
+          fetch-depth: 0
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - name: Apply fixes
+        run: |
+          python .github/scripts/fix_checkout_cart.py
+          python .github/scripts/fix_navigation.py
+      - name: Install dependencies
+        run: npm ci
+      - name: Build
+        run: npm run build
+      - name: Production dependency audit
+        run: npm audit --omit=dev --audit-level=high
+      - name: Commit fixed files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/CheckoutPage.tsx src/pages/CartPage.tsx src/components/CartDrawerContent.tsx src/App.tsx src/lib/prefetchRoutes.ts src/components/AppErrorBoundary.tsx src/main.tsx
+          if git diff --cached --quiet; then exit 0; fi
+          git commit -m "Fix checkout cart and navigation reliability"
+          git push origin HEAD:agent/checkout-cart-navigation-fixes

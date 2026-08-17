@@ -1,20 +1,38 @@
 name: Connect storefront admin
 
 on:
-  push:
+  pull_request:
     branches:
-      - agent/connect-storefront-admin
+      - main
+  workflow_dispatch:
 
 permissions:
   contents: write
 
 jobs:
   patch:
+    if: github.event.pull_request.head.ref == 'agent/connect-storefront-admin' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
         with:
           ref: agent/connect-storefront-admin
           fetch-depth: 0
-      - name: Verify workflow
-        run: echo "workflow-ready"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - name: Apply integration patch
+        run: python .github/scripts/connect_admin_storefront.py
+      - name: Install and build
+        run: |
+          npm ci
+          npm run build
+      - name: Commit verified patch
+        run: |
+          rm -f .github/workflows/connect-admin-storefront.yml .github/scripts/connect_admin_storefront.py
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "Connect storefront pages to admin data"
+          git push origin HEAD:agent/connect-storefront-admin

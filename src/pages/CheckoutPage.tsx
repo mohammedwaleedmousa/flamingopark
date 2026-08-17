@@ -362,7 +362,7 @@ const CheckoutPage = () => {
       p_customer_city: formData.city.trim(),
       p_customer_region: customer?.region || selectedRegion || null,
       p_items: items,
-      p_payment_method: paymentMethod,
+      p_payment_method: isCashPayment ? "cod" : paymentMethod,
       p_currency_mode: currencyMode,
       p_currency_code: currencyMode,
       p_coupon_code: appliedCoupon || null,

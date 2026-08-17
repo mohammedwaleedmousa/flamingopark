@@ -219,15 +219,6 @@ const CartPage = () => {
                     <span className="text-[10px] font-semibold text-[#493A37]">{formatCurrency(total)}</span>
                   </div>
 
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] text-[#897A75]">{getSiteText(content, "cart_shipping_label", "الشحن")}</span>
-                    <span className="text-[9px] font-semibold text-[#73856E]">{getSiteText(content, "cart_shipping_value", "مجاني")}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between">
-                    <span className="text-[9px] text-[#897A75]">الضريبة</span>
-                    <span className="text-[9px] text-[#A99B96]">تحدد عند الدفع</span>
-                  </div>
                 </div>
 
                 <div className="flex items-end justify-between py-5">

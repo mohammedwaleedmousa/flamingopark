@@ -24,13 +24,28 @@ const REGIONS = ["عدن", "صنعاء", "تعز", "حضرموت", "إب", "ال
 
 const arabicDigitsToLatin = (value: string) => value.replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))).replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)));
 
-const normalizeYemenPhone = (value: string) => {
-  let digits = arabicDigitsToLatin(value).replace(/\D/g, "");
-  if (digits.startsWith("00967")) digits = digits.slice(5);
-  else if (digits.startsWith("967")) digits = digits.slice(3);
-  else if (digits.startsWith("0")) digits = digits.slice(1);
-  if (!/^7\d{8}$/.test(digits)) throw new Error("أدخل رقم جوال يمني صحيح مثل 77xxxxxxx");
-  return `+967${digits}`;
+const normalizePhone = (value: string) => {
+  const latin = arabicDigitsToLatin(value).trim();
+  let compact = latin.replace(/[\s().-]/g, "");
+  if (compact.startsWith("00")) compact = `+${compact.slice(2)}`;
+  if (!compact.startsWith("+")) {
+    let digits = compact.replace(/\D/g, "");
+    if (/^0?7\d{8}$/.test(digits)) {
+      if (digits.startsWith("0")) digits = digits.slice(1);
+      return `+967${digits}`;
+    }
+    throw new Error("أدخل رقم الهاتف مع رمز الدولة مثل +966 أو +1 أو +60");
+  }
+  if (!/^\+[1-9]\d{7,14}$/.test(compact)) throw new Error("أدخل رقم هاتف دولي صحيح مع رمز الدولة");
+  return compact;
+};
+
+const countryFromPhone = (phone: string) => {
+  if (phone.startsWith("+967")) return "YE";
+  if (phone.startsWith("+966")) return "SA";
+  if (phone.startsWith("+60")) return "MY";
+  if (phone.startsWith("+1")) return "US";
+  return "XX";
 };
 
 const authPasswordFor = async (phone: string, password: string) => {
@@ -138,7 +153,7 @@ const handleSubmit = async (event: React.FormEvent) => {
     }
 
     let phone = "";
-    try { phone = normalizeYemenPhone(formData.phone); } catch (error: any) {
+    try { phone = normalizePhone(formData.phone); } catch (error: any) {
       toast({ title: "رقم الهاتف غير صحيح", description: error?.message, variant: "destructive" });
       return;
     }
@@ -146,14 +161,33 @@ const handleSubmit = async (event: React.FormEvent) => {
     setIsLoading(true);
     try {
       const authPassword = await authPasswordFor(phone, password);
+      const signInCompatible = async () => {
+        const candidates = Array.from(new Set([password, authPassword]));
+        for (const candidate of candidates) {
+          const result = await supabase.auth.signInWithPassword({ phone, password: candidate });
+          if (!result.error && result.data.user) return result;
+        }
+        return null;
+      };
 
       if (mode === "register") {
         await supabase.auth.signOut();
-        const { data, error } = await supabase.auth.signUp({ phone, password: authPassword, options: { data: { name, region: selectedRegion, country: "YE" } } });
+        const existing = await signInCompatible();
+        if (existing?.data.user) {
+          let existingCustomer = await getOwnCustomer(existing.data.user.id);
+          if (!existingCustomer) existingCustomer = await finalizeRegistration({ name, phone, region: selectedRegion, country: countryFromPhone(phone), channel: "none", legacyPassword: password });
+          persistCustomer(existingCustomer);
+          toast({ title: "الحساب موجود بالفعل", description: "تم تسجيل الدخول إلى حسابك الحالي بدلاً من إنشاء حساب مكرر." });
+          navigate("/home", { replace: true });
+          return;
+        }
+        await supabase.auth.signOut();
+        const country = countryFromPhone(phone);
+        const { data, error } = await supabase.auth.signUp({ phone, password: authPassword, options: { data: { name, region: selectedRegion, country } } });
         if (error) throw error;
         if (!data.session || !data.user) throw new Error("تعذر بدء جلسة الحساب. حاول تسجيل الدخول مرة أخرى.");
 
-        const customerData = await finalizeRegistration({ name, phone, region: selectedRegion, country: "YE", channel: "none" });
+        const customerData = await finalizeRegistration({ name, phone, region: selectedRegion, country: countryFromPhone(phone), channel: "none" });
         persistCustomer(customerData);
         toast({ title: "تم إنشاء الحساب", description: `أهلاً ${customerData.name}` });
         navigate("/home", { replace: true });
@@ -161,11 +195,12 @@ const handleSubmit = async (event: React.FormEvent) => {
       }
 
       await supabase.auth.signOut();
-      const { data: loginData, error: loginError } = await supabase.auth.signInWithPassword({ phone, password: authPassword });
+      const compatibleLogin = await signInCompatible();
+      const loginData = compatibleLogin?.data;
 
-      if (!loginError && loginData.user) {
+      if (loginData?.user) {
         let customerData = await getOwnCustomer(loginData.user.id);
-        if (!customerData && claimExisting) customerData = await finalizeRegistration({ name: "عميل فلامنجو", phone, region: "عدن", country: "YE", channel: "none", legacyPassword: password });
+        if (!customerData && claimExisting) customerData = await finalizeRegistration({ name: "عميل فلامنجو", phone, region: "غير محدد", country: countryFromPhone(phone), channel: "none", legacyPassword: password });
         if (!customerData) throw new Error("ملف العميل غير مكتمل. تواصل مع خدمة العملاء.");
         persistCustomer(customerData);
         toast({ title: "مرحباً بعودتك", description: `أهلاً ${customerData.name}` });
@@ -219,16 +254,16 @@ const handleSubmit = async (event: React.FormEvent) => {
         <div className="mt-2 flex items-center justify-center gap-2.5"><span className="h-px w-5 bg-[#E0B7B4]" /><span className="font-serif text-[8px] tracking-[0.26em] text-[#B86168]">FLAMINGO PARK</span><span className="h-px w-5 bg-[#E0B7B4]" /></div>
 
         <section className="mt-8 rounded-[22px] border border-[#EEE4E0] bg-[#FFFDFC] px-4 pb-5 pt-6 sm:px-6 sm:pb-6 sm:pt-7">
-          <div className="text-center"><h1 className="text-[25px] font-semibold tracking-[-0.035em] text-[#382F2C] sm:text-[28px]">{mode === "login" ? "مرحباً بعودتك" : "إنشاء حساب جديد"}</h1><p className="mx-auto mt-2 max-w-[320px] text-[10px] leading-5 text-[#958883] sm:text-[11px] sm:leading-6">{mode === "login" ? "سجّل دخولك برقم هاتفك لمتابعة الطلبات والمفضلة." : "أنشئ حسابك برقم هاتف يمني وكلمة المرور التي تختارها."}</p></div>
+          <div className="text-center"><h1 className="text-[25px] font-semibold tracking-[-0.035em] text-[#382F2C] sm:text-[28px]">{mode === "login" ? "مرحباً بعودتك" : "إنشاء حساب جديد"}</h1><p className="mx-auto mt-2 max-w-[320px] text-[10px] leading-5 text-[#958883] sm:text-[11px] sm:leading-6">{mode === "login" ? "سجّل دخولك برقم هاتفك لمتابعة الطلبات والمفضلة." : "أنشئ حسابك برقم هاتفك الدولي وكلمة المرور التي تختارها."}</p></div>
 
           <div className="mt-6 grid grid-cols-2 rounded-[13px] bg-[#F7F3F1] p-1"><button type="button" onClick={() => changeMode("login")} className={`h-[42px] rounded-[10px] text-[11px] font-medium ${mode === "login" ? "bg-white text-[#443936] shadow-[0_1px_4px_rgba(49,39,35,0.06)]" : "text-[#9F928D]"}`}>تسجيل الدخول</button><button type="button" onClick={() => changeMode("register")} className={`h-[42px] rounded-[10px] text-[11px] font-medium ${mode === "register" ? "bg-white text-[#443936] shadow-[0_1px_4px_rgba(49,39,35,0.06)]" : "text-[#9F928D]"}`}>حساب جديد</button></div>
 
           <form onSubmit={handleSubmit} className="mt-5 space-y-3">
             {mode === "register" && <div><label htmlFor="auth-name" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">الاسم الكامل</label><div className="relative"><UserRound className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-name" value={formData.name} onChange={(event) => updateField("name", event.target.value)} autoComplete="name" placeholder="أدخل اسمك الكامل" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div></div>}
 
-            {mode === "register" && <div><label className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">المحافظة</label><button type="button" onClick={() => setRegionOpen(true)} className="relative flex h-[50px] w-full items-center rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-11 text-right"><MapPin className="absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><span className={`flex-1 text-[12px] ${formData.region ? "text-[#443936]" : "text-[#B8ADA8]"}`}>{formData.region || "اختر المحافظة"}</span><ChevronDown className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" /></button></div>}
+            {mode === "register" && <div><label htmlFor="auth-region" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">المدينة / المنطقة</label><div className="relative"><MapPin className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-region" value={formData.region} onChange={(event) => updateField("region", event.target.value)} autoComplete="address-level2" placeholder="مثال: عدن، الرياض، كوالالمبور" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div></div>}
 
-            <div><label htmlFor="auth-phone" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">رقم الهاتف</label><div className="relative"><Phone className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-phone" type="tel" inputMode="tel" autoComplete="tel" value={formData.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder="77xxxxxxx" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-left text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div></div>
+            <div><label htmlFor="auth-phone" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">رقم الهاتف</label><div className="relative"><Phone className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-phone" type="tel" inputMode="tel" autoComplete="tel" value={formData.phone} onChange={(event) => updateField("phone", event.target.value)} placeholder="+9665xxxxxxxx أو +1xxxxxxxxxx" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-4 text-left text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /></div></div>
 
             <div><label htmlFor="auth-password" className="mb-1.5 block px-1 text-[9px] font-medium text-[#746761]">كلمة المرور</label><div className="relative"><LockKeyhole className="pointer-events-none absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-[#A99D98]" strokeWidth={1.5} /><input id="auth-password" type={showPassword ? "text" : "password"} autoComplete={mode === "login" ? "current-password" : "new-password"} value={formData.password} onChange={(event) => updateField("password", event.target.value)} placeholder="كلمة المرور" dir="ltr" className="h-[50px] w-full rounded-[12px] border border-[#E8DEDA] bg-white pr-11 pl-12 text-left text-[12px] text-[#443936] outline-none focus:border-[#D7AAA7]" /><button type="button" onClick={() => setShowPassword((value) => !value)} aria-label={showPassword ? "إخفاء كلمة المرور" : "إظهار كلمة المرور"} className="absolute left-2.5 top-1/2 flex h-8 w-8 -translate-y-1/2 items-center justify-center text-[#A99D98]">{showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button></div></div>
 

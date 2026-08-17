@@ -122,70 +122,41 @@ const AccountPage = () => {
   ========================================================= */
 
   useEffect(() => {
+    let active = true;
+
     const loadCustomer = async () => {
-      const savedCustomer = localStorage.getItem("customer");
-
-      if (!savedCustomer) {
-        navigate("/auth", { replace: true });
-        return;
-      }
-
       try {
-        const customerData = JSON.parse(savedCustomer);
-
-        setCustomer(customerData);
-
-        setUser({
-          id: customerData.id,
-          user_metadata: {
-            full_name: customerData.name,
-            phone_number: customerData.phone,
-            region: customerData.region,
-            avatar_url: customerData.avatar_url,
-          },
-          created_at: customerData.created_at || new Date().toISOString(),
-        });
-
-        if (customerData.phone && customerData.id) {
-          const { data, error } = await (supabase as any).rpc("customer_self", {
-            _id: customerData.id,
-            _phone: customerData.phone,
-          });
-
-          if (!error && data && data.length) {
-            const fresh = {
-              ...data[0],
-              region: data[0].region || data[0].country,
-            };
-
-            setCustomer(fresh);
-
-            setUser({
-              id: fresh.id || customerData.id,
-              user_metadata: {
-                full_name: fresh.name,
-                phone_number: fresh.phone,
-                region: fresh.region,
-                avatar_url: fresh.avatar_url,
-              },
-              created_at: fresh.created_at || customerData.created_at || new Date().toISOString(),
-            });
-
-            localStorage.setItem("customer", JSON.stringify(fresh));
-          }
+        const { data: authData } = await supabase.auth.getUser();
+        if (!active) return;
+        if (!authData.user) {
+          localStorage.removeItem("customer");
+          navigate("/auth", { replace: true });
+          return;
         }
+
+        const { data: fresh, error } = await (supabase as any).from("customers").select("id,user_id,name,phone,country,region,avatar_url,created_at").eq("user_id", authData.user.id).maybeSingle();
+        if (error) throw error;
+        if (!fresh) {
+          navigate("/auth", { replace: true });
+          return;
+        }
+
+        const customerData = { ...fresh, region: fresh.region || fresh.country || "عدن" };
+        if (!active) return;
+        setCustomer(customerData);
+        setUser({ id: customerData.id, auth_user_id: authData.user.id, user_metadata: { full_name: customerData.name, phone_number: customerData.phone, region: customerData.region, avatar_url: customerData.avatar_url }, created_at: customerData.created_at || authData.user.created_at });
+        localStorage.setItem("customer", JSON.stringify(customerData));
+        localStorage.setItem("customer_phone", customerData.phone || "");
       } catch (error) {
         console.error(error);
-
-        localStorage.removeItem("customer");
-
-        navigate("/auth", { replace: true });
+        if (active) setNotification({ type: "error", message: "تعذر تحميل بيانات الحساب" });
       } finally {
-        setLoading(false);
+        if (active) setLoading(false);
       }
     };
 
     void loadCustomer();
+    return () => { active = false; };
   }, [navigate]);
 
   /* =========================================================

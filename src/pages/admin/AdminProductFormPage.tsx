@@ -84,6 +84,7 @@ const AdminProductFormPage = () => {
     description: '',
     description_ar: '',
     category: '',
+    audience: '' as '' | 'men' | 'women' | 'kids' | 'unisex',
     brand: '',
     in_stock: true,
     is_featured: false,
@@ -262,6 +263,7 @@ const AdminProductFormPage = () => {
         description: data.description || '',
         description_ar: data.description_ar || '',
         category: data.category || '',
+        audience: (((data as any).audience || '') as '' | 'men' | 'women' | 'kids' | 'unisex'),
         brand: brandName,
         in_stock: data.in_stock ?? true,
         is_featured: data.is_featured ?? false,
@@ -344,6 +346,7 @@ const AdminProductFormPage = () => {
       !formData.name_ar.trim() && 'الاسم العربي',
       !Number.isFinite(price) && 'سعر البيع',
       price < 0 && 'سعر البيع',
+      !formData.audience && 'قسم الظهور',
       !resolvedCategory && 'القسم الرئيسي',
     ].filter(Boolean);
 
@@ -387,6 +390,7 @@ const AdminProductFormPage = () => {
       category: selectedCat?.slug || resolvedCategory || null,
       brand: brandName || null,
       category_id: selectedCat?.id ?? null,
+      audience: formData.audience,
       brand_id: selectedBrand?.id ?? null,
       in_stock: stockQty > 0 ? formData.in_stock : false,
       stock_quantity: stockQty,
@@ -411,7 +415,7 @@ const AdminProductFormPage = () => {
       let savedProductId = id || '';
 
       if (isEditing) {
-        const { data: savedProduct, error } = await supabase
+        const { data: savedProduct, error } = await (supabase as any)
           .from('products')
           .update(productData)
           .eq('id', id)
@@ -423,7 +427,7 @@ const AdminProductFormPage = () => {
         }
         savedProductId = savedProduct.id;
       } else {
-        const { data: inserted, error } = await supabase
+        const { data: inserted, error } = await (supabase as any)
           .from('products')
           .insert(productData)
           .select('id')
@@ -592,7 +596,21 @@ const AdminProductFormPage = () => {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-[10px] md:grid-cols-2">
+          <div className="grid grid-cols-1 gap-[10px] md:grid-cols-3">
+            <div>
+              <label className="block text-[10px] font-medium text-[#6E7680] mb-[6px]">قسم ظهور المنتج *</label>
+              <Select value={formData.audience} onValueChange={(value) => setFormData((current) => ({ ...current, audience: value as 'men' | 'women' | 'kids' | 'unisex' }))}>
+                <SelectTrigger><SelectValue placeholder="اختر أين يظهر المنتج" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="men">رجالي</SelectItem>
+                  <SelectItem value="women">نسائي</SelectItem>
+                  <SelectItem value="kids">أطفال</SelectItem>
+                  <SelectItem value="unisex">للجنسين</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-[8px] text-[#969DA7] mt-[4px]">لا يغيّر الفئة؛ يحدد فقط القسم الذي يظهر فيه المنتج للعميل.</p>
+            </div>
+
             <div>
               <label className="block text-[10px] font-medium text-[#6E7680] mb-[6px]">القسم الرئيسي *</label>
               <Select

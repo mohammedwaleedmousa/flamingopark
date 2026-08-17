@@ -87,6 +87,20 @@ const CategoriesPage = () => {
 
   const selectedSub = useMemo(() => subCategories.find((sub) => sub.slug === subSlug) || null, [subCategories, subSlug]);
 
+  const audienceContext = useMemo(() => {
+    if (selectedParent?.slug === "men") return "men";
+    if (selectedParent?.slug === "women") return "women";
+    if (["babes", "kids"].includes(selectedParent?.slug || "")) return "kids";
+    return "";
+  }, [selectedParent?.slug]);
+
+  const audienceValues = useMemo(() => {
+    if (audienceContext === "men") return ["men", "unisex"];
+    if (audienceContext === "women") return ["women", "unisex"];
+    if (audienceContext === "kids") return ["kids"];
+    return [] as string[];
+  }, [audienceContext]);
+
   const activeProductCategory = selectedSub || (selectedParent && subCategories.length === 0 ? selectedParent : null);
 
   const scopedCategoryIds = useMemo(() => {
@@ -94,6 +108,9 @@ const CategoriesPage = () => {
 
     return [activeProductCategory.id];
   }, [activeProductCategory]);
+
+  const audienceRootOnly = Boolean(audienceContext && selectedParent && !selectedSub && ["men", "women"].includes(selectedParent.slug));
+  const hasProductScope = audienceRootOnly || scopedCategoryIds.length > 0;
 
   /* =========================================================
      INVALID SUB CATEGORY
@@ -119,7 +136,8 @@ const CategoriesPage = () => {
 
   const productScopeKey = useMemo(() => {
     return [
-      scopedCategoryIds.join(","),
+      audienceContext,
+      audienceRootOnly ? "audience-root" : scopedCategoryIds.join(","),
       brandFilter,
       productQuery,
       productSort,
@@ -127,7 +145,7 @@ const CategoriesPage = () => {
       minPrice,
       maxPrice,
     ].join("|");
-  }, [scopedCategoryIds, brandFilter, productQuery, productSort, inStockOnly, minPrice, maxPrice]);
+  }, [audienceContext, audienceRootOnly, scopedCategoryIds, brandFilter, productQuery, productSort, inStockOnly, minPrice, maxPrice]);
 
   useEffect(() => {
     if (previousScopeRef.current && previousScopeRef.current !== productScopeKey) {
@@ -143,9 +161,11 @@ const CategoriesPage = () => {
 
   const { data: totalProductCount = 0 } = useQuery({
     queryKey: ["category-products-count", productScopeKey],
-    enabled: scopedCategoryIds.length > 0,
+    enabled: hasProductScope,
     queryFn: async () => {
-      let query = supabase.from("products").select("id", { count: "exact", head: true }).eq("is_active", true).in("category_id", scopedCategoryIds);
+      let query = (supabase as any).from("products").select("id", { count: "exact", head: true }).eq("is_active", true);
+      if (!audienceRootOnly) query = query.in("category_id", scopedCategoryIds);
+      if (audienceValues.length > 0) query = query.in("audience", audienceValues);
 
       if (brandFilter !== "all") {
         query = query.eq("brand", brandFilter);
@@ -187,12 +207,14 @@ const CategoriesPage = () => {
   const productQueries = useQueries({
     queries: Array.from({ length: loadedPage }, (_, pageIndex) => ({
       queryKey: ["categories-products", productScopeKey, pageIndex + 1],
-      enabled: scopedCategoryIds.length > 0,
+      enabled: hasProductScope,
 
       queryFn: async () => {
         const from = pageIndex * PAGE_SIZE;
 
-        let query = supabase.from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true).in("category_id", scopedCategoryIds);
+        let query = (supabase as any).from("products").select(PRODUCT_CARD_SELECT).eq("is_active", true);
+        if (!audienceRootOnly) query = query.in("category_id", scopedCategoryIds);
+        if (audienceValues.length > 0) query = query.in("audience", audienceValues);
 
         if (brandFilter !== "all") {
           query = query.eq("brand", brandFilter);
@@ -265,17 +287,19 @@ const CategoriesPage = () => {
      الفلاتر على أول 24 منتجاً فقط.
   ========================================================= */
 
-  const brandScopeKey = useMemo(() => [scopedCategoryIds.join(","), productQuery, inStockOnly ? "1" : "0", minPrice, maxPrice].join("|"), [scopedCategoryIds, productQuery, inStockOnly, minPrice, maxPrice]);
+  const brandScopeKey = useMemo(() => [audienceContext, audienceRootOnly ? "audience-root" : scopedCategoryIds.join(","), productQuery, inStockOnly ? "1" : "0", minPrice, maxPrice].join("|"), [audienceContext, audienceRootOnly, scopedCategoryIds, productQuery, inStockOnly, minPrice, maxPrice]);
 
   const { data: availableBrands = [] } = useQuery({
     queryKey: ["category-available-brands", brandScopeKey],
-    enabled: scopedCategoryIds.length > 0,
+    enabled: hasProductScope,
     queryFn: async () => {
       const brands = new Set<string>();
       const batchSize = 1000;
 
       for (let page = 0; page < 20; page += 1) {
-        let query = supabase.from("products").select("brand").eq("is_active", true).in("category_id", scopedCategoryIds);
+        let query = (supabase as any).from("products").select("brand").eq("is_active", true);
+        if (!audienceRootOnly) query = query.in("category_id", scopedCategoryIds);
+        if (audienceValues.length > 0) query = query.in("audience", audienceValues);
         if (productQuery.trim()) { const term = productQuery.trim(); query = query.or(`name_ar.ilike.%${term}%,name.ilike.%${term}%,description_ar.ilike.%${term}%`); }
         if (inStockOnly) query = query.eq("in_stock", true);
         if (Number(minPrice) > 0) query = query.gte("price", Number(minPrice));

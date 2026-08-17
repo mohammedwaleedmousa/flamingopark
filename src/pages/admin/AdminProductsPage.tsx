@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
@@ -54,10 +54,13 @@ const AdminProductsPage = () => {
   const [total, setTotal] = useState(0);
   const [stats, setStats] = useState({ total: 0, active: 0, inStock: 0, outOfStock: 0 });
 
-  const [page, setPage] = useState(1);
+  const [page, setPage] = useState(() => {
+    const saved = Number(sessionStorage.getItem("admin-products-page") || 1);
+    return Number.isFinite(saved) && saved > 0 ? Math.floor(saved) : 1;
+  });
   const [isLoading, setIsLoading] = useState(true);
 
-  const [searchInput, setSearchInput] = useState("");
+  const [searchInput, setSearchInput] = useState(() => sessionStorage.getItem("admin-products-search") || "");
   const search = useDebounce(searchInput, 350);
 
   const [status, setStatus] = useState<"all" | "active" | "inactive">(() => (sessionStorage.getItem("admin-products-status") as "all" | "active" | "inactive") || "all");
@@ -73,9 +76,15 @@ const AdminProductsPage = () => {
   const [bulkBusy, setBulkBusy] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState<{ id?: string; bulk?: boolean } | null>(null);
 
+  const didHydrateFilters = useRef(false);
+
   useEffect(() => {
+    if (!didHydrateFilters.current) { didHydrateFilters.current = true; return; }
     setPage(1);
   }, [search, status, stock, categoryFilter, brandFilter]);
+
+  useEffect(() => { sessionStorage.setItem("admin-products-page", String(page)); }, [page]);
+  useEffect(() => { sessionStorage.setItem("admin-products-search", searchInput); }, [searchInput]);
 
   useEffect(() => {
     sessionStorage.setItem("admin-products-status", status);
@@ -351,6 +360,27 @@ const AdminProductsPage = () => {
     setBrandFilter("all");
   };
 
+  const rememberProductPosition = (productId: string) => {
+    sessionStorage.setItem("admin-products-page", String(page));
+    sessionStorage.setItem("admin-products-search", searchInput);
+    sessionStorage.setItem("admin-products-return-id", productId);
+    sessionStorage.setItem("admin-products-return-scroll", String(window.scrollY));
+  };
+
+  useEffect(() => {
+    if (isLoading || products.length === 0) return;
+    const returnId = sessionStorage.getItem("admin-products-return-id");
+    if (!returnId || !products.some((product) => product.id === returnId)) return;
+    const savedScroll = Number(sessionStorage.getItem("admin-products-return-scroll") || 0);
+    requestAnimationFrame(() => { requestAnimationFrame(() => {
+      const target = Array.from(document.querySelectorAll<HTMLElement>(`[data-product-id="${returnId}"]`)).find((element) => element.offsetParent !== null);
+      if (target) target.scrollIntoView({ block: "center", behavior: "auto" });
+      else if (Number.isFinite(savedScroll)) window.scrollTo({ top: savedScroll, left: 0, behavior: "auto" });
+      sessionStorage.removeItem("admin-products-return-id");
+      sessionStorage.removeItem("admin-products-return-scroll");
+    }); });
+  }, [isLoading, products, page]);
+
   const allSelected = useMemo(() => products.length > 0 && products.every((product) => selected.has(product.id)), [products, selected]);
 
   const hasFilters = Boolean(searchInput.trim()) || status !== "all" || stock !== "all" || categoryFilter !== "all" || brandFilter !== "all";
@@ -575,7 +605,7 @@ const AdminProductsPage = () => {
           <EmptyProducts />
         ) : (
           products.map((product) => (
-            <article key={product.id} className={cn("overflow-hidden rounded-[14px] border bg-white transition-colors", selected.has(product.id) ? "border-[#CFC9EC] bg-[#FBFAFF]" : "border-[#E5E9EF]")}>
+            <article key={product.id} data-product-id={product.id} className={cn("overflow-hidden rounded-[14px] border bg-white transition-colors", selected.has(product.id) ? "border-[#CFC9EC] bg-[#FBFAFF]" : "border-[#E5E9EF]")}>
               <div className="p-[11px]">
                 <div className="flex items-start gap-[10px]">
                   <Checkbox checked={selected.has(product.id)} onCheckedChange={() => toggleSelect(product.id)} className="mt-[3px] h-[15px] w-[15px] border-[#BAC0C8] data-[state=checked]:border-[#675CBA] data-[state=checked]:bg-[#675CBA]" />
@@ -617,7 +647,7 @@ const AdminProductsPage = () => {
                   {product.is_active ? "تعطيل" : "تفعيل"}
                 </button>
 
-                <Link to={`/admin/products/${product.id}`} className="flex h-[34px] items-center justify-center gap-[5px] rounded-[8px] border border-[#E3E7EC] bg-white text-[8px] font-semibold text-[#69717C]">
+                <Link to={`/admin/products/${product.id}`} onClick={() => rememberProductPosition(product.id)} className="flex h-[34px] items-center justify-center gap-[5px] rounded-[8px] border border-[#E3E7EC] bg-white text-[8px] font-semibold text-[#69717C]">
                   <Edit className="h-[11px] w-[11px]" />
                   تعديل
                 </Link>
@@ -690,7 +720,7 @@ const AdminProductsPage = () => {
                 </tr>
               ) : (
                 products.map((product) => (
-                  <tr key={product.id} className={cn("h-[72px] border-b border-[#F0F2F5] transition-colors last:border-b-0 hover:bg-[#FCFDFE]", selected.has(product.id) && "bg-[#FAF9FF]")}>
+                  <tr key={product.id} data-product-id={product.id} className={cn("h-[72px] border-b border-[#F0F2F5] transition-colors last:border-b-0 hover:bg-[#FCFDFE]", selected.has(product.id) && "bg-[#FAF9FF]")}>
                     <td className="px-[10px] text-center">
                       <Checkbox checked={selected.has(product.id)} onCheckedChange={() => toggleSelect(product.id)} className="h-[15px] w-[15px] border-[#BAC0C8] data-[state=checked]:border-[#675CBA] data-[state=checked]:bg-[#675CBA]" />
                     </td>
@@ -702,7 +732,7 @@ const AdminProductsPage = () => {
                         </div>
 
                         <div className="min-w-0">
-                          <Link to={`/admin/products/${product.id}`} className="block max-w-[250px] truncate text-[10px] font-semibold text-[#424A54] transition-colors hover:text-[#675CBA]">{product.name_ar || product.name}</Link>
+                          <Link to={`/admin/products/${product.id}`} onClick={() => rememberProductPosition(product.id)} className="block max-w-[250px] truncate text-[10px] font-semibold text-[#424A54] transition-colors hover:text-[#675CBA]">{product.name_ar || product.name}</Link>
 
                           <p dir="ltr" className="mt-[4px] max-w-[250px] truncate text-right text-[6.8px] text-[#A1A7B0]">{product.slug}</p>
 
@@ -735,7 +765,7 @@ const AdminProductsPage = () => {
                           {product.is_active ? <EyeOff className="h-[12px] w-[12px]" /> : <Eye className="h-[12px] w-[12px]" />}
                         </ActionButton>
 
-                        <Link to={`/admin/products/${product.id}`} aria-label="تعديل المنتج" className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] border border-[#E3E7EC] bg-white text-[#707884] transition-colors hover:border-[#D7DCE3] hover:bg-[#F7F9FB] hover:text-[#675CBA]">
+                        <Link to={`/admin/products/${product.id}`} onClick={() => rememberProductPosition(product.id)} aria-label="تعديل المنتج" className="flex h-[30px] w-[30px] items-center justify-center rounded-[8px] border border-[#E3E7EC] bg-white text-[#707884] transition-colors hover:border-[#D7DCE3] hover:bg-[#F7F9FB] hover:text-[#675CBA]">
                           <Edit className="h-[12px] w-[12px]" strokeWidth={1.7} />
                         </Link>
 

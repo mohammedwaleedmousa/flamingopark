@@ -14,16 +14,44 @@ do $$ begin
   end if;
 end $$;
 
-update public.categories set category_kind='audience' where slug in ('men','women','babes','kids','unisex');
+update public.categories
+set category_kind='audience'
+where slug in ('men','women','babes','kids','unisex');
 
 insert into public.categories(name,name_ar,slug,parent_id,is_active,sort_order,countries,category_kind)
 select 'Unisex','للجنسين','unisex',null,true,28,array['GLOBAL']::text[],'audience'
 where not exists (select 1 from public.categories where slug='unisex');
 
-update public.categories set name='Kids', name_ar='أطفال', slug='kids', category_kind='audience' where slug='babes';
+-- Audience rows are not catalog parents anymore. Preserve any existing children
+-- (for example kids clothes/pants) as normal root product categories.
+update public.categories
+set parent_id=null
+where parent_id in (
+  select id from public.categories where category_kind='audience'
+);
 
-update public.products p set audience='men' from public.categories c where p.category_id=c.id and c.slug='men' and p.audience is null;
-update public.products p set audience='women' from public.categories c where p.category_id=c.id and c.slug='women' and p.audience is null;
-update public.products p set audience='kids' from public.categories c where p.category_id=c.id and c.slug in ('kids','babes') and p.audience is null;
+-- Keep the existing kids row/id but normalize its public slug/name.
+update public.categories
+set name='Kids', name_ar='أطفال', slug='kids', category_kind='audience'
+where slug='babes';
 
-create index if not exists idx_products_audience_active_category on public.products(audience,category_id) where is_active=true;
+-- Only migrate products whose existing category explicitly identified an audience.
+-- Generic categories such as watches/shoes are deliberately not guessed.
+update public.products p
+set audience='men'
+from public.categories c
+where p.category_id=c.id and c.slug='men' and p.audience is null;
+
+update public.products p
+set audience='women'
+from public.categories c
+where p.category_id=c.id and c.slug='women' and p.audience is null;
+
+update public.products p
+set audience='kids'
+from public.categories c
+where p.category_id=c.id and c.slug in ('kids','babes') and p.audience is null;
+
+create index if not exists idx_products_audience_active_category
+on public.products(audience,category_id)
+where is_active=true;

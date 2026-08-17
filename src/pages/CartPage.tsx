@@ -14,7 +14,7 @@ const CartPage = () => {
   const navigate = useNavigate();
   const { data: content } = useSiteContent("cart_");
 
-  const { format: formatCurrency } = useCurrency();
+  const { format: formatCurrency, symbol: currency } = useCurrency();
   const total = getCartTotal();
 
   const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);

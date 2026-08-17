@@ -189,6 +189,7 @@ const sections: NavSection[] = [
     items: [
       { title: "البانرات", url: "/admin/banners", icon: Image, tone: "rose" },
       { title: "أقسام الصفحة الرئيسية", url: "/admin/sections", icon: LayoutGrid, tone: "rose" },
+      { title: "تجربة العميل", url: "/admin/customer-experience", icon: SlidersHorizontal, tone: "rose" },
       { title: "المحتوى", url: "/admin/content", icon: FileText, tone: "rose" },
       { title: "صفحات الماركات", url: "/admin/brand-pages", icon: Store, tone: "rose" },
       { title: "أقسام الماركات", url: "/admin/brand-sections", icon: LayoutGrid, tone: "rose" },
@@ -205,6 +206,7 @@ const sections: NavSection[] = [
       { title: "إدارة التوصيل", url: "/admin/delivery", icon: Truck, tone: "amber" },
       { title: "مناطق الدفع عند الاستلام", url: "/admin/cod-regions", icon: MapPinCheck, tone: "amber" },
       { title: "التقييمات", url: "/admin/reviews", icon: Star, tone: "amber" },
+      { title: "أسئلة المنتجات", url: "/admin/product-questions", icon: Star, tone: "amber" },
     ],
   },
   {

@@ -12,6 +12,7 @@ import HeroSlider from "@/components/HeroSlider";
 import ProductCard from "@/components/ProductCard";
 import BrandsStrip from "@/components/BrandsStrip";
 import FlamingoServices from "@/components/FlamingoServices";
+import HomeManagedSections from "@/components/HomeManagedSections";
 
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
@@ -323,11 +324,13 @@ const HomePage = () => {
             FLAMINGO PICKS
         ===================================================== */}
 
-        {showHomeSection("featuredProducts") && (
+        {false && showHomeSection("featuredProducts") && (
           <div ref={featuredViewport.ref} className="min-h-px bg-background">
             <ProductSection eyebrow="FLAMINGO PICKS" title="مختارات فلامنجو" products={products} link="/products" />
           </div>
         )}
+
+        <HomeManagedSections />
 
         {/* =====================================================
             SERVICES
@@ -343,7 +346,7 @@ const HomePage = () => {
             BEST SELLERS
         ===================================================== */}
 
-        {showHomeSection("bestSellers") && (
+        {false && showHomeSection("bestSellers") && (
           <div ref={bestSellersViewport.ref} className="min-h-px bg-background">
             <ProductSection eyebrow="BEST SELLERS" title="الأكثر مبيعاً" products={bestSellers} link="/top-selling" badge="BEST SELLER" />
           </div>

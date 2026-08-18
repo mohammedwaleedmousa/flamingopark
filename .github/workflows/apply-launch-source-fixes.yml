@@ -1,9 +1,9 @@
 name: Apply Launch Source Fixes
 
 on:
-  push:
-    branches:
-      - agent/fix-launch-readiness-without-password
+  pull_request:
+    branches: [main]
+    types: [opened, synchronize, reopened]
 
 permissions:
   contents: write
@@ -17,6 +17,11 @@ jobs:
         with:
           ref: agent/fix-launch-readiness-without-password
           fetch-depth: 0
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
 
       - name: Apply exact source replacements
         run: |
@@ -52,6 +57,13 @@ jobs:
           text = text.replace('placeholder="cod أو transfer"', 'placeholder="cash أو cod أو bank"', 1)
           payments.write_text(text, encoding='utf-8')
           PY
+
+      - name: Verify patched source
+        run: |
+          npm ci
+          npm run lint
+          npx tsc -p tsconfig.app.json --noEmit
+          npm run build
 
       - name: Remove one-time workflow
         run: git rm .github/workflows/apply-launch-source-fixes.yml

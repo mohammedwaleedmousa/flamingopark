@@ -39,7 +39,7 @@ async function convertHeic(file: File): Promise<File> {
       lastModified: Date.now(),
     });
   } catch {
-    return await bitmapToJpegFile(file); // خطة احتياطية عبر محرك المتصفح نفسه
+    return await bitmapToJpegFile(file);
   }
 }
 
@@ -65,7 +65,6 @@ export async function prepareImageUpload(
     }
   }
 
-  // نعتبره HEIC لو أي من الفحصين أثبت ذلك (وليس فقط عند فشل isHeic)
   const isHEIC = looksLikeHeicByNameOrType || looksLikeHeicByContent;
 
   let working: File | Blob = file;
@@ -80,7 +79,6 @@ export async function prepareImageUpload(
     }
   }
 
-  // حماية أخيرة: لو وصلنا هنا وما زال النوع ليس صورة (مثلاً HEIC لم يُكتشف إطلاقًا)، حاول تحويله كخيار أخير
   if (!/^image\//.test((working as File).type || "")) {
     try {
       working = await convertHeic(file);
@@ -103,18 +101,37 @@ export async function prepareImageUpload(
     lastModified: Date.now(),
   });
 }
+
+export async function uploadPreparedImage(file: File, pathPrefix: string): Promise<string> {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+
+  const token = sessionData.session?.access_token;
+  if (!token) throw new Error("انتهت جلسة تسجيل الدخول. سجّل الدخول مرة أخرى ثم حاول الرفع");
+
+  const response = await fetch("/api/media/upload", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${token}`,
+      "Content-Type": file.type || "image/webp",
+      "x-upload-prefix": pathPrefix,
+    },
+    body: file,
+  });
+
+  const payload = await response.json().catch(() => ({})) as { url?: string; error?: string };
+  if (!response.ok || !payload.url) {
+    throw new Error(payload.error || `فشل رفع الصورة (${response.status})`);
+  }
+
+  return payload.url;
+}
+
 export async function uploadOptimizedImage(
   file: File,
   pathPrefix: string,
   opts: { maxSizeMB?: number; maxWidthOrHeight?: number } = {},
 ): Promise<string> {
   const prepared = await prepareImageUpload(file, opts);
-  const path = `${pathPrefix}/${crypto.randomUUID()}.webp`;
-  const { error } = await supabase.storage.from("uploads").upload(path, prepared, {
-    cacheControl: "31536000",
-    upsert: false,
-    contentType: "image/webp",
-  });
-  if (error) throw error;
-  return supabase.storage.from("uploads").getPublicUrl(path).data.publicUrl;
+  return uploadPreparedImage(prepared, pathPrefix);
 }

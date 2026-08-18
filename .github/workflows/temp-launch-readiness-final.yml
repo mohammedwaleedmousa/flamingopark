@@ -4,6 +4,9 @@ on:
   push:
     branches:
       - fix/launch-readiness-final
+  pull_request:
+    branches:
+      - main
 
 permissions:
   contents: write

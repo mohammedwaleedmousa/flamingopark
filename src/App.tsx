@@ -128,13 +128,13 @@ const AdminCampaignsPage = lazy(() => import("./pages/admin/AdminCampaignsPage")
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 5 * 60 * 1000, // Default pages stay light; sensitive pages override this.
-      gcTime: 30 * 60 * 1000, // 30 minutes - keep unused data in cache for 30 minutes
-      retry: 1, // محاولة واحدة فقط حتى لا تتجمد الصفحة دقيقة كاملة عند فشل الطلب
-      retryDelay: attemptIndex => Math.min(500 * 2 ** attemptIndex, 2000), // انتظار قصير جداً
+      staleTime: 5 * 60 * 1000,
+      gcTime: 30 * 60 * 1000,
+      retry: 1,
+      retryDelay: attemptIndex => Math.min(500 * 2 ** attemptIndex, 2000),
       refetchOnWindowFocus: false,
       refetchOnMount: false,
-      refetchOnReconnect: true, // refetch when connection is restored
+      refetchOnReconnect: true,
     },
   },
 });
@@ -183,7 +183,6 @@ const ScrollToTop = () => {
   const navType = useNavigationType();
 
   useEffect(() => {
-    // On POP (back/forward) let the browser restore the previous scroll position.
     if (navType === "POP") return;
     window.scrollTo({ top: 0, left: 0, behavior: "auto" });
   }, [pathname, navType]);
@@ -202,7 +201,6 @@ const App = () => {
     return () => media.removeEventListener("change", update);
   }, []);
 
-  // هنا يتم تجهيز العملات عند تشغيل الموقع
   useEffect(() => {
     hydrateCurrencies();
   }, []);
@@ -245,12 +243,12 @@ const App = () => {
             <Route path="/my-shipments" element={<ProtectedRoute><MyShipmentsPage /></ProtectedRoute>} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route path="/product/:slug" element={<ProtectedRoute><ProductDetailPage /></ProtectedRoute>} />
-            <Route path="/brand/:slug" element={ <ProtectedRoute><BrandPage /></ProtectedRoute> } />
-            <Route path="/brands" element={ <ProtectedRoute><AllBrandsPage /></ProtectedRoute> } />
-            <Route path="/brands/:slug" element={ <ProtectedRoute><BrandPage /></ProtectedRoute> } />
+            <Route path="/brand/:slug" element={<ProtectedRoute><BrandPage /></ProtectedRoute>} />
+            <Route path="/brands" element={<ProtectedRoute><AllBrandsPage /></ProtectedRoute>} />
+            <Route path="/brands/:slug" element={<ProtectedRoute><BrandPage /></ProtectedRoute>} />
             <Route path="/brands/:slug/products" element={<ProtectedRoute><BrandProductsPage /></ProtectedRoute>} />
-            <Route path="/brands/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />
-            <Route path="/brand/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />
+            <Route path="/brands/:slug/sections/:sectionSlug" element={<ProtectedRoute><BrandSectionPage /></ProtectedRoute>} />
+            <Route path="/brand/:slug/sections/:sectionSlug" element={<ProtectedRoute><BrandSectionPage /></ProtectedRoute>} />
             <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
             <Route path="/order-confirmation" element={<ProtectedRoute><OrderConfirmationPage /></ProtectedRoute>} />
             <Route path="/reviews" element={<ProtectedRoute><ReviewsPage /></ProtectedRoute>} />
@@ -260,8 +258,8 @@ const App = () => {
             <Route path="/banner/:slug" element={<ProtectedRoute><BannerPage /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/order-tracking" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
-            <Route path="/brands/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />
-            <Route path="/brand/:slug/sections/:sectionSlug" element={ <ProtectedRoute><BrandSectionPage /></ProtectedRoute> } />
+            <Route path="/brands/:slug/sections/:sectionSlug" element={<ProtectedRoute><BrandSectionPage /></ProtectedRoute>} />
+            <Route path="/brand/:slug/sections/:sectionSlug" element={<ProtectedRoute><BrandSectionPage /></ProtectedRoute>} />
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route path="/admin" element={<AdminLayout />}>
@@ -287,7 +285,6 @@ const App = () => {
               <Route path="reports" element={<ReportsOverviewPage />} />
               <Route path="reports/finance" element={<ReportsFinancePage />} />
               <Route path="reports/customers" element={<ReportsCustomersPage />} />
-              {/* Legacy aliases */}
               <Route path="analytics" element={<Navigate to="/admin/reports" replace />} />
               <Route path="revenue" element={<Navigate to="/admin/reports" replace />} />
               <Route path="profit-report" element={<Navigate to="/admin/reports/finance" replace />} />
@@ -303,6 +300,8 @@ const App = () => {
               <Route path="inventory-adjustments" element={<AdminInventoryAdjustmentsPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
               <Route path="customer-experience" element={<AdminCustomerExperiencePage />} />
+              <Route path="product-experience" element={<Navigate to="/admin/products" replace />} />
+              <Route path="storefront-map" element={<Navigate to="/admin/sections" replace />} />
               <Route path="brand-pages" element={<AdminBrandPagesPage />} />
               <Route path="brand-pages/new" element={<AdminBrandPageEditor />} />
               <Route path="brand-pages/:id" element={<AdminBrandPageEditor />} />

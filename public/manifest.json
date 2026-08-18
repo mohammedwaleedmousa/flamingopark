@@ -1,18 +1,18 @@
 {
-  "name": "فلامنجو | ماركات عالمية",
+  "name": "فلامنجو بارك | ماركات عالمية",
   "short_name": "Flamingo",
-  "description": "اكتشف أرقى الماركات العالمية والقطع الفاخرة من فلامنجو",
-  "start_url": "/",
+  "description": "اكتشف أرقى الماركات العالمية والقطع المختارة من فلامنجو بارك",
+  "start_url": "/home",
   "display": "standalone",
-  "background_color": "#0A0A0A",
-  "theme_color": "#C9A962",
+  "background_color": "#FFFDFC",
+  "theme_color": "#D4777D",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/og-image.jpg",
-      "sizes": "512x512",
+      "src": "/icons/flamingo.jpeg",
+      "sizes": "any",
       "type": "image/jpeg",
-      "purpose": "any maskable"
+      "purpose": "any"
     }
   ]
 }

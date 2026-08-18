@@ -1,20 +1,21 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.112.0";
 
 type InvoiceBody = { action?: unknown; orderId?: unknown; trackingToken?: unknown; pdfBase64?: unknown };
-const DEFAULT_ORIGINS = ["https://flamingopark.vercel.app", "https://flamingopark.store", "https://www.flamingopark.store", "https://flamingoparkaden.com", "https://www.flamingoparkaden.com", "http://localhost:5173", "http://localhost:8080"];
+const DEFAULT_ORIGINS = ["https://flamingopark.vercel.app","https://flamingopark.store","https://www.flamingopark.store","https://flamingoparkaden.com","https://www.flamingoparkaden.com","http://localhost:5173","http://localhost:8080"];
 const MAX_BODY_BYTES = 8_100_000;
 const MAX_PDF_BYTES = 6_000_000;
 const allowedOrigins = () => new Set((Deno.env.get("ALLOWED_ORIGINS") || DEFAULT_ORIGINS.join(",")).split(",").map((origin) => origin.trim()).filter(Boolean));
-const corsHeaders = (origin: string | null) => ({ "Access-Control-Allow-Origin": origin && allowedOrigins().has(origin) ? origin : DEFAULT_ORIGINS[0], "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS", Vary: "Origin" });
-const json = (body: unknown, status: number, origin: string | null) => Response.json(body, { status, headers: { ...corsHeaders(origin), "Cache-Control": "no-store" } });
+const headers = (origin: string | null) => ({ "Access-Control-Allow-Origin": origin && allowedOrigins().has(origin) ? origin : DEFAULT_ORIGINS[0], "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS", Vary: "Origin" });
+const json = (body: unknown, status: number, origin: string | null) => Response.json(body, { status, headers: { ...headers(origin), "Cache-Control": "no-store" } });
 const hashToken = async (value: string) => { const digest = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(value)); return [...new Uint8Array(digest)].map((byte) => byte.toString(16).padStart(2, "0")).join(""); };
 const signInvoice = async (service: SupabaseClient<any>, path: string) => { if (!path || /^https?:\/\//i.test(path) || path.includes("..") || path.startsWith("/")) return null; const { data, error } = await service.storage.from("invoices").createSignedUrl(path, 300); return error ? null : data?.signedUrl || null; };
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
   if (origin && !allowedOrigins().has(origin)) return json({ error: "Origin not allowed" }, 403, origin);
-  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: corsHeaders(origin) });
+  if (req.method === "OPTIONS") return new Response(null, { status: 204, headers: headers(origin) });
   if (req.method !== "POST") return json({ error: "Method not allowed" }, 405, origin);
+
   const declaredLength = Number(req.headers.get("content-length") || 0);
   if (declaredLength > MAX_BODY_BYTES) return json({ error: "Invoice request is too large" }, 413, origin);
 
@@ -41,13 +42,18 @@ Deno.serve(async (req) => {
   if (!isAdmin && !isOwner && !validTrackingToken) return json({ error: "Invoice access denied" }, 403, origin);
 
   if (action === "signed_url") { const signedUrl = await signInvoice(service, order.invoice_url || ""); return signedUrl ? json({ signedUrl }, 200, origin) : json({ error: "Invoice unavailable" }, 404, origin); }
-  if (typeof body.pdfBase64 !== "string" || body.pdfBase64.length < 8 || body.pdfBase64.length > 8_000_000) return json({ error: "Invalid invoice request" }, 400, origin);
 
+  // Financial integrity: only administrators may persist an invoice PDF.
+  // Storefront clients may still render/print their local order copy, but a tracking token
+  // can no longer replace the authoritative invoice stored for the order.
+  if (!isAdmin) return json({ uploaded: false, reason: "client_upload_disabled" }, 200, origin);
+
+  if (typeof body.pdfBase64 !== "string" || body.pdfBase64.length < 8 || body.pdfBase64.length > 8_000_000) return json({ error: "Invalid invoice request" }, 400, origin);
   let binary: Uint8Array;
   try { binary = Uint8Array.from(atob(body.pdfBase64), (character) => character.charCodeAt(0)); } catch { return json({ error: "Invalid invoice request" }, 400, origin); }
   if (binary.byteLength > MAX_PDF_BYTES || new TextDecoder().decode(binary.slice(0, 5)) !== "%PDF-") return json({ error: "Invalid PDF file" }, 400, origin);
-  if (order.invoice_url) { const existing = await signInvoice(service, order.invoice_url); if (existing) return json({ path: order.invoice_url, signedUrl: existing }, 200, origin); }
 
+  if (order.invoice_url) { const existing = await signInvoice(service, order.invoice_url); if (existing) return json({ path: order.invoice_url, signedUrl: existing }, 200, origin); }
   const path = `orders/${order.id}/${crypto.randomUUID()}.pdf`;
   const { error: uploadError } = await service.storage.from("invoices").upload(path, binary, { contentType: "application/pdf", cacheControl: "3600", upsert: false });
   if (uploadError) return json({ error: "Invoice upload failed" }, 500, origin);

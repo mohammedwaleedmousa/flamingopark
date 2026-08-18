@@ -20,7 +20,7 @@ interface TrackingStep {
 
 type NormalizedStatus = "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
 
-const STORE_WHATSAPP = "967782676054";
+const STORE_WHATSAPP = "967778579777";
 
 const normalizeStatus = (raw: string): NormalizedStatus => {
   const status = String(raw || "").trim().toLowerCase();
@@ -349,46 +349,27 @@ const OrderTrackingPage = () => {
 
                     return (
                       <div key={`${step.title}-${index}`} className="relative flex gap-3">
-                        {/* LINE */}
-
                         {!last && <div className={`absolute right-[15px] top-[30px] h-[calc(100%-6px)] w-px ${step.completed && !isCancelled ? "bg-[#D8AAA7]" : isCancelStep ? "bg-[#D5A2A0]" : "bg-[#E7DFDC]"}`} />}
-
-                        {/* ICON */}
 
                         <div className={`relative z-10 flex h-[31px] w-[31px] shrink-0 items-center justify-center rounded-full border ${isCancelStep ? "border-[#D69491] bg-[#FFF0EF] text-[#AE6262]" : step.completed || step.active ? "border-[#D9A7A4] bg-[#FFF5F3] text-[#B86168]" : "border-[#E5DCD8] bg-[#FAF8F7] text-[#ACA09B]"}`}>
                           {step.completed && !step.active && !isCancelStep ? <Check className="h-3.5 w-3.5" strokeWidth={2} /> : <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />}
-
                           {step.active && !isCancelStep && normalizedStatus !== "delivered" && <span className="absolute inset-[-4px] animate-pulse rounded-full border border-[#D9A7A4]/45" />}
                         </div>
-
-                        {/* CONTENT */}
 
                         <div className={`min-w-0 flex-1 ${last ? "pb-0" : "pb-6"}`}>
                           <div className="flex items-start justify-between gap-3">
                             <div>
                               <h3 className={`text-[9px] font-semibold ${isCancelStep ? "text-[#A95F5F]" : step.completed || step.active ? "text-[#514540]" : "text-[#A29590]"}`}>{step.title}</h3>
-
                               <p className={`mt-1 text-[7px] leading-5 ${step.completed || step.active ? "text-[#8C7E79]" : "text-[#B2A6A1]"}`}>{step.description}</p>
                             </div>
-
-                            {step.active && (
-                              <span className={`shrink-0 rounded-full px-2 py-1 text-[5px] font-semibold ${isCancelStep ? "bg-[#FFF0EF] text-[#A95F5F]" : "bg-[#FFF5F3] text-[#A95B61]"}`}>
-                                الحالة الحالية
-                              </span>
-                            )}
+                            {step.active && <span className={`shrink-0 rounded-full px-2 py-1 text-[5px] font-semibold ${isCancelStep ? "bg-[#FFF0EF] text-[#A95F5F]" : "bg-[#FFF5F3] text-[#A95B61]"}`}>الحالة الحالية</span>}
                           </div>
 
                           {step.date && (
                             <div className="mt-1.5 flex items-center gap-1 text-[6px] text-[#A0938E]">
                               <Clock3 className="h-2.5 w-2.5" strokeWidth={1.4} />
                               <span>{step.date}</span>
-
-                              {step.time && (
-                                <>
-                                  <span className="text-[#D2C7C3]">•</span>
-                                  <span>{step.time}</span>
-                                </>
-                              )}
+                              {step.time && <><span className="text-[#D2C7C3]">•</span><span>{step.time}</span></>}
                             </div>
                           )}
                         </div>
@@ -398,53 +379,31 @@ const OrderTrackingPage = () => {
                 </div>
               </section>
 
-              {/* =================================================
-                  DELIVERY
-              ================================================= */}
-
               <section className="mt-4 rounded-[15px] border border-[#E9DFDB] bg-white px-4 py-4 md:px-5">
                 <div className="flex items-center gap-3">
                   <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#FAECE9]">
                     <Truck className="h-4 w-4 text-[#C66C72]" strokeWidth={1.5} />
                   </span>
-
                   <div className="min-w-0 flex-1">
                     <p className="text-[6px] text-[#9B8D88]">شركة التوصيل</p>
-
                     <p className="mt-1 truncate text-[9px] font-semibold text-[#514540]">{order.delivery_company_name || "سيتم تحديد شركة التوصيل"}</p>
                   </div>
-
-                  {!isCancelled && normalizedStatus === "shipped" && (
-                    <span className="flex shrink-0 items-center gap-1 rounded-full bg-[#FFF5F3] px-2 py-1.5 text-[6px] font-medium text-[#A95B61]">
-                      <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#D4777D]" />
-                      في الطريق
-                    </span>
-                  )}
+                  {!isCancelled && normalizedStatus === "shipped" && <span className="flex shrink-0 items-center gap-1 rounded-full bg-[#FFF5F3] px-2 py-1.5 text-[6px] font-medium text-[#A95B61]"><span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[#D4777D]" />في الطريق</span>}
                 </div>
               </section>
-
-              {/* =================================================
-                  SUPPORT
-              ================================================= */}
 
               <section className="mt-4 overflow-hidden rounded-[15px] border border-[#E9DFDB] bg-[#FFFCFB]">
                 <div className="flex items-center justify-between gap-3 px-4 py-4 md:px-5">
                   <div>
                     <p className="text-[9px] font-semibold text-[#514540]">هل تحتاج إلى مساعدة؟</p>
-
                     <p className="mt-1 text-[6px] text-[#9B8D88]">تواصل معنا وساعدنا برقم الطلب لتسريع الخدمة.</p>
                   </div>
-
                   <button type="button" onClick={handleContact} className="flex h-[38px] shrink-0 items-center justify-center gap-1.5 rounded-[9px] bg-[#568C68] px-3.5 text-[7px] font-semibold text-white active:bg-[#4C7D5D]">
                     <MessageCircle className="h-3.5 w-3.5" strokeWidth={1.5} />
                     واتساب
                   </button>
                 </div>
               </section>
-
-              {/* =================================================
-                  HOME
-              ================================================= */}
 
               <div className="mt-4 text-center">
                 <Link to="/home" className="inline-flex h-9 items-center justify-center gap-1.5 px-3 text-[7px] font-medium text-[#887A75] active:text-[#A95B61]">

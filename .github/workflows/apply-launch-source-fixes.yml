@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   patch:
-    if: github.actor != 'github-actions[bot]'
+    if: github.head_ref == 'agent/fix-launch-readiness-without-password' && github.actor != 'github-actions[bot]'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -65,8 +65,8 @@ jobs:
           npx tsc -p tsconfig.app.json --noEmit
           npm run build
 
-      - name: Remove one-time workflow
-        run: git rm .github/workflows/apply-launch-source-fixes.yml
+      - name: Remove one-time branch workflow
+        run: git rm -f .github/workflows/apply-launch-source-fixes.yml || true
 
       - name: Commit source fixes
         run: |

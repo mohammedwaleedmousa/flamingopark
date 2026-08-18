@@ -69,112 +69,261 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
     onChange(value.filter((_, idx) => idx !== i));
   };
 
-  const uploadImage = async (colorIdx: number, files: FileList) => {
-    if (!value[colorIdx]?.name) {
-      toast({
-        title: 'حدد اسم اللون أولاً',
-        variant: 'destructive',
+  const uploadImage = async (
+  colorIdx: number,
+  files: FileList,
+) => {
+  if (!value[colorIdx]?.name) {
+    toast({
+      title: "حدد اسم اللون أولاً",
+      variant: "destructive",
+    });
+
+    return;
+  }
+
+  const fileArray = Array.from(files);
+
+  const currentImages =
+    value[colorIdx].images || [];
+
+  if (
+    currentImages.length +
+      fileArray.length >
+    5
+  ) {
+    toast({
+      title:
+        "الحد الأقصى هو 5 صور لكل لون",
+      variant: "destructive",
+    });
+
+    return;
+  }
+
+  setUploading(colorIdx);
+
+  try {
+    const uploadPromises =
+      fileArray.map(async (file) => {
+        const extension =
+          file.name
+            .split(".")
+            .pop()
+            ?.toLowerCase();
+
+        const allowed = [
+          "jpg",
+          "jpeg",
+          "png",
+          "webp",
+          "heic",
+          "heif",
+        ];
+
+        if (
+          !allowed.includes(
+            extension || "",
+          )
+        ) {
+          throw new Error(
+            `${file.name} ليس صورة مدعومة`,
+          );
+        }
+
+        if (
+          file.size >
+          15 * 1024 * 1024
+        ) {
+          throw new Error(
+            `${file.name} أكبر من 15MB`,
+          );
+        }
+
+        let finalFile: File;
+
+        try {
+          finalFile =
+            await prepareImageUpload(
+              file,
+              {
+                maxSizeMB: 0.8,
+                maxWidthOrHeight:
+                  1800,
+              },
+            );
+        } catch (error: any) {
+          console.error(
+            "IMAGE PREP ERROR:",
+            file.name,
+            error,
+          );
+
+          throw new Error(
+            `تعذر معالجة صورة ${
+              file.name
+            } (${
+              error?.message ||
+              "خطأ غير معروف"
+            })`,
+          );
+        }
+
+        const fileName =
+          `color-variants/` +
+          `${crypto.randomUUID()}.webp`;
+
+        const uploadPromise =
+          supabase.storage
+            .from("uploads")
+            .upload(
+              fileName,
+              finalFile,
+              {
+                cacheControl:
+                  "31536000",
+
+                upsert: false,
+
+                contentType:
+                  "image/webp",
+              },
+            );
+
+        const timeoutPromise =
+          new Promise<never>(
+            (_, reject) => {
+              window.setTimeout(
+                () => {
+                  reject(
+                    new Error(
+                      `انتهت مهلة رفع ${file.name}`,
+                    ),
+                  );
+                },
+                90_000,
+              );
+            },
+          );
+
+        const { error } =
+          await Promise.race([
+            uploadPromise,
+            timeoutPromise,
+          ]);
+
+        if (error) {
+          throw error;
+        }
+
+        const { data } =
+          supabase.storage
+            .from("uploads")
+            .getPublicUrl(
+              fileName,
+            );
+
+        if (!data.publicUrl) {
+          throw new Error(
+            `تعذر إنشاء رابط ${file.name}`,
+          );
+        }
+
+        return data.publicUrl;
       });
-      return;
-    }
 
-    setUploading(colorIdx);
-    let previewUrls: string[] = [];
+    const results =
+      await Promise.allSettled(
+        uploadPromises,
+      );
 
-    try {
-      const fileArray = Array.from(files);
-      const currentImages = value[colorIdx].images.length;
-      if (currentImages + fileArray.length > 5) {
-        toast({
-          title: "الحد الأقصى هو 5 صور لكل لون",
-          variant: "destructive",
-        });
+    const successfulUrls =
+      results
+        .filter(
+          (
+            result,
+          ): result is PromiseFulfilledResult<string> =>
+            result.status ===
+            "fulfilled",
+        )
+        .map(
+          (result) =>
+            result.value,
+        );
 
-        setUploading(null);
-        return;
+    const failed =
+      results.filter(
+        (result) =>
+          result.status ===
+          "rejected",
+      );
+
+    if (
+      successfulUrls.length === 0
+    ) {
+      const firstError =
+        failed[0];
+
+      if (
+        firstError?.status ===
+        "rejected"
+      ) {
+        throw firstError.reason;
       }
 
-      
-
-      previewUrls = fileArray.map((file) => URL.createObjectURL(file));
-      const optimistic = [...value];
-      optimistic[colorIdx] = {
-        ...optimistic[colorIdx],
-        images: [...(optimistic[colorIdx].images || []), ...previewUrls],
-      };
-      onChange(optimistic);
-
-      const uploadPromises = fileArray.map(async (file) => {
-  const extension = file.name.split('.').pop()?.toLowerCase();
-  const allowed = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
-
-  if (!allowed.includes(extension || '')) {
-    throw new Error(`${file.name} ليس صورة مدعومة`);
-  }
-
-  if (file.size > 15 * 1024 * 1024) {
-    throw new Error(`${file.name} أكبر من 15MB`);
-  }
-
-  let finalFile: File;
-  try {
-    finalFile = await prepareImageUpload(file, {
-      maxSizeMB: 0.25,
-      maxWidthOrHeight: 800,
-    });
-  } catch (error: any) {
-    console.error('IMAGE PREP ERROR:', file.name, error);
-    throw new Error(`تعذر معالجة صورة ${file.name} (${error?.message || 'خطأ غير معروف'})`);
-  }
-
-  const fileName = `color-variants/${crypto.randomUUID()}`;
-
-  const { error } = await supabase.storage
-    .from('uploads')
-    .upload(fileName, finalFile, {
-      cacheControl: '31536000',
-      upsert: false,
-      contentType: finalFile.type,
-    });
-
-  if (error) throw error;
-
-  const { data } = supabase.storage.from('uploads').getPublicUrl(fileName);
-  return data.publicUrl;
-});
-
-      const urls = await Promise.all(uploadPromises);
-
-      previewUrls.forEach(URL.revokeObjectURL);
-      const next = [...value];
-      next[colorIdx] = {
-        ...next[colorIdx],
-        images: [...(next[colorIdx].images || []).filter((image) => !previewUrls.includes(image)), ...urls],
-      };
-
-      onChange(next);
-
-      toast({
-        title: `تم رفع ${urls.length} صور`,
-      });
-    } catch (error: any) {
-      previewUrls.forEach(URL.revokeObjectURL);
-      const next = [...value];
-      next[colorIdx] = {
-        ...next[colorIdx],
-        images: (next[colorIdx].images || []).filter((image) => !previewUrls.includes(image)),
-      };
-      onChange(next);
-      console.error('COLOR UPLOAD ERROR:', error);
-      toast({
-        title: 'فشل رفع الصور',
-        description: error.message,
-        variant: 'destructive',
-      });
-    } finally {
-      setUploading(null);
+      throw new Error(
+        "تعذر رفع الصور",
+      );
     }
-  };
+
+    const next = [...value];
+
+    next[colorIdx] = {
+      ...next[colorIdx],
+
+      images: [
+        ...currentImages,
+        ...successfulUrls,
+      ],
+    };
+
+    onChange(next);
+
+    if (failed.length > 0) {
+      toast({
+        title:
+          `تم رفع ${successfulUrls.length} صور`,
+
+        description:
+          `تعذر رفع ${failed.length} صور`,
+      });
+    } else {
+      toast({
+        title:
+          `تم رفع ${successfulUrls.length} صور بنجاح`,
+      });
+    }
+  } catch (error: any) {
+    console.error(
+      "COLOR UPLOAD ERROR:",
+      error,
+    );
+
+    toast({
+      title:
+        "فشل رفع الصور",
+
+      description:
+        error?.message ||
+        "حدث خطأ أثناء رفع الصور",
+
+      variant:
+        "destructive",
+    });
+  } finally {
+    setUploading(null);
+  }
+};
 
   const removeImage = (colorIdx: number, imgIdx: number) => {
     const next = [...value];

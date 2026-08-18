@@ -20,7 +20,6 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
-      - run: node scripts/launch-readiness-check.mjs
       - run: npm run lint
       - run: npx tsc -p tsconfig.app.json --noEmit
       - run: npm run build

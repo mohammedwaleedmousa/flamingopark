@@ -10,25 +10,34 @@ const launchReadinessGuard = (): Plugin => ({
     const file = id.replace(/\\/g, "/");
 
     if (file.endsWith("/src/pages/ProductDetailPage.tsx")) {
-      const oldDomain = 'const siteUrl = "https://flamingopark.store";';
-      const oldCurrency = 'priceCurrency: "YER",';
-      if (!code.includes(oldDomain) || !code.includes(oldCurrency)) throw new Error("Product SEO guard no longer matches ProductDetailPage.tsx");
-      return code.replace(oldDomain, 'const siteUrl = "https://flamingoparkaden.com";').replace(oldCurrency, 'priceCurrency: "SAR",');
+      const domainPattern = /const siteUrl = ["']https:\/\/flamingopark\.store["'];/;
+      const currencyPattern = /priceCurrency:\s*["']YER["'],/;
+
+      if (!domainPattern.test(code) || !currencyPattern.test(code)) {
+        throw new Error("Product SEO guard no longer matches ProductDetailPage.tsx");
+      }
+
+      return code
+        .replace(domainPattern, 'const siteUrl = "https://flamingoparkaden.com";')
+        .replace(currencyPattern, 'priceCurrency: "SAR",');
     }
 
     if (file.endsWith("/src/pages/admin/AdminPaymentMethodsPage.tsx")) {
-      const cardOption = '                    <SelectItem value="card">بطاقة</SelectItem>\n';
-      const walletOption = '                    <SelectItem value="wallet">محفظة إلكترونية</SelectItem>\n';
-      const validationAnchor = '      if (!nameAr) throw new Error("الاسم العربي مطلوب.");\n';
-      const validation = '      if (!["cash", "bank"].includes(methodForm.type)) throw new Error("نوع الدفع غير مدعوم في صفحة الدفع الحالية.");\n      if (methodForm.type === "bank" && code !== "bank") throw new Error("كود التحويل البنكي يجب أن يكون bank حتى يتوافق مع صفحة الدفع.");\n      if (methodForm.type === "cash" && !["cash", "cod"].includes(code)) throw new Error("كود الدفع النقدي يجب أن يكون cash أو cod حتى يتوافق مع صفحة الدفع.");\n';
+      const cardOptionPattern = /^\s*<SelectItem value="card">بطاقة<\/SelectItem>\s*$/gm;
+      const walletOptionPattern = /^\s*<SelectItem value="wallet">محفظة إلكترونية<\/SelectItem>\s*$/gm;
+      const validationAnchor = '      if (!nameAr) throw new Error("الاسم العربي مطلوب.");';
+      const validation = `\n      if (!["cash", "bank"].includes(methodForm.type)) throw new Error("نوع الدفع غير مدعوم في صفحة الدفع الحالية.");\n      if (methodForm.type === "bank" && code !== "bank") throw new Error("كود التحويل البنكي يجب أن يكون bank حتى يتوافق مع صفحة الدفع.");\n      if (methodForm.type === "cash" && !["cash", "cod"].includes(code)) throw new Error("كود الدفع النقدي يجب أن يكون cash أو cod حتى يتوافق مع صفحة الدفع.");`;
 
-      if ((code.match(new RegExp(cardOption.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length !== 2) throw new Error("Payment card option guard no longer matches AdminPaymentMethodsPage.tsx");
-      if ((code.match(new RegExp(walletOption.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "g")) || []).length !== 2) throw new Error("Payment wallet option guard no longer matches AdminPaymentMethodsPage.tsx");
+      const cardMatches = code.match(cardOptionPattern) || [];
+      const walletMatches = code.match(walletOptionPattern) || [];
+
+      if (cardMatches.length !== 2) throw new Error(`Payment card option guard expected 2 matches, got ${cardMatches.length}`);
+      if (walletMatches.length !== 2) throw new Error(`Payment wallet option guard expected 2 matches, got ${walletMatches.length}`);
       if (!code.includes(validationAnchor)) throw new Error("Payment validation guard no longer matches AdminPaymentMethodsPage.tsx");
 
       return code
-        .replaceAll(cardOption, "")
-        .replaceAll(walletOption, "")
+        .replace(cardOptionPattern, "")
+        .replace(walletOptionPattern, "")
         .replace(validationAnchor, validationAnchor + validation)
         .replace('placeholder="cod أو transfer"', 'placeholder="cash أو cod أو bank"');
     }

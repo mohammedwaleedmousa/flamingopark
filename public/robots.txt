@@ -14,7 +14,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://flamingopark.store/sitemap.xml
+Sitemap: https://flamingoparkaden.com/sitemap.xml
 
 # Host
-Host: https://flamingopark.store
+Host: https://flamingoparkaden.com

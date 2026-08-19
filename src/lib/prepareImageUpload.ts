@@ -17,8 +17,8 @@ async function bitmapToJpegFile(file: File): Promise<File> {
     canvas.toBlob(
       (b) => (b ? resolve(b) : reject(new Error("toBlob فشل"))),
       "image/jpeg",
-      0.92
-    )
+      0.92,
+    ),
   );
 
   return new File([blob], `${crypto.randomUUID()}.jpg`, {
@@ -39,17 +39,16 @@ async function convertHeic(file: File): Promise<File> {
       lastModified: Date.now(),
     });
   } catch {
-    return await bitmapToJpegFile(file); // خطة احتياطية عبر محرك المتصفح نفسه
+    return bitmapToJpegFile(file);
   }
 }
 
 export async function prepareImageUpload(
   file: File,
-  opts: { maxSizeMB?: number; maxWidthOrHeight?: number } = {}
+  opts: { maxSizeMB?: number; maxWidthOrHeight?: number } = {},
 ): Promise<File> {
   const name = file.name.toLowerCase();
   const type = (file.type || "").toLowerCase();
-
   const looksLikeHeicByNameOrType =
     type === "image/heic" ||
     type === "image/heif" ||
@@ -61,33 +60,26 @@ export async function prepareImageUpload(
     try {
       looksLikeHeicByContent = await isHeic(file);
     } catch {
-      // تجاهل: إن فشل الفحص سنعتمد على الامتداد/النوع فقط
+      // نعتمد على الامتداد/النوع عند فشل فحص المحتوى.
     }
   }
 
-  // نعتبره HEIC لو أي من الفحصين أثبت ذلك (وليس فقط عند فشل isHeic)
   const isHEIC = looksLikeHeicByNameOrType || looksLikeHeicByContent;
-
   let working: File | Blob = file;
 
   if (isHEIC) {
     try {
       working = await convertHeic(file);
     } catch {
-      throw new Error(
-        "تعذر قراءة هذه الصورة. جرّب فتحها في تطبيق الصور بآيفون، ثم Export/مشاركة كـ JPEG قبل رفعها"
-      );
+      throw new Error("تعذر قراءة هذه الصورة. احفظها كـ JPEG ثم حاول مرة أخرى");
     }
   }
 
-  // حماية أخيرة: لو وصلنا هنا وما زال النوع ليس صورة (مثلاً HEIC لم يُكتشف إطلاقًا)، حاول تحويله كخيار أخير
   if (!/^image\//.test((working as File).type || "")) {
     try {
       working = await convertHeic(file);
     } catch {
-      throw new Error(
-        "هذا الملف غير صالح كصورة قابلة للقراءة في المتصفح. جرّب حفظه كـ JPEG من الهاتف أولاً"
-      );
+      throw new Error("هذا الملف غير صالح كصورة قابلة للرفع");
     }
   }
 
@@ -103,18 +95,49 @@ export async function prepareImageUpload(
     lastModified: Date.now(),
   });
 }
+
+export async function uploadPreparedImage(prepared: File, pathPrefix: string): Promise<string> {
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session?.access_token) {
+    throw new Error("انتهت جلسة الأدمن. سجّل الدخول ثم حاول مرة أخرى");
+  }
+
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 60_000);
+
+  try {
+    const response = await fetch("/api/media/upload", {
+      method: "POST",
+      headers: {
+        authorization: `Bearer ${session.access_token}`,
+        "content-type": prepared.type || "image/webp",
+        "x-upload-prefix": pathPrefix,
+      },
+      body: prepared,
+      signal: controller.signal,
+    });
+
+    const payload = await response.json().catch(() => ({})) as { url?: string; error?: string };
+    if (!response.ok || !payload.url) {
+      throw new Error(payload.error || `فشل رفع الصورة إلى Cloudflare (${response.status})`);
+    }
+
+    return payload.url;
+  } catch (error: any) {
+    if (error?.name === "AbortError") {
+      throw new Error("انتهت مهلة رفع الصورة إلى Cloudflare. تحقق من الاتصال ثم حاول مرة أخرى");
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+}
+
 export async function uploadOptimizedImage(
   file: File,
   pathPrefix: string,
   opts: { maxSizeMB?: number; maxWidthOrHeight?: number } = {},
 ): Promise<string> {
   const prepared = await prepareImageUpload(file, opts);
-  const path = `${pathPrefix}/${crypto.randomUUID()}.webp`;
-  const { error } = await supabase.storage.from("uploads").upload(path, prepared, {
-    cacheControl: "31536000",
-    upsert: false,
-    contentType: "image/webp",
-  });
-  if (error) throw error;
-  return supabase.storage.from("uploads").getPublicUrl(path).data.publicUrl;
+  return uploadPreparedImage(prepared, pathPrefix);
 }

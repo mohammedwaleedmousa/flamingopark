@@ -1,8 +1,8 @@
 import { heicTo, isHeic } from "heic-to";
-import imageCompression from "browser-image-compression";
 import { supabase } from "@/integrations/supabase/client";
 
 const MAX_CONCURRENT_IMAGE_UPLOADS = 1;
+const MAX_R2_IMAGE_BYTES = Math.floor(3.8 * 1024 * 1024);
 let activeImageUploads = 0;
 const pendingImageUploads: Array<() => void> = [];
 
@@ -62,6 +62,16 @@ async function convertHeic(file: File): Promise<File> {
   }
 }
 
+function canvasToWebp(canvas: HTMLCanvasElement, quality: number): Promise<Blob> {
+  return new Promise<Blob>((resolve, reject) => {
+    canvas.toBlob(
+      (result) => (result ? resolve(result) : reject(new Error("تعذر تحويل الصورة إلى WebP"))),
+      "image/webp",
+      quality,
+    );
+  });
+}
+
 async function encodeHighQualityWebp(
   file: File,
   maxWidthOrHeight: number,
@@ -73,7 +83,6 @@ async function encodeHighQualityWebp(
     const longestSide = Math.max(bitmap.width, bitmap.height);
     const scale = longestSide > maxWidthOrHeight ? maxWidthOrHeight / longestSide : 1;
 
-    // الصور المحسنة مسبقاً لا تحتاج دورة ضغط جديدة.
     if (file.type === "image/webp" && scale === 1 && file.size <= targetSizeMB * 1024 * 1024) {
       return new File([file], `${crypto.randomUUID()}.webp`, {
         type: "image/webp",
@@ -92,38 +101,25 @@ async function encodeHighQualityWebp(
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
 
-    const blob = await new Promise<Blob>((resolve, reject) => {
-      canvas.toBlob(
-        (result) => (result ? resolve(result) : reject(new Error("تعذر تحويل الصورة إلى WebP"))),
-        "image/webp",
-        0.9,
-      );
-    });
+    // تحويل واحد سريع بجودة قوية. لا نستخدم browser-image-compression لأنه كان
+    // يعلق أحياناً عند رفع الصورة الثانية في نفس جلسة تحرير المنتج.
+    let blob = await canvasToWebp(canvas, 0.9);
 
-    // مسار سريع: تحويل واحد فقط بجودة عالية. في الغالب يصل لنفس الحجم المطلوب أو قريباً منه.
-    if (blob.size <= Math.max(targetSizeMB * 1.35, 1) * 1024 * 1024) {
-      return new File([blob], `${crypto.randomUUID()}.webp`, {
-        type: "image/webp",
-        lastModified: Date.now(),
-      });
+    // حد R2 الحالي 4MB. في الحالة النادرة التي تتجاوز فيها الصورة هذا الحد،
+    // نعيد الترميز مرة واحدة فقط مع جودة بصرية عالية بدلاً من ضغط متكرر/Worker.
+    if (blob.size > MAX_R2_IMAGE_BYTES) {
+      blob = await canvasToWebp(canvas, 0.86);
     }
 
-    // فقط الصور شديدة التفاصيل تمر بالضغط الإضافي لضمان بقاء الملف خفيفاً.
-    const intermediate = new File([blob], `${crypto.randomUUID()}.webp`, {
-      type: "image/webp",
-      lastModified: Date.now(),
-    });
+    if (blob.size > MAX_R2_IMAGE_BYTES) {
+      blob = await canvasToWebp(canvas, 0.82);
+    }
 
-    const compressed = await imageCompression(intermediate, {
-      maxSizeMB: targetSizeMB,
-      maxWidthOrHeight,
-      useWebWorker: true,
-      fileType: "image/webp",
-      initialQuality: 0.9,
-      maxIteration: 3,
-    });
+    if (blob.size > MAX_R2_IMAGE_BYTES) {
+      throw new Error("الصورة ما زالت كبيرة بعد التجهيز. استخدم صورة أصغر ثم حاول مرة أخرى");
+    }
 
-    return new File([compressed], `${crypto.randomUUID()}.webp`, {
+    return new File([blob], `${crypto.randomUUID()}.webp`, {
       type: "image/webp",
       lastModified: Date.now(),
     });
@@ -177,22 +173,9 @@ export async function prepareImageUpload(
 
   try {
     return await encodeHighQualityWebp(working, maxWidthOrHeight, maxSizeMB);
-  } catch (fastError) {
-    console.warn("FAST IMAGE ENCODE FALLBACK:", fastError);
-
-    const compressed = await imageCompression(working, {
-      maxSizeMB,
-      maxWidthOrHeight,
-      useWebWorker: true,
-      fileType: "image/webp",
-      initialQuality: 0.9,
-      maxIteration: 3,
-    });
-
-    return new File([compressed], `${crypto.randomUUID()}.webp`, {
-      type: "image/webp",
-      lastModified: Date.now(),
-    });
+  } catch (error) {
+    console.error("IMAGE PREPARE ERROR:", error);
+    throw error;
   }
 }
 

@@ -26,6 +26,26 @@ const DIRECT_UPLOAD_MIMES = new Set([
   "image/avif",
 ]);
 
+function createUploadId(): string {
+  const cryptoApi = globalThis.crypto;
+
+  if (cryptoApi && typeof cryptoApi.randomUUID === "function") {
+    return cryptoApi.randomUUID();
+  }
+
+  if (cryptoApi && typeof cryptoApi.getRandomValues === "function") {
+    const bytes = new Uint8Array(16);
+    cryptoApi.getRandomValues(bytes);
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+
+    const hex = Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+    return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
+  }
+
+  return `img-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 12)}-${Math.random().toString(36).slice(2, 12)}`;
+}
+
 function inferImageMimeType(file: File): string {
   const declaredType = (file.type || "").toLowerCase();
 
@@ -79,7 +99,7 @@ function normalizeFile(file: File, mime: string): File {
 async function convertHeicToJpeg(file: File): Promise<File> {
   try {
     const convertedBlob = await heicTo({ blob: file, type: "image/jpeg", quality: 0.94 });
-    return new File([convertedBlob], `${crypto.randomUUID()}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
+    return new File([convertedBlob], `${createUploadId()}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
   } catch (heicToError) {
     console.warn("heic-to failed, trying heic2any:", heicToError);
   }
@@ -88,7 +108,7 @@ async function convertHeicToJpeg(file: File): Promise<File> {
     const { default: heic2any } = await import("heic2any");
     const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.94 });
     const convertedBlob = Array.isArray(converted) ? converted[0] : converted;
-    return new File([convertedBlob], `${crypto.randomUUID()}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
+    return new File([convertedBlob], `${createUploadId()}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
   } catch (heic2anyError) {
     console.error("HEIC conversion failed:", heic2anyError);
     throw new Error("تعذر تحويل صورة HEIC. جرّب تحويلها إلى JPG ثم أعد الرفع.");
@@ -107,8 +127,6 @@ export async function prepareImageUpload(
 
   const normalizedFile = normalizeFile(file, mime);
 
-  // الملفات القياسية ترفع كما هي مباشرة إلى Supabase بدون أي فك ترميز أو ضغط داخل المتصفح.
-  // هذا يلغي نهائيًا أخطاء createImageBitmap / Canvas / browser-image-compression.
   if (DIRECT_UPLOAD_MIMES.has(mime)) return normalizedFile;
 
   if (mime === "image/heic" || mime === "image/heif") return convertHeicToJpeg(normalizedFile);
@@ -139,7 +157,7 @@ export async function uploadPreparedImage(prepared: File, pathPrefix: string): P
 
   const prefix = sanitizeUploadPrefix(pathPrefix) || "images";
   const extension = getUploadExtension(prepared);
-  const path = `${prefix}/${crypto.randomUUID()}.${extension}`;
+  const path = `${prefix}/${createUploadId()}.${extension}`;
 
   const { error: uploadError } = await supabase.storage.from("uploads").upload(path, prepared, {
     cacheControl: "31536000",

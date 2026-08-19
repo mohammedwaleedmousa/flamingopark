@@ -1,0 +1,24 @@
+/*
+ * Storefront layout normalization.
+ * Navbar owns its fixed-header spacer, so pages must not add a second navbar offset.
+ */
+
+/* Legacy mobile offsets that duplicated the Navbar spacer. */
+:where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main[class~="pt-20"],
+:where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main[class~="pt-16"][class~="md:pt-20"] {
+  padding-top: 0 !important;
+}
+
+/* Legacy desktop offsets used before Navbar started rendering its own spacer. */
+@media (min-width: 768px) {
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main[class~="md:pt-24"],
+  :where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main[class~="md:pt-20"] {
+    padding-top: 0 !important;
+  }
+}
+
+/* Keep the storefront header in one stable layer above regular page content. */
+:where(header[dir="rtl"]:has(img[src="/icons/flamingo.jpeg"])) {
+  isolation: isolate;
+  backface-visibility: hidden;
+}

@@ -30,6 +30,36 @@ function normalizeImageFile(file: File): File {
   });
 }
 
+function getScaledSize(width: number, height: number, maxWidthOrHeight: number) {
+  const longestSide = Math.max(width, height);
+  const scale = longestSide > maxWidthOrHeight ? maxWidthOrHeight / longestSide : 1;
+
+  return {
+    width: Math.max(1, Math.round(width * scale)),
+    height: Math.max(1, Math.round(height * scale)),
+  };
+}
+
+async function canvasToFile(
+  canvas: HTMLCanvasElement,
+  type: "image/jpeg" | "image/webp",
+  quality: number,
+  extension: "jpg" | "webp",
+): Promise<File> {
+  const blob: Blob = await new Promise((resolve, reject) =>
+    canvas.toBlob(
+      (value) => (value ? resolve(value) : reject(new Error(`تعذر تحويل الصورة إلى ${extension.toUpperCase()}`))),
+      type,
+      quality,
+    ),
+  );
+
+  return new File([blob], `${crypto.randomUUID()}.${extension}`, {
+    type,
+    lastModified: Date.now(),
+  });
+}
+
 async function bitmapToJpegFile(file: File): Promise<File> {
   const bitmap = await createImageBitmap(file);
 
@@ -45,18 +75,7 @@ async function bitmapToJpegFile(file: File): Promise<File> {
     ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.drawImage(bitmap, 0, 0);
 
-    const blob: Blob = await new Promise((resolve, reject) =>
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error("تعذر تحويل الصورة إلى JPEG"))),
-        "image/jpeg",
-        0.92,
-      ),
-    );
-
-    return new File([blob], `${crypto.randomUUID()}.jpg`, {
-      type: "image/jpeg",
-      lastModified: Date.now(),
-    });
+    return canvasToFile(canvas, "image/jpeg", 0.92, "jpg");
   } finally {
     bitmap.close();
   }
@@ -66,12 +85,10 @@ async function bitmapToWebpFile(file: File, maxWidthOrHeight: number): Promise<F
   const bitmap = await createImageBitmap(file);
 
   try {
-    const longestSide = Math.max(bitmap.width, bitmap.height);
-    const scale = longestSide > maxWidthOrHeight ? maxWidthOrHeight / longestSide : 1;
-
+    const size = getScaledSize(bitmap.width, bitmap.height, maxWidthOrHeight);
     const canvas = document.createElement("canvas");
-    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
-    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    canvas.width = size.width;
+    canvas.height = size.height;
 
     const ctx = canvas.getContext("2d");
     if (!ctx) throw new Error("تعذر تجهيز الصورة");
@@ -80,20 +97,47 @@ async function bitmapToWebpFile(file: File, maxWidthOrHeight: number): Promise<F
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
 
-    const blob: Blob = await new Promise((resolve, reject) =>
-      canvas.toBlob(
-        (b) => (b ? resolve(b) : reject(new Error("تعذر تحويل الصورة إلى WebP"))),
-        "image/webp",
-        0.9,
-      ),
-    );
-
-    return new File([blob], `${crypto.randomUUID()}.webp`, {
-      type: "image/webp",
-      lastModified: Date.now(),
-    });
+    return canvasToFile(canvas, "image/webp", 0.92, "webp");
   } finally {
     bitmap.close();
+  }
+}
+
+async function imageElementToWebpFile(file: File, maxWidthOrHeight: number): Promise<File> {
+  const objectUrl = URL.createObjectURL(file);
+
+  try {
+    const image = new Image();
+    image.decoding = "async";
+
+    await new Promise<void>((resolve, reject) => {
+      image.onload = () => resolve();
+      image.onerror = () => reject(new Error("تعذر قراءة الصورة بواسطة المتصفح"));
+      image.src = objectUrl;
+    });
+
+    const naturalWidth = image.naturalWidth || image.width;
+    const naturalHeight = image.naturalHeight || image.height;
+
+    if (!naturalWidth || !naturalHeight) {
+      throw new Error("أبعاد الصورة غير صالحة");
+    }
+
+    const size = getScaledSize(naturalWidth, naturalHeight, maxWidthOrHeight);
+    const canvas = document.createElement("canvas");
+    canvas.width = size.width;
+    canvas.height = size.height;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("تعذر تجهيز الصورة");
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+
+    return canvasToFile(canvas, "image/webp", 0.92, "webp");
+  } finally {
+    URL.revokeObjectURL(objectUrl);
   }
 }
 
@@ -191,9 +235,9 @@ export async function prepareImageUpload(
     const compressed = await imageCompression(working, {
       maxSizeMB,
       maxWidthOrHeight,
-      useWebWorker: true,
+      useWebWorker: false,
       fileType: "image/webp",
-      initialQuality: 0.9,
+      initialQuality: 0.92,
     });
 
     return new File([compressed], `${crypto.randomUUID()}.webp`, {
@@ -201,14 +245,20 @@ export async function prepareImageUpload(
       lastModified: Date.now(),
     });
   } catch (compressionError) {
-    console.warn("browser-image-compression failed, using canvas fallback:", compressionError);
+    console.warn("browser-image-compression failed, trying createImageBitmap:", compressionError);
+  }
 
-    try {
-      return await bitmapToWebpFile(working, maxWidthOrHeight);
-    } catch (fallbackError) {
-      console.error("Image WebP fallback failed:", fallbackError);
-      throw new Error("تعذر تجهيز هذه الصورة للرفع. جرّب صورة أخرى أو احفظها بصيغة JPEG.");
-    }
+  try {
+    return await bitmapToWebpFile(working, maxWidthOrHeight);
+  } catch (bitmapError) {
+    console.warn("createImageBitmap failed, trying HTMLImageElement:", bitmapError);
+  }
+
+  try {
+    return await imageElementToWebpFile(working, maxWidthOrHeight);
+  } catch (imageElementError) {
+    console.error("All browser image decoders failed:", imageElementError);
+    throw new Error("تعذر قراءة هذه الصورة في المتصفح. جرّب إعادة حفظها كـ JPG أو PNG ثم ارفعها مرة أخرى.");
   }
 }
 

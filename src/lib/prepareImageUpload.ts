@@ -81,7 +81,7 @@ async function bitmapToJpegFile(file: File): Promise<File> {
   }
 }
 
-async function bitmapToWebpFile(file: File, maxWidthOrHeight: number): Promise<File> {
+async function bitmapToWebpFile(file: File, maxWidthOrHeight: number, quality = 0.9): Promise<File> {
   const bitmap = await createImageBitmap(file);
 
   try {
@@ -97,7 +97,7 @@ async function bitmapToWebpFile(file: File, maxWidthOrHeight: number): Promise<F
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
 
-    return canvasToFile(canvas, "image/webp", 0.92, "webp");
+    return canvasToFile(canvas, "image/webp", quality, "webp");
   } finally {
     bitmap.close();
   }
@@ -135,7 +135,7 @@ async function imageElementToWebpFile(file: File, maxWidthOrHeight: number): Pro
     ctx.imageSmoothingQuality = "high";
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-    return canvasToFile(canvas, "image/webp", 0.92, "webp");
+    return canvasToFile(canvas, "image/webp", 0.9, "webp");
   } finally {
     URL.revokeObjectURL(objectUrl);
   }
@@ -189,6 +189,58 @@ async function convertHeic(file: File): Promise<File> {
   }
 }
 
+async function encodeHighQualityWebp(file: File, maxWidthOrHeight: number, maxSizeMB: number): Promise<File> {
+  const targetBytes = maxSizeMB * 1024 * 1024;
+  const bitmap = await createImageBitmap(file);
+
+  try {
+    const size = getScaledSize(bitmap.width, bitmap.height, maxWidthOrHeight);
+    const needsResize = size.width !== bitmap.width || size.height !== bitmap.height;
+
+    if (file.type === "image/webp" && !needsResize && file.size <= targetBytes) {
+      return new File([file], `${crypto.randomUUID()}.webp`, {
+        type: "image/webp",
+        lastModified: Date.now(),
+      });
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = size.width;
+    canvas.height = size.height;
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("تعذر تجهيز الصورة");
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+    const encoded = await canvasToFile(canvas, "image/webp", 0.9, "webp");
+
+    // أغلب صور المنتجات تصل للحجم المناسب من أول تحويل. نتجنب دورات ضغط إضافية
+    // إلا عندما تكون الصورة ما زالت كبيرة بشكل واضح.
+    if (encoded.size <= Math.max(targetBytes * 1.2, 900 * 1024)) {
+      return encoded;
+    }
+
+    const compressed = await imageCompression(encoded, {
+      maxSizeMB,
+      maxWidthOrHeight,
+      useWebWorker: true,
+      fileType: "image/webp",
+      initialQuality: 0.9,
+      maxIteration: 3,
+    });
+
+    return new File([compressed], `${crypto.randomUUID()}.webp`, {
+      type: "image/webp",
+      lastModified: Date.now(),
+    });
+  } finally {
+    bitmap.close();
+  }
+}
+
 export async function prepareImageUpload(
   file: File,
   opts: { maxSizeMB?: number; maxWidthOrHeight?: number } = {},
@@ -228,16 +280,23 @@ export async function prepareImageUpload(
     throw new Error("هذا الملف غير صالح كصورة قابلة للرفع");
   }
 
-  const maxSizeMB = opts.maxSizeMB ?? 3;
-  const maxWidthOrHeight = opts.maxWidthOrHeight ?? 2400;
+  const maxSizeMB = opts.maxSizeMB ?? 1.5;
+  const maxWidthOrHeight = opts.maxWidthOrHeight ?? 2000;
+
+  try {
+    return await encodeHighQualityWebp(working, maxWidthOrHeight, maxSizeMB);
+  } catch (fastError) {
+    console.warn("Fast WebP encode failed, trying worker compression:", fastError);
+  }
 
   try {
     const compressed = await imageCompression(working, {
       maxSizeMB,
       maxWidthOrHeight,
-      useWebWorker: false,
+      useWebWorker: true,
       fileType: "image/webp",
-      initialQuality: 0.92,
+      initialQuality: 0.9,
+      maxIteration: 3,
     });
 
     return new File([compressed], `${crypto.randomUUID()}.webp`, {
@@ -249,7 +308,7 @@ export async function prepareImageUpload(
   }
 
   try {
-    return await bitmapToWebpFile(working, maxWidthOrHeight);
+    return await bitmapToWebpFile(working, maxWidthOrHeight, 0.9);
   } catch (bitmapError) {
     console.warn("createImageBitmap failed, trying HTMLImageElement:", bitmapError);
   }
@@ -262,41 +321,42 @@ export async function prepareImageUpload(
   }
 }
 
+function sanitizeUploadPrefix(pathPrefix: string) {
+  return pathPrefix
+    .split("/")
+    .map((part) => part.trim().replace(/[^a-zA-Z0-9_-]/g, "-"))
+    .filter(Boolean)
+    .join("/");
+}
+
 export async function uploadPreparedImage(prepared: File, pathPrefix: string): Promise<string> {
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   if (sessionError || !session?.access_token) {
-    throw new Error("انتهت جلسة الأدمن. سجّل الدخول ثم حاول مرة أخرى");
+    throw new Error("انتهت الجلسة. سجّل الدخول ثم حاول مرة أخرى");
   }
 
-  const controller = new AbortController();
-  const timeoutId = window.setTimeout(() => controller.abort(), 60_000);
+  const prefix = sanitizeUploadPrefix(pathPrefix) || "images";
+  const path = `${prefix}/${crypto.randomUUID()}.webp`;
 
-  try {
-    const response = await fetch("/api/media/upload", {
-      method: "POST",
-      headers: {
-        authorization: `Bearer ${session.access_token}`,
-        "content-type": prepared.type || "image/webp",
-        "x-upload-prefix": pathPrefix,
-      },
-      body: prepared,
-      signal: controller.signal,
+  const { error: uploadError } = await supabase.storage
+    .from("uploads")
+    .upload(path, prepared, {
+      cacheControl: "31536000",
+      upsert: false,
+      contentType: prepared.type || "image/webp",
     });
 
-    const payload = await response.json().catch(() => ({})) as { url?: string; error?: string };
-    if (!response.ok || !payload.url) {
-      throw new Error(payload.error || `فشل رفع الصورة إلى Cloudflare (${response.status})`);
-    }
-
-    return payload.url;
-  } catch (error: any) {
-    if (error?.name === "AbortError") {
-      throw new Error("انتهت مهلة رفع الصورة إلى Cloudflare. تحقق من الاتصال ثم حاول مرة أخرى");
-    }
-    throw error;
-  } finally {
-    window.clearTimeout(timeoutId);
+  if (uploadError) {
+    throw new Error(uploadError.message || "تعذر رفع الصورة إلى Supabase");
   }
+
+  const { data } = supabase.storage.from("uploads").getPublicUrl(path);
+
+  if (!data.publicUrl) {
+    throw new Error("تم رفع الصورة ولكن تعذر إنشاء رابطها العام");
+  }
+
+  return data.publicUrl;
 }
 
 export async function uploadOptimizedImage(

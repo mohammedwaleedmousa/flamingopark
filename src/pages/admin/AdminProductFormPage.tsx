@@ -242,6 +242,11 @@ const AdminProductFormPage = () => {
       toast({ title: 'خطأ', description: 'فشل في تحميل المنتج', variant: 'destructive' });
       navigate('/admin/products');
     } else {
+      const { data: costRow } = await (supabase as any)
+        .from('product_costs')
+        .select('cost_price')
+        .eq('product_id', data.id)
+        .maybeSingle();
       setSelectedCategoryId(data.category_id || null);
       let brandName = data.brand?.trim() || '';
       if (!brandName && data.brand_id) {
@@ -257,7 +262,7 @@ const AdminProductFormPage = () => {
         name_ar: data.name_ar || '',
         slug: data.slug || '',
         price: data.price?.toString() || '',
-        cost_price: data.cost_price?.toString() || '',
+        cost_price: costRow?.cost_price?.toString() || '',
         original_price: data.original_price?.toString() || '',
         discount: data.discount?.toString() || '0',
         description: data.description || '',
@@ -381,7 +386,6 @@ const AdminProductFormPage = () => {
       name_ar: formData.name_ar,
       slug: resolvedSlug,
       price,
-      cost_price: formData.cost_price ? parseLocalizedNumber(formData.cost_price) || 0 : 0,
       original_price: formData.original_price ? parseLocalizedNumber(formData.original_price) || null : null,
       discount: parseLocalizedNumber(formData.discount) || 0,
       description: formData.description,
@@ -435,6 +439,12 @@ const AdminProductFormPage = () => {
         if (!inserted?.id) throw new Error('لم يتم إنشاء المنتج (استجابة فارغة)');
         savedProductId = inserted.id;
       }
+
+      const secureCost = Math.max(0, formData.cost_price ? parseLocalizedNumber(formData.cost_price) || 0 : 0);
+      const { error: costError } = await (supabase as any)
+        .from('product_costs')
+        .upsert({ product_id: savedProductId, cost_price: secureCost, updated_at: new Date().toISOString() }, { onConflict: 'product_id' });
+      if (costError) throw costError;
 
       // inventory_skus هو مصدر الحقيقة للمخزون. هذا الربط يجعل صفحة إضافة/تعديل
       // المنتج ومركز المخزون وصفحة العميل كلها تقرأ نفس الكميات.

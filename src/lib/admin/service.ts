@@ -165,7 +165,7 @@ function buildOrderListQuery(params: AdminOrderQueryParams) {
 function buildProductListQuery(params: AdminProductQueryParams) {
   let query = supabase
     .from("products")
-    .select("id,name,name_ar,slug,price,cost_price,discount,category,brand,in_stock,is_active,countries,images,sort_order,created_at", { count: "exact" });
+    .select("id,name,name_ar,slug,price,discount,category,brand,in_stock,is_active,countries,images,sort_order,created_at", { count: "exact" });
   if (params.search?.trim()) {
     const term = `%${params.search.trim()}%`;
     query = query.or(`name.ilike.${term},name_ar.ilike.${term},slug.ilike.${term}`);

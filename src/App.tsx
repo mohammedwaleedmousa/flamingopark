@@ -258,8 +258,6 @@ const App = () => {
             <Route path="/banner/:slug" element={<ProtectedRoute><BannerPage /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/order-tracking" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
-            <Route path="/brands/:slug/sections/:sectionSlug" element={<ProtectedRoute><BrandSectionPage /></ProtectedRoute>} />
-            <Route path="/brand/:slug/sections/:sectionSlug" element={<ProtectedRoute><BrandSectionPage /></ProtectedRoute>} />
             {/* Admin Routes */}
             <Route path="/admin/login" element={<AdminLoginPage />} />
             <Route path="/admin" element={<AdminLayout />}>

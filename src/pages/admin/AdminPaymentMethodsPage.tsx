@@ -276,6 +276,9 @@ const AdminPaymentMethodsPage = () => {
       if (!code) throw new Error("كود طريقة الدفع مطلوب.");
       if (!/^[a-z0-9_-]+$/.test(code)) throw new Error("الكود يجب أن يحتوي حروفًا إنجليزية صغيرة أو أرقامًا أو _ أو - فقط.");
       if (!nameAr) throw new Error("الاسم العربي مطلوب.");
+      if (!["cash", "bank"].includes(methodForm.type)) throw new Error("نوع الدفع غير مدعوم في صفحة الدفع الحالية.");
+      if (methodForm.type === "bank" && code !== "bank") throw new Error("كود التحويل البنكي يجب أن يكون bank حتى يتوافق مع صفحة الدفع.");
+      if (methodForm.type === "cash" && !["cash", "cod"].includes(code)) throw new Error("كود الدفع النقدي يجب أن يكون cash أو cod حتى يتوافق مع صفحة الدفع.");
 
       if (editingMethod && editingMethod.code !== code) {
         const { count, error } = await supabase.from("orders").select("id", { count: "exact", head: true }).eq("payment_method", editingMethod.code);
@@ -534,8 +537,6 @@ const AdminPaymentMethodsPage = () => {
                     <SelectItem value="all">كل الأنواع</SelectItem>
                     <SelectItem value="cash">نقدي</SelectItem>
                     <SelectItem value="bank">بنكي</SelectItem>
-                    <SelectItem value="card">بطاقة</SelectItem>
-                    <SelectItem value="wallet">محفظة إلكترونية</SelectItem>
                   </SelectContent>
                 </Select>
               </>
@@ -589,7 +590,7 @@ const AdminPaymentMethodsPage = () => {
 
                 <div className="grid grid-cols-1 gap-[8px] sm:grid-cols-2">
                   <Field label="الكود" required>
-                    <Input value={methodForm.code} onChange={(event) => setMethodForm((current) => ({ ...current, code: event.target.value }))} placeholder="cod أو transfer" dir="ltr" className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[11px] shadow-none focus-visible:bg-white focus-visible:ring-0" />
+                    <Input value={methodForm.code} onChange={(event) => setMethodForm((current) => ({ ...current, code: event.target.value }))} placeholder="cash أو cod أو bank" dir="ltr" className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[11px] shadow-none focus-visible:bg-white focus-visible:ring-0" />
                     <p className="mt-[5px] text-[10px] leading-5 text-[#979EA7]">الكود هو المفتاح البرمجي؛ لا تغيّره بعد استخدامه في الطلبات.</p>
                   </Field>
 
@@ -599,8 +600,6 @@ const AdminPaymentMethodsPage = () => {
                       <SelectContent>
                         <SelectItem value="cash">نقدي</SelectItem>
                         <SelectItem value="bank">بنكي</SelectItem>
-                        <SelectItem value="card">بطاقة</SelectItem>
-                        <SelectItem value="wallet">محفظة إلكترونية</SelectItem>
                       </SelectContent>
                     </Select>
                   </Field>

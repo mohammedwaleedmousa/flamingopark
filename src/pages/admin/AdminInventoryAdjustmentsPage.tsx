@@ -202,7 +202,7 @@ const AdminInventoryAdjustmentsPage = () => {
   const { data: productResult, isLoading: productsLoading, isFetching: productsFetching } = useQuery({
     queryKey: ["inventory-products", page, search, filter],
     queryFn: async () => {
-      let query = supabase.from("products").select("id,name,name_ar,brand,cost_price,price,stock_quantity,in_stock,is_active,images,color_variants,has_sizes,sizes,has_quality_variants", { count: "exact" });
+      let query = (supabase as any).from("products").select("id,name,name_ar,brand,price,stock_quantity,in_stock,is_active,images,color_variants,has_sizes,sizes,has_quality_variants,product_costs(cost_price)", { count: "exact" });
 
       if (search.trim()) {
         const safe = search.trim().replace(/[,%()]/g, " ");
@@ -218,7 +218,8 @@ const AdminInventoryAdjustmentsPage = () => {
       const { data, count, error } = await query.order("stock_quantity", { ascending: true }).order("name_ar", { ascending: true }).range(from, from + PRODUCT_PAGE_SIZE - 1);
       if (error) throw error;
 
-      return { rows: (data || []) as Product[], total: count || 0 };
+      const rows = (data || []).map((row: any) => ({ ...row, cost_price: Number(Array.isArray(row.product_costs) ? row.product_costs[0]?.cost_price || 0 : row.product_costs?.cost_price || 0) }));
+      return { rows: rows as Product[], total: count || 0 };
     },
     staleTime: 15_000,
   });

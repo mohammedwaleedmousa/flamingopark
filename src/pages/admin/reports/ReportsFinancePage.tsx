@@ -187,13 +187,13 @@ export default function ReportsFinancePage() {
   const productsQuery = useQuery({
     queryKey: ["reports-finance-products-cost-v2"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("products").select("id,cost_price,price");
+      const { data, error } = await (supabase as any).from("products").select("id,price,product_costs(cost_price)");
 
       if (error) throw error;
 
       return (data || []).map((row: any) => ({
         ...row,
-        cost_price: row.cost_price == null ? null : Number(row.cost_price),
+        cost_price: Number(Array.isArray(row.product_costs) ? row.product_costs[0]?.cost_price || 0 : row.product_costs?.cost_price || 0),
         price: Number(row.price || 0),
       })) as ProductRow[];
     },

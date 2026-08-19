@@ -20,7 +20,6 @@ interface DbProduct {
   name_ar: string;
   slug: string;
   price: number;
-  cost_price: number | null;
   original_price: number | null;
   discount: number | null;
   description: string;
@@ -179,7 +178,7 @@ const AdminProductsPage = () => {
       return;
     }
 
-    let query = supabase.from("products").select("id,name,name_ar,slug,price,cost_price,discount,category,category_id,brand,brand_id,in_stock,is_active,countries,images,color_variants,sort_order", { count: "exact" });
+    let query = supabase.from("products").select("id,name,name_ar,slug,price,discount,category,category_id,brand,brand_id,in_stock,is_active,countries,images,color_variants,sort_order", { count: "exact" });
 
     if (search.trim()) {
       const term = `%${search.trim()}%`;

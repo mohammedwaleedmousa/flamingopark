@@ -71,6 +71,7 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
+      "@vercel/speed-insights/react": path.resolve(__dirname, "./src/lib/noopSpeedInsights.tsx"),
     },
   },
 }));

@@ -29,17 +29,9 @@ const DIRECT_UPLOAD_MIMES = new Set([
 function inferImageMimeType(file: File): string {
   const declaredType = (file.type || "").toLowerCase();
 
-  if (declaredType === "image/jpg" || declaredType === "image/pjpeg") {
-    return "image/jpeg";
-  }
-
-  if (declaredType === "image/x-png") {
-    return "image/png";
-  }
-
-  if (/^image\//.test(declaredType)) {
-    return declaredType;
-  }
+  if (declaredType === "image/jpg" || declaredType === "image/pjpeg") return "image/jpeg";
+  if (declaredType === "image/x-png") return "image/png";
+  if (/^image\//.test(declaredType)) return declaredType;
 
   const extension = file.name.split(".").pop()?.toLowerCase() || "";
   return IMAGE_MIME_BY_EXTENSION[extension] || "";
@@ -49,9 +41,7 @@ async function sniffImageMimeType(file: File): Promise<string> {
   try {
     const bytes = new Uint8Array(await file.slice(0, 64).arrayBuffer());
 
-    if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
-      return "image/jpeg";
-    }
+    if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return "image/jpeg";
 
     if (
       bytes.length >= 8 &&
@@ -63,29 +53,16 @@ async function sniffImageMimeType(file: File): Promise<string> {
       bytes[5] === 0x0a &&
       bytes[6] === 0x1a &&
       bytes[7] === 0x0a
-    ) {
-      return "image/png";
-    }
+    ) return "image/png";
 
-    const ascii = (start: number, end: number) =>
-      String.fromCharCode(...Array.from(bytes.slice(start, end)));
+    const ascii = (start: number, end: number) => String.fromCharCode(...Array.from(bytes.slice(start, end)));
 
-    if (bytes.length >= 12 && ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") {
-      return "image/webp";
-    }
+    if (bytes.length >= 12 && ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") return "image/webp";
 
     if (bytes.length >= 12 && ascii(4, 8) === "ftyp") {
       const brands = ascii(8, Math.min(bytes.length, 64)).toLowerCase();
-
-      if (brands.includes("avif") || brands.includes("avis")) {
-        return "image/avif";
-      }
-
-      const heifBrands = ["heic", "heix", "hevc", "hevx", "heim", "heis", "mif1", "msf1"];
-
-      if (heifBrands.some((brand) => brands.includes(brand))) {
-        return "image/heic";
-      }
+      if (brands.includes("avif") || brands.includes("avis")) return "image/avif";
+      if (["heic", "heix", "hevc", "hevx", "heim", "heis", "mif1", "msf1"].some((brand) => brands.includes(brand))) return "image/heic";
     }
   } catch (error) {
     console.warn("Image signature detection failed:", error);
@@ -95,46 +72,23 @@ async function sniffImageMimeType(file: File): Promise<string> {
 }
 
 function normalizeFile(file: File, mime: string): File {
-  if (!mime || file.type === mime) {
-    return file;
-  }
-
-  return new File([file], file.name, {
-    type: mime,
-    lastModified: file.lastModified || Date.now(),
-  });
+  if (!mime || file.type === mime) return file;
+  return new File([file], file.name, { type: mime, lastModified: file.lastModified || Date.now() });
 }
 
 async function convertHeicToJpeg(file: File): Promise<File> {
   try {
-    const convertedBlob = await heicTo({
-      blob: file,
-      type: "image/jpeg",
-      quality: 0.94,
-    });
-
-    return new File([convertedBlob], `${crypto.randomUUID()}.jpg`, {
-      type: "image/jpeg",
-      lastModified: Date.now(),
-    });
+    const convertedBlob = await heicTo({ blob: file, type: "image/jpeg", quality: 0.94 });
+    return new File([convertedBlob], `${crypto.randomUUID()}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
   } catch (heicToError) {
     console.warn("heic-to failed, trying heic2any:", heicToError);
   }
 
   try {
     const { default: heic2any } = await import("heic2any");
-    const converted = await heic2any({
-      blob: file,
-      toType: "image/jpeg",
-      quality: 0.94,
-    });
-
+    const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.94 });
     const convertedBlob = Array.isArray(converted) ? converted[0] : converted;
-
-    return new File([convertedBlob], `${crypto.randomUUID()}.jpg`, {
-      type: "image/jpeg",
-      lastModified: Date.now(),
-    });
+    return new File([convertedBlob], `${crypto.randomUUID()}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
   } catch (heic2anyError) {
     console.error("HEIC conversion failed:", heic2anyError);
     throw new Error("تعذر تحويل صورة HEIC. جرّب تحويلها إلى JPG ثم أعد الرفع.");
@@ -149,22 +103,15 @@ export async function prepareImageUpload(
   const inferredMime = inferImageMimeType(file);
   const mime = sniffedMime || inferredMime;
 
-  if (!mime) {
-    throw new Error("هذا الملف غير صالح كصورة قابلة للرفع");
-  }
+  if (!mime) throw new Error("هذا الملف غير صالح كصورة قابلة للرفع");
 
   const normalizedFile = normalizeFile(file, mime);
 
-  // JPEG / PNG / WebP / AVIF ترفع كما هي مباشرة إلى Supabase.
-  // لا createImageBitmap ولا Canvas ولا browser-image-compression هنا.
-  // هذا يحافظ على الجودة الأصلية ويتجنب أعطال Chromium التي كانت توقف رفع الصور.
-  if (DIRECT_UPLOAD_MIMES.has(mime)) {
-    return normalizedFile;
-  }
+  // الملفات القياسية ترفع كما هي مباشرة إلى Supabase بدون أي فك ترميز أو ضغط داخل المتصفح.
+  // هذا يلغي نهائيًا أخطاء createImageBitmap / Canvas / browser-image-compression.
+  if (DIRECT_UPLOAD_MIMES.has(mime)) return normalizedFile;
 
-  if (mime === "image/heic" || mime === "image/heif") {
-    return convertHeicToJpeg(normalizedFile);
-  }
+  if (mime === "image/heic" || mime === "image/heif") return convertHeicToJpeg(normalizedFile);
 
   throw new Error("نوع الصورة غير مدعوم. استخدم JPG أو PNG أو WebP أو AVIF أو HEIC.");
 }
@@ -179,51 +126,31 @@ function sanitizeUploadPrefix(pathPrefix: string) {
 
 function getUploadExtension(file: File) {
   const type = inferImageMimeType(file);
-
-  if (UPLOAD_EXTENSION_BY_MIME[type]) {
-    return UPLOAD_EXTENSION_BY_MIME[type];
-  }
+  if (UPLOAD_EXTENSION_BY_MIME[type]) return UPLOAD_EXTENSION_BY_MIME[type];
 
   const extension = file.name.split(".").pop()?.toLowerCase() || "";
-
-  if (["jpg", "jpeg", "png", "webp", "avif"].includes(extension)) {
-    return extension === "jpeg" ? "jpg" : extension;
-  }
-
+  if (["jpg", "jpeg", "png", "webp", "avif"].includes(extension)) return extension === "jpeg" ? "jpg" : extension;
   return "jpg";
 }
 
 export async function uploadPreparedImage(prepared: File, pathPrefix: string): Promise<string> {
-  const {
-    data: { session },
-    error: sessionError,
-  } = await supabase.auth.getSession();
-
-  if (sessionError || !session?.access_token) {
-    throw new Error("انتهت الجلسة. سجّل الدخول ثم حاول مرة أخرى");
-  }
+  const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError || !session?.access_token) throw new Error("انتهت الجلسة. سجّل الدخول ثم حاول مرة أخرى");
 
   const prefix = sanitizeUploadPrefix(pathPrefix) || "images";
   const extension = getUploadExtension(prepared);
   const path = `${prefix}/${crypto.randomUUID()}.${extension}`;
 
-  const { error: uploadError } = await supabase.storage
-    .from("uploads")
-    .upload(path, prepared, {
-      cacheControl: "31536000",
-      upsert: false,
-      contentType: prepared.type || "image/jpeg",
-    });
+  const { error: uploadError } = await supabase.storage.from("uploads").upload(path, prepared, {
+    cacheControl: "31536000",
+    upsert: false,
+    contentType: prepared.type || "image/jpeg",
+  });
 
-  if (uploadError) {
-    throw new Error(uploadError.message || "تعذر رفع الصورة إلى Supabase");
-  }
+  if (uploadError) throw new Error(uploadError.message || "تعذر رفع الصورة إلى Supabase");
 
   const { data } = supabase.storage.from("uploads").getPublicUrl(path);
-
-  if (!data.publicUrl) {
-    throw new Error("تم رفع الصورة ولكن تعذر إنشاء رابطها العام");
-  }
+  if (!data.publicUrl) throw new Error("تم رفع الصورة ولكن تعذر إنشاء رابطها العام");
 
   return data.publicUrl;
 }

@@ -3,8 +3,7 @@ import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Loader2, Plus, Trash2, Upload, X } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
-import { prepareImageUpload } from '@/lib/prepareImageUpload';
+import { uploadOptimizedImage } from '@/lib/prepareImageUpload';
 
 export interface VariantSize {
   size: string;
@@ -29,6 +28,8 @@ type UploadProgress = {
   total: number;
   completed: number;
 };
+
+const MAX_PARALLEL_UPLOADS = 2;
 
 const ColorVariantsEditor = ({ value, onChange }: Props) => {
   const [newColor, setNewColor] = useState({
@@ -126,112 +127,88 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
       completed: 0,
     });
 
-    const successfulUrls: string[] = [];
+    const uploadedSlots: Array<string | undefined> = new Array(fileArray.length);
     const failedFiles: string[] = [];
     let lastError: unknown = null;
+    let nextFileIndex = 0;
+
+    const uploadOne = async (file: File, fileIdx: number) => {
+      try {
+        const extension = file.name.split('.').pop()?.toLowerCase();
+        const allowed = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
+
+        if (!allowed.includes(extension || '')) {
+          throw new Error(`${file.name} ليس صورة مدعومة`);
+        }
+
+        if (file.size > 15 * 1024 * 1024) {
+          throw new Error(`${file.name} أكبر من 15MB`);
+        }
+
+        const url = await uploadOptimizedImage(file, 'color-variants', {
+          maxSizeMB: 1.1,
+          maxWidthOrHeight: 2000,
+        });
+
+        uploadedSlots[fileIdx] = url;
+
+        const uploadedSoFar = uploadedSlots.filter((item): item is string => Boolean(item));
+        const next = value.map((variant, idx) =>
+          idx === colorIdx
+            ? {
+                ...variant,
+                images: [...currentImages, ...uploadedSoFar],
+              }
+            : variant,
+        );
+
+        onChange(next);
+      } catch (error) {
+        console.error('SUPABASE IMAGE UPLOAD ERROR:', file.name, error);
+        lastError = error;
+        failedFiles.push(file.name);
+      } finally {
+        setUploadProgress((progress) =>
+          progress
+            ? {
+                ...progress,
+                completed: progress.completed + 1,
+              }
+            : progress,
+        );
+      }
+    };
+
+    const uploadWorker = async () => {
+      while (true) {
+        const fileIdx = nextFileIndex;
+        nextFileIndex += 1;
+
+        if (fileIdx >= fileArray.length) return;
+        await uploadOne(fileArray[fileIdx], fileIdx);
+      }
+    };
 
     try {
-      /*
-       * مهم:
-       * نرفع الصور واحدة وراء الثانية وليس كلها معاً.
-       * هذا أكثر استقراراً خصوصاً مع الصور الكبيرة و HEIC.
-       */
-      for (const file of fileArray) {
-        try {
-          const extension = file.name.split('.').pop()?.toLowerCase();
+      const workerCount = Math.min(MAX_PARALLEL_UPLOADS, fileArray.length);
+      await Promise.all(Array.from({ length: workerCount }, () => uploadWorker()));
 
-          const allowed = [
-            'jpg',
-            'jpeg',
-            'png',
-            'webp',
-            'heic',
-            'heif',
-          ];
-
-          if (!allowed.includes(extension || '')) {
-            throw new Error(`${file.name} ليس صورة مدعومة`);
-          }
-
-          if (file.size > 15 * 1024 * 1024) {
-            throw new Error(`${file.name} أكبر من 15MB`);
-          }
-
-          /*
-           * نفس جودة الصور:
-           * - WebP
-           * - حد أقصى 1800px
-           * - تحسين الحجم قبل الرفع
-           */
-          const preparedFile = await prepareImageUpload(file, {
-            maxSizeMB: 0.8,
-            maxWidthOrHeight: 1800,
-          });
-
-          const fileName = `color-variants/${crypto.randomUUID()}.webp`;
-
-          const { error: uploadError } = await supabase.storage
-            .from('uploads')
-            .upload(fileName, preparedFile, {
-              cacheControl: '31536000',
-              upsert: false,
-              contentType: 'image/webp',
-            });
-
-          if (uploadError) {
-            throw uploadError;
-          }
-
-          const { data } = supabase.storage
-            .from('uploads')
-            .getPublicUrl(fileName);
-
-          if (!data.publicUrl) {
-            throw new Error('تعذر إنشاء رابط الصورة');
-          }
-
-          successfulUrls.push(data.publicUrl);
-
-          /*
-           * نظهر كل صورة فور اكتمال رفعها.
-           */
-          const next = value.map((variant, idx) =>
-            idx === colorIdx
-              ? {
-                  ...variant,
-                  images: [
-                    ...currentImages,
-                    ...successfulUrls,
-                  ],
-                }
-              : variant,
-          );
-
-          onChange(next);
-        } catch (error) {
-          console.error(
-            'SUPABASE IMAGE UPLOAD ERROR:',
-            file.name,
-            error,
-          );
-
-          lastError = error;
-          failedFiles.push(file.name);
-        } finally {
-          setUploadProgress((progress) =>
-            progress
-              ? {
-                  ...progress,
-                  completed: progress.completed + 1,
-                }
-              : progress,
-          );
-        }
-      }
+      const successfulUrls = uploadedSlots.filter((item): item is string => Boolean(item));
 
       if (successfulUrls.length === 0) {
         throw lastError || new Error('تعذر رفع الصور');
       }
+
+      const next = value.map((variant, idx) =>
+        idx === colorIdx
+          ? {
+              ...variant,
+              images: [...currentImages, ...successfulUrls],
+            }
+          : variant,
+      );
+
+      onChange(next);
 
       if (failedFiles.length > 0) {
         toast({

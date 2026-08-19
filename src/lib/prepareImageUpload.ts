@@ -2,7 +2,7 @@ import { heicTo, isHeic } from "heic-to";
 import imageCompression from "browser-image-compression";
 import { supabase } from "@/integrations/supabase/client";
 
-const MAX_CONCURRENT_IMAGE_UPLOADS = 2;
+const MAX_CONCURRENT_IMAGE_UPLOADS = 1;
 let activeImageUploads = 0;
 const pendingImageUploads: Array<() => void> = [];
 

@@ -16,7 +16,6 @@
 
     <link rel="manifest" href="/manifest.json" />
     <meta name="theme-color" content="#D4777D" />
-    <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="default" />
     <meta name="apple-mobile-web-app-title" content="Flamingo Park" />
@@ -50,16 +49,6 @@
           "addressCountry": "YE"
         }
       }
-    </script>
-
-    <script>
-      window.addEventListener("load", function () {
-        var url = new URL(window.location.href);
-        if (url.searchParams.has("__flamingo_reload")) {
-          url.searchParams.delete("__flamingo_reload");
-          window.history.replaceState({}, "", url.pathname + url.search + url.hash);
-        }
-      }, { once: true });
     </script>
 
     <link rel="preconnect" href="https://fonts.googleapis.com" />

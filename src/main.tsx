@@ -5,6 +5,5 @@ import AppErrorBoundary from "./components/AppErrorBoundary";
 import "./index.css";
 import "./desktop-storefront.css";
 import "./desktop-pages.css";
-import "./storefront-layout-fixes.css";
 
 createRoot(document.getElementById("root")!).render(<AppErrorBoundary><App /></AppErrorBoundary>);

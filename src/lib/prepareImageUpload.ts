@@ -2,6 +2,34 @@ import { heicTo, isHeic } from "heic-to";
 import imageCompression from "browser-image-compression";
 import { supabase } from "@/integrations/supabase/client";
 
+const IMAGE_MIME_BY_EXTENSION: Record<string, string> = {
+  jpg: "image/jpeg",
+  jpeg: "image/jpeg",
+  jfif: "image/jpeg",
+  png: "image/png",
+  webp: "image/webp",
+  heic: "image/heic",
+  heif: "image/heif",
+};
+
+function inferImageMimeType(file: File): string {
+  const declaredType = (file.type || "").toLowerCase();
+  if (/^image\//.test(declaredType)) return declaredType;
+
+  const extension = file.name.split(".").pop()?.toLowerCase() || "";
+  return IMAGE_MIME_BY_EXTENSION[extension] || "";
+}
+
+function normalizeImageFile(file: File): File {
+  const inferredType = inferImageMimeType(file);
+  if (!inferredType || file.type === inferredType) return file;
+
+  return new File([file], file.name, {
+    type: inferredType,
+    lastModified: file.lastModified || Date.now(),
+  });
+}
+
 async function bitmapToJpegFile(file: File): Promise<File> {
   const bitmap = await createImageBitmap(file);
 
@@ -102,7 +130,6 @@ async function convertHeic(file: File): Promise<File> {
   } catch (heic2anyError: any) {
     const message = String(heic2anyError?.message || "").toLowerCase();
 
-    // بعض ملفات HEIC تكون قابلة للقراءة مباشرة في المتصفح رغم امتدادها.
     if (message.includes("already browser readable")) {
       return file;
     }
@@ -122,8 +149,14 @@ export async function prepareImageUpload(
   file: File,
   opts: { maxSizeMB?: number; maxWidthOrHeight?: number } = {},
 ): Promise<File> {
-  const name = file.name.toLowerCase();
-  const type = (file.type || "").toLowerCase();
+  const normalizedFile = normalizeImageFile(file);
+  const name = normalizedFile.name.toLowerCase();
+  const type = inferImageMimeType(normalizedFile);
+
+  if (!type) {
+    throw new Error("هذا الملف غير صالح كصورة قابلة للرفع");
+  }
+
   const looksLikeHeicByNameOrType =
     type === "image/heic" ||
     type === "image/heif" ||
@@ -134,20 +167,20 @@ export async function prepareImageUpload(
 
   if (looksLikeHeicByNameOrType) {
     try {
-      looksLikeHeicByContent = await isHeic(file);
+      looksLikeHeicByContent = await isHeic(normalizedFile);
     } catch {
       // نعتمد على الامتداد/النوع عند فشل فحص المحتوى.
     }
   }
 
   const isHEIC = looksLikeHeicByNameOrType || looksLikeHeicByContent;
-  let working: File = file;
+  let working: File = normalizedFile;
 
   if (isHEIC) {
-    working = await convertHeic(file);
+    working = await convertHeic(normalizedFile);
   }
 
-  if (!/^image\//.test(working.type || "")) {
+  if (!inferImageMimeType(working)) {
     throw new Error("هذا الملف غير صالح كصورة قابلة للرفع");
   }
 

@@ -20,6 +20,12 @@ const UPLOAD_EXTENSION_BY_MIME: Record<string, string> = {
   "image/avif": "avif",
 };
 
+const BROWSER_SAFE_PASSTHROUGH_MIMES = new Set([
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+]);
+
 function inferImageMimeType(file: File): string {
   const declaredType = (file.type || "").toLowerCase();
   if (declaredType === "image/jpg" || declaredType === "image/pjpeg") return "image/jpeg";
@@ -327,6 +333,21 @@ export async function prepareImageUpload(
 
   const maxSizeMB = opts.maxSizeMB ?? 1.5;
   const maxWidthOrHeight = opts.maxWidthOrHeight ?? 2000;
+
+  // الصور الصغيرة والسليمة مثل صور المنتجات القادمة من الآيفون/واتساب لا تحتاج فك ترميز أو ضغط جديد.
+  // نحتفظ بالجودة الأصلية ونرفعها مباشرة إلى Supabase، وهذا يتجاوز مشاكل Chromium في قراءة بعض JPEG السليمة.
+  if (
+    contentMime &&
+    BROWSER_SAFE_PASSTHROUGH_MIMES.has(contentMime) &&
+    normalizedFile.size <= maxSizeMB * 1024 * 1024
+  ) {
+    const extension = UPLOAD_EXTENSION_BY_MIME[contentMime];
+
+    return new File([normalizedFile], `${crypto.randomUUID()}.${extension}`, {
+      type: contentMime,
+      lastModified: Date.now(),
+    });
+  }
 
   let working: File = normalizedFile;
   let isHEIC = looksLikeHeicByNameOrType;

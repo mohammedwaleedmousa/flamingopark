@@ -8,10 +8,12 @@ import { uploadOptimizedImage } from '@/lib/prepareImageUpload';
 export interface VariantSize { size: string; stock: number }
 export interface ColorVariant { name: string; hex: string; hex2?: string; images: string[]; sizes?: Array<VariantSize | string>; stock?: number }
 interface Props { value: ColorVariant[]; onChange: (v: ColorVariant[]) => void }
+type UploadProgress = { colorIdx: number; total: number; completed: number; successful: number };
 
 const ColorVariantsEditor = ({ value, onChange }: Props) => {
   const [newColor, setNewColor] = useState({ name: '', hex: '#F4A6B8', hex2: '', dual: false });
   const [uploading, setUploading] = useState<number | null>(null);
+  const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
 
   useEffect(() => {
     if (uploading === null) return;
@@ -47,20 +49,37 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
     }
 
     setUploading(colorIdx);
+    setUploadProgress({ colorIdx, total: fileArray.length, completed: 0, successful: 0 });
+
+    const uploadedSlots: Array<string | undefined> = new Array(fileArray.length);
 
     try {
-      const uploadPromises = fileArray.map(async (file) => {
+      const uploadPromises = fileArray.map(async (file, fileIdx) => {
         const extension = file.name.split('.').pop()?.toLowerCase();
         const allowed = ['jpg', 'jpeg', 'png', 'webp', 'heic', 'heif'];
         if (!allowed.includes(extension || '')) throw new Error(`${file.name} ليس صورة مدعومة`);
         if (file.size > 15 * 1024 * 1024) throw new Error(`${file.name} أكبر من 15MB`);
-        return uploadOptimizedImage(file, 'products/color-variants', { maxSizeMB: 0.8, maxWidthOrHeight: 1800 });
+
+        try {
+          const url = await uploadOptimizedImage(file, 'products/color-variants', { maxSizeMB: 0.8, maxWidthOrHeight: 1800 });
+          uploadedSlots[fileIdx] = url;
+          const uploadedSoFar = uploadedSlots.filter((item): item is string => Boolean(item));
+          const next = value.map((variant, idx) => idx === colorIdx ? { ...variant, images: [...currentImages, ...uploadedSoFar] } : variant);
+          onChange(next);
+          setUploadProgress((progress) => progress && progress.colorIdx === colorIdx
+            ? { ...progress, completed: progress.completed + 1, successful: progress.successful + 1 }
+            : progress);
+          return url;
+        } catch (error) {
+          setUploadProgress((progress) => progress && progress.colorIdx === colorIdx
+            ? { ...progress, completed: progress.completed + 1 }
+            : progress);
+          throw error;
+        }
       });
 
       const results = await Promise.allSettled(uploadPromises);
-      const successfulUrls = results
-        .filter((result): result is PromiseFulfilledResult<string> => result.status === 'fulfilled')
-        .map((result) => result.value);
+      const successfulUrls = uploadedSlots.filter((item): item is string => Boolean(item));
       const failed = results.filter((result) => result.status === 'rejected');
 
       if (successfulUrls.length === 0) {
@@ -69,8 +88,7 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
         throw new Error('تعذر رفع الصور');
       }
 
-      const next = [...value];
-      next[colorIdx] = { ...next[colorIdx], images: [...currentImages, ...successfulUrls] };
+      const next = value.map((variant, idx) => idx === colorIdx ? { ...variant, images: [...currentImages, ...successfulUrls] } : variant);
       onChange(next);
 
       if (failed.length > 0) {
@@ -83,6 +101,7 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
       toast({ title: 'فشل رفع الصور', description: error?.message || 'تعذر رفع الصور إلى Cloudflare', variant: 'destructive' });
     } finally {
       setUploading(null);
+      setUploadProgress(null);
     }
   };
 
@@ -141,7 +160,7 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
                   </div>
                 ))}
                 <label className={`aspect-square border-2 border-dashed rounded-xl flex flex-col items-center justify-center cursor-pointer transition ${uploading === ci ? 'opacity-60 cursor-not-allowed' : 'hover:border-primary'}`}>
-                  {uploading === ci ? <><Loader2 className="w-6 h-6 animate-spin mb-2" /><span className="text-[11px]">جاري الرفع إلى Cloudflare...</span></> : <><Upload className="w-6 h-6 text-muted-foreground" /><span className="text-[11px] mt-2 text-center">اختر حتى 5 صور</span><span className="text-[10px] text-muted-foreground">يمكن اختيار عدة صور دفعة واحدة</span></>}
+                  {uploading === ci ? <><Loader2 className="w-6 h-6 animate-spin mb-2" /><span className="text-[11px]">جاري الرفع إلى Cloudflare...</span><span className="text-[10px] mt-1 text-muted-foreground">تم رفع {uploadProgress?.colorIdx === ci ? uploadProgress.successful : 0} من {uploadProgress?.colorIdx === ci ? uploadProgress.total : 0}</span></> : <><Upload className="w-6 h-6 text-muted-foreground" /><span className="text-[11px] mt-2 text-center">اختر حتى 5 صور</span><span className="text-[10px] text-muted-foreground">يمكن اختيار عدة صور دفعة واحدة</span></>}
                   <input type="file" accept="image/jpeg,image/png,image/webp,image/heic,image/heif,.heic,.heif" multiple className="hidden" disabled={uploading === ci} onChange={(e) => { const files = e.target.files; if (!files || files.length === 0) return; if (files.length > 5) { toast({ title: 'يمكن اختيار 5 صور كحد أقصى', variant: 'destructive' }); e.target.value = ''; return; } void uploadImage(ci, files); e.target.value = ''; }} />
                 </label>
               </div>

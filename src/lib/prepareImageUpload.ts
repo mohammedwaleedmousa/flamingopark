@@ -12,6 +12,12 @@ const IMAGE_MIME_BY_EXTENSION: Record<string, string> = {
   heif: "image/heif",
 };
 
+const UPLOAD_EXTENSION_BY_MIME: Record<string, string> = {
+  "image/jpeg": "jpg",
+  "image/png": "png",
+  "image/webp": "webp",
+};
+
 function inferImageMimeType(file: File): string {
   const declaredType = (file.type || "").toLowerCase();
   if (/^image\//.test(declaredType)) return declaredType;
@@ -20,8 +26,43 @@ function inferImageMimeType(file: File): string {
   return IMAGE_MIME_BY_EXTENSION[extension] || "";
 }
 
-function normalizeImageFile(file: File): File {
-  const inferredType = inferImageMimeType(file);
+async function sniffBrowserImageMimeType(file: File): Promise<string> {
+  try {
+    const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+
+    if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
+      return "image/jpeg";
+    }
+
+    if (
+      bytes.length >= 8 &&
+      bytes[0] === 0x89 &&
+      bytes[1] === 0x50 &&
+      bytes[2] === 0x4e &&
+      bytes[3] === 0x47 &&
+      bytes[4] === 0x0d &&
+      bytes[5] === 0x0a &&
+      bytes[6] === 0x1a &&
+      bytes[7] === 0x0a
+    ) {
+      return "image/png";
+    }
+
+    const ascii = (start: number, end: number) =>
+      String.fromCharCode(...Array.from(bytes.slice(start, end)));
+
+    if (bytes.length >= 12 && ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") {
+      return "image/webp";
+    }
+  } catch (error) {
+    console.warn("Image signature detection failed:", error);
+  }
+
+  return "";
+}
+
+function normalizeImageFile(file: File, contentMime = ""): File {
+  const inferredType = contentMime || inferImageMimeType(file);
   if (!inferredType || file.type === inferredType) return file;
 
   return new File([file], file.name, {
@@ -217,8 +258,6 @@ async function encodeHighQualityWebp(file: File, maxWidthOrHeight: number, maxSi
 
     const encoded = await canvasToFile(canvas, "image/webp", 0.9, "webp");
 
-    // أغلب صور المنتجات تصل للحجم المناسب من أول تحويل. نتجنب دورات ضغط إضافية
-    // إلا عندما تكون الصورة ما زالت كبيرة بشكل واضح.
     if (encoded.size <= Math.max(targetBytes * 1.2, 900 * 1024)) {
       return encoded;
     }
@@ -226,7 +265,7 @@ async function encodeHighQualityWebp(file: File, maxWidthOrHeight: number, maxSi
     const compressed = await imageCompression(encoded, {
       maxSizeMB,
       maxWidthOrHeight,
-      useWebWorker: true,
+      useWebWorker: false,
       fileType: "image/webp",
       initialQuality: 0.9,
       maxIteration: 3,
@@ -241,11 +280,21 @@ async function encodeHighQualityWebp(file: File, maxWidthOrHeight: number, maxSi
   }
 }
 
+async function tryDetectHeic(file: File): Promise<boolean> {
+  try {
+    return await isHeic(file);
+  } catch (error) {
+    console.warn("HEIC content detection failed:", error);
+    return false;
+  }
+}
+
 export async function prepareImageUpload(
   file: File,
   opts: { maxSizeMB?: number; maxWidthOrHeight?: number } = {},
 ): Promise<File> {
-  const normalizedFile = normalizeImageFile(file);
+  const contentMime = await sniffBrowserImageMimeType(file);
+  const normalizedFile = normalizeImageFile(file, contentMime);
   const name = normalizedFile.name.toLowerCase();
   const type = inferImageMimeType(normalizedFile);
 
@@ -259,18 +308,11 @@ export async function prepareImageUpload(
     name.endsWith(".heic") ||
     name.endsWith(".heif");
 
-  let looksLikeHeicByContent = false;
+  const maxSizeMB = opts.maxSizeMB ?? 1.5;
+  const maxWidthOrHeight = opts.maxWidthOrHeight ?? 2000;
 
-  if (looksLikeHeicByNameOrType) {
-    try {
-      looksLikeHeicByContent = await isHeic(normalizedFile);
-    } catch {
-      // نعتمد على الامتداد/النوع عند فشل فحص المحتوى.
-    }
-  }
-
-  const isHEIC = looksLikeHeicByNameOrType || looksLikeHeicByContent;
   let working: File = normalizedFile;
+  let isHEIC = looksLikeHeicByNameOrType;
 
   if (isHEIC) {
     working = await convertHeic(normalizedFile);
@@ -280,20 +322,30 @@ export async function prepareImageUpload(
     throw new Error("هذا الملف غير صالح كصورة قابلة للرفع");
   }
 
-  const maxSizeMB = opts.maxSizeMB ?? 1.5;
-  const maxWidthOrHeight = opts.maxWidthOrHeight ?? 2000;
-
   try {
     return await encodeHighQualityWebp(working, maxWidthOrHeight, maxSizeMB);
   } catch (fastError) {
-    console.warn("Fast WebP encode failed, trying worker compression:", fastError);
+    console.warn("Fast WebP encode failed:", fastError);
+  }
+
+  // بعض صور iPhone/WhatsApp تكون HEIC فعليًا لكن اسمها أو MIME يقول JPG.
+  // نفحص محتوى الملف فقط عند فشل القراءة العادية حتى لا نضيف تكلفة لكل صورة سليمة.
+  if (!isHEIC && await tryDetectHeic(normalizedFile)) {
+    isHEIC = true;
+    working = await convertHeic(normalizedFile);
+
+    try {
+      return await encodeHighQualityWebp(working, maxWidthOrHeight, maxSizeMB);
+    } catch (heicEncodeError) {
+      console.warn("Converted HEIC WebP encode failed:", heicEncodeError);
+    }
   }
 
   try {
     const compressed = await imageCompression(working, {
       maxSizeMB,
       maxWidthOrHeight,
-      useWebWorker: true,
+      useWebWorker: false,
       fileType: "image/webp",
       initialQuality: 0.9,
       maxIteration: 3,
@@ -317,8 +369,24 @@ export async function prepareImageUpload(
     return await imageElementToWebpFile(working, maxWidthOrHeight);
   } catch (imageElementError) {
     console.error("All browser image decoders failed:", imageElementError);
-    throw new Error("تعذر قراءة هذه الصورة في المتصفح. جرّب إعادة حفظها كـ JPG أو PNG ثم ارفعها مرة أخرى.");
   }
+
+  // إذا كان الملف JPEG/PNG/WebP حقيقيًا حسب ترويسة الملف، لا نمنع الأدمن من الرفع
+  // فقط لأن Chromium لم يستطع فكّه محليًا. Supabase سيحفظ الأصل، والتحويلات تتم عند العرض.
+  if (!isHEIC && UPLOAD_EXTENSION_BY_MIME[contentMime]) {
+    console.warn("Uploading original browser image because local decoding failed", {
+      name: normalizedFile.name,
+      type: contentMime,
+      size: normalizedFile.size,
+    });
+
+    return new File([normalizedFile], `${crypto.randomUUID()}.${UPLOAD_EXTENSION_BY_MIME[contentMime]}`, {
+      type: contentMime,
+      lastModified: Date.now(),
+    });
+  }
+
+  throw new Error("تعذر قراءة هذه الصورة. تأكد أنها JPG أو PNG أو WebP أو HEIC سليمة ثم حاول مرة أخرى.");
 }
 
 function sanitizeUploadPrefix(pathPrefix: string) {
@@ -329,6 +397,14 @@ function sanitizeUploadPrefix(pathPrefix: string) {
     .join("/");
 }
 
+function getUploadExtension(file: File) {
+  const type = (file.type || "").toLowerCase();
+  if (UPLOAD_EXTENSION_BY_MIME[type]) return UPLOAD_EXTENSION_BY_MIME[type];
+
+  const extension = file.name.split(".").pop()?.toLowerCase() || "";
+  return ["jpg", "jpeg", "png", "webp"].includes(extension) ? extension : "webp";
+}
+
 export async function uploadPreparedImage(prepared: File, pathPrefix: string): Promise<string> {
   const { data: { session }, error: sessionError } = await supabase.auth.getSession();
   if (sessionError || !session?.access_token) {
@@ -336,7 +412,8 @@ export async function uploadPreparedImage(prepared: File, pathPrefix: string): P
   }
 
   const prefix = sanitizeUploadPrefix(pathPrefix) || "images";
-  const path = `${prefix}/${crypto.randomUUID()}.webp`;
+  const extension = getUploadExtension(prepared);
+  const path = `${prefix}/${crypto.randomUUID()}.${extension}`;
 
   const { error: uploadError } = await supabase.storage
     .from("uploads")

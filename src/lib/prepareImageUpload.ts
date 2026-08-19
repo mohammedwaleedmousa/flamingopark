@@ -2,6 +2,25 @@ import { heicTo, isHeic } from "heic-to";
 import imageCompression from "browser-image-compression";
 import { supabase } from "@/integrations/supabase/client";
 
+const MAX_CONCURRENT_IMAGE_UPLOADS = 2;
+let activeImageUploads = 0;
+const pendingImageUploads: Array<() => void> = [];
+
+async function withImageUploadSlot<T>(task: () => Promise<T>): Promise<T> {
+  if (activeImageUploads >= MAX_CONCURRENT_IMAGE_UPLOADS) {
+    await new Promise<void>((resolve) => pendingImageUploads.push(resolve));
+  }
+
+  activeImageUploads += 1;
+
+  try {
+    return await task();
+  } finally {
+    activeImageUploads = Math.max(0, activeImageUploads - 1);
+    pendingImageUploads.shift()?.();
+  }
+}
+
 async function bitmapToJpegFile(file: File): Promise<File> {
   const bitmap = await createImageBitmap(file);
   const canvas = document.createElement("canvas");
@@ -219,6 +238,8 @@ export async function uploadOptimizedImage(
   pathPrefix: string,
   opts: { maxSizeMB?: number; maxWidthOrHeight?: number } = {},
 ): Promise<string> {
-  const prepared = await prepareImageUpload(file, opts);
-  return uploadPreparedImage(prepared, pathPrefix);
+  return withImageUploadSlot(async () => {
+    const prepared = await prepareImageUpload(file, opts);
+    return uploadPreparedImage(prepared, pathPrefix);
+  });
 }

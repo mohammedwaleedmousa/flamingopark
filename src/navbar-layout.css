@@ -1,0 +1,15 @@
+/*
+ * Standard storefront Navbar is fixed and already renders its own height spacer.
+ * Remove page-level top padding only when that standard Navbar is present so
+ * catalog/content pages cannot randomly sit too low or slide underneath it.
+ * ProductDetailPage mobile uses a different header and is intentionally excluded.
+ */
+:where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) main {
+  padding-top: 0 !important;
+}
+
+/* Keep fixed storefront navigation above normal page content and product cards. */
+:where(body:has(header[dir="rtl"] img[src="/icons/flamingo.jpeg"])) header[dir="rtl"] {
+  isolation: isolate;
+  z-index: 50;
+}

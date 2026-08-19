@@ -43,6 +43,76 @@ async function convertHeic(file: File): Promise<File> {
   }
 }
 
+async function encodeHighQualityWebp(
+  file: File,
+  maxWidthOrHeight: number,
+  targetSizeMB: number,
+): Promise<File> {
+  const bitmap = await createImageBitmap(file);
+
+  try {
+    const longestSide = Math.max(bitmap.width, bitmap.height);
+    const scale = longestSide > maxWidthOrHeight ? maxWidthOrHeight / longestSide : 1;
+
+    // الصور المحسنة مسبقاً لا تحتاج دورة ضغط جديدة.
+    if (file.type === "image/webp" && scale === 1 && file.size <= targetSizeMB * 1024 * 1024) {
+      return new File([file], `${crypto.randomUUID()}.webp`, {
+        type: "image/webp",
+        lastModified: Date.now(),
+      });
+    }
+
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+
+    const ctx = canvas.getContext("2d");
+    if (!ctx) throw new Error("تعذر تجهيز الصورة");
+
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+
+    const blob = await new Promise<Blob>((resolve, reject) => {
+      canvas.toBlob(
+        (result) => (result ? resolve(result) : reject(new Error("تعذر تحويل الصورة إلى WebP"))),
+        "image/webp",
+        0.9,
+      );
+    });
+
+    // مسار سريع: تحويل واحد فقط بجودة عالية. في الغالب يصل لنفس الحجم المطلوب أو قريباً منه.
+    if (blob.size <= Math.max(targetSizeMB * 1.35, 1) * 1024 * 1024) {
+      return new File([blob], `${crypto.randomUUID()}.webp`, {
+        type: "image/webp",
+        lastModified: Date.now(),
+      });
+    }
+
+    // فقط الصور شديدة التفاصيل تمر بالضغط الإضافي لضمان بقاء الملف خفيفاً.
+    const intermediate = new File([blob], `${crypto.randomUUID()}.webp`, {
+      type: "image/webp",
+      lastModified: Date.now(),
+    });
+
+    const compressed = await imageCompression(intermediate, {
+      maxSizeMB: targetSizeMB,
+      maxWidthOrHeight,
+      useWebWorker: true,
+      fileType: "image/webp",
+      initialQuality: 0.9,
+      maxIteration: 3,
+    });
+
+    return new File([compressed], `${crypto.randomUUID()}.webp`, {
+      type: "image/webp",
+      lastModified: Date.now(),
+    });
+  } finally {
+    bitmap.close();
+  }
+}
+
 export async function prepareImageUpload(
   file: File,
   opts: { maxSizeMB?: number; maxWidthOrHeight?: number } = {},
@@ -65,7 +135,7 @@ export async function prepareImageUpload(
   }
 
   const isHEIC = looksLikeHeicByNameOrType || looksLikeHeicByContent;
-  let working: File | Blob = file;
+  let working: File = file;
 
   if (isHEIC) {
     try {
@@ -75,7 +145,7 @@ export async function prepareImageUpload(
     }
   }
 
-  if (!/^image\//.test((working as File).type || "")) {
+  if (!/^image\//.test(working.type || "")) {
     try {
       working = await convertHeic(file);
     } catch {
@@ -83,17 +153,28 @@ export async function prepareImageUpload(
     }
   }
 
-  const compressed = await imageCompression(working as File, {
-    maxSizeMB: opts.maxSizeMB ?? 3,
-    maxWidthOrHeight: opts.maxWidthOrHeight ?? 2400,
-    useWebWorker: true,
-    fileType: "image/webp",
-  });
+  const maxSizeMB = opts.maxSizeMB ?? 3;
+  const maxWidthOrHeight = opts.maxWidthOrHeight ?? 2400;
 
-  return new File([compressed], `${crypto.randomUUID()}.webp`, {
-    type: "image/webp",
-    lastModified: Date.now(),
-  });
+  try {
+    return await encodeHighQualityWebp(working, maxWidthOrHeight, maxSizeMB);
+  } catch (fastError) {
+    console.warn("FAST IMAGE ENCODE FALLBACK:", fastError);
+
+    const compressed = await imageCompression(working, {
+      maxSizeMB,
+      maxWidthOrHeight,
+      useWebWorker: true,
+      fileType: "image/webp",
+      initialQuality: 0.9,
+      maxIteration: 3,
+    });
+
+    return new File([compressed], `${crypto.randomUUID()}.webp`, {
+      type: "image/webp",
+      lastModified: Date.now(),
+    });
+  }
 }
 
 export async function uploadPreparedImage(prepared: File, pathPrefix: string): Promise<string> {

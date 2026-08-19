@@ -8,6 +8,7 @@ const IMAGE_MIME_BY_EXTENSION: Record<string, string> = {
   jfif: "image/jpeg",
   png: "image/png",
   webp: "image/webp",
+  avif: "image/avif",
   heic: "image/heic",
   heif: "image/heif",
 };
@@ -16,10 +17,13 @@ const UPLOAD_EXTENSION_BY_MIME: Record<string, string> = {
   "image/jpeg": "jpg",
   "image/png": "png",
   "image/webp": "webp",
+  "image/avif": "avif",
 };
 
 function inferImageMimeType(file: File): string {
   const declaredType = (file.type || "").toLowerCase();
+  if (declaredType === "image/jpg" || declaredType === "image/pjpeg") return "image/jpeg";
+  if (declaredType === "image/x-png") return "image/png";
   if (/^image\//.test(declaredType)) return declaredType;
 
   const extension = file.name.split(".").pop()?.toLowerCase() || "";
@@ -28,7 +32,7 @@ function inferImageMimeType(file: File): string {
 
 async function sniffBrowserImageMimeType(file: File): Promise<string> {
   try {
-    const bytes = new Uint8Array(await file.slice(0, 16).arrayBuffer());
+    const bytes = new Uint8Array(await file.slice(0, 64).arrayBuffer());
 
     if (bytes.length >= 3 && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) {
       return "image/jpeg";
@@ -53,6 +57,19 @@ async function sniffBrowserImageMimeType(file: File): Promise<string> {
 
     if (bytes.length >= 12 && ascii(0, 4) === "RIFF" && ascii(8, 12) === "WEBP") {
       return "image/webp";
+    }
+
+    if (bytes.length >= 12 && ascii(4, 8) === "ftyp") {
+      const brands = ascii(8, Math.min(bytes.length, 64)).toLowerCase();
+
+      if (brands.includes("avif") || brands.includes("avis")) {
+        return "image/avif";
+      }
+
+      const heifBrands = ["heic", "heix", "hevc", "hevx", "heim", "heis", "mif1", "msf1"];
+      if (heifBrands.some((brand) => brands.includes(brand))) {
+        return "image/heic";
+      }
     }
   } catch (error) {
     console.warn("Image signature detection failed:", error);
@@ -371,22 +388,23 @@ export async function prepareImageUpload(
     console.error("All browser image decoders failed:", imageElementError);
   }
 
-  // إذا كان الملف JPEG/PNG/WebP حقيقيًا حسب ترويسة الملف، لا نمنع الأدمن من الرفع
-  // فقط لأن Chromium لم يستطع فكّه محليًا. Supabase سيحفظ الأصل، والتحويلات تتم عند العرض.
-  if (!isHEIC && UPLOAD_EXTENSION_BY_MIME[contentMime]) {
-    console.warn("Uploading original browser image because local decoding failed", {
+  // إذا تعذر فك الصورة محليًا، لا نمنع الأدمن من الرفع لمجرد أن Chromium لم يستطع قراءتها.
+  // نعتمد أولًا على الترويسة، ثم MIME/امتداد الملف، ونترك Supabase يتولى التخزين والتحويل عند العرض.
+  const originalMime = contentMime || inferImageMimeType(normalizedFile);
+  if (!isHEIC && UPLOAD_EXTENSION_BY_MIME[originalMime]) {
+    console.warn("Uploading original image because local decoding failed", {
       name: normalizedFile.name,
-      type: contentMime,
+      type: originalMime,
       size: normalizedFile.size,
     });
 
-    return new File([normalizedFile], `${crypto.randomUUID()}.${UPLOAD_EXTENSION_BY_MIME[contentMime]}`, {
-      type: contentMime,
+    return new File([normalizedFile], `${crypto.randomUUID()}.${UPLOAD_EXTENSION_BY_MIME[originalMime]}`, {
+      type: originalMime,
       lastModified: Date.now(),
     });
   }
 
-  throw new Error("تعذر قراءة هذه الصورة. تأكد أنها JPG أو PNG أو WebP أو HEIC سليمة ثم حاول مرة أخرى.");
+  throw new Error("تعذر قراءة هذه الصورة. جرّب اختيارها مرة أخرى أو احفظها كـ JPG ثم أعد الرفع.");
 }
 
 function sanitizeUploadPrefix(pathPrefix: string) {
@@ -398,11 +416,11 @@ function sanitizeUploadPrefix(pathPrefix: string) {
 }
 
 function getUploadExtension(file: File) {
-  const type = (file.type || "").toLowerCase();
+  const type = inferImageMimeType(file);
   if (UPLOAD_EXTENSION_BY_MIME[type]) return UPLOAD_EXTENSION_BY_MIME[type];
 
   const extension = file.name.split(".").pop()?.toLowerCase() || "";
-  return ["jpg", "jpeg", "png", "webp"].includes(extension) ? extension : "webp";
+  return ["jpg", "jpeg", "png", "webp", "avif"].includes(extension) ? extension : "webp";
 }
 
 export async function uploadPreparedImage(prepared: File, pathPrefix: string): Promise<string> {

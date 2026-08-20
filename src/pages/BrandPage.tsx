@@ -35,7 +35,7 @@ interface BrandRow {
   hero_image: string | null;
   description: string | null;
   is_active: boolean | null;
-  brand_pages: BrandPageRow[] | null;
+  brand_pages: BrandPageRow | BrandPageRow[] | null;
   brand_sections: BrandSectionRow[] | null;
 }
 
@@ -74,7 +74,15 @@ const BrandPage = () => {
   });
 
   const brandPage = useMemo(() => {
-    return brand?.brand_pages?.find((page) => page.is_active !== false) || null;
+    const relation = brand?.brand_pages;
+
+    if (!relation) return null;
+
+    if (Array.isArray(relation)) {
+      return relation.find((page) => page.is_active !== false) || null;
+    }
+
+    return relation.is_active !== false ? relation : null;
   }, [brand?.brand_pages]);
 
   const sections = useMemo(() => {

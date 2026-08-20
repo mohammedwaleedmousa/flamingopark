@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import AppErrorBoundary from "./components/AppErrorBoundary";
 import ProductRatingSync from "./components/ProductRatingSync";
+import CheckoutCodGuard from "./components/CheckoutCodGuard";
 import "./index.css";
 import "./desktop-storefront.css";
 import "./desktop-pages.css";
@@ -21,4 +22,4 @@ if (typeof window !== "undefined") {
   }
 }
 
-createRoot(document.getElementById("root")!).render(<AppErrorBoundary><><ProductRatingSync /><App /></></AppErrorBoundary>);
+createRoot(document.getElementById("root")!).render(<AppErrorBoundary><><ProductRatingSync /><CheckoutCodGuard /><App /></></AppErrorBoundary>);

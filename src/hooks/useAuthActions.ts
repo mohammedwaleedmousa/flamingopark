@@ -15,7 +15,8 @@ export const useAuthActions = () => {
   const logout = async (options: LogoutOptions = {}) => {
     const { redirectTo, successTitle = "تم تسجيل الخروج", onSuccess } = options;
     try {
-      await supabase.auth.signOut();
+      // تسجيل الخروج من هذا الجهاز فقط حتى تبقى جلسات الأجهزة الأخرى فعالة.
+      await supabase.auth.signOut({ scope: "local" });
       clearCustomerSession();
       clearFavorites();
       setCustomer(null);

@@ -2,13 +2,9 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { FreeMode } from "swiper/modules";
 
 import { supabase } from "@/integrations/supabase/client";
-
-import "swiper/css";
-import "swiper/css/free-mode";
+import { optimizeImage } from "@/lib/imageUrl";
 
 interface BrandRow {
   id: string;
@@ -58,8 +54,6 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
   return (
     <section className="w-full overflow-hidden bg-background py-4 md:py-6" dir="rtl" aria-label="الماركات">
       <div className="mx-auto w-full max-w-[1400px] px-3 md:px-6">
-        {/* HEADER */}
-
         <div className="mb-3 flex items-end justify-between gap-3 md:mb-4">
           <div>
             <div className="mb-1 flex items-center gap-2">
@@ -76,32 +70,26 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
           </Link>
         </div>
 
-        {/* BRANDS */}
-
-        <Swiper modules={[FreeMode]} slidesPerView="auto" spaceBetween={10} freeMode={{ enabled: true, momentum: true, momentumRatio: 0.65 }} grabCursor className="!overflow-visible">
-          {renderBrands.map((brand) => (
-            <SwiperSlide key={brand.id} className="!w-[78px] sm:!w-[90px] md:!w-[102px]">
-              <Link to={`/brands/${brand.slug}`} aria-label={`عرض منتجات ${brand.name}`} className="group block w-full select-none [-webkit-tap-highlight-color:transparent]">
-                {/* LOGO BOX */}
-
+        <div className="-mx-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden md:-mx-6 md:px-6">
+          <div className="flex w-max gap-2.5">
+            {renderBrands.map((brand) => (
+              <Link key={brand.id} to={`/brands/${brand.slug}`} aria-label={`عرض منتجات ${brand.name}`} className="group block w-[78px] shrink-0 select-none [-webkit-tap-highlight-color:transparent] sm:w-[90px] md:w-[102px]">
                 <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-[15px] border border-border/60 bg-white px-2.5 md:rounded-[18px] md:px-3">
                   {brand.logo_url ? (
-                    <img src={brand.logo_url} alt={brand.name} loading="lazy" decoding="async" className="max-h-[45%] max-w-[82%] object-contain object-center transition-transform duration-200 group-hover:scale-[1.04]" />
+                    <img src={optimizeImage(brand.logo_url, 180, 72)} alt={brand.name} loading="lazy" decoding="async" width={180} height={180} className="max-h-[45%] max-w-[82%] object-contain object-center" />
                   ) : (
                     <span className="max-w-full truncate text-center font-serif text-[10px] font-semibold text-[#403633] md:text-[12px]">{brand.name}</span>
                   )}
                 </div>
-
-                {/* BRAND NAME */}
 
                 <div className="mt-1.5 text-center">
                   <p className="truncate text-[8px] font-semibold text-foreground md:text-[9px]">{brand.name}</p>
                   <p className="mt-0.5 font-serif text-[5px] uppercase tracking-[0.08em] text-muted-foreground md:text-[6px]">BRAND</p>
                 </div>
               </Link>
-            </SwiperSlide>
-          ))}
-        </Swiper>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );

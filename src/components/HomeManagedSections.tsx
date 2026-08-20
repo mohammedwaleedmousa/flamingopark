@@ -22,11 +22,19 @@ const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSect
     refetchOnWindowFocus: false,
   });
 
+  const sectionIds = useMemo(() => sections.map((section) => section.id), [sections]);
+
   const { data: rows = [] } = useQuery({
-    queryKey: ["home-managed-section-products"],
-    enabled: sections.length > 0,
+    queryKey: ["home-managed-section-products", sectionIds.join(",")],
+    enabled: sectionIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("products").select(`${PRODUCT_CARD_SELECT},section_ids,created_at,sort_order`).eq("is_active", true).eq("in_stock", true).limit(120);
+      const { data, error } = await (supabase as any)
+        .from("products")
+        .select(`${PRODUCT_CARD_SELECT},section_ids,created_at,sort_order`)
+        .eq("is_active", true)
+        .eq("in_stock", true)
+        .overlaps("section_ids", sectionIds)
+        .order("sort_order", { ascending: true });
       if (error) throw error;
       return (data || []) as ProductRow[];
     },

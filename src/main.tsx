@@ -7,4 +7,18 @@ import "./index.css";
 import "./desktop-storefront.css";
 import "./desktop-pages.css";
 
+const warmProductDetailRoute = () => {
+  void import("./pages/ProductDetailPage");
+};
+
+if (typeof window !== "undefined") {
+  const requestIdle = (window as any).requestIdleCallback as ((callback: () => void, options?: { timeout: number }) => number) | undefined;
+
+  if (requestIdle) {
+    requestIdle(warmProductDetailRoute, { timeout: 1200 });
+  } else {
+    window.setTimeout(warmProductDetailRoute, 500);
+  }
+}
+
 createRoot(document.getElementById("root")!).render(<AppErrorBoundary><><ProductRatingSync /><App /></></AppErrorBoundary>);

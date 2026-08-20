@@ -1,6 +1,6 @@
 import { createClient } from "npm:@supabase/supabase-js@2.112.0";
 
-const DEFAULT_ORIGINS = ["https://flamingoparkaden.com", "https://www.flamingoparkaden.com", "https://flamingopark.store", "https://www.flamingopark.store", "http://localhost:5173", "http://localhost:8080"];
+const DEFAULT_ORIGINS = ["https://flamingoparkaden.com", "https://www.flamingoparkaden.com", "https://flamingopark.store", "https://www.flamingopark.store", "http://localhost:3000", "http://localhost:5173", "http://localhost:8080"];
 const MAX_BODY_BYTES = 2048;
 
 const allowedOrigins = () => new Set((Deno.env.get("ALLOWED_ORIGINS") || DEFAULT_ORIGINS.join(",")).split(",").map((origin) => origin.trim()).filter(Boolean));

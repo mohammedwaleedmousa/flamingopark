@@ -110,7 +110,7 @@ const CategoriesPage = () => {
   }, [activeProductCategory]);
 
   const audienceRootOnly = Boolean(audienceContext && selectedParent && !selectedSub && ["men", "women"].includes(selectedParent.slug));
-  const hasProductScope = audienceRootOnly || scopedCategoryIds.length > 0;
+  const hasProductScope = Boolean(selectedSub && scopedCategoryIds.length > 0);
 
   /* =========================================================
      INVALID SUB CATEGORY

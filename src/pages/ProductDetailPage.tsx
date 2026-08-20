@@ -102,7 +102,7 @@ const ProductDetailPage = () => {
   const [selectedQualityIdx, setSelectedQualityIdx] = useState<number | null>(null);
   const [accessoryQuantities, setAccessoryQuantities] = useState<Record<string, number>>({});
   const [justAdded, setJustAdded] = useState(false);
-  const [openSection, setOpenSection] = useState<"details" | "specs" | "return" | "delivery" | null>("details");
+  const [openSection, setOpenSection] = useState<"specs" | "return" | "delivery" | null>(null);
 
   /* =========================================================
      PRODUCT
@@ -859,6 +859,10 @@ const ProductDetailPage = () => {
                     )}
 
                     <h1 className="text-[16px] font-semibold leading-[1.65] tracking-[-0.025em] text-[#302725] md:text-[20px]">{product.nameAr || product.name}</h1>
+
+                    {effectiveDescription && (
+                      <p className="mt-2 max-w-[620px] whitespace-pre-line text-[10px] leading-[1.9] text-[#796A65] md:text-[11px]">{effectiveDescription}</p>
+                    )}
                   </div>
 
                   <div className="hidden shrink-0 items-center gap-1 lg:flex">
@@ -1062,24 +1066,6 @@ const ProductDetailPage = () => {
               ============================================= */}
 
               <div className="divide-y divide-[#EEE4E0]">
-                {/* DETAILS */}
-
-                <div>
-                  <button type="button" onClick={() => setOpenSection(openSection === "details" ? null : "details")} className="flex w-full items-center justify-between px-3.5 py-4 text-right sm:px-5 lg:px-0">
-                    <span className="text-[10px] font-semibold text-[#413633]">تفاصيل المنتج</span>
-
-                    <ChevronDown className={`h-3.5 w-3.5 text-[#A95B61] transition-transform ${openSection === "details" ? "rotate-180" : ""}`} strokeWidth={1.5} />
-                  </button>
-
-                  {openSection === "details" && (
-                    <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: "auto" }} className="overflow-hidden">
-                      <div className="px-3.5 pb-4 sm:px-5 lg:px-0">
-                        <p className="whitespace-pre-line text-[9px] leading-6 text-[#796A65]">{effectiveDescription || "منتج مختار بعناية من فلامنجو بارك."}</p>
-                      </div>
-                    </motion.div>
-                  )}
-                </div>
-
                 {/* SPECS */}
 
                 {product.specs?.length > 0 && (

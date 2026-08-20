@@ -2,8 +2,6 @@ import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
-import { Swiper, SwiperSlide } from "swiper/react";
-import { FreeMode } from "swiper/modules";
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -16,9 +14,7 @@ import HomeManagedSections from "@/components/HomeManagedSections";
 import { supabase } from "@/integrations/supabase/client";
 import { useNearViewport } from "@/hooks/useNearViewport";
 import { useCustomerExperience } from "@/hooks/useCustomerExperience";
-
-import "swiper/css";
-import "swiper/css/free-mode";
+import { optimizeImage } from "@/lib/imageUrl";
 
 type FeaturedCategoryItem = {
   title: string;
@@ -28,12 +24,12 @@ type FeaturedCategoryItem = {
 };
 
 const fallbackCategoryImages: Record<string, string> = {
-  women: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=640&q=70",
-  men: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=640&q=70",
-  kids: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=640&q=70",
-  bags: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=640&q=70",
-  shoes: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=640&q=70",
-  beauty: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=640&q=70",
+  women: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=240&q=68&auto=format&fit=crop",
+  men: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=240&q=68&auto=format&fit=crop",
+  kids: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=240&q=68&auto=format&fit=crop",
+  bags: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=240&q=68&auto=format&fit=crop",
+  shoes: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=240&q=68&auto=format&fit=crop",
+  beauty: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=240&q=68&auto=format&fit=crop",
 };
 
 const fallbackFeaturedCategories: FeaturedCategoryItem[] = [
@@ -64,21 +60,21 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
           </Link>
         </div>
 
-        <Swiper modules={[FreeMode]} slidesPerView="auto" spaceBetween={10} freeMode={{ enabled: true, momentum: true, momentumRatio: 0.65 }} grabCursor className="!overflow-visible">
-          {items.map((item) => (
-            <SwiperSlide key={`${item.title}-${item.link}`} className="!w-[78px] sm:!w-[90px] md:!w-[102px]">
-              <Link to={item.link} className="group block w-full select-none [-webkit-tap-highlight-color:transparent]">
+        <div className="-mx-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden md:-mx-6 md:px-6">
+          <div className="flex w-max gap-2.5">
+            {items.map((item) => (
+              <Link key={`${item.title}-${item.link}`} to={item.link} className="group block w-[78px] shrink-0 select-none [-webkit-tap-highlight-color:transparent] sm:w-[90px] md:w-[102px]">
                 <div className="aspect-square w-full overflow-hidden rounded-[15px] border border-border/60 bg-muted/40 md:rounded-[18px]">
-                  <img src={item.image} alt={item.title} loading="lazy" decoding="async" className="h-full w-full object-cover object-center transition-transform duration-300 group-hover:scale-[1.025]" />
+                  <img src={optimizeImage(item.image, 220, 68)} alt={item.title} loading="lazy" decoding="async" width={220} height={220} className="h-full w-full object-cover object-center" />
                 </div>
                 <div className="mt-1.5 text-center">
                   <p className="truncate text-[8px] font-semibold text-foreground md:text-[9px]">{item.title}</p>
                   <p className="mt-0.5 truncate font-serif text-[5px] uppercase tracking-[0.08em] text-muted-foreground md:text-[6px]">{item.subtitle}</p>
                 </div>
               </Link>
-            </SwiperSlide>
-          ))}
-        </Swiper>
+            ))}
+          </div>
+        </div>
       </div>
     </section>
   );
@@ -86,7 +82,7 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
 
 const EditorialSection = () => {
   return (
-    <section className="bg-background px-4 py-11 md:py-20">
+    <section className="bg-background px-4 py-11 md:py-20 [content-visibility:auto] [contain-intrinsic-size:420px]">
       <div className="mx-auto max-w-[850px] text-center">
         <div className="mx-auto mb-4 flex items-center justify-center gap-2">
           <span className="h-px w-6 bg-border" />
@@ -116,9 +112,9 @@ const HomePage = () => {
   const showHomeSection = (section: string) => customerExperience?.homeSections[section] !== false;
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ["categories-all-active"],
+    queryKey: ["categories-home-active-parents"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order", { ascending: true });
+      const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).is("parent_id", null).order("sort_order", { ascending: true });
       if (error) throw error;
       return data || [];
     },
@@ -127,12 +123,9 @@ const HomePage = () => {
   });
 
   const featuredCategories = useMemo<FeaturedCategoryItem[]>(() => {
-    if (categoriesLoading) return fallbackFeaturedCategories;
+    if (categoriesLoading || categories.length === 0) return fallbackFeaturedCategories;
 
-    const parentCategories = categories.filter((category: any) => !category.parent_id);
-    if (parentCategories.length === 0) return fallbackFeaturedCategories;
-
-    return parentCategories.map((category: any) => ({
+    return categories.map((category: any) => ({
       title: category.name_ar || category.name || category.slug,
       subtitle: category.name || category.name_ar || category.slug,
       image: category.image_url || fallbackCategoryImages[category.slug] || fallbackFeaturedCategories[0].image,
@@ -140,10 +133,10 @@ const HomePage = () => {
     }));
   }, [categories, categoriesLoading]);
 
-  const brandsViewport = useNearViewport<HTMLDivElement>();
+  const brandsViewport = useNearViewport<HTMLDivElement>("120px");
 
   const imageBanner = showHomeSection("services") ? (
-    <div className="bg-background">
+    <div className="bg-background [content-visibility:auto] [contain-intrinsic-size:420px]">
       <FlamingoServices />
     </div>
   ) : null;

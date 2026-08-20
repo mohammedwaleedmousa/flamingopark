@@ -2,7 +2,7 @@ import { createClient } from "npm:@supabase/supabase-js@2.112.0";
 
 type VerificationChannel = "none" | "sms" | "whatsapp" | "email";
 type RegistrationBody = { name?: unknown; phone?: unknown; email?: unknown; region?: unknown; country?: unknown; channel?: unknown; legacyPassword?: unknown };
-const DEFAULT_ORIGINS = ["https://flamingopark.vercel.app", "https://flamingopark.store", "https://www.flamingopark.store", "https://flamingoparkaden.com", "https://www.flamingoparkaden.com", "http://localhost:5173", "http://localhost:8080"];
+const DEFAULT_ORIGINS = ["https://flamingopark.vercel.app", "https://flamingopark.store", "https://www.flamingopark.store", "https://flamingoparkaden.com", "https://www.flamingoparkaden.com", "http://localhost:3000", "http://localhost:5173", "http://localhost:8080"];
 const MAX_BODY_BYTES = 4096;
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const allowedOrigins = () => new Set((Deno.env.get("ALLOWED_ORIGINS") || DEFAULT_ORIGINS.join(",")).split(",").map((origin) => origin.trim()).filter(Boolean));

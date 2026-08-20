@@ -194,14 +194,14 @@ const BrandSectionPage = () => {
   ========================================================= */
 
   const { data: products = [], isLoading: productsLoading } = useQuery({
-    queryKey: ["brand-section-products", section?.id],
-    enabled: Boolean(section?.id),
+    queryKey: ["brand-section-products", section?.id, brand?.id],
+    enabled: Boolean(section?.id && brand?.id),
     queryFn: async () => {
       const { data, error } = await (supabase as any).from("brand_section_products").select("product_id,products(*)").eq("section_id", section!.id);
 
       if (error) throw error;
 
-      const productRows = (data || []).map((item: any) => item.products).filter(Boolean).filter((product: any) => product.is_active);
+      const productRows = (data || []).map((item: any) => item.products).filter(Boolean).filter((product: any) => product.is_active && product.brand_id === brand!.id);
 
       return productRows.map(mapProduct);
     },
@@ -409,10 +409,6 @@ const BrandSectionPage = () => {
       <CartDrawer />
 
       <main className="flex-1 pb-14">
-        {/* =====================================================
-            CLEAN SECTION IMAGE
-        ===================================================== */}
-
         {section.image_url && (
           <section className="bg-background pt-3 md:pt-5">
             <div className="mx-auto w-full max-w-[1400px] px-3 md:px-6">
@@ -422,10 +418,6 @@ const BrandSectionPage = () => {
             </div>
           </section>
         )}
-
-        {/* =====================================================
-            TITLE
-        ===================================================== */}
 
         <section className="mx-auto w-full max-w-[1400px] px-4 pb-5 pt-6 md:px-6 md:pb-7 md:pt-8">
           <Link to={`/brands/${slug}`} className="inline-flex items-center gap-1 text-[10px] text-muted-foreground transition-colors hover:text-[#A95B61] md:text-[11px]">
@@ -449,10 +441,6 @@ const BrandSectionPage = () => {
           </div>
         </section>
 
-        {/* =====================================================
-            SIMPLE TOOLBAR
-        ===================================================== */}
-
         {(brandFilters.length > 0 || products.length > 0) && (
           <section className="border-y border-border/60 bg-background">
             <div className="mx-auto flex h-[54px] w-full max-w-[1400px] items-center justify-between px-4 md:px-6">
@@ -470,10 +458,6 @@ const BrandSectionPage = () => {
             </div>
           </section>
         )}
-
-        {/* =====================================================
-            ACTIVE FILTERS
-        ===================================================== */}
 
         {activeFilterCount > 0 && (
           <section className="mx-auto flex w-full max-w-[1400px] items-center gap-2 overflow-x-auto px-4 py-3 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:px-6">
@@ -516,10 +500,6 @@ const BrandSectionPage = () => {
           </section>
         )}
 
-        {/* =====================================================
-            PRODUCTS
-        ===================================================== */}
-
         <section className="mx-auto mt-5 w-full max-w-[1400px] px-4 md:mt-7 md:px-6">
           {productsLoading ? (
             <div className="grid grid-cols-2 gap-x-3 gap-y-6 md:grid-cols-4 md:gap-x-5 md:gap-y-8">
@@ -554,10 +534,6 @@ const BrandSectionPage = () => {
       </main>
 
       <Footer />
-
-      {/* =====================================================
-          SORT SHEET
-      ===================================================== */}
 
       {sortOpen && (
         <div className="fixed inset-0 z-[120]" dir="rtl">
@@ -594,10 +570,6 @@ const BrandSectionPage = () => {
         </div>
       )}
 
-      {/* =====================================================
-          FILTER SHEET
-      ===================================================== */}
-
       {filterOpen && (
         <div className="fixed inset-0 z-[120]" dir="rtl">
           <button type="button" onClick={() => setFilterOpen(false)} aria-label="إغلاق الفلترة" className="absolute inset-0 touch-none bg-black/25" />
@@ -606,8 +578,6 @@ const BrandSectionPage = () => {
             <div className="flex h-6 shrink-0 items-center justify-center md:hidden">
               <span className="h-1 w-9 rounded-full bg-[#DDD4CF]" />
             </div>
-
-            {/* HEADER */}
 
             <div className="flex shrink-0 items-center justify-between border-b border-border/60 px-4 pb-4 pt-2 md:pt-4">
               <div>
@@ -619,8 +589,6 @@ const BrandSectionPage = () => {
                 <X className="h-4 w-4" strokeWidth={1.5} />
               </button>
             </div>
-
-            {/* CONTENT */}
 
             <div className="flex-1 overscroll-contain overflow-y-auto px-4">
               {brandFilters.map((filter) => {
@@ -647,8 +615,6 @@ const BrandSectionPage = () => {
                 );
               })}
 
-              {/* PRICE */}
-
               <div className="border-b border-border/60 py-5">
                 <div className="flex items-end justify-between">
                   <h3 className="text-[12px] font-semibold text-foreground">السعر</h3>
@@ -669,8 +635,6 @@ const BrandSectionPage = () => {
                 </div>
               </div>
 
-              {/* STOCK */}
-
               <div className="py-5">
                 <button type="button" onClick={() => setDraftInStockOnly((value) => !value)} className="flex w-full items-center justify-between gap-4 text-right">
                   <div>
@@ -684,8 +648,6 @@ const BrandSectionPage = () => {
                 </button>
               </div>
             </div>
-
-            {/* FOOTER */}
 
             <div className="grid shrink-0 grid-cols-[0.7fr_1.3fr] gap-2 border-t border-border/60 bg-background px-4 pb-[max(14px,env(safe-area-inset-bottom))] pt-3">
               <button type="button" onClick={resetDraftFilters} className="h-11 rounded-[10px] border border-border text-[10px] font-medium text-muted-foreground">مسح</button>

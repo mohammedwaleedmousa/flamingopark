@@ -7,6 +7,7 @@ import { Autoplay } from "swiper/modules";
 import { ArrowLeft } from "phosphor-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { optimizeImage } from "@/lib/imageUrl";
 
 import "swiper/css";
 
@@ -68,6 +69,7 @@ const HeroSlider = () => {
   });
 
   const slides = managedSlides.length > 0 ? managedSlides : fallbackSlides;
+  const heroImageWidth = typeof window !== "undefined" && window.innerWidth < 768 ? 900 : 1600;
 
   return (
     <section dir="rtl" className="w-full bg-background px-3 pt-3 md:px-6 md:pt-5">
@@ -77,21 +79,12 @@ const HeroSlider = () => {
             {slides.map((slide, index) => (
               <SwiperSlide key={`${slide.image}-${index}`}>
                 <div className="relative h-[230px] w-full overflow-hidden bg-muted/30 sm:h-[285px] md:h-[390px] lg:h-[450px]">
-                  {/* IMAGE */}
-
                   {loadedSlides.has(index) && (
-                    <img src={slide.image} alt={slide.title || "Flamingo Park"} loading={index === 0 ? "eager" : "lazy"} decoding="async" fetchPriority={index === 0 ? "high" : "auto"} className="absolute inset-0 h-full w-full object-cover object-center" />
+                    <img src={optimizeImage(slide.image, heroImageWidth, 74)} alt={slide.title || "Flamingo Park"} loading={index === 0 ? "eager" : "lazy"} decoding="async" fetchPriority={index === 0 ? "high" : "auto"} width={heroImageWidth} height={900} className="absolute inset-0 h-full w-full object-cover object-center" />
                   )}
 
-                  {/* NEUTRAL OVERLAY */}
-
                   <div className="absolute inset-0 bg-gradient-to-l from-background/95 via-background/65 to-transparent sm:from-background/92 sm:via-background/52 md:via-background/42" />
-
-                  {/* SUBTLE BOTTOM SHADE */}
-
                   <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/[0.05] to-transparent" />
-
-                  {/* CONTENT */}
 
                   <div className="absolute inset-0 flex items-center">
                     <div className="w-[70%] px-5 sm:w-[60%] sm:px-8 md:w-[54%] md:px-12 lg:w-[50%] lg:px-16">
@@ -111,8 +104,6 @@ const HeroSlider = () => {
                     </div>
                   </div>
 
-                  {/* SLIDE NUMBER */}
-
                   {slides.length > 1 && (
                     <div className="absolute bottom-4 left-4 z-20 hidden items-center gap-1.5 text-[7px] font-medium text-white/90 sm:flex md:bottom-5 md:left-6">
                       <span>{String(activeIndex + 1).padStart(2, "0")}</span>
@@ -124,8 +115,6 @@ const HeroSlider = () => {
               </SwiperSlide>
             ))}
           </Swiper>
-
-          {/* PAGINATION */}
 
           {slides.length > 1 && (
             <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 md:bottom-4">

@@ -306,6 +306,7 @@ const App = () => {
               <Route path="brand-section-products/:id" element={<AdminBrandSectionProductsPage />} />
               <Route path="brand-filters/:id" element={<AdminBrandFiltersPage />} />
               <Route path="brand-sections" element={<AdminBrandSectionsPage />} />
+              <Route path="brand-sections/:id" element={<AdminBrandSectionsPage />} />
               <Route path="brand-filters" element={<AdminBrandFiltersPage />} />
               <Route path="customer-notifications" element={<AdminCustomerNotificationsPage />} />
               <Route path="notification-deliveries" element={<AdminNotificationDeliveriesPage />} />

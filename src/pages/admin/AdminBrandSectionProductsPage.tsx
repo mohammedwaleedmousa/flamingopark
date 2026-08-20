@@ -38,7 +38,7 @@ interface BrandRow {
 }
 
 type SelectionFilter = "all" | "selected" | "unselected";
-type BrandFilter = "all" | "section-brand";
+type BrandFilter = "section-brand";
 
 const AdminBrandSectionProductsPage = () => {
   const { id } = useParams<{ id: string }>();
@@ -47,7 +47,7 @@ const AdminBrandSectionProductsPage = () => {
 
   const [search, setSearch] = useState("");
   const [selectionFilter, setSelectionFilter] = useState<SelectionFilter>("all");
-  const [brandFilter, setBrandFilter] = useState<BrandFilter>("all");
+  const [brandFilter, setBrandFilter] = useState<BrandFilter>("section-brand");
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [selectionLoadedFor, setSelectionLoadedFor] = useState("");
 
@@ -139,7 +139,7 @@ const AdminBrandSectionProductsPage = () => {
       const text = `${product.name} ${product.name_ar || ""} ${product.brand || ""}`.toLowerCase();
       const matchesSearch = !normalizedSearch || text.includes(normalizedSearch);
       const matchesSelection = selectionFilter === "all" || (selectionFilter === "selected" && selectedSet.has(product.id)) || (selectionFilter === "unselected" && !selectedSet.has(product.id));
-      const matchesBrand = brandFilter === "all" || !section?.brand_id || product.brand_id === section.brand_id;
+      const matchesBrand = !section?.brand_id || product.brand_id === section.brand_id;
 
       return matchesSearch && matchesSelection && matchesBrand;
     });
@@ -194,6 +194,15 @@ const AdminBrandSectionProductsPage = () => {
 
       const toRemove = linkedProductIds.filter((productId) => !next.has(productId));
       const toInsert = selectedProducts.filter((productId) => !existing.has(productId));
+
+      const invalidInsert = toInsert.find((productId) => {
+        const product = products.find((item) => item.id === productId);
+        return !section?.brand_id || product?.brand_id !== section.brand_id;
+      });
+
+      if (invalidInsert) {
+        throw new Error(`لا يمكن ربط منتج بماركة مختلفة عن ${sectionBrand?.name || "ماركة القسم"}.`);
+      }
 
       if (toRemove.length > 0) {
         const { error } = await (supabase as any).from("brand_section_products").delete().eq("section_id", id).in("product_id", toRemove);
@@ -262,7 +271,7 @@ const AdminBrandSectionProductsPage = () => {
         <ProductStatCard title="المنتجات النشطة" value={products.length} helper="جميع منتجات المتجر المتاحة" icon={Package} tone="indigo" />
         <ProductStatCard title="مرتبطة بالقسم" value={selectedProducts.length} helper={section?.name || "القسم الحالي"} icon={CheckCircle2} tone="green" />
         <ProductStatCard title="منتجات نفس الماركة" value={sectionBrandProducts.length} helper={sectionBrand?.name || "الماركة الحالية"} icon={ShoppingBag} tone="blue" />
-        <ProductStatCard title="غير مرتبطة" value={Math.max(0, products.length - selectedProducts.length)} helper="يمكن إضافتها للقسم" icon={CircleOff} tone="coral" />
+        <ProductStatCard title="غير مرتبطة" value={Math.max(0, sectionBrandProducts.length - selectedProducts.filter((productId) => sectionBrandProducts.some((product) => product.id === productId)).length)} helper="يمكن إضافتها للقسم" icon={CircleOff} tone="coral" />
       </section>
 
       <section className="overflow-hidden rounded-[14px] border border-[#E5E9EF] bg-white">
@@ -292,11 +301,11 @@ const AdminBrandSectionProductsPage = () => {
         <div className="flex items-center justify-between border-b border-[#EDF0F3] px-[13px] py-[10px]">
           <div>
             <h2 className="text-[11px] font-semibold text-[#444B55]">البحث والتصفية</h2>
-            <p className="mt-[3px] text-[8px] text-[#9BA2AC]">اختر المنتجات بسرعة بدون مغادرة الصفحة</p>
+            <p className="mt-[3px] text-[8px] text-[#9BA2AC]">تظهر هنا منتجات ماركة القسم فقط</p>
           </div>
 
-          {(search || selectionFilter !== "all" || brandFilter !== "all") && (
-            <button type="button" onClick={() => { setSearch(""); setSelectionFilter("all"); setBrandFilter("all"); }} className="flex h-[30px] items-center gap-[5px] rounded-[8px] px-[8px] text-[8px] font-semibold text-[#7E8690] hover:bg-[#F7F8FA]">
+          {(search || selectionFilter !== "all") && (
+            <button type="button" onClick={() => { setSearch(""); setSelectionFilter("all"); setBrandFilter("section-brand"); }} className="flex h-[30px] items-center gap-[5px] rounded-[8px] px-[8px] text-[8px] font-semibold text-[#7E8690] hover:bg-[#F7F8FA]">
               <X className="h-[10px] w-[10px]" />
               مسح الفلاتر
             </button>
@@ -325,8 +334,7 @@ const AdminBrandSectionProductsPage = () => {
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all">كل الماركات</SelectItem>
-              <SelectItem value="section-brand">ماركة القسم فقط</SelectItem>
+              <SelectItem value="section-brand">{sectionBrand?.name || "ماركة القسم"} فقط</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -345,7 +353,7 @@ const AdminBrandSectionProductsPage = () => {
         <section className="overflow-hidden rounded-[14px] border border-[#E5E9EF] bg-white">
           <div className="flex items-center justify-between border-b border-[#EAEDF1] px-[13px] py-[10px]">
             <div>
-              <h2 className="text-[11px] font-semibold text-[#454C56]">جميع المنتجات</h2>
+              <h2 className="text-[11px] font-semibold text-[#454C56]">منتجات {sectionBrand?.name || "الماركة"}</h2>
               <p className="mt-[3px] text-[8px] text-[#9CA3AC]">اضغط على المنتج لإضافته أو إزالته من القسم</p>
             </div>
 
@@ -412,6 +420,7 @@ const AdminBrandSectionProductsPage = () => {
                   <div className="min-w-0 flex-1">
                     <p className="truncate text-[8px] font-semibold text-[#535B65]">{product.name_ar || product.name}</p>
                     <p className="mt-[2px] truncate text-[6px] text-[#9BA2AC]">{Number(product.price || 0).toLocaleString("en-US")} ر.س</p>
+                    {section?.brand_id && product.brand_id !== section.brand_id && <p className="mt-[2px] text-[6px] font-semibold text-[#C15F56]">ماركة مختلفة — احذف الربط القديم</p>}
                   </div>
 
                   <button type="button" onClick={() => removeProduct(product.id)} className="flex h-[27px] w-[27px] shrink-0 items-center justify-center rounded-[7px] text-[#C15F56] hover:bg-[#FFF0ED]"><Trash2 className="h-[10px] w-[10px]" /></button>
@@ -462,7 +471,7 @@ const ProductImage = ({ product, compact = false }: { product: Product; compact?
 const PlusIcon = () => <span className="text-[13px] leading-none">+</span>;
 
 const ProductsEmpty = () => {
-  return <div className="flex min-h-[330px] flex-col items-center justify-center px-6 text-center"><div className="flex h-[45px] w-[45px] items-center justify-center rounded-[13px] bg-[#F0F2F5] text-[#8C949E]"><Package className="h-[18px] w-[18px]" /></div><h3 className="mt-3 text-[10px] font-semibold text-[#535B65]">لا توجد منتجات</h3><p className="mt-[4px] text-[7px] text-[#9BA2AC]">غيّر البحث أو الفلاتر للعثور على منتجات أخرى.</p></div>;
+  return <div className="flex min-h-[330px] flex-col items-center justify-center px-6 text-center"><div className="flex h-[45px] w-[45px] items-center justify-center rounded-[13px] bg-[#F0F2F5] text-[#8C949E]"><Package className="h-[18px] w-[18px]" /></div><h3 className="mt-3 text-[10px] font-semibold text-[#535B65]">لا توجد منتجات</h3><p className="mt-[4px] text-[7px] text-[#9BA2AC]">تأكد من أن منتجات الماركة مفعّلة ومربوطة بالماركة الصحيحة.</p></div>;
 };
 
 export default AdminBrandSectionProductsPage;

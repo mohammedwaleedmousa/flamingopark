@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Check, CheckCircle2, ChevronLeft, Copy, FileText, Home, Loader2, MapPin, PackageCheck, Phone, ReceiptText, Truck } from "lucide-react";
+import { Check, CheckCircle2, Copy, FileText, Home, MapPin, PackageCheck, Phone, ReceiptText, Truck } from "lucide-react";
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -48,6 +48,7 @@ interface OrderData {
   couponCode?: string | null;
   total: number;
   paymentMethod: string;
+  paymentMethodName?: string;
   deliveryCompany: string;
   selectedRegion?: string | null;
   country: string;
@@ -60,20 +61,9 @@ const OrderConfirmationPage = () => {
   const navigate = useNavigate();
 
   const [orderData, setOrderData] = useState<OrderData | null>(null);
-  const [isConfirming, setIsConfirming] = useState(false);
   const [isConfirmed, setIsConfirmed] = useState(false);
-  const [invoiceFile, setInvoiceFile] = useState<File | null>(null);
-  const [isPreparingInvoice, setIsPreparingInvoice] = useState(false);
-  const [invoicePreparationFailed, setInvoicePreparationFailed] = useState(false);
-  const [isSharingInvoice, setIsSharingInvoice] = useState(false);
-
-  const invoiceRef = useRef<HTMLDivElement>(null);
 
   const flamingoLogo = "/icons/flamingo.jpeg";
-
-  /* =========================================================
-     CURRENCY
-  ========================================================= */
 
   const currencyMode = orderData?.currencyMode || "SAR";
   const currencyConfig = CURRENCY_RATES[currencyMode as keyof typeof CURRENCY_RATES];
@@ -81,13 +71,9 @@ const OrderConfirmationPage = () => {
 
   const fmt = (amount: number) => {
     try {
-      return convertPrice(amount, currencyMode as any).toLocaleString("en-US", {
-        maximumFractionDigits: 2,
-      });
+      return convertPrice(amount, currencyMode as any).toLocaleString("en-US", { maximumFractionDigits: 2 });
     } catch {
-      return Number(amount || 0).toLocaleString("en-US", {
-        maximumFractionDigits: 2,
-      });
+      return Number(amount || 0).toLocaleString("en-US", { maximumFractionDigits: 2 });
     }
   };
 
@@ -99,10 +85,7 @@ const OrderConfirmationPage = () => {
     const incomingOrder = location.state?.orderData as OrderData | undefined;
 
     if (!incomingOrder) {
-      navigate("/home", {
-        replace: true,
-      });
-
+      navigate("/home", { replace: true });
       return;
     }
 
@@ -135,154 +118,36 @@ const OrderConfirmationPage = () => {
 
   const trackingUrl = orderData ? `/order-tracking?order=${encodeURIComponent(orderData.orderNumber)}&token=${encodeURIComponent(orderData.trackingToken)}` : "/order-tracking";
 
+  const paymentLabel = orderData?.paymentMethodName || (orderData?.paymentMethod === "cod" ? "الدفع عند الاستلام" : orderData?.paymentMethod === "bank" ? "تحويل بنكي أو عبر صراف" : orderData?.paymentMethod || "—");
+
   const createWhatsAppMessage = () => {
     if (!orderData) return "";
 
-    const items = orderData.items
-      .map((item, index) => `${index + 1}. ${item.product_name} × ${item.quantity} — ${fmt(item.price * item.quantity)} ${currency}`)
+    const shownItems = orderData.items.slice(0, 20);
+    const items = shownItems
+      .map((item, index) => {
+        const details = [item.selected_size ? `مقاس ${item.selected_size}` : "", item.selected_color ? `لون ${item.selected_color}` : ""].filter(Boolean).join(" • ");
+        return `${index + 1}. ${item.product_name} ×${item.quantity}${details ? ` (${details})` : ""}`;
+      })
       .join("\n");
+    const remaining = orderData.items.length > shownItems.length ? `\n+ ${orderData.items.length - shownItems.length} منتجات أخرى` : "";
     const absoluteTrackingUrl = typeof window !== "undefined" ? `${window.location.origin}${trackingUrl}` : trackingUrl;
+    const region = orderData.selectedRegion ? `\nمنطقة الاستلام: ${orderData.selectedRegion}` : "";
 
-    return `فاتورة طلب Flamingo Park\n\nالاسم: ${orderData.customerName}\nالهاتف: ${orderData.customerPhone}\nرقم الطلب: ${orderData.orderNumber}\n\nالمنتجات:\n${items}\n\nرسوم التوصيل: ${fmt(orderData.deliveryFee)} ${currency}\nالإجمالي: ${fmt(orderData.total)} ${currency}\n\nتتبع الطلب:\n${absoluteTrackingUrl}`;
+    return `فاتورة Flamingo Park\nرقم الطلب: ${orderData.orderNumber}\nالعميل: ${orderData.customerName}\nالهاتف: ${orderData.customerPhone}\n\nالمنتجات:\n${items}${remaining}\n\nشركة التوصيل: ${orderData.deliveryCompany}\nطريقة الدفع: ${paymentLabel}${region}\nرسوم التوصيل: ${fmt(orderData.deliveryFee)} ${currency}\nالإجمالي: ${fmt(orderData.total)} ${currency}\n\nتتبع الطلب:\n${absoluteTrackingUrl}`;
   };
 
   const openWhatsApp = () => {
     if (!orderData) return;
-
-    const message = createWhatsAppMessage();
-    const whatsappUrl = `https://wa.me/${STORE_WHATSAPP}?text=${encodeURIComponent(message)}`;
-    const opened = window.open(whatsappUrl, "_blank", "noopener,noreferrer");
-
-    if (!opened) {
-      window.location.assign(whatsappUrl);
-    }
-  };
-
-  const prepareInvoiceFile = async () => {
-    if (!orderData || !invoiceRef.current || isPreparingInvoice || invoiceFile) return;
-
-    setIsPreparingInvoice(true);
-    setInvoicePreparationFailed(false);
-
-    try {
-      const [{ default: html2canvas }, { default: jsPDF }] = await Promise.all([import("html2canvas"), import("jspdf")]);
-
-      const canvas = await html2canvas(invoiceRef.current, {
-        scale: 1.15,
-        useCORS: true,
-        allowTaint: false,
-        backgroundColor: "#ffffff",
-        logging: false,
-        imageTimeout: 4000,
-      });
-
-      const imageData = canvas.toDataURL("image/jpeg", 0.76);
-      const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
-      const pageWidth = 210;
-      const pageHeight = 297;
-      const imageHeight = (canvas.height * pageWidth) / canvas.width;
-
-      if (imageHeight <= pageHeight) {
-        pdf.addImage(imageData, "JPEG", 0, 0, pageWidth, imageHeight);
-      } else {
-        let position = 0;
-        let remainingHeight = imageHeight;
-
-        pdf.addImage(imageData, "JPEG", 0, position, pageWidth, imageHeight);
-        remainingHeight -= pageHeight;
-
-        while (remainingHeight > 0) {
-          position -= pageHeight;
-          pdf.addPage();
-          pdf.addImage(imageData, "JPEG", 0, position, pageWidth, imageHeight);
-          remainingHeight -= pageHeight;
-        }
-      }
-
-      const blob = pdf.output("blob");
-      const file = new File([blob], `Flamingo-${orderData.orderNumber}.pdf`, { type: "application/pdf" });
-      setInvoiceFile(file);
-    } catch (error) {
-      console.error("Invoice preparation error:", error);
-      setInvoicePreparationFailed(true);
-    } finally {
-      setIsPreparingInvoice(false);
-    }
+    const whatsappUrl = `https://wa.me/${STORE_WHATSAPP}?text=${encodeURIComponent(createWhatsAppMessage())}`;
+    window.location.assign(whatsappUrl);
   };
 
   const handleConfirmOrder = () => {
-    if (!orderData || isConfirming || isConfirmed) return;
-
-    setIsConfirming(true);
+    if (!orderData || isConfirmed) return;
     setIsConfirmed(true);
-
-    toast({
-      title: "تم تأكيد الطلب",
-      description: "جاري تجهيز الفاتورة للمشاركة عبر واتساب.",
-    });
-
-    setIsConfirming(false);
-    void prepareInvoiceFile();
-  };
-
-  const downloadInvoice = (file: File) => {
-    const url = URL.createObjectURL(file);
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = file.name;
-    document.body.appendChild(anchor);
-    anchor.click();
-    anchor.remove();
-    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-  };
-
-  const handleShareInvoice = async () => {
-    if (!orderData || isSharingInvoice) return;
-
-    if (!invoiceFile) {
-      if (!isPreparingInvoice) void prepareInvoiceFile();
-      toast({
-        title: invoicePreparationFailed ? "تعذر تجهيز ملف الفاتورة" : "جاري تجهيز الفاتورة",
-        description: invoicePreparationFailed ? "يمكنك المتابعة عبر واتساب برسالة الطلب." : "حاول المشاركة بعد لحظات.",
-        variant: invoicePreparationFailed ? "destructive" : "default",
-      });
-      if (invoicePreparationFailed) openWhatsApp();
-      return;
-    }
-
-    setIsSharingInvoice(true);
-
-    try {
-      const shareData: ShareData = {
-        title: `فاتورة ${orderData.orderNumber}`,
-        text: createWhatsAppMessage(),
-        files: [invoiceFile],
-      };
-
-      if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
-        await navigator.share(shareData);
-        return;
-      }
-
-      downloadInvoice(invoiceFile);
-      toast({
-        title: "تم تنزيل الفاتورة",
-        description: "سيتم فتح واتساب الآن. أرفق ملف الفاتورة الذي تم تنزيله.",
-      });
-      openWhatsApp();
-    } catch (error: any) {
-      if (error?.name !== "AbortError") {
-        console.error("Invoice share error:", error);
-        downloadInvoice(invoiceFile);
-        toast({
-          title: "تم تنزيل الفاتورة",
-          description: "تعذرت مشاركة الملف مباشرة، وسيتم فتح واتساب الآن.",
-        });
-        openWhatsApp();
-      }
-    } finally {
-      setIsSharingInvoice(false);
-    }
+    toast({ title: "تم تأكيد الطلب", description: "سيتم فتح واتساب مباشرة بدون انتظار تحميل ملف." });
+    openWhatsApp();
   };
 
   if (!orderData) {
@@ -311,10 +176,8 @@ const OrderConfirmationPage = () => {
                 <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-[#EAF4EC]">
                   <CheckCircle2 className="h-6 w-6 text-[#63856A]" strokeWidth={1.5} />
                 </span>
-
                 <h1 className="mt-3 text-[17px] font-semibold text-[#3F4E42] md:text-[21px]">تم تأكيد طلبك بنجاح</h1>
-
-                <p className="mx-auto mt-1.5 max-w-[390px] text-[8px] leading-5 text-[#829086]">شكراً لاختيارك فلامنجو بارك. سيتم التواصل معك لتأكيد تفاصيل الطلب والتوصيل.</p>
+                <p className="mx-auto mt-1.5 max-w-[390px] text-[8px] leading-5 text-[#829086]">تم تجهيز تفاصيل الطلب بشكل خفيف وسريع لتعمل جيداً حتى مع الإنترنت البطيء.</p>
               </div>
             ) : (
               <div>
@@ -322,14 +185,11 @@ const OrderConfirmationPage = () => {
                   <span className="h-[2px] w-4 rounded-full bg-[#D4777D]" />
                   <span className="font-serif text-[6px] tracking-[0.22em] text-[#B86168]">ORDER RECEIVED</span>
                 </div>
-
                 <div className="mt-1.5 flex items-end justify-between gap-4">
                   <div>
                     <h1 className="text-[19px] font-semibold tracking-[-0.025em] text-[#403633] md:text-[25px]">تفاصيل طلبك</h1>
-
-                    <p className="mt-1 text-[8px] text-[#9B8D88]">راجع الفاتورة ثم أكّد الطلب. بعدها يمكنك مشاركة ملف الفاتورة عبر واتساب.</p>
+                    <p className="mt-1 text-[8px] text-[#9B8D88]">راجع الفاتورة ثم أكّد الطلب. واتساب سيفتح فوراً برسالة فاتورة خفيفة بدون PDF ثقيل.</p>
                   </div>
-
                   <span className="hidden h-9 w-9 items-center justify-center rounded-full bg-[#FAECE9] md:flex">
                     <ReceiptText className="h-4 w-4 text-[#C66C72]" strokeWidth={1.5} />
                   </span>
@@ -338,7 +198,7 @@ const OrderConfirmationPage = () => {
             )}
           </section>
 
-          <div ref={invoiceRef} id="invoice" className="overflow-hidden rounded-[16px] border border-[#E9DFDB] bg-white print:rounded-none print:border-0">
+          <div id="invoice" className="overflow-hidden rounded-[16px] border border-[#E9DFDB] bg-white print:rounded-none print:border-0">
             <div className="flex items-start justify-between gap-4 border-b border-[#EEE5E1] px-4 py-4 md:px-6 md:py-5">
               <div className="min-w-0">
                 <img src={flamingoLogo} alt="Flamingo Park" className="h-[48px] w-auto object-contain md:h-[58px]" />
@@ -347,22 +207,14 @@ const OrderConfirmationPage = () => {
 
               <div className="min-w-0 text-left">
                 <p className="text-[6px] uppercase tracking-[0.12em] text-[#A79A95]">ORDER NUMBER</p>
-
                 <div className="mt-1 flex items-center justify-end gap-1.5">
                   <span dir="ltr" className="font-mono text-[9px] font-semibold text-[#514540]">{orderData.orderNumber}</span>
                   <button type="button" onClick={handleCopyOrderNumber} aria-label="نسخ رقم الطلب" className="flex h-6 w-6 items-center justify-center rounded-[6px] text-[#A76A6D] active:bg-[#FFF5F3] print:hidden">
                     <Copy className="h-3 w-3" strokeWidth={1.5} />
                   </button>
                 </div>
-
                 <p className="mt-1.5 text-[6px] leading-4 text-[#A0938E]">
-                  {new Date(orderData.createdAt).toLocaleDateString("ar", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                    hour: "2-digit",
-                    minute: "2-digit",
-                  })}
+                  {new Date(orderData.createdAt).toLocaleDateString("ar", { year: "numeric", month: "long", day: "numeric", hour: "2-digit", minute: "2-digit" })}
                 </p>
               </div>
             </div>
@@ -375,13 +227,12 @@ const OrderConfirmationPage = () => {
                 </div>
                 <p className="mt-1 text-[8px] font-semibold text-[#527258]">تم استلام الطلب</p>
               </div>
-
               <div className="px-4 py-3 md:px-6">
                 <div className="flex items-center gap-1.5">
                   <Truck className="h-3 w-3 text-[#C66C72]" strokeWidth={1.5} />
                   <span className="text-[6px] text-[#9D8F8A]">شركة التوصيل</span>
                 </div>
-                <p className="mt-1 truncate text-[8px] font-semibold text-[#514540]">{orderData.deliveryCompany || "سيتم تحديدها"}</p>
+                <p className="mt-1 truncate text-[8px] font-semibold text-[#514540]">{orderData.deliveryCompany}</p>
               </div>
             </div>
 
@@ -419,7 +270,7 @@ const OrderConfirmationPage = () => {
                   <div key={`${item.product_id}-${index}`} className={`py-3 ${index !== orderData.items.length - 1 ? "border-b border-[#F0E8E5]" : ""}`}>
                     <div className="flex items-center gap-3">
                       <div className="flex h-[64px] w-[64px] shrink-0 items-center justify-center overflow-hidden rounded-[9px] border border-[#EEE7E4] bg-[#F7F5F3] p-1 print:h-[52px] print:w-[52px]">
-                        <img src={optimizeImage(item.product_image || "/placeholder.svg", 220, 82)} alt={item.product_name} loading="lazy" decoding="async" onError={handleImageError} className="h-full w-full object-contain object-center" />
+                        <img src={optimizeImage(item.product_image || "/placeholder.svg", 180, 72)} alt={item.product_name} loading="lazy" decoding="async" onError={handleImageError} className="h-full w-full object-contain object-center" />
                       </div>
 
                       <div className="min-w-0 flex-1">
@@ -441,16 +292,9 @@ const OrderConfirmationPage = () => {
                         <div className="space-y-2">
                           {item.selected_accessories.map((accessory, accessoryIndex) => (
                             <div key={`${accessory.name_ar}-${accessoryIndex}`} className="flex items-center justify-between gap-3">
-                              <div className="flex min-w-0 items-center gap-2">
-                                {accessory.image_url && (
-                                  <div className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden rounded-[6px] border border-[#ECE3DF] bg-white p-0.5">
-                                    <img src={optimizeImage(accessory.image_url, 120, 76)} alt={accessory.name_ar || accessory.name} loading="lazy" decoding="async" onError={handleImageError} className="h-full w-full object-contain object-center" />
-                                  </div>
-                                )}
-                                <div className="min-w-0">
-                                  <p className="truncate text-[6px] font-medium text-[#685A55]">{accessory.name_ar || accessory.name}</p>
-                                  <p className="mt-0.5 text-[5px] text-[#A0938E]">الكمية ×{accessory.quantity}</p>
-                                </div>
+                              <div className="min-w-0">
+                                <p className="truncate text-[6px] font-medium text-[#685A55]">{accessory.name_ar || accessory.name}</p>
+                                <p className="mt-0.5 text-[5px] text-[#A0938E]">الكمية ×{accessory.quantity}</p>
                               </div>
                               <span className="shrink-0 text-[6px] font-medium text-[#A95B61]">+{fmt(accessory.price * accessory.quantity)} {currency}</span>
                             </div>
@@ -466,7 +310,7 @@ const OrderConfirmationPage = () => {
             <div className="border-t border-[#EEE5E1] bg-[#FFFCFB] px-4 py-4 md:px-6 md:py-5">
               <div className="space-y-2.5">
                 <div className="flex items-center justify-between text-[7px] text-[#746661]"><span>المجموع الفرعي</span><span>{fmt(orderData.subtotal)} {currency}</span></div>
-                <div className="flex items-center justify-between gap-3 text-[7px] text-[#746661]"><span className="truncate">رسوم التوصيل {orderData.deliveryCompany ? `(${orderData.deliveryCompany})` : ""}</span><span className="shrink-0">{fmt(orderData.deliveryFee)} {currency}</span></div>
+                <div className="flex items-center justify-between gap-3 text-[7px] text-[#746661]"><span className="truncate">رسوم التوصيل ({orderData.deliveryCompany})</span><span className="shrink-0">{fmt(orderData.deliveryFee)} {currency}</span></div>
                 {Number(orderData.discountAmount || 0) > 0 && (
                   <div className="flex items-center justify-between text-[7px] font-medium text-[#5F8066]">
                     <div className="flex items-center gap-1.5"><span>الخصم</span>{orderData.couponCode && <span className="rounded-[4px] bg-[#EAF4EC] px-1.5 py-0.5 font-mono text-[5px] text-[#58735D]">{orderData.couponCode}</span>}</div>
@@ -481,7 +325,7 @@ const OrderConfirmationPage = () => {
               </div>
 
               <div className="mt-4 grid grid-cols-1 gap-2 border-t border-[#EEE5E1] pt-3 sm:grid-cols-2">
-                <div className="flex items-center justify-between gap-3"><span className="text-[6px] text-[#9A8C87]">طريقة الدفع</span><span className="text-[7px] font-medium text-[#5D504B]">{orderData.paymentMethod === "cod" ? "الدفع عند الاستلام" : "تحويل بنكي"}</span></div>
+                <div className="flex items-center justify-between gap-3"><span className="text-[6px] text-[#9A8C87]">طريقة الدفع</span><span className="text-[7px] font-medium text-[#5D504B]">{paymentLabel}</span></div>
                 {orderData.selectedRegion && <div className="flex items-center justify-between gap-3 sm:border-r sm:border-[#E8DFDB] sm:pr-3"><span className="text-[6px] text-[#9A8C87]">منطقة الاستلام</span><span className="text-[7px] font-medium text-[#5D504B]">{orderData.selectedRegion}</span></div>}
               </div>
             </div>
@@ -494,23 +338,21 @@ const OrderConfirmationPage = () => {
 
           <div className="mt-4 print:hidden">
             {!isConfirmed ? (
-              <button type="button" onClick={handleConfirmOrder} disabled={isConfirming} className="flex h-[50px] w-full items-center justify-center gap-2.5 rounded-[12px] bg-[#D4777D] px-4 text-[9px] font-semibold text-white transition-colors active:bg-[#C96B72] disabled:cursor-not-allowed disabled:opacity-60">
-                {isConfirming ? <Loader2 className="h-4 w-4 animate-spin" /> : <Check className="h-4 w-4" strokeWidth={2} />}
-                {isConfirming ? "جاري التأكيد..." : "تأكيد الطلب"}
+              <button type="button" onClick={handleConfirmOrder} className="flex h-[50px] w-full items-center justify-center gap-2.5 rounded-[12px] bg-[#D4777D] px-4 text-[9px] font-semibold text-white active:bg-[#C96B72]">
+                <Check className="h-4 w-4" strokeWidth={2} />
+                تأكيد الطلب وإرساله عبر واتساب
               </button>
             ) : (
-              <div className="space-y-2">
-                <button type="button" onClick={handleShareInvoice} disabled={isSharingInvoice || isPreparingInvoice} className="flex h-[50px] w-full items-center justify-center gap-2 rounded-[12px] bg-[#4F9167] px-4 text-[9px] font-semibold text-white active:bg-[#467F5A] disabled:cursor-not-allowed disabled:opacity-60">
-                  {(isSharingInvoice || isPreparingInvoice) ? <Loader2 className="h-4 w-4 animate-spin" /> : <FileText className="h-4 w-4" strokeWidth={1.7} />}
-                  {isPreparingInvoice ? "جاري تجهيز الفاتورة..." : isSharingInvoice ? "جاري فتح المشاركة..." : invoicePreparationFailed ? "متابعة عبر واتساب" : "مشاركة الفاتورة عبر واتساب"}
-                </button>
-                {invoicePreparationFailed && (
-                  <button type="button" onClick={openWhatsApp} className="flex h-[42px] w-full items-center justify-center rounded-[10px] border border-[#D9AEAA] bg-white text-[8px] font-semibold text-[#A95B61] active:bg-[#FFF7F5]">
-                    فتح واتساب بدون ملف
-                  </button>
-                )}
-              </div>
+              <button type="button" onClick={openWhatsApp} className="flex h-[50px] w-full items-center justify-center gap-2 rounded-[12px] bg-[#4F9167] px-4 text-[9px] font-semibold text-white active:bg-[#467F5A]">
+                <FileText className="h-4 w-4" strokeWidth={1.7} />
+                فتح الفاتورة في واتساب مرة أخرى
+              </button>
             )}
+
+            <button type="button" onClick={() => window.print()} className="mt-2 flex h-[42px] w-full items-center justify-center gap-1.5 rounded-[10px] border border-[#E5DAD6] bg-white text-[8px] font-medium text-[#655752] active:bg-[#FAF8F7]">
+              <FileText className="h-3.5 w-3.5" strokeWidth={1.5} />
+              طباعة أو حفظ الفاتورة PDF
+            </button>
 
             <div className="mt-2 grid grid-cols-2 gap-2">
               <Link to={trackingUrl} className="flex h-[42px] items-center justify-center gap-1.5 rounded-[10px] border border-[#D9AEAA] bg-white text-[8px] font-semibold text-[#A95B61] active:bg-[#FFF7F5]">
@@ -527,7 +369,7 @@ const OrderConfirmationPage = () => {
 
           <div className="mt-4 flex items-center justify-center gap-1.5 text-center print:hidden">
             <FileText className="h-3 w-3 text-[#A99B96]" strokeWidth={1.4} />
-            <p className="text-[6px] text-[#9C8E89]">احتفظ برقم الطلب لاستخدامه في صفحة التتبع.</p>
+            <p className="text-[6px] text-[#9C8E89]">واتساب يستخدم رسالة نصية خفيفة لتقليل استهلاك الإنترنت.</p>
           </div>
         </div>
       </main>

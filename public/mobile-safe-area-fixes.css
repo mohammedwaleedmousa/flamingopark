@@ -1,4 +1,11 @@
 @media (max-width: 767px) {
+  html,
+  body,
+  #root {
+    min-height: 100%;
+    background: #fffdfc;
+  }
+
   body {
     padding-bottom: 0 !important;
   }
@@ -16,10 +23,41 @@
     padding-top: env(safe-area-inset-top);
   }
 
+  /* iOS Safari: keep the cart fully covering the visual viewport and safe area. */
   aside.fixed.inset-y-0.right-0 {
-    top: 0;
-    bottom: auto;
-    height: 100dvh;
-    max-height: 100dvh;
+    inset: 0 !important;
+    width: 100vw !important;
+    height: 100vh !important;
+    min-height: 100vh !important;
+    max-height: none !important;
+    background: #fffdfc !important;
+    overscroll-behavior: contain;
+  }
+
+  @supports (height: 100dvh) {
+    aside.fixed.inset-y-0.right-0 {
+      height: 100dvh !important;
+      min-height: 100dvh !important;
+    }
+  }
+
+  @supports (-webkit-touch-callout: none) {
+    aside.fixed.inset-y-0.right-0 {
+      min-height: -webkit-fill-available !important;
+    }
+  }
+
+  aside.fixed.inset-y-0.right-0 > footer {
+    padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+    background: #fffdfc !important;
+  }
+
+  /* OTP recovery is intentionally disabled for now. Login remains phone + password only. */
+  form + button + * {
+    --flamingo-auth-otp-disabled: 1;
+  }
+
+  button.shrink-0.text-\[9px\].font-medium.text-\[\#C1646C\] {
+    display: none !important;
   }
 }

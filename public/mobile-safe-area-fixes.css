@@ -1,0 +1,25 @@
+@media (max-width: 767px) {
+  body {
+    padding-bottom: 0 !important;
+  }
+
+  header.fixed.inset-x-0.top-0 {
+    padding-top: env(safe-area-inset-top);
+  }
+
+  header.fixed.inset-x-0.top-0 + div[aria-hidden="true"] {
+    height: calc(112px + env(safe-area-inset-top)) !important;
+  }
+
+  header.sticky.top-0 {
+    min-height: calc(50px + env(safe-area-inset-top));
+    padding-top: env(safe-area-inset-top);
+  }
+
+  aside.fixed.inset-y-0.right-0 {
+    top: 0;
+    bottom: auto;
+    height: 100dvh;
+    max-height: 100dvh;
+  }
+}

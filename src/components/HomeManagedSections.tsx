@@ -57,7 +57,7 @@ const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSect
 
   return (
     <>
-      {rendered.map(({ section, products }, index) => (
+      {rendered.map(({ section, products }, sectionIndex) => (
         <div key={section.id}>
           <section className="bg-background py-7 md:py-12">
             <div className="mx-auto w-full max-w-[1400px] px-3 md:px-6">
@@ -72,7 +72,9 @@ const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSect
               </div>
 
               <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 md:grid-cols-4 md:gap-x-5 md:gap-y-7">
-                {products.map((product) => <ProductCard key={product.id} product={product} />)}
+                {products.map((product, productIndex) => (
+                  <ProductCard key={product.id} product={product} index={sectionIndex * 8 + productIndex} />
+                ))}
               </div>
 
               {section.show_view_all !== false && (
@@ -86,7 +88,7 @@ const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSect
             </div>
           </section>
 
-          {index === 0 && rendered.length > 1 ? betweenSections : null}
+          {sectionIndex === 0 && rendered.length > 1 ? betweenSections : null}
         </div>
       ))}
 

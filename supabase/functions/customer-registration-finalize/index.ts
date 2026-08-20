@@ -9,7 +9,19 @@ const allowedOrigins = () => new Set((Deno.env.get("ALLOWED_ORIGINS") || DEFAULT
 const corsHeaders = (origin: string | null) => ({ "Access-Control-Allow-Origin": origin && allowedOrigins().has(origin) ? origin : DEFAULT_ORIGINS[0], "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type", "Access-Control-Allow-Methods": "POST, OPTIONS", Vary: "Origin" });
 const json = (body: unknown, status: number, origin: string | null) => Response.json(body, { status, headers: { ...corsHeaders(origin), "Cache-Control": "no-store" } });
 const cleanText = (value: unknown, maxLength: number) => typeof value === "string" ? value.trim().replaceAll(String.fromCharCode(0), "").replace(/\s+/g, " ").slice(0, maxLength) : "";
-const normalizePhone = (value: unknown) => { if (typeof value !== "string") return null; const latin = value.trim().replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))).replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit))); const compact = latin.replace(/[\s().-]/g, ""); const normalized = compact.startsWith("00") ? `+${compact.slice(2)}` : compact; return /^\+[1-9]\d{7,14}$/.test(normalized) ? normalized : null; };
+const normalizePhone = (value: unknown) => {
+  if (typeof value !== "string") return null;
+  const latin = value.trim().replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))).replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)));
+  let compact = latin.replace(/[\s().-]/g, "");
+  if (compact.startsWith("00")) compact = `+${compact.slice(2)}`;
+  let digits = compact.replace(/\D/g, "");
+  if (!compact.startsWith("+") && /^0?7\d{8}$/.test(digits)) {
+    if (digits.startsWith("0")) digits = digits.slice(1);
+    return `+967${digits}`;
+  }
+  if (!/^[1-9]\d{7,14}$/.test(digits)) return null;
+  return `+${digits}`;
+};
 
 Deno.serve(async (req) => {
   const origin = req.headers.get("origin");
@@ -52,12 +64,13 @@ Deno.serve(async (req) => {
   if (userLookupError) return json({ error: "تعذر التحقق من الحساب." }, 500, origin);
   if (existingByUser) return json({ ok: true, customer: existingByUser }, 200, origin);
 
-  const { data: existingByPhone, error: phoneLookupError } = await service.from("customers").select("id,user_id,name,phone,region,country,avatar_url,created_at").eq("phone", phone).maybeSingle();
+  const digits = phone.replace(/\D/g, "");
+  const { data: existingByPhone, error: phoneLookupError } = await service.from("customers").select("id,user_id,name,phone,region,country,avatar_url,created_at").or(`phone.eq.${phone},phone.eq.${digits}`).maybeSingle();
   if (phoneLookupError) return json({ error: "تعذر التحقق من الحساب." }, 500, origin);
   if (existingByPhone) {
     if (existingByPhone.user_id && existingByPhone.user_id !== user.id) return json({ error: "رقم الهاتف مرتبط بحساب آخر." }, 409, origin);
     if (!legacyPassword) return json({ error: "رقم الهاتف مرتبط بحساب سابق. استخدم تسجيل الدخول مع خيار ربط الحساب القديم." }, 409, origin);
-    const { data: verified, error: verifyError } = await service.rpc("customer_login", { _phone: phone, _password: legacyPassword });
+    const { data: verified, error: verifyError } = await service.rpc("customer_login", { _phone: existingByPhone.phone, _password: legacyPassword });
     if (verifyError || !verified?.length || String(verified[0]?.id || "") !== String(existingByPhone.id)) return json({ error: "كلمة مرور الحساب السابق غير صحيحة." }, 401, origin);
     const { data: linked, error: linkError } = await service.from("customers").update({ user_id: user.id, password_hash: null, region: existingByPhone.region || region, country: existingByPhone.country || country }).eq("id", existingByPhone.id).is("user_id", null).select("id,user_id,name,phone,region,country,avatar_url,created_at").single();
     if (linkError || !linked) return json({ error: "تعذر ربط الحساب السابق." }, 409, origin);

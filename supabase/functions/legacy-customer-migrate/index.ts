@@ -11,12 +11,13 @@ const normalizePhone = (value: unknown) => {
   const latin = value.trim().replace(/[٠-٩]/g, (digit) => String("٠١٢٣٤٥٦٧٨٩".indexOf(digit))).replace(/[۰-۹]/g, (digit) => String("۰۱۲۳۴۵۶۷۸۹".indexOf(digit)));
   let compact = latin.replace(/[\s().-]/g, "");
   if (compact.startsWith("00")) compact = `+${compact.slice(2)}`;
-  if (!compact.startsWith("+")) {
-    let digits = compact.replace(/\D/g, "");
-    if (/^0?7\d{8}$/.test(digits)) { if (digits.startsWith("0")) digits = digits.slice(1); return `+967${digits}`; }
-    return null;
+  let digits = compact.replace(/\D/g, "");
+  if (!compact.startsWith("+") && /^0?7\d{8}$/.test(digits)) {
+    if (digits.startsWith("0")) digits = digits.slice(1);
+    return `+967${digits}`;
   }
-  return /^\+[1-9]\d{7,14}$/.test(compact) ? compact : null;
+  if (!digits || !/^[1-9]\d{7,14}$/.test(digits)) return null;
+  return `+${digits}`;
 };
 const authPasswordFor = async (phone: string, password: string) => {
   if (password.length >= 6) return password;
@@ -53,18 +54,43 @@ Deno.serve(async (req) => {
 
   const service = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
 
-  const { data: customer, error: customerError } = await service.from("customers").select("id,user_id,name,phone,region,country,password_hash").eq("phone", phone).maybeSingle();
+  const digits = phone.replace(/\D/g, "");
+  const { data: customer, error: customerError } = await service
+    .from("customers")
+    .select("id,user_id,name,phone,region,country,password_hash")
+    .or(`phone.eq.${phone},phone.eq.${digits}`)
+    .maybeSingle();
+
   if (customerError) return json({ error: "تعذر التحقق من الحساب." }, 500, origin);
   if (!customer || customer.user_id || !customer.password_hash) return json({ error: "رقم الهاتف أو كلمة المرور غير صحيحة." }, 401, origin);
 
-  const { data: verified, error: verifyError } = await service.rpc("customer_login", { _phone: phone, _password: rawPassword });
+  const { data: verified, error: verifyError } = await service.rpc("customer_login", { _phone: customer.phone, _password: rawPassword });
   if (verifyError || !verified?.length || String(verified[0]?.id || "") !== String(customer.id)) return json({ error: "رقم الهاتف أو كلمة المرور غير صحيحة." }, 401, origin);
 
   const authPassword = await authPasswordFor(phone, rawPassword);
-  const { data: created, error: createError } = await service.auth.admin.createUser({ phone, password: authPassword, phone_confirm: true, user_metadata: { name: customer.name, region: customer.region || "عدن", country: customer.country || "YE" } });
+  const { data: created, error: createError } = await service.auth.admin.createUser({
+    phone,
+    password: authPassword,
+    phone_confirm: true,
+    user_metadata: {
+      name: customer.name,
+      full_name: customer.name,
+      contact_phone: phone,
+      region: customer.region || "عدن",
+      country: customer.country || "YE",
+      legacy_migration: true,
+    },
+  });
+
   if (createError || !created.user) return json({ error: "تعذر ترحيل الحساب. تواصل مع خدمة العملاء." }, 409, origin);
 
-  const { data: linked, error: linkError } = await service.from("customers").update({ user_id: created.user.id, password_hash: null }).eq("id", customer.id).is("user_id", null).select("id,user_id,name,phone,region,country,avatar_url,created_at").maybeSingle();
+  const { data: linked, error: linkError } = await service
+    .from("customers")
+    .select("id,user_id,name,phone,region,country,avatar_url,created_at")
+    .eq("id", customer.id)
+    .eq("user_id", created.user.id)
+    .maybeSingle();
+
   if (linkError || !linked) {
     await service.auth.admin.deleteUser(created.user.id).catch(() => undefined);
     return json({ error: "تعذر ترحيل الحساب. حاول مرة أخرى." }, 409, origin);

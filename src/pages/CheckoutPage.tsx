@@ -207,8 +207,9 @@ const CheckoutPage = () => {
   });
 
   useEffect(() => {
-    if (!paymentMethod && paymentMethods.length > 0) setPaymentMethod(paymentMethods[0].code);
-    else if (paymentMethod && paymentMethods.length > 0 && !paymentMethods.some((method) => method.code === paymentMethod)) setPaymentMethod(paymentMethods[0].code);
+    if (paymentMethod && paymentMethods.length > 0 && !paymentMethods.some((method) => method.code === paymentMethod)) {
+      setPaymentMethod("");
+    }
   }, [paymentMethod, paymentMethods]);
 
   /* =========================================================
@@ -437,9 +438,20 @@ const CheckoutPage = () => {
     }
 
     if (step === 2) {
-      if (!selectedDelivery) {
+      if (!selectedDelivery || !selectedCompany) {
         toast({
           title: "اختر شركة التوصيل",
+          description: "يجب تحديد شركة التوصيل قبل المتابعة.",
+          variant: "destructive",
+        });
+
+        return false;
+      }
+
+      if (!paymentMethod || !selectedPaymentMethod) {
+        toast({
+          title: "اختر طريقة الدفع",
+          description: "يجب تحديد طريقة الدفع قبل المتابعة.",
           variant: "destructive",
         });
 
@@ -580,6 +592,7 @@ const CheckoutPage = () => {
         couponCode: Number(createdOrder.discount_amount) > 0 ? appliedCoupon : null,
         total: Number(createdOrder.total),
         paymentMethod,
+        paymentMethodName: selectedPaymentMethod?.name_ar || selectedPaymentMethod?.name || paymentMethod,
         deliveryCompany: createdOrder.delivery_company || selectedCompany?.name || "",
         selectedRegion: isCashPayment && regionData ? regionData.region_name_ar : customer?.region || null,
         country: orderCountryFromPhone(customerPhone),
@@ -608,9 +621,11 @@ const CheckoutPage = () => {
                 ? "تحقق من اختيار المقاس أو اللون لجميع المنتجات."
                 : rawMessage.includes("invalid_coupon")
                   ? "كود الخصم لم يعد صالحاً. أزله أو جرّب كوداً آخر."
-                  : rawMessage.includes("invalid_delivery_company") || rawMessage.includes("delivery_company_required")
-                    ? "شركة التوصيل المختارة غير متاحة حالياً. اختر شركة توصيل أخرى."
-                    : rawMessage;
+                  : rawMessage.includes("invalid_payment_method")
+                    ? "طريقة الدفع المختارة غير متاحة حالياً. اختر طريقة دفع أخرى."
+                    : rawMessage.includes("invalid_delivery_company") || rawMessage.includes("delivery_company_required")
+                      ? "شركة التوصيل المختارة غير متاحة حالياً. اختر شركة توصيل أخرى."
+                      : rawMessage;
 
       toast({
         title: "تعذر إنشاء الطلب",
@@ -681,10 +696,7 @@ const CheckoutPage = () => {
 
           <div className="mb-6 overflow-hidden rounded-[14px] border border-[#EAE0DC] bg-white px-2 py-4 md:px-5">
             <div className="relative mx-auto w-full max-w-[580px]">
-              {/* BASE CONNECTING LINE */}
               <div className="pointer-events-none absolute left-[12.5%] right-[12.5%] top-[16px] h-px bg-[#EAE2DF]" />
-
-              {/* COMPLETED CONNECTING LINE */}
               <div className="pointer-events-none absolute right-[12.5%] top-[16px] h-px bg-[#D9AAA7] transition-[width] duration-300" style={{ width: `${(currentStep / (STEPS.length - 1)) * 75}%` }} />
 
               <div className="relative grid grid-cols-4">
@@ -698,7 +710,6 @@ const CheckoutPage = () => {
                       <button type="button" onClick={() => { if (index < currentStep) setCurrentStep(index); }} disabled={index > currentStep} className={`relative z-10 flex h-8 w-8 items-center justify-center rounded-full border transition-colors ${done ? "border-[#D4777D] bg-[#D4777D] text-white" : active ? "border-[#D4777D] bg-[#FFF5F3] text-[#B86168]" : "border-[#E8DEDA] bg-[#FAF8F7] text-[#B0A49F]"}`}>
                         {done ? <Check className="h-3.5 w-3.5" strokeWidth={2} /> : <Icon className="h-3.5 w-3.5" strokeWidth={1.5} />}
                       </button>
-
                       <span className={`mt-2 block w-full text-center text-[6px] font-medium leading-none md:text-[7px] ${active || done ? "text-[#685853]" : "text-[#A99B96]"}`}>{step.label}</span>
                     </div>
                   );
@@ -708,23 +719,14 @@ const CheckoutPage = () => {
           </div>
 
           <div className="grid grid-cols-1 gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-5">
-            {/* =================================================
-                STEP CONTENT
-            ================================================= */}
-
             <div className="min-w-0">
               <section className="overflow-hidden rounded-[16px] border border-[#EAE0DC] bg-white">
-                {/* =================================================
-                    STEP 1 - INFO
-                ================================================= */}
-
                 {currentStep === 0 && (
                   <div className="p-4 md:p-5">
                     <div className="mb-5 flex items-center gap-2">
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FAECE9]">
                         <User className="h-3.5 w-3.5 text-[#C66C72]" strokeWidth={1.5} />
                       </span>
-
                       <div>
                         <h2 className="text-[11px] font-semibold text-[#483C38]">معلوماتك الشخصية</h2>
                         <p className="mt-0.5 text-[7px] text-[#A0938E]">بيانات التواصل الخاصة بالطلب.</p>
@@ -734,28 +736,20 @@ const CheckoutPage = () => {
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div>
                         <label className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">الاسم الكامل *</label>
-
                         <input value={isGuestLike ? formData.name : customer?.name || ""} onChange={(event) => { if (isGuestLike) setFormData((current) => ({ ...current, name: event.target.value })); }} disabled={!isGuestLike} placeholder="أدخل اسمك" className="h-11 w-full rounded-[10px] border border-[#E6DCD8] bg-white px-3 text-[9px] text-[#483C38] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA] disabled:bg-[#F7F4F2] disabled:text-[#8E817C]" />
                       </div>
-
                       <div>
                         <label className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">رقم الهاتف *</label>
-
                         <input value={isGuestLike ? formData.phone : customer?.phone || ""} onChange={(event) => { if (isGuestLike) setFormData((current) => ({ ...current, phone: event.target.value })); }} disabled={!isGuestLike} placeholder="رقم الهاتف" dir="ltr" inputMode="tel" className="h-11 w-full rounded-[10px] border border-[#E6DCD8] bg-white px-3 text-left text-[9px] text-[#483C38] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA] disabled:bg-[#F7F4F2] disabled:text-[#8E817C]" />
                       </div>
                     </div>
 
                     <div className="mt-4">
                       <label className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">البريد الإلكتروني <span className="font-normal text-[#AA9D98]">اختياري</span></label>
-
                       <input value={formData.email} onChange={(event) => setFormData((current) => ({ ...current, email: event.target.value }))} placeholder="you@example.com" dir="ltr" inputMode="email" className="h-11 w-full rounded-[10px] border border-[#E6DCD8] bg-white px-3 text-left text-[9px] text-[#483C38] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA]" />
                     </div>
                   </div>
                 )}
-
-                {/* =================================================
-                    STEP 2 - ADDRESS
-                ================================================= */}
 
                 {currentStep === 1 && (
                   <div className="p-4 md:p-5">
@@ -763,7 +757,6 @@ const CheckoutPage = () => {
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FAECE9]">
                         <MapPin className="h-3.5 w-3.5 text-[#C66C72]" strokeWidth={1.5} />
                       </span>
-
                       <div>
                         <h2 className="text-[11px] font-semibold text-[#483C38]">عنوان التوصيل</h2>
                         <p className="mt-0.5 text-[7px] text-[#A0938E]">أدخل المكان الذي تريد استلام الطلب فيه.</p>
@@ -773,7 +766,6 @@ const CheckoutPage = () => {
                     {savedAddresses.length > 0 && (
                       <div className="relative mb-4">
                         <label className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">عنوان محفوظ</label>
-
                         <button type="button" onClick={() => setAddressPickerOpen((current) => !current)} className={`flex h-11 w-full items-center justify-between rounded-[10px] border bg-white px-3 text-right text-[9px] ${addressPickerOpen ? "border-[#D9AEAA]" : "border-[#E6DCD8]"}`}>
                           <div className="min-w-0">
                             {selectedSavedAddress ? (
@@ -785,30 +777,25 @@ const CheckoutPage = () => {
                               <span className="text-[#A0938E]">إضافة عنوان جديد</span>
                             )}
                           </div>
-
                           <ChevronDown className={`h-3.5 w-3.5 shrink-0 text-[#9B8E89] transition-transform ${addressPickerOpen ? "rotate-180" : ""}`} strokeWidth={1.5} />
                         </button>
 
                         {addressPickerOpen && (
                           <>
                             <button type="button" onClick={() => setAddressPickerOpen(false)} aria-label="إغلاق قائمة العناوين" className="fixed inset-0 z-[60] cursor-default" />
-
                             <div className="absolute inset-x-0 top-[68px] z-[70] overflow-hidden rounded-[12px] border border-[#E5DAD6] bg-white p-1.5 shadow-[0_12px_32px_rgba(50,35,30,0.10)]">
                               <button type="button" onClick={() => selectSavedAddress("")} className={`flex min-h-[42px] w-full items-center justify-between rounded-[8px] px-3 text-right text-[8px] ${!selectedAddressId ? "bg-[#FFF5F3] text-[#A95B61]" : "text-[#625550]"}`}>
                                 <span>عنوان جديد</span>
                                 {!selectedAddressId && <Check className="h-3.5 w-3.5" />}
                               </button>
-
                               {savedAddresses.map((address) => {
                                 const active = selectedAddressId === address.id;
-
                                 return (
                                   <button key={address.id} type="button" onClick={() => selectSavedAddress(address.id)} className={`flex min-h-[50px] w-full items-center justify-between gap-3 rounded-[8px] px-3 text-right ${active ? "bg-[#FFF5F3]" : "active:bg-[#FAF7F5]"}`}>
                                     <div className="min-w-0">
                                       <p className={`truncate text-[8px] font-medium ${active ? "text-[#A95B61]" : "text-[#514540]"}`}>{address.label}</p>
                                       <p className="mt-1 truncate text-[6px] text-[#A0938E]">{address.city} — {address.address}</p>
                                     </div>
-
                                     {active && <Check className="h-3.5 w-3.5 shrink-0 text-[#C96F79]" />}
                                   </button>
                                 );
@@ -822,28 +809,20 @@ const CheckoutPage = () => {
                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                       <div>
                         <label className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">المدينة *</label>
-
                         <input value={formData.city} onChange={(event) => { setSelectedAddressId(""); setFormData((current) => ({ ...current, city: event.target.value })); }} placeholder="مثال: عدن" className="h-11 w-full rounded-[10px] border border-[#E6DCD8] bg-white px-3 text-[9px] text-[#483C38] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA]" />
                       </div>
-
                       <div>
                         <label className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">العنوان بالتفصيل *</label>
-
                         <input value={formData.address} onChange={(event) => { setSelectedAddressId(""); setFormData((current) => ({ ...current, address: event.target.value })); }} placeholder="الحي، الشارع، رقم المبنى" className="h-11 w-full rounded-[10px] border border-[#E6DCD8] bg-white px-3 text-[9px] text-[#483C38] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA]" />
                       </div>
                     </div>
 
                     <div className="mt-4">
                       <label className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">ملاحظات إضافية <span className="font-normal text-[#AA9D98]">اختياري</span></label>
-
                       <textarea value={formData.notes} onChange={(event) => setFormData((current) => ({ ...current, notes: event.target.value }))} rows={3} placeholder="وقت التسليم المفضل، معلم قريب..." className="w-full resize-none rounded-[10px] border border-[#E6DCD8] bg-white px-3 py-3 text-[9px] leading-6 text-[#483C38] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA]" />
                     </div>
                   </div>
                 )}
-
-                {/* =================================================
-                    STEP 3 - PAYMENT
-                ================================================= */}
 
                 {currentStep === 2 && (
                   <div className="p-4 md:p-5">
@@ -851,14 +830,11 @@ const CheckoutPage = () => {
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FAECE9]">
                         <CreditCard className="h-3.5 w-3.5 text-[#C66C72]" strokeWidth={1.5} />
                       </span>
-
                       <div>
                         <h2 className="text-[11px] font-semibold text-[#483C38]">الشحن والدفع</h2>
-                        <p className="mt-0.5 text-[7px] text-[#A0938E]">اختر شركة التوصيل وطريقة الدفع.</p>
+                        <p className="mt-0.5 text-[7px] text-[#A0938E]">يجب اختيار شركة التوصيل وطريقة الدفع للمتابعة.</p>
                       </div>
                     </div>
-
-                    {/* DELIVERY */}
 
                     <div>
                       <div className="mb-2.5 flex items-center gap-1.5">
@@ -870,18 +846,12 @@ const CheckoutPage = () => {
                         <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
                           {deliveryCompanies.map((company) => {
                             const active = selectedDelivery === company.id;
-
                             return (
                               <button key={company.id} type="button" onClick={() => setSelectedDelivery(company.id)} className={`relative flex min-h-[68px] items-center justify-between rounded-[11px] border p-3 text-right ${active ? "border-[#D9A7A4] bg-[#FFF7F5]" : "border-[#E7DDD9] bg-white active:bg-[#FAF8F7]"}`}>
                                 <div>
                                   <p className={`text-[9px] font-semibold ${active ? "text-[#A95B61]" : "text-[#514540]"}`}>{company.name}</p>
-
-                                  <p className="mt-1 text-[7px] text-[#9E918C]">
-                                    {company.base_fee.toFixed(0)} {currency}
-                                    {company.delivery_days ? ` • ${company.delivery_days}` : ""}
-                                  </p>
+                                  <p className="mt-1 text-[7px] text-[#9E918C]">{company.base_fee.toFixed(0)} {currency}{company.delivery_days ? ` • ${company.delivery_days}` : ""}</p>
                                 </div>
-
                                 <span className={`flex h-5 w-5 items-center justify-center rounded-full border ${active ? "border-[#D4777D] bg-[#D4777D]" : "border-[#D8CECA]"}`}>
                                   {active && <Check className="h-2.5 w-2.5 text-white" strokeWidth={2.2} />}
                                 </span>
@@ -896,8 +866,6 @@ const CheckoutPage = () => {
                         </div>
                       )}
                     </div>
-
-                    {/* PAYMENT METHOD */}
 
                     <div className="mt-5">
                       <p className="mb-2.5 text-[8px] font-semibold text-[#574A45]">طريقة الدفع *</p>
@@ -915,19 +883,15 @@ const CheckoutPage = () => {
                       )}
                     </div>
 
-                    {/* COD REGION */}
-
                     {isCashPayment && codRegions.length > 0 && !customer?.region && (
                       <div className="mt-5 rounded-[12px] border border-[#EAE0DC] bg-[#FFFCFB] p-3">
                         <div className="mb-3 flex items-center gap-2">
                           <MapPin className="h-3.5 w-3.5 text-[#C66C72]" strokeWidth={1.5} />
                           <span className="text-[8px] font-semibold text-[#574A45]">منطقة الاستلام *</span>
                         </div>
-
                         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
                           {codRegions.map((region) => {
                             const active = selectedRegion === region.id;
-
                             return (
                               <button key={region.id} type="button" onClick={() => setSelectedRegion(region.id)} className={`min-h-[36px] rounded-[8px] border px-2 text-[7px] font-medium ${active ? "border-[#D4777D] bg-[#D4777D] text-white" : "border-[#E4DAD6] bg-white text-[#625550] active:bg-[#FFF7F5]"}`}>
                                 {region.region_name_ar}
@@ -938,23 +902,17 @@ const CheckoutPage = () => {
                       </div>
                     )}
 
-                    {/* BANK ACCOUNTS */}
-
                     {isBankPayment && bankAccounts.length > 0 && (
                       <div className="mt-5 rounded-[12px] border border-[#EAE0DC] bg-[#FFFCFB] p-3">
                         <p className="mb-2.5 text-[7px] text-[#958781]">حول المبلغ إلى أحد الحسابات التالية:</p>
-
                         <div className="space-y-2">
                           {bankAccounts.map((account, index) => (
                             <div key={`${account.account}-${index}`} className="flex items-center justify-between gap-3 rounded-[9px] border border-[#ECE3DF] bg-white p-3">
                               <div className="min-w-0">
                                 <p className="truncate text-[8px] font-semibold text-[#514540]">{account.bank}</p>
-
                                 {account.name && <p className="mt-0.5 truncate text-[6px] text-[#A0938E]">{account.name}</p>}
-
                                 <p dir="ltr" className="mt-1 truncate text-left font-mono text-[7px] text-[#776A65]">{account.account}</p>
                               </div>
-
                               <button type="button" onClick={() => { navigator.clipboard.writeText(account.account); toast({ title: "تم نسخ رقم الحساب" }); }} aria-label="نسخ رقم الحساب" className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-[#E5DAD6] bg-white text-[#A76A6D] active:bg-[#FFF6F4]">
                                 <Copy className="h-3.5 w-3.5" strokeWidth={1.5} />
                               </button>
@@ -963,8 +921,6 @@ const CheckoutPage = () => {
                         </div>
                       </div>
                     )}
-
-                    {/* COUPON */}
 
                     <div className="mt-5 border-t border-[#EEE4E0] pt-4">
                       <div className="mb-2 flex items-center gap-1.5">
@@ -976,111 +932,74 @@ const CheckoutPage = () => {
                       {appliedCoupon ? (
                         <div className="flex min-h-[46px] items-center justify-between gap-3 rounded-[10px] border border-[#CFE1D2] bg-[#F5FAF6] px-3">
                           <div className="flex min-w-0 items-center gap-2">
-                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#6F9576]">
-                              <Check className="h-3 w-3 text-white" />
-                            </span>
-
+                            <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-[#6F9576]"><Check className="h-3 w-3 text-white" /></span>
                             <div className="min-w-0">
                               <p className="truncate text-[8px] font-semibold text-[#54745A]">{appliedCoupon}</p>
                               <p className="mt-0.5 text-[6px] text-[#77907B]">خصم {discountAmount.toFixed(2)} {currency}</p>
                             </div>
                           </div>
-
                           <button type="button" onClick={removeCoupon} className="flex h-7 items-center gap-1 rounded-[7px] px-2 text-[7px] font-medium text-[#A45D5D] active:bg-white">
-                            <X className="h-3 w-3" />
-                            إزالة
+                            <X className="h-3 w-3" />إزالة
                           </button>
                         </div>
                       ) : (
                         <div className="flex gap-2">
                           <input value={couponCode} onChange={(event) => setCouponCode(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter") void applyCoupon(); }} placeholder="أدخل الكود" dir="ltr" className="h-10 min-w-0 flex-1 rounded-[9px] border border-[#E6DCD8] bg-white px-3 text-left text-[8px] uppercase text-[#50433F] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA]" />
-
-                          <button type="button" onClick={applyCoupon} className="h-10 shrink-0 rounded-[9px] border border-[#D9AEAA] bg-white px-4 text-[8px] font-semibold text-[#A95B61] active:bg-[#FFF7F5]">
-                            تطبيق
-                          </button>
+                          <button type="button" onClick={applyCoupon} className="h-10 shrink-0 rounded-[9px] border border-[#D9AEAA] bg-white px-4 text-[8px] font-semibold text-[#A95B61] active:bg-[#FFF7F5]">تطبيق</button>
                         </div>
                       )}
                     </div>
                   </div>
                 )}
 
-                {/* =================================================
-                    STEP 4 - REVIEW
-                ================================================= */}
-
                 {currentStep === 3 && (
                   <div className="p-4 md:p-5">
                     <div className="mb-5 flex items-center gap-2">
-                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FAECE9]">
-                        <Check className="h-3.5 w-3.5 text-[#C66C72]" strokeWidth={1.7} />
-                      </span>
-
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#FAECE9]"><Check className="h-3.5 w-3.5 text-[#C66C72]" strokeWidth={1.7} /></span>
                       <div>
                         <h2 className="text-[11px] font-semibold text-[#483C38]">مراجعة الطلب</h2>
                         <p className="mt-0.5 text-[7px] text-[#A0938E]">راجع معلوماتك قبل التأكيد النهائي.</p>
                       </div>
                     </div>
 
-                    {/* CONTACT */}
-
                     <div className="border-b border-[#EEE5E1] py-3 first:pt-0">
                       <p className="text-[7px] font-medium text-[#A0938E]">معلومات التواصل</p>
-
                       <p className="mt-1.5 text-[9px] font-medium text-[#514540]">{customer?.name || formData.name}</p>
-
                       <p dir="ltr" className="mt-1 text-right text-[7px] text-[#847671]">{customer?.phone || formData.phone}</p>
                     </div>
 
-                    {/* ADDRESS */}
-
                     <div className="border-b border-[#EEE5E1] py-3">
                       <p className="text-[7px] font-medium text-[#A0938E]">عنوان التوصيل</p>
-
                       <p className="mt-1.5 text-[9px] leading-5 text-[#514540]">{formData.city} — {formData.address}</p>
-
                       {formData.notes && <p className="mt-1 text-[7px] leading-5 text-[#948680]">ملاحظات: {formData.notes}</p>}
                     </div>
 
-                    {/* SHIPPING */}
-
                     <div className="border-b border-[#EEE5E1] py-3">
                       <p className="text-[7px] font-medium text-[#A0938E]">الشحن والدفع</p>
-
-                      <p className="mt-1.5 text-[9px] text-[#514540]">{selectedCompany?.name || "—"} <span className="mx-1 text-[#C9BDB8]">•</span> {selectedPaymentMethod?.name_ar || selectedPaymentMethod?.name || paymentMethod || "—"}</p>
-
+                      <p className="mt-1.5 text-[9px] text-[#514540]">{selectedCompany?.name || "—"} <span className="mx-1 text-[#C9BDB8]">•</span> {selectedPaymentMethod?.name_ar || selectedPaymentMethod?.name || "—"}</p>
                       {appliedCoupon && <p className="mt-1.5 text-[7px] font-medium text-[#5C8063]">كوبون {appliedCoupon} — خصم {discountAmount.toFixed(2)} {currency}</p>}
                     </div>
 
-                    {/* PRODUCTS */}
-
                     <div className="pt-3">
                       <p className="mb-3 text-[7px] font-medium text-[#A0938E]">المنتجات</p>
-
                       <div className="space-y-3">
                         {cart.map((item, index) => {
                           const price = item.product.discount ? item.product.price * (1 - item.product.discount / 100) : item.product.price;
                           const accessoriesTotal = item.selectedAccessories?.reduce((sum, accessory) => sum + accessory.price * accessory.quantity, 0) || 0;
                           const color = item.selectedColor || item.variantColor;
-
                           return (
                             <div key={`${item.product.id}-${index}`} className="flex items-center gap-3">
-                              {/* PRODUCT IMAGE - FULL IMAGE WITHOUT CROPPING */}
                               <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center overflow-hidden rounded-[9px] border border-[#EEE7E4] bg-[#F7F5F3] p-1">
                                 <img src={optimizeImage(item.product.images?.[0] || "/placeholder.svg", 200, 80)} alt={item.product.nameAr || ""} loading="lazy" decoding="async" onError={handleImageError} className="h-full w-full object-contain object-center" />
                               </div>
-
                               <div className="min-w-0 flex-1">
                                 <p className="truncate text-[8px] font-medium text-[#514540]">{item.product.nameAr}</p>
-
                                 <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1 text-[6px] text-[#958781]">
                                   <span>الكمية: {item.quantity}</span>
-
                                   {item.selectedSize && <span>المقاس: {item.selectedSize}</span>}
-
                                   {color && <span>اللون: {color}</span>}
                                 </div>
                               </div>
-
                               <span className="shrink-0 text-[8px] font-semibold text-[#A95B61]">{((price + accessoriesTotal) * item.quantity).toFixed(0)} {currency}</span>
                             </div>
                           );
@@ -1091,20 +1010,14 @@ const CheckoutPage = () => {
                 )}
               </section>
 
-              {/* =================================================
-                  NAVIGATION
-              ================================================= */}
-
               <div className="mt-4 flex items-center justify-between gap-2">
                 <button type="button" onClick={prevStep} disabled={currentStep === 0} className="flex h-11 min-w-[88px] items-center justify-center gap-1.5 rounded-[10px] border border-[#E4DAD6] bg-white px-4 text-[8px] font-semibold text-[#625550] disabled:cursor-not-allowed disabled:opacity-35">
-                  <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.5} />
-                  السابق
+                  <ChevronRight className="h-3.5 w-3.5" strokeWidth={1.5} />السابق
                 </button>
 
                 {currentStep < STEPS.length - 1 ? (
                   <button type="button" onClick={nextStep} className="flex h-11 min-w-[138px] items-center justify-center gap-1.5 rounded-[10px] bg-[#D4777D] px-5 text-[8px] font-semibold text-white active:bg-[#C96B72]">
-                    التالي
-                    <ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
+                    التالي<ChevronLeft className="h-3.5 w-3.5" strokeWidth={1.5} />
                   </button>
                 ) : (
                   <button type="button" onClick={handleSubmit} disabled={isSubmitting} className="flex h-11 min-w-[155px] items-center justify-center gap-2 rounded-[10px] bg-[#D4777D] px-5 text-[8px] font-semibold text-white active:bg-[#C96B72] disabled:cursor-not-allowed disabled:opacity-50">
@@ -1115,23 +1028,14 @@ const CheckoutPage = () => {
               </div>
             </div>
 
-            {/* =================================================
-                ORDER SUMMARY
-            ================================================= */}
-
             <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
               <div className="overflow-hidden rounded-[16px] border border-[#EAE0DC] bg-white">
-                {/* SUMMARY HEADER */}
-
                 <div className="border-b border-[#EEE4E0] px-4 py-3.5">
                   <div className="flex items-center justify-between">
                     <h2 className="text-[10px] font-semibold text-[#483C38]">ملخص الطلب</h2>
-
                     <span className="text-[6px] text-[#A0938E]">{cart.length} {cart.length === 1 ? "منتج" : "منتجات"}</span>
                   </div>
                 </div>
-
-                {/* SUMMARY PRODUCTS */}
 
                 <div className="max-h-[280px] overflow-y-auto px-4 [scrollbar-width:thin]">
                   {cart.map((item, index) => {
@@ -1141,73 +1045,35 @@ const CheckoutPage = () => {
 
                     return (
                       <div key={`${item.product.id}-${index}`} className={`flex items-center gap-3 py-3 ${index !== cart.length - 1 ? "border-b border-[#F0E8E5]" : ""}`}>
-                        {/* PRODUCT IMAGE - CONTAIN */}
                         <div className="flex h-[60px] w-[60px] shrink-0 items-center justify-center overflow-hidden rounded-[9px] border border-[#EEE7E4] bg-[#F7F5F3] p-1">
                           <img src={optimizeImage(item.product.images?.[0] || "/placeholder.svg", 200, 80)} alt={item.product.nameAr || ""} loading="lazy" decoding="async" onError={handleImageError} className="h-full w-full object-contain object-center" />
                         </div>
-
                         <div className="min-w-0 flex-1">
                           <p className="truncate text-[7.5px] font-medium leading-5 text-[#514540]">{item.product.nameAr}</p>
-
                           <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5 text-[6px] text-[#9A8C87]">
                             <span>الكمية {item.quantity}</span>
-
-                            {item.selectedSize && (
-                              <>
-                                <span className="text-[#D0C6C2]">•</span>
-                                <span>{item.selectedSize}</span>
-                              </>
-                            )}
-
-                            {color && (
-                              <>
-                                <span className="text-[#D0C6C2]">•</span>
-                                <span className="max-w-[60px] truncate">{color}</span>
-                              </>
-                            )}
+                            {item.selectedSize && <><span className="text-[#D0C6C2]">•</span><span>{item.selectedSize}</span></>}
+                            {color && <><span className="text-[#D0C6C2]">•</span><span className="max-w-[60px] truncate">{color}</span></>}
                           </div>
                         </div>
-
                         <span className="shrink-0 text-[7px] font-semibold text-[#A95B61]">{((price + accessoriesTotal) * item.quantity).toFixed(0)}</span>
                       </div>
                     );
                   })}
                 </div>
 
-                {/* TOTALS */}
-
                 <div className="border-t border-[#EEE4E0] px-4 py-4">
                   <div className="space-y-2.5">
-                    <div className="flex items-center justify-between text-[7px] text-[#746661]">
-                      <span>المجموع الفرعي</span>
-                      <span>{formatCurrency(subtotal)}</span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-[7px] text-[#746661]">
-                      <span>رسوم التوصيل</span>
-                      <span>{deliveryFee > 0 ? formatCurrency(deliveryFee) : "—"}</span>
-                    </div>
-
-                    {discountAmount > 0 && (
-                      <div className="flex items-center justify-between text-[7px] font-medium text-[#63806A]">
-                        <span>الخصم</span>
-                        <span>-{formatCurrency(discountAmount)}</span>
-                      </div>
-                    )}
+                    <div className="flex items-center justify-between text-[7px] text-[#746661]"><span>المجموع الفرعي</span><span>{formatCurrency(subtotal)}</span></div>
+                    <div className="flex items-center justify-between text-[7px] text-[#746661]"><span>رسوم التوصيل</span><span>{deliveryFee > 0 ? formatCurrency(deliveryFee) : "—"}</span></div>
+                    {discountAmount > 0 && <div className="flex items-center justify-between text-[7px] font-medium text-[#63806A]"><span>الخصم</span><span>-{formatCurrency(discountAmount)}</span></div>}
                   </div>
-
                   <div className="mt-4 flex items-end justify-between border-t border-[#EEE4E0] pt-3">
-                    <div>
-                      <span className="block text-[7px] text-[#8F817C]">الإجمالي</span>
-                      <span className="mt-0.5 block text-[6px] text-[#B1A49F]">شامل رسوم التوصيل</span>
-                    </div>
-
+                    <div><span className="block text-[7px] text-[#8F817C]">الإجمالي</span><span className="mt-0.5 block text-[6px] text-[#B1A49F]">شامل رسوم التوصيل</span></div>
                     <span className="text-[15px] font-bold text-[#B86168]">{formatCurrency(total)}</span>
                   </div>
                 </div>
               </div>
-
-              {/* SECURITY */}
 
               <div className="mt-2 flex items-center justify-center gap-2 py-2 text-[6px] text-[#A0938E]">
                 <Check className="h-3 w-3 text-[#6F9275]" strokeWidth={1.7} />

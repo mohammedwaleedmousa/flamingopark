@@ -58,14 +58,43 @@ const OrderTrackingPage = () => {
 
   const { data: order, isLoading, isFetching, isError, refetch } = useQuery({
     queryKey: ["tracking-order", selectedOrder, trackingToken],
-    enabled: Boolean(selectedOrder && trackingToken),
+    enabled: Boolean(selectedOrder),
     refetchInterval: 10000,
     refetchOnWindowFocus: true,
     refetchOnMount: "always",
     queryFn: async () => {
+      let resolvedToken = trackingToken;
+
+      if (!resolvedToken) {
+        const { data: authData, error: authError } = await supabase.auth.getUser();
+        if (authError) throw authError;
+        if (!authData.user) return null;
+
+        const { data: customer, error: customerError } = await (supabase as any)
+          .from("customers")
+          .select("id")
+          .eq("user_id", authData.user.id)
+          .maybeSingle();
+
+        if (customerError) throw customerError;
+        if (!customer?.id) return null;
+
+        const { data: ownedOrder, error: ownedOrderError } = await (supabase as any)
+          .from("orders")
+          .select("tracking_token")
+          .eq("customer_id", customer.id)
+          .eq("order_number", selectedOrder)
+          .maybeSingle();
+
+        if (ownedOrderError) throw ownedOrderError;
+
+        resolvedToken = String(ownedOrder?.tracking_token || "").trim();
+        if (!resolvedToken) return null;
+      }
+
       const { data, error } = await (supabase as any).rpc("get_order_tracking", {
         p_order_number: selectedOrder,
-        p_tracking_token: trackingToken,
+        p_tracking_token: resolvedToken,
       });
 
       if (error) throw error;
@@ -176,7 +205,7 @@ const OrderTrackingPage = () => {
      INVALID LINK
   ========================================================= */
 
-  const missingTrackingInfo = !selectedOrder || !trackingToken;
+  const missingTrackingInfo = !selectedOrder;
 
   return (
     <div className="min-h-screen bg-[#FFFDFC]" dir="rtl">
@@ -222,7 +251,7 @@ const OrderTrackingPage = () => {
 
               <h2 className="mt-3 text-[11px] font-semibold text-[#4A3E3A]">رابط التتبع غير مكتمل</h2>
 
-              <p className="mx-auto mt-1.5 max-w-[320px] text-[7px] leading-5 text-[#998B86]">استخدم رابط التتبع الموجود في صفحة تأكيد الطلب. يجب أن يحتوي على رقم الطلب ورمز التتبع الآمن.</p>
+              <p className="mx-auto mt-1.5 max-w-[320px] text-[7px] leading-5 text-[#998B86]">يجب أن يحتوي رابط التتبع على رقم الطلب.</p>
 
               <Link to="/home" className="mx-auto mt-4 flex h-[38px] w-fit items-center justify-center gap-1.5 rounded-[9px] border border-[#D9AEAA] bg-white px-5 text-[8px] font-semibold text-[#A95B61]">
                 <Home className="h-3.5 w-3.5" strokeWidth={1.5} />
@@ -275,7 +304,7 @@ const OrderTrackingPage = () => {
 
               <p className="mt-2 text-[9px] font-semibold text-[#815953]">لم يتم العثور على الطلب</p>
 
-              <p className="mt-1 text-[7px] text-[#A08782]">تأكد من استخدام رابط التتبع الأصلي الخاص بطلبك.</p>
+              <p className="mt-1 text-[7px] text-[#A08782]">تأكد أن الطلب يخص حسابك أو استخدم رابط التتبع الأصلي.</p>
             </div>
           )}
 

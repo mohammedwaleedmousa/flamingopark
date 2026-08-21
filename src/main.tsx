@@ -3,6 +3,7 @@ import "./lib/customerAuthCompat";
 import "./lib/accountInvoiceEnhancements";
 import "./lib/accountInvoiceRenderer";
 import "./lib/myOrdersInvoiceBridge";
+import "./lib/adminDashboardDrilldowns";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import AppErrorBoundary from "./components/AppErrorBoundary";

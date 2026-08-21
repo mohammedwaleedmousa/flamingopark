@@ -118,10 +118,6 @@ body.${BODY_CLASS} {
   }
 }
 @media print {
-  body.${BODY_CLASS} #root main,
-  body.${BODY_CLASS} #root footer {
-    visibility: visible !important;
-  }
   #${OVERLAY_ID}::before {
     display: none !important;
   }

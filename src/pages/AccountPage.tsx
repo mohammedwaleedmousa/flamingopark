@@ -64,6 +64,15 @@ const YEMEN_REGIONS = [
   "المحويت",
 ];
 
+type InvoiceItem = {
+  product_id?: string | null;
+  product_name?: string | null;
+  quantity?: number | string | null;
+  price?: number | string | null;
+  selected_size?: string | null;
+  selected_color?: string | null;
+};
+
 type Invoice = {
   id: string;
   order_number: string;
@@ -71,7 +80,18 @@ type Invoice = {
   status: string;
   created_at: string;
   invoice_url: string | null;
+  items: InvoiceItem[] | null;
+  subtotal: number | string | null;
+  delivery_fee: number | string | null;
+  discount_amount: number | string | null;
+  payment_method: string | null;
+  currency_code: string | null;
+  customer_address: string | null;
+  customer_city: string | null;
+  customer_region: string | null;
 };
+
+const escapeInvoiceHtml = (value: unknown) => String(value ?? "").replace(/[&<>"']/g, (character) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" })[character] || character);
 
 const AccountPage = () => {
   const navigate = useNavigate();
@@ -286,35 +306,37 @@ const AccountPage = () => {
   ========================================================= */
 
   useEffect(() => {
-    const fetchInvoices = async () => {
+    const fetchInvoices = async (showLoading = false) => {
       if (!customer?.id) return;
 
-      setInvoicesLoading(true);
+      if (showLoading) setInvoicesLoading(true);
 
       try {
-        const { data, error } = await supabase.from("orders").select("id, order_number, total, status, created_at, invoice_url").eq("customer_id", customer.id).order("created_at", { ascending: false }).limit(20);
+        const { data, error } = await supabase.from("orders").select("id, order_number, total, status, created_at, invoice_url, items, subtotal, delivery_fee, discount_amount, payment_method, currency_code, customer_address, customer_city, customer_region").eq("customer_id", customer.id).order("created_at", { ascending: false }).limit(20);
 
         if (error) throw error;
 
-        setInvoices(data || []);
+        setInvoices((data || []) as unknown as Invoice[]);
       } catch {
-        setInvoices([]);
+        if (showLoading) setInvoices([]);
       } finally {
-        setInvoicesLoading(false);
+        if (showLoading) setInvoicesLoading(false);
       }
     };
 
-    void fetchInvoices();
+    void fetchInvoices(true);
 
-    const intervalId = window.setInterval(fetchInvoices, 15000);
+    const intervalId = window.setInterval(() => {
+      void fetchInvoices(false);
+    }, 15000);
 
     const onFocus = () => {
-      void fetchInvoices();
+      void fetchInvoices(false);
     };
 
     const onVisibility = () => {
       if (document.visibilityState === "visible") {
-        void fetchInvoices();
+        void fetchInvoices(false);
       }
     };
 
@@ -692,29 +714,50 @@ const AccountPage = () => {
   };
 
   /* =========================================================
-     INVOICE ACCESS
+     INVOICE DETAILS
   ========================================================= */
 
-  const openInvoice = async (orderId: string) => {
-    try {
-      const { data, error } = await supabase.functions.invoke("invoice-access", {
-        body: {
-          action: "signed_url",
-          orderId,
-        },
-      });
+  const openInvoice = (invoice: Invoice) => {
+    const invoiceWindow = window.open("", "_blank");
 
-      if (error || !data?.signedUrl) {
-        throw error || new Error("Invoice unavailable");
-      }
-
-      window.open(data.signedUrl, "_blank", "noopener,noreferrer");
-    } catch {
-      setNotification({
-        type: "error",
-        message: "تعذر فتح الفاتورة",
-      });
+    if (!invoiceWindow) {
+      setNotification({ type: "error", message: "تعذر فتح الفاتورة. اسمح بفتح النوافذ المنبثقة ثم حاول مرة أخرى." });
+      return;
     }
+
+    const items = Array.isArray(invoice.items) ? invoice.items : [];
+    const currencyCode = String(invoice.currency_code || "SAR").toUpperCase();
+    const currencyLabel = currencyCode === "SAR" ? "ر.س" : currencyCode === "YER" ? "ر.ي" : currencyCode;
+    const formatMoney = (value: unknown) => `${Number(value || 0).toLocaleString("ar-EG")} ${currencyLabel}`;
+    const paymentLabel = invoice.payment_method === "bank" ? "تحويل بنكي" : invoice.payment_method === "cash" ? "نقداً" : invoice.payment_method || "—";
+    const statusLabel: Record<string, string> = {
+      pending: "بانتظار التأكيد",
+      confirmed: "تم التأكيد",
+      processing: "قيد التجهيز",
+      shipped: "قيد الشحن",
+      out_for_delivery: "خرج للتسليم",
+      delivered: "تم التسليم",
+      cancelled: "ملغي",
+      canceled: "ملغي",
+    };
+    const rows = items.length
+      ? items.map((item) => {
+          const quantity = Math.max(1, Number(item.quantity || 1));
+          const price = Number(item.price || 0);
+          const variants = [item.selected_color ? `اللون: ${escapeInvoiceHtml(item.selected_color)}` : "", item.selected_size ? `المقاس: ${escapeInvoiceHtml(item.selected_size)}` : ""].filter(Boolean).join(" · ");
+          return `<tr><td><strong>${escapeInvoiceHtml(item.product_name || "منتج")}</strong>${variants ? `<small>${variants}</small>` : ""}</td><td>${quantity.toLocaleString("ar-EG")}</td><td>${escapeInvoiceHtml(formatMoney(price))}</td><td>${escapeInvoiceHtml(formatMoney(price * quantity))}</td></tr>`;
+        }).join("")
+      : `<tr><td colspan="4" class="empty">لا توجد تفاصيل منتجات محفوظة لهذه الفاتورة.</td></tr>`;
+    const address = [invoice.customer_region, invoice.customer_city, invoice.customer_address].filter(Boolean).map(escapeInvoiceHtml).join(" - ") || "—";
+    const subtotal = Number(invoice.subtotal ?? invoice.total ?? 0);
+    const deliveryFee = Number(invoice.delivery_fee || 0);
+    const discount = Number(invoice.discount_amount || 0);
+    const total = Number(invoice.total || 0);
+
+    invoiceWindow.opener = null;
+    invoiceWindow.document.open();
+    invoiceWindow.document.write(`<!doctype html><html lang="ar" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>فاتورة ${escapeInvoiceHtml(invoice.order_number)}</title><style>*{box-sizing:border-box}body{margin:0;background:#fffaf9;color:#403633;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Tahoma,Arial,sans-serif}.page{max-width:820px;margin:0 auto;padding:28px 18px 48px}.top{display:flex;justify-content:space-between;gap:18px;align-items:flex-start;border-bottom:1px solid #eaded9;padding-bottom:18px}.brand{font-size:22px;font-weight:800;color:#b86168;letter-spacing:.04em}.muted{color:#9b8d88;font-size:12px;line-height:1.9}.number{font-size:15px;font-weight:700;margin-top:5px}.badge{display:inline-block;margin-top:8px;padding:5px 10px;border-radius:999px;background:#fff0ee;color:#a95b61;font-size:11px}.card{margin-top:16px;border:1px solid #eaded9;border-radius:15px;background:white;padding:16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.label{font-size:10px;color:#a0938e}.value{font-size:13px;font-weight:600;margin-top:4px;word-break:break-word}table{width:100%;border-collapse:collapse;margin-top:8px}th,td{text-align:right;padding:11px 8px;border-bottom:1px solid #f0e8e5;font-size:12px}th{font-size:10px;color:#9b8d88;font-weight:600}td small{display:block;color:#9b8d88;font-size:10px;margin-top:4px}.empty{text-align:center;color:#9b8d88;padding:24px}.totals{margin-top:14px;margin-right:auto;max-width:330px}.row{display:flex;justify-content:space-between;gap:18px;padding:7px 0;font-size:12px}.row.total{border-top:1px solid #e8dcd7;margin-top:5px;padding-top:12px;font-size:16px;font-weight:800;color:#a9585e}.actions{display:flex;justify-content:center;margin-top:20px}.print{border:0;border-radius:11px;background:#d4777d;color:white;padding:11px 24px;font-size:13px;font-weight:700;cursor:pointer}@media(max-width:600px){.page{padding:18px 12px 36px}.top{display:block}.top>div:last-child{margin-top:13px}.grid{grid-template-columns:1fr}th,td{padding:9px 5px;font-size:11px}.brand{font-size:19px}}@media print{body{background:white}.page{max-width:none;padding:0}.actions{display:none}.card{break-inside:avoid}}</style></head><body><main class="page"><div class="top"><div><div class="brand">FLAMINGO PARK</div><div class="muted">تفاصيل الفاتورة</div></div><div><div class="muted">رقم الطلب</div><div class="number">${escapeInvoiceHtml(invoice.order_number)}</div><div class="badge">${escapeInvoiceHtml(statusLabel[String(invoice.status || "").toLowerCase()] || invoice.status || "—")}</div></div></div><section class="card"><div class="grid"><div><div class="label">تاريخ الطلب</div><div class="value">${escapeInvoiceHtml(new Date(invoice.created_at).toLocaleString("ar-EG"))}</div></div><div><div class="label">طريقة الدفع</div><div class="value">${escapeInvoiceHtml(paymentLabel)}</div></div><div><div class="label">عنوان التوصيل</div><div class="value">${address}</div></div><div><div class="label">العملة</div><div class="value">${escapeInvoiceHtml(currencyCode)}</div></div></div></section><section class="card"><div class="label">المنتجات</div><table><thead><tr><th>المنتج</th><th>الكمية</th><th>السعر</th><th>الإجمالي</th></tr></thead><tbody>${rows}</tbody></table><div class="totals"><div class="row"><span>المجموع الفرعي</span><strong>${escapeInvoiceHtml(formatMoney(subtotal))}</strong></div><div class="row"><span>التوصيل</span><strong>${escapeInvoiceHtml(formatMoney(deliveryFee))}</strong></div>${discount > 0 ? `<div class="row"><span>الخصم</span><strong>- ${escapeInvoiceHtml(formatMoney(discount))}</strong></div>` : ""}<div class="row total"><span>الإجمالي</span><span>${escapeInvoiceHtml(formatMoney(total))}</span></div></div></section><div class="actions"><button class="print" onclick="window.print()">طباعة الفاتورة</button></div></main></body></html>`);
+    invoiceWindow.document.close();
   };
 
   if (loading) {
@@ -1046,15 +1089,9 @@ const AccountPage = () => {
                         <p className="truncate text-[10px] font-semibold text-[#493B38]">{invoice.order_number}</p>
                         <p className="mt-1 text-[6px] text-[#A49792]">{new Date(invoice.created_at).toLocaleDateString("ar-EG")}</p>
 
-                        <div className="mt-2 flex items-center gap-1.5">
-                          <button type="button" onClick={() => navigate(`/order-tracking?order=${encodeURIComponent(invoice.order_number)}`)} className="rounded-full border border-[#E0D2CE] px-2.5 py-1.5 text-[6px] font-medium text-[#A85D63]">
-                            تتبع الطلب
-                          </button>
-
-                          <button type="button" onClick={() => void openInvoice(invoice.id)} disabled={!invoice.invoice_url} className="rounded-full border border-[#E0D2CE] px-2.5 py-1.5 text-[6px] font-medium text-[#A85D63] disabled:cursor-not-allowed disabled:opacity-35">
-                            عرض الفاتورة
-                          </button>
-                        </div>
+                        <button type="button" onClick={() => openInvoice(invoice)} className="mt-2 rounded-full border border-[#E0D2CE] px-2.5 py-1.5 text-[6px] font-medium text-[#A85D63]">
+                          عرض الفاتورة
+                        </button>
                       </div>
 
                       <div className="shrink-0 text-left">

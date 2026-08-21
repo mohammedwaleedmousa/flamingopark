@@ -1,5 +1,6 @@
 import "./lib/cryptoCompat";
 import "./lib/customerAuthCompat";
+import "./lib/accountInvoiceRenderer";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import AppErrorBoundary from "./components/AppErrorBoundary";

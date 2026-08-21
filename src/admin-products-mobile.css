@@ -1,0 +1,347 @@
+@media (max-width: 767px) {
+  body.admin-products-mobile-list,
+  body.admin-products-mobile-editor {
+    overscroll-behavior-y: contain;
+  }
+
+  body.admin-products-mobile-list #root,
+  body.admin-products-mobile-editor #root {
+    padding-bottom: calc(84px + env(safe-area-inset-bottom));
+  }
+
+  body.admin-products-mobile-list [data-admin-products-page-header],
+  body.admin-products-mobile-editor [data-admin-products-page-header] {
+    margin-bottom: 12px !important;
+    gap: 10px !important;
+    padding-bottom: 12px !important;
+  }
+
+  body.admin-products-mobile-list [data-admin-products-page-header] h1,
+  body.admin-products-mobile-editor [data-admin-products-page-header] h1 {
+    font-size: 20px !important;
+    line-height: 1.25 !important;
+  }
+
+  body.admin-products-mobile-list [data-admin-products-page-header] p,
+  body.admin-products-mobile-editor [data-admin-products-page-header] p {
+    font-size: 10px !important;
+    line-height: 1.65 !important;
+  }
+
+  /* KPI cards become a compact horizontal strip instead of taking half the screen. */
+  body.admin-products-mobile-list [data-admin-products-page-header] + section,
+  body.admin-products-mobile-editor [data-admin-products-page-header] + section {
+    display: flex !important;
+    gap: 8px !important;
+    margin-inline: -2px;
+    overflow-x: auto;
+    padding-inline: 2px;
+    padding-bottom: 3px;
+    scroll-snap-type: x proximity;
+    scrollbar-width: none;
+  }
+
+  body.admin-products-mobile-list [data-admin-products-page-header] + section::-webkit-scrollbar,
+  body.admin-products-mobile-editor [data-admin-products-page-header] + section::-webkit-scrollbar {
+    display: none;
+  }
+
+  body.admin-products-mobile-list [data-admin-products-page-header] + section > *,
+  body.admin-products-mobile-editor [data-admin-products-page-header] + section > * {
+    flex: 0 0 150px;
+    min-width: 150px;
+    scroll-snap-align: start;
+  }
+
+  /* ===== Product list ===== */
+  body.admin-products-mobile-list [data-admin-products-page-header] > div:last-child {
+    width: 100% !important;
+    gap: 6px !important;
+  }
+
+  body.admin-products-mobile-list [data-admin-products-page-header] a[href="/admin/products/new"] {
+    position: fixed;
+    right: 10px;
+    bottom: calc(9px + env(safe-area-inset-bottom));
+    left: 10px;
+    z-index: 35;
+    height: 52px !important;
+    border-radius: 14px !important;
+    box-shadow: 0 12px 34px rgba(61, 53, 119, 0.2);
+    font-size: 13px !important;
+  }
+
+  body.admin-products-mobile-list [data-admin-products-page-header] a[href="/admin/inventory-adjustments"],
+  body.admin-products-mobile-list [data-admin-products-page-header] a[href="/admin/reports"] {
+    flex: 1 1 0;
+    height: 40px !important;
+    padding-inline: 10px !important;
+    font-size: 10px !important;
+  }
+
+  body.admin-products-mobile-list [data-admin-products-page-header] + section + section {
+    border-radius: 14px !important;
+  }
+
+  body.admin-products-mobile-list [data-admin-products-page-header] + section + section > div:first-child {
+    padding: 10px 11px !important;
+  }
+
+  body.admin-products-mobile-list [data-admin-products-page-header] + section + section > div:last-child {
+    padding: 10px !important;
+  }
+
+  body.admin-products-mobile-list section:has(input[placeholder^="ابحث باسم المنتج"]) .overflow-x-auto button {
+    min-height: 36px;
+    padding-inline: 12px !important;
+    font-size: 10px !important;
+    white-space: nowrap;
+  }
+
+  body.admin-products-mobile-list section:has(input[placeholder^="ابحث باسم المنتج"]) div.grid:has(> div.relative > input[placeholder^="ابحث باسم المنتج"]) {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+    gap: 7px !important;
+  }
+
+  body.admin-products-mobile-list section:has(input[placeholder^="ابحث باسم المنتج"]) div.grid:has(> div.relative > input[placeholder^="ابحث باسم المنتج"]) > div:first-child {
+    grid-column: 1 / -1;
+  }
+
+  body.admin-products-mobile-list input[placeholder^="ابحث باسم المنتج"] {
+    height: 46px !important;
+    font-size: 16px !important;
+  }
+
+  body.admin-products-mobile-list section:has(input[placeholder^="ابحث باسم المنتج"]) button[role="combobox"] {
+    height: 42px !important;
+    min-width: 0;
+    font-size: 11px !important;
+  }
+
+  body.admin-products-mobile-list article[data-product-id] {
+    border-radius: 16px !important;
+    border-color: #e1e5ea !important;
+    box-shadow: 0 4px 16px rgba(31, 37, 46, 0.035);
+  }
+
+  body.admin-products-mobile-list article[data-product-id] > div:first-child {
+    padding: 12px !important;
+  }
+
+  body.admin-products-mobile-list article[data-product-id] > div:first-child > div {
+    gap: 10px !important;
+  }
+
+  body.admin-products-mobile-list article[data-product-id] [role="checkbox"] {
+    width: 20px !important;
+    height: 20px !important;
+    margin-top: 2px !important;
+  }
+
+  body.admin-products-mobile-list article[data-product-id] > div:first-child > div > div:has(> img) {
+    width: 78px !important;
+    height: 98px !important;
+    border-radius: 12px !important;
+  }
+
+  body.admin-products-mobile-list article[data-product-id] img {
+    object-fit: contain !important;
+  }
+
+  body.admin-products-mobile-list article[data-product-id] h3 {
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+    white-space: normal !important;
+    display: -webkit-box;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
+    overflow: hidden;
+  }
+
+  body.admin-products-mobile-list article[data-product-id] h3 + p[dir="ltr"] {
+    display: none;
+  }
+
+  body.admin-products-mobile-list article[data-product-id] > div:last-child {
+    grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.25fr) 44px !important;
+    gap: 7px !important;
+    padding: 8px !important;
+  }
+
+  body.admin-products-mobile-list article[data-product-id] > div:last-child > button,
+  body.admin-products-mobile-list article[data-product-id] > div:last-child > a {
+    height: 44px !important;
+    border-radius: 10px !important;
+    font-size: 11px !important;
+  }
+
+  body.admin-products-mobile-list article[data-product-id] > div:last-child > a[href^="/admin/products/"] {
+    border-color: #675cba !important;
+    background: #675cba !important;
+    color: white !important;
+    box-shadow: 0 5px 14px rgba(103, 92, 186, 0.16);
+  }
+
+  body.admin-products-mobile-list article[data-product-id] > div:last-child > button:last-child {
+    width: 44px !important;
+  }
+
+  body.admin-products-mobile-list section.md\:hidden > div:last-child button {
+    min-width: 38px;
+    min-height: 38px;
+  }
+
+  /* ===== Product editor ===== */
+  body.admin-products-mobile-editor [data-admin-products-page-header] > div:last-child {
+    position: fixed;
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom));
+    left: 8px;
+    z-index: 35;
+    display: grid !important;
+    grid-template-columns: minmax(0, 1fr) 112px;
+    gap: 8px !important;
+    width: auto !important;
+    padding: 8px;
+    border: 1px solid #e0e4ea;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.97);
+    box-shadow: 0 14px 36px rgba(32, 36, 45, 0.16);
+  }
+
+  body.admin-products-mobile-editor [data-admin-products-page-header] > div:last-child > * {
+    width: 100% !important;
+    height: 48px !important;
+    border-radius: 11px !important;
+    padding-inline: 10px !important;
+    font-size: 12px !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form {
+    gap: 10px !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form > div,
+  body.admin-products-mobile-editor #product-editor-form .rounded-3xl {
+    border-radius: 14px !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form > div {
+    padding: 12px !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form .p-6,
+  body.admin-products-mobile-editor #product-editor-form .p-5 {
+    padding: 12px !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form h2 {
+    font-size: 13px !important;
+    line-height: 1.45 !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form label,
+  body.admin-products-mobile-editor #product-editor-form .text-xs {
+    font-size: 11px !important;
+  }
+
+  /* 16px prevents Safari from zooming into fields while entering product data. */
+  body.admin-products-mobile-editor #product-editor-form input:not([type="checkbox"]):not([type="color"]):not([type="file"]):not([type="hidden"]):not([type="range"]),
+  body.admin-products-mobile-editor #product-editor-form textarea {
+    min-height: 46px !important;
+    font-size: 16px !important;
+    line-height: 1.45 !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form textarea {
+    min-height: 92px !important;
+    padding: 11px !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form button[role="combobox"] {
+    min-height: 46px !important;
+    font-size: 13px !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form input[type="color"] {
+    min-width: 58px;
+    min-height: 46px;
+    border-radius: 10px !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form [role="checkbox"] {
+    width: 20px !important;
+    height: 20px !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form > div:has(h2 svg) {
+    scroll-margin-top: 76px;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form .rounded-3xl > div:first-child p,
+  body.admin-products-mobile-editor #product-editor-form .text-sm {
+    font-size: 10px !important;
+    line-height: 1.65 !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form .grid-cols-3 {
+    gap: 8px !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form .group > button {
+    width: 28px !important;
+    height: 28px !important;
+    opacity: 1 !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form .w-28 {
+    width: 86px !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form button:not([role="combobox"]):not([role="checkbox"]) {
+    min-height: 40px;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form label:has(> [role="checkbox"]) {
+    min-height: 44px;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form > div:has(h2) > div.flex.flex-wrap:has([role="checkbox"]) > label {
+    flex: 1 1 calc(50% - 4px);
+    justify-content: flex-start;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form .aspect-square.border-dashed {
+    min-height: 112px;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form .aspect-square.border-dashed span {
+    font-size: 10px !important;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form .max-h-\[300px\],
+  body.admin-products-mobile-editor #product-editor-form .max-h-\[400px\] {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+@media (max-width: 380px) {
+  body.admin-products-mobile-list [data-admin-products-page-header] + section > *,
+  body.admin-products-mobile-editor [data-admin-products-page-header] + section > * {
+    flex-basis: 138px;
+    min-width: 138px;
+  }
+
+  body.admin-products-mobile-list article[data-product-id] > div:first-child > div > div:has(> img) {
+    width: 70px !important;
+    height: 90px !important;
+  }
+
+  body.admin-products-mobile-editor [data-admin-products-page-header] > div:last-child {
+    grid-template-columns: minmax(0, 1fr) 96px;
+  }
+
+  body.admin-products-mobile-editor #product-editor-form .w-28 {
+    width: 76px !important;
+  }
+}

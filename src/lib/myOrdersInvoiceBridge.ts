@@ -1,4 +1,4 @@
-const BRIDGE_ID = "my-orders-invoice-bridge";
+const BRIDGE_SELECTOR = "[data-my-orders-invoice-bridge]";
 
 const isMyOrdersInvoiceButton = (button: HTMLButtonElement) => {
   if (window.location.pathname !== "/my-orders") return false;
@@ -6,6 +6,15 @@ const isMyOrdersInvoiceButton = (button: HTMLButtonElement) => {
 
   const article = button.closest("article");
   return Boolean(article?.querySelector('span[dir="ltr"].font-mono'));
+};
+
+const keepMyOrdersBackLabel = () => {
+  if (window.location.pathname !== "/my-orders") return;
+
+  const backLabel = document.querySelector<HTMLElement>("#account-invoice-overlay [data-account-invoice-back] span:last-child");
+  if (backLabel && backLabel.textContent !== "العودة إلى طلباتي") {
+    backLabel.textContent = "العودة إلى طلباتي";
+  }
 };
 
 const enableMyOrdersInvoiceButtons = () => {
@@ -17,14 +26,17 @@ const enableMyOrdersInvoiceButtons = () => {
     if (button.disabled) button.disabled = false;
     button.removeAttribute("disabled");
   });
+
+  keepMyOrdersBackLabel();
 };
 
 const openThroughAccountInvoiceRenderer = (orderNumber: string) => {
-  document.getElementById(BRIDGE_ID)?.remove();
+  document.querySelector(BRIDGE_SELECTOR)?.remove();
 
   const bridge = document.createElement("div");
-  bridge.id = BRIDGE_ID;
-  bridge.style.display = "none";
+  bridge.id = "account-orders";
+  bridge.hidden = true;
+  bridge.setAttribute("data-my-orders-invoice-bridge", "true");
 
   const row = document.createElement("div");
   row.className = "justify-between";
@@ -38,18 +50,12 @@ const openThroughAccountInvoiceRenderer = (orderNumber: string) => {
 
   row.append(order, button);
   bridge.appendChild(row);
-  bridge.setAttribute("data-invoice-return-label", "العودة إلى طلباتي");
-  bridge.id = "account-orders";
-
   document.body.appendChild(bridge);
+
   button.click();
 
-  window.setTimeout(() => {
-    if (bridge.isConnected) bridge.remove();
-
-    const backLabel = document.querySelector<HTMLElement>("#account-invoice-overlay [data-account-invoice-back] span:last-child");
-    if (backLabel) backLabel.textContent = "العودة إلى طلباتي";
-  }, 0);
+  if (bridge.isConnected) bridge.remove();
+  keepMyOrdersBackLabel();
 };
 
 if (typeof window !== "undefined" && typeof document !== "undefined") {

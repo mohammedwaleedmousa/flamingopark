@@ -61,8 +61,3 @@
     display: none !important;
   }
 }
-
-/* Account invoice history is invoice-only; tracking remains in the shipments section above. */
-#account-orders .mt-2 > button:first-child {
-  display: none !important;
-}

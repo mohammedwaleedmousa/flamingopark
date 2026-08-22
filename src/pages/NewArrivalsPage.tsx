@@ -12,7 +12,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
 
-const PAGE_SIZE = 36;
+// Keep the first paint light on mobile while preserving access to the full catalog.
+const PAGE_SIZE = 20;
 
 const NewArrivalsPage = () => {
   const { data: content } = useSiteContent("new_arrivals_");
@@ -75,7 +76,7 @@ const NewArrivalsPage = () => {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 sm:gap-y-6 md:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4 xl:grid-cols-5">{products.map((product) => <div key={product.id} className="min-w-0"><ProductCard product={product} badge="NEW IN" /></div>)}</div>
+              <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 sm:gap-y-6 md:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4 xl:grid-cols-5">{products.map((product, index) => <div key={product.id} className="min-w-0"><ProductCard product={product} index={index} badge="NEW IN" /></div>)}</div>
               {hasMore && <div className="flex justify-center pt-8"><button type="button" disabled={isFetching} onClick={() => setVisibleCount((count) => count + PAGE_SIZE)} className="flex h-11 min-w-[150px] items-center justify-center gap-2 rounded-full border border-[#DFC4C0] bg-white px-6 text-[9px] font-semibold text-[#A95B61] disabled:opacity-50">{isFetching && <Loader2 className="h-3.5 w-3.5 animate-spin" />}{isFetching ? "جارٍ التحميل" : "عرض المزيد"}</button></div>}
             </>
           )}

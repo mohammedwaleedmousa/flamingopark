@@ -1,0 +1,93 @@
+.admin-normalized-pink-action {
+  border-color: #675CBA !important;
+  background: #675CBA !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+.admin-normalized-pink-action:hover {
+  border-color: #594FAB !important;
+  background: #594FAB !important;
+  color: #FFFFFF !important;
+}
+
+.admin-normalized-pink-soft-action {
+  border-color: #DAD6F1 !important;
+  background: #F1EFFF !important;
+  color: #5F55A9 !important;
+  box-shadow: none !important;
+}
+
+.admin-normalized-pink-soft-action:hover {
+  border-color: #CBC5E9 !important;
+  background: #EAE7FA !important;
+  color: #51479C !important;
+}
+
+.admin-normalized-pink-text-action {
+  color: #675CBA !important;
+}
+
+.admin-normalized-pink-text-action:hover {
+  color: #594FAB !important;
+}
+
+.admin-normalized-pink-action:focus-visible,
+.admin-normalized-pink-soft-action:focus-visible,
+.admin-normalized-pink-text-action:focus-visible {
+  outline: 2px solid #CBC5ED !important;
+  outline-offset: 2px !important;
+}
+
+.admin-normalized-pink-action:disabled,
+.admin-normalized-pink-soft-action:disabled,
+.admin-normalized-pink-text-action:disabled {
+  opacity: 0.55 !important;
+}
+
+.admin-global-excel-export {
+  display: inline-flex;
+  height: 38px;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border: 1px solid #DAD6F1;
+  border-radius: 10px;
+  background: #F5F3FF;
+  padding: 0 10px;
+  color: #5F55A9;
+  font-size: 9px;
+  font-weight: 700;
+  white-space: nowrap;
+  transition: border-color 150ms ease, background-color 150ms ease, color 150ms ease;
+}
+
+.admin-global-excel-export:hover {
+  border-color: #CFC9EA;
+  background: #EEEAFE;
+  color: #51479C;
+}
+
+.admin-global-excel-export:disabled {
+  cursor: wait;
+  opacity: 0.62;
+}
+
+.admin-export-spinner {
+  animation: admin-export-spin 0.8s linear infinite;
+}
+
+@keyframes admin-export-spin {
+  to { transform: rotate(360deg); }
+}
+
+@media (max-width: 639px) {
+  .admin-global-excel-export {
+    width: 38px;
+    padding: 0;
+  }
+
+  .admin-global-excel-export span {
+    display: none;
+  }
+}

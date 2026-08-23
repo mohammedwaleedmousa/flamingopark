@@ -1,0 +1,21 @@
+.admin-normalized-pink-action {
+  border-color: #675CBA !important;
+  background: #675CBA !important;
+  color: #FFFFFF !important;
+  box-shadow: none !important;
+}
+
+.admin-normalized-pink-action:hover {
+  border-color: #594FAB !important;
+  background: #594FAB !important;
+  color: #FFFFFF !important;
+}
+
+.admin-normalized-pink-action:focus-visible {
+  outline: 2px solid #CBC5ED !important;
+  outline-offset: 2px !important;
+}
+
+.admin-normalized-pink-action:disabled {
+  opacity: 0.55 !important;
+}

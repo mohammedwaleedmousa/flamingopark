@@ -11,12 +11,37 @@
   color: #FFFFFF !important;
 }
 
-.admin-normalized-pink-action:focus-visible {
+.admin-normalized-pink-soft-action {
+  border-color: #DAD6F1 !important;
+  background: #F1EFFF !important;
+  color: #5F55A9 !important;
+  box-shadow: none !important;
+}
+
+.admin-normalized-pink-soft-action:hover {
+  border-color: #CBC5E9 !important;
+  background: #EAE7FA !important;
+  color: #51479C !important;
+}
+
+.admin-normalized-pink-text-action {
+  color: #675CBA !important;
+}
+
+.admin-normalized-pink-text-action:hover {
+  color: #594FAB !important;
+}
+
+.admin-normalized-pink-action:focus-visible,
+.admin-normalized-pink-soft-action:focus-visible,
+.admin-normalized-pink-text-action:focus-visible {
   outline: 2px solid #CBC5ED !important;
   outline-offset: 2px !important;
 }
 
-.admin-normalized-pink-action:disabled {
+.admin-normalized-pink-action:disabled,
+.admin-normalized-pink-soft-action:disabled,
+.admin-normalized-pink-text-action:disabled {
   opacity: 0.55 !important;
 }
 

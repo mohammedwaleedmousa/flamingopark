@@ -63,7 +63,7 @@ const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSect
     return { section, products: source.slice(0, sectionLimit(section)).map((row) => mapProductCard(row as any)) };
   }).filter(({ products }) => products.length > 0), [rows, visibleSections]);
 
-  if (!rendered.length) return null;
+  if (!rendered.length) return <>{betweenSections}{afterSections}</>;
 
   return (
     <>
@@ -98,7 +98,7 @@ const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSect
             </div>
           </section>
 
-          {sectionIndex === 0 && rendered.length > 1 ? betweenSections : null}
+          {sectionIndex === 0 ? betweenSections : null}
         </div>
       ))}
 

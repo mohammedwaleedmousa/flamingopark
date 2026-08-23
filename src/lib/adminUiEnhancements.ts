@@ -1,6 +1,7 @@
 import "@/admin-action-colors.css";
 import { toast } from "@/hooks/use-toast";
 import { exportAdminPageData, getAdminExportDefinition } from "@/lib/adminDataExport";
+import { exportAdditionalAdminPageData, getAdditionalAdminExportDefinition } from "@/lib/adminAdditionalDataExport";
 
 const EXPORT_ID = "admin-global-excel-export";
 const PINK_CLASS = "admin-normalized-pink-action";
@@ -11,19 +12,23 @@ const parseRgb = (value: string) => {
   return { r: Number(match[1]), g: Number(match[2]), b: Number(match[3]) };
 };
 
+const isPinkRgb = (rgb: { r: number; g: number; b: number }, allowPale = false) => {
+  const { r, g, b } = rgb;
+  const saturatedPink = r >= 180 && r - g >= 35 && b >= 105 && b - g >= 0;
+  const palePink = allowPale && r >= 235 && g >= 170 && g <= 225 && b >= 185 && b - g >= 4;
+  return saturatedPink || palePink;
+};
+
 const looksPink = (element: HTMLElement) => {
   if (element.classList.contains(PINK_CLASS)) return true;
 
   const className = typeof element.className === "string" ? element.className.toLowerCase() : "";
-  if (/bg-(pink|rose)-/.test(className)) return true;
+  if (/(bg|text|border)-(pink|rose)-/.test(className)) return true;
 
-  const background = parseRgb(window.getComputedStyle(element).backgroundColor);
-  if (!background) return false;
-
-  const { r, g, b } = background;
-  const saturatedPink = r >= 180 && r - g >= 35 && b - g >= 8 && b >= 105;
-  const palePink = r >= 235 && g >= 170 && g <= 225 && b >= 185 && b - g >= 4;
-  return saturatedPink || palePink;
+  const style = window.getComputedStyle(element);
+  const background = parseRgb(style.backgroundColor);
+  const foreground = parseRgb(style.color);
+  return Boolean((background && isPinkRgb(background, true)) || (foreground && isPinkRgb(foreground, false)));
 };
 
 const normalizePinkActions = () => {
@@ -38,6 +43,13 @@ const normalizePinkActions = () => {
 const exportIcon = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>`;
 const loadingIcon = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true" class="admin-export-spinner"><circle cx="12" cy="12" r="9" opacity=".25"/><path d="M21 12a9 9 0 0 0-9-9"/></svg>`;
 
+const getDefinition = (pathname: string) => getAdminExportDefinition(pathname) || getAdditionalAdminExportDefinition(pathname);
+
+const runExport = async (pathname: string) => {
+  if (getAdminExportDefinition(pathname)) return exportAdminPageData(pathname);
+  return exportAdditionalAdminPageData(pathname);
+};
+
 const findAdminTopActions = () => {
   const workspace = document.querySelector<HTMLElement>(".admin-workspace");
   if (!workspace) return null;
@@ -49,7 +61,7 @@ const findAdminTopActions = () => {
 };
 
 const syncExportButton = () => {
-  const definition = getAdminExportDefinition(window.location.pathname);
+  const definition = getDefinition(window.location.pathname);
   const existing = document.getElementById(EXPORT_ID) as HTMLButtonElement | null;
 
   if (!definition) {
@@ -72,10 +84,11 @@ const syncExportButton = () => {
 
   button.addEventListener("click", async () => {
     if (button.disabled) return;
+    const pathname = window.location.pathname;
     button.disabled = true;
     button.innerHTML = `${loadingIcon}<span>جاري التصدير...</span>`;
     try {
-      const count = await exportAdminPageData(window.location.pathname);
+      const count = await runExport(pathname);
       toast({
         title: "تم تجهيز ملف Excel",
         description: count > 0 ? `تم تصدير ${count.toLocaleString("ar-EG")} صف في أعمدة مرتبة.` : "تم إنشاء الملف بالعناوين ولا توجد بيانات حالياً.",

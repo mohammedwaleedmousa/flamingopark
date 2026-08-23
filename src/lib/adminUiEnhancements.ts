@@ -12,6 +12,8 @@ const parseRgb = (value: string) => {
 };
 
 const looksPink = (element: HTMLElement) => {
+  if (element.classList.contains(PINK_CLASS)) return true;
+
   const className = typeof element.className === "string" ? element.className.toLowerCase() : "";
   if (/bg-(pink|rose)-/.test(className)) return true;
 
@@ -30,7 +32,6 @@ const normalizePinkActions = () => {
   document.querySelectorAll<HTMLElement>("button, a[role='button'], a[class]").forEach((element) => {
     if (element.id === EXPORT_ID || element.closest("[data-admin-preserve-action-color='true']")) return;
     if (looksPink(element)) element.classList.add(PINK_CLASS);
-    else element.classList.remove(PINK_CLASS);
   });
 };
 

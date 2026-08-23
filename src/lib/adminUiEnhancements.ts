@@ -4,7 +4,12 @@ import { exportAdminPageData, getAdminExportDefinition } from "@/lib/adminDataEx
 import { exportAdditionalAdminPageData, getAdditionalAdminExportDefinition } from "@/lib/adminAdditionalDataExport";
 
 const EXPORT_ID = "admin-global-excel-export";
-const PINK_CLASS = "admin-normalized-pink-action";
+const PINK_SOLID_CLASS = "admin-normalized-pink-action";
+const PINK_SOFT_CLASS = "admin-normalized-pink-soft-action";
+const PINK_TEXT_CLASS = "admin-normalized-pink-text-action";
+const NORMALIZED_CLASSES = [PINK_SOLID_CLASS, PINK_SOFT_CLASS, PINK_TEXT_CLASS] as const;
+
+type PinkMode = "solid" | "soft" | "text";
 
 const parseRgb = (value: string) => {
   const match = value.match(/rgba?\(\s*(\d+)\s*[, ]\s*(\d+)\s*[, ]\s*(\d+)/i);
@@ -12,23 +17,31 @@ const parseRgb = (value: string) => {
   return { r: Number(match[1]), g: Number(match[2]), b: Number(match[3]) };
 };
 
-const isPinkRgb = (rgb: { r: number; g: number; b: number }, allowPale = false) => {
-  const { r, g, b } = rgb;
-  const saturatedPink = r >= 180 && r - g >= 35 && b >= 105 && b - g >= 0;
-  const palePink = allowPale && r >= 235 && g >= 170 && g <= 225 && b >= 185 && b - g >= 4;
-  return saturatedPink || palePink;
+const isSaturatedPink = ({ r, g, b }: { r: number; g: number; b: number }) => r >= 180 && r - g >= 35 && b >= 105 && b - g >= 0;
+const isPalePink = ({ r, g, b }: { r: number; g: number; b: number }) => r >= 235 && g >= 170 && g <= 225 && b >= 185 && b - g >= 4;
+
+const existingMode = (element: HTMLElement): PinkMode | null => {
+  if (element.classList.contains(PINK_SOLID_CLASS)) return "solid";
+  if (element.classList.contains(PINK_SOFT_CLASS)) return "soft";
+  if (element.classList.contains(PINK_TEXT_CLASS)) return "text";
+  return null;
 };
 
-const looksPink = (element: HTMLElement) => {
-  if (element.classList.contains(PINK_CLASS)) return true;
+const detectPinkMode = (element: HTMLElement): PinkMode | null => {
+  const normalized = existingMode(element);
+  if (normalized) return normalized;
 
   const className = typeof element.className === "string" ? element.className.toLowerCase() : "";
-  if (/(bg|text|border)-(pink|rose)-/.test(className)) return true;
-
   const style = window.getComputedStyle(element);
   const background = parseRgb(style.backgroundColor);
   const foreground = parseRgb(style.color);
-  return Boolean((background && isPinkRgb(background, true)) || (foreground && isPinkRgb(foreground, false)));
+
+  if (background && isSaturatedPink(background)) return "solid";
+  if (background && isPalePink(background)) return "soft";
+  if (foreground && isSaturatedPink(foreground)) return "text";
+  if (/bg-(pink|rose)-/.test(className)) return "soft";
+  if (/(text|border)-(pink|rose)-/.test(className)) return "text";
+  return null;
 };
 
 const normalizePinkActions = () => {
@@ -36,7 +49,10 @@ const normalizePinkActions = () => {
 
   document.querySelectorAll<HTMLElement>("button, a[role='button'], a[class]").forEach((element) => {
     if (element.id === EXPORT_ID || element.closest("[data-admin-preserve-action-color='true']")) return;
-    if (looksPink(element)) element.classList.add(PINK_CLASS);
+    const mode = detectPinkMode(element);
+    if (mode === "solid") element.classList.add(PINK_SOLID_CLASS);
+    if (mode === "soft") element.classList.add(PINK_SOFT_CLASS);
+    if (mode === "text") element.classList.add(PINK_TEXT_CLASS);
   });
 };
 
@@ -109,10 +125,16 @@ const syncExportButton = () => {
   target.prepend(button);
 };
 
+const clearNormalization = () => {
+  NORMALIZED_CLASSES.forEach((className) => {
+    document.querySelectorAll(`.${className}`).forEach((element) => element.classList.remove(className));
+  });
+};
+
 const sync = () => {
   if (!window.location.pathname.startsWith("/admin")) {
     document.getElementById(EXPORT_ID)?.remove();
-    document.querySelectorAll(`.${PINK_CLASS}`).forEach((element) => element.classList.remove(PINK_CLASS));
+    clearNormalization();
     return;
   }
   syncExportButton();

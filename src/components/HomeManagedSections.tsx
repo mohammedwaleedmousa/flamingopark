@@ -5,30 +5,44 @@ import { ArrowLeft } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
+import { useCustomerExperience } from "@/hooks/useCustomerExperience";
 
 type ManagedSection = { id: string; title: string; title_ar: string; filter_type: string | null; max_products: number | null; show_view_all: boolean | null; view_all_link: string | null; sort_order: number | null };
 type ProductRow = Record<string, any> & { section_ids?: string[] | null; created_at?: string | null; sort_order?: number | null };
 type HomeManagedSectionsProps = { betweenSections?: ReactNode; afterSections?: ReactNode };
 
+const SUPPORTED_FILTERS = new Set(["featured", "best_seller", "discounted", "new", "all"]);
+
+const sectionLimit = (section: ManagedSection) => Math.max(1, Math.min(60, Number(section.max_products ?? 8)));
+
 const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSectionsProps) => {
+  const { data: customerExperience } = useCustomerExperience();
+
   const { data: sections = [] } = useQuery({
     queryKey: ["home-managed-sections"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("homepage_sections").select("id,title,title_ar,filter_type,max_products,show_view_all,view_all_link,sort_order").eq("is_active", true).in("filter_type", ["featured", "best_seller"]).order("sort_order", { ascending: true });
+      const { data, error } = await supabase.from("homepage_sections").select("id,title,title_ar,filter_type,max_products,show_view_all,view_all_link,sort_order").eq("is_active", true).order("sort_order", { ascending: true });
       if (error) throw error;
-      return (data || []) as ManagedSection[];
+      return (data || []).filter((section: ManagedSection) => Boolean(section.filter_type && SUPPORTED_FILTERS.has(section.filter_type))) as ManagedSection[];
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 
-  const sectionIds = useMemo(() => sections.map((section) => section.id), [sections]);
+  const visibleSections = useMemo(() => sections.filter((section) => {
+    if (section.filter_type === "featured" && customerExperience?.homeSections.featuredProducts === false) return false;
+    if (section.filter_type === "best_seller" && customerExperience?.homeSections.bestSellers === false) return false;
+    if (section.filter_type === "new" && customerExperience?.homeSections.newArrivals === false) return false;
+    return true;
+  }), [sections, customerExperience]);
 
-  const { data: rows = [] } = useQuery({
+  const sectionIds = useMemo(() => visibleSections.map((section) => section.id), [visibleSections]);
+
+  const { data: explicitRows = [] } = useQuery({
     queryKey: ["home-managed-section-products", sectionIds.join(",")],
     enabled: sectionIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("products")
         .select(`${PRODUCT_CARD_SELECT},section_ids,created_at,sort_order`)
         .eq("is_active", true)
@@ -42,16 +56,52 @@ const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSect
     refetchOnWindowFocus: false,
   });
 
-  const rendered = useMemo(() => sections.map((section) => {
-    const explicit = rows.filter((row) => Array.isArray(row.section_ids) && row.section_ids.includes(section.id));
-    let source = explicit.length ? explicit : rows.filter((row) => {
-      if (section.filter_type === "featured") return Boolean(row.is_featured);
-      if (section.filter_type === "best_seller") return Boolean(row.is_best_seller);
-      return true;
+  const fallbackPlan = useMemo(() => {
+    const plan = new Map<string, number>();
+    visibleSections.forEach((section) => {
+      const filter = section.filter_type || "";
+      if (!SUPPORTED_FILTERS.has(filter)) return;
+      plan.set(filter, Math.max(plan.get(filter) || 0, sectionLimit(section)));
     });
-    source = [...source].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
-    return { section, products: source.slice(0, 8).map((row) => mapProductCard(row as any)) };
-  }).filter(({ products }) => products.length > 0), [rows, sections]);
+    return Array.from(plan.entries()).sort(([a], [b]) => a.localeCompare(b));
+  }, [visibleSections]);
+
+  const fallbackKey = useMemo(() => fallbackPlan.map(([filter, limit]) => `${filter}:${limit}`).join("|"), [fallbackPlan]);
+
+  const { data: fallbackRows = {} } = useQuery({
+    queryKey: ["home-managed-section-fallbacks", fallbackKey],
+    enabled: fallbackPlan.length > 0,
+    queryFn: async () => {
+      const entries = await Promise.all(fallbackPlan.map(async ([filter, limit]) => {
+        let query = supabase
+          .from("products")
+          .select(`${PRODUCT_CARD_SELECT},created_at,sort_order`)
+          .eq("is_active", true)
+          .eq("in_stock", true);
+
+        if (filter === "featured") query = query.eq("is_featured", true).order("sort_order", { ascending: true });
+        else if (filter === "best_seller") query = query.eq("is_best_seller", true).order("sort_order", { ascending: true });
+        else if (filter === "discounted") query = query.gt("discount", 0).order("sort_order", { ascending: true });
+        else if (filter === "new") query = query.order("created_at", { ascending: false });
+        else if (filter === "all") query = query.order("sort_order", { ascending: true });
+        else return [filter, [] as ProductRow[]] as const;
+
+        const { data, error } = await query.limit(limit);
+        if (error) throw error;
+        return [filter, (data || []) as ProductRow[]] as const;
+      }));
+
+      return Object.fromEntries(entries) as Record<string, ProductRow[]>;
+    },
+    staleTime: 60_000,
+    refetchOnWindowFocus: false,
+  });
+
+  const rendered = useMemo(() => visibleSections.map((section) => {
+    const explicit = explicitRows.filter((row) => Array.isArray(row.section_ids) && row.section_ids.includes(section.id));
+    const source = explicit.length ? [...explicit].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0)) : (fallbackRows[section.filter_type || ""] || []);
+    return { section, products: source.slice(0, sectionLimit(section)).map((row) => mapProductCard(row as any)) };
+  }).filter(({ products }) => products.length > 0), [explicitRows, fallbackRows, visibleSections]);
 
   if (!rendered.length) return null;
 

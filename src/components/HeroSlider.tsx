@@ -39,7 +39,7 @@ const fallbackSlides: HeroSlide[] = [
     title: "تجربة تسوق مختلفة",
     desc: "مختارات عالمية في مكان واحد",
     cta: "استكشف فلامنجو",
-    link: "/seasonal-offers",
+    link: "/products",
   },
 ];
 

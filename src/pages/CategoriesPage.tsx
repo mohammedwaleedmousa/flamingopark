@@ -34,8 +34,35 @@ const FALLBACK: Record<string, string> = {
   beauty: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=640&q=65",
 };
 
-const CATEGORY_SCOPE_ALIASES: Record<string, string[]> = {
-  "men:mens-shoes": ["shose", "shoes"],
+const normalizeCategorySlug = (value: string) => {
+  const normalized = value.toLowerCase().trim().replace(/^(mens?|womens?|kids?)-/, "");
+  if (normalized === "shose") return "shoes";
+  if (normalized === "watchs") return "watches";
+  return normalized;
+};
+
+const normalizeCategoryName = (value: string) =>
+  value
+    .trim()
+    .replace(/[\u064B-\u065F\u0670]/g, "")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/\b(رجاليه|رجالي|نسائيه|نسائي|اطفال|طفل|طفله)\b/g, "")
+    .replace(/^ال/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const inferCategoryAudience = (category: Category | null) => {
+  if (!category) return "";
+
+  const slug = category.slug.toLowerCase();
+  const name = category.name_ar.replace(/[أإآ]/g, "ا").replace(/ة/g, "ه");
+
+  if (/^(mens?|men)-/.test(slug) || /\b(رجاليه|رجالي|رجال)\b/.test(name)) return "men";
+  if (/^(womens?|women)-/.test(slug) || /\b(نسائيه|نسائي|نساء)\b/.test(name)) return "women";
+  if (/^(kids?|children)-/.test(slug) || /\b(اطفال|طفل|طفله)\b/.test(name)) return "kids";
+
+  return "";
 };
 
 const CategoriesPage = () => {
@@ -95,8 +122,8 @@ const CategoriesPage = () => {
     if (selectedParent?.slug === "men") return "men";
     if (selectedParent?.slug === "women") return "women";
     if (["babes", "kids"].includes(selectedParent?.slug || "")) return "kids";
-    return "";
-  }, [selectedParent?.slug]);
+    return inferCategoryAudience(selectedSub || selectedParent);
+  }, [selectedParent, selectedSub]);
 
   const audienceValues = useMemo(() => {
     if (audienceContext === "men") return ["men", "unisex"];
@@ -110,32 +137,39 @@ const CategoriesPage = () => {
   const scopedCategoryIds = useMemo(() => {
     if (!activeProductCategory) return [];
 
-    const ids = new Set<string>([activeProductCategory.id]);
-    const aliasSlugs = CATEGORY_SCOPE_ALIASES[`${selectedParent?.slug || ""}:${activeProductCategory.slug}`] || [];
-    const aliasRoot = categories.find((category) => !category.parent_id && aliasSlugs.includes(category.slug));
+    const targetSlug = normalizeCategorySlug(activeProductCategory.slug);
+    const targetName = normalizeCategoryName(activeProductCategory.name_ar);
+    const ids = new Set<string>();
+    const pendingParentIds: string[] = [];
 
-    if (aliasRoot) {
-      const pendingParentIds = [aliasRoot.id];
-      ids.add(aliasRoot.id);
+    categories.forEach((category) => {
+      const sameCategory = category.id === activeProductCategory.id;
+      const sameSlug = Boolean(targetSlug) && normalizeCategorySlug(category.slug) === targetSlug;
+      const sameName = Boolean(targetName) && normalizeCategoryName(category.name_ar) === targetName;
 
-      while (pendingParentIds.length > 0) {
-        const parentId = pendingParentIds.shift();
-        if (!parentId) continue;
+      if (!sameCategory && !sameSlug && !sameName) return;
 
-        categories.forEach((category) => {
-          if (category.parent_id !== parentId || ids.has(category.id)) return;
+      ids.add(category.id);
+      pendingParentIds.push(category.id);
+    });
 
-          ids.add(category.id);
-          pendingParentIds.push(category.id);
-        });
-      }
+    while (pendingParentIds.length > 0) {
+      const parentId = pendingParentIds.shift();
+      if (!parentId) continue;
+
+      categories.forEach((category) => {
+        if (category.parent_id !== parentId || ids.has(category.id)) return;
+
+        ids.add(category.id);
+        pendingParentIds.push(category.id);
+      });
     }
 
     return Array.from(ids);
-  }, [activeProductCategory, categories, selectedParent?.slug]);
+  }, [activeProductCategory, categories]);
 
   const audienceRootOnly = Boolean(audienceContext && selectedParent && !selectedSub && ["men", "women"].includes(selectedParent.slug));
-  const hasProductScope = Boolean(selectedSub && scopedCategoryIds.length > 0);
+  const hasProductScope = Boolean(activeProductCategory && scopedCategoryIds.length > 0);
 
   /* =========================================================
      INVALID SUB CATEGORY

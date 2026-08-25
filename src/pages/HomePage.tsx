@@ -23,25 +23,9 @@ type FeaturedCategoryItem = {
   link: string;
 };
 
-const fallbackCategoryImages: Record<string, string> = {
-  women: "https://images.unsplash.com/photo-1490481651871-ab68de25d43d?w=240&q=68&auto=format&fit=crop",
-  men: "https://images.unsplash.com/photo-1488161628813-04466f872be2?w=240&q=68&auto=format&fit=crop",
-  kids: "https://images.unsplash.com/photo-1503944583220-79d8926ad5e2?w=240&q=68&auto=format&fit=crop",
-  bags: "https://images.unsplash.com/photo-1584917865442-de89df76afd3?w=240&q=68&auto=format&fit=crop",
-  shoes: "https://images.unsplash.com/photo-1543163521-1bf539c55dd2?w=240&q=68&auto=format&fit=crop",
-  beauty: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=240&q=68&auto=format&fit=crop",
-};
+const CategoryCarousel = ({ items, loading = false }: { items: FeaturedCategoryItem[]; loading?: boolean }) => {
+  if (!loading && items.length === 0) return null;
 
-const fallbackFeaturedCategories: FeaturedCategoryItem[] = [
-  { title: "نسائي", subtitle: "Women", image: fallbackCategoryImages.women, link: "/categories?parent=women" },
-  { title: "رجالي", subtitle: "Men", image: fallbackCategoryImages.men, link: "/categories?parent=men" },
-  { title: "أطفال", subtitle: "Kids", image: fallbackCategoryImages.kids, link: "/categories?parent=kids" },
-  { title: "حقائب", subtitle: "Bags", image: fallbackCategoryImages.bags, link: "/categories?parent=bags" },
-  { title: "أحذية", subtitle: "Shoes", image: fallbackCategoryImages.shoes, link: "/categories?parent=shoes" },
-  { title: "تجميل", subtitle: "Beauty", image: fallbackCategoryImages.beauty, link: "/categories?parent=beauty" },
-];
-
-const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
   return (
     <section className="w-full overflow-hidden bg-background py-4 md:py-6" dir="rtl" aria-label="الأقسام">
       <div className="mx-auto w-full max-w-[1400px] px-3 md:px-6">
@@ -62,17 +46,25 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
 
         <div className="-mx-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden md:-mx-6 md:px-6">
           <div className="flex w-max gap-2.5">
-            {items.map((item) => (
-              <Link key={`${item.title}-${item.link}`} to={item.link} className="group block w-[78px] shrink-0 select-none [-webkit-tap-highlight-color:transparent] sm:w-[90px] md:w-[102px]">
-                <div className="aspect-square w-full overflow-hidden rounded-[15px] border border-border/60 bg-muted/40 md:rounded-[18px]">
-                  <img src={optimizeImage(item.image, 320, 82)} alt={item.title} loading="lazy" decoding="async" width={320} height={320} className="h-full w-full object-cover object-center" />
-                </div>
-                <div className="mt-1.5 text-center">
-                  <p className="truncate text-[8px] font-semibold text-foreground md:text-[9px]">{item.title}</p>
-                  <p className="mt-0.5 truncate font-serif text-[5px] uppercase tracking-[0.08em] text-muted-foreground md:text-[6px]">{item.subtitle}</p>
-                </div>
-              </Link>
-            ))}
+            {loading
+              ? Array.from({ length: 6 }).map((_, index) => (
+                  <div key={index} className="block w-[78px] shrink-0 sm:w-[90px] md:w-[102px]" aria-hidden="true">
+                    <div className="aspect-square w-full animate-pulse rounded-[15px] bg-muted md:rounded-[18px]" />
+                    <div className="mx-auto mt-2 h-2 w-10 animate-pulse rounded-full bg-muted" />
+                    <div className="mx-auto mt-1 h-1.5 w-7 animate-pulse rounded-full bg-muted/70" />
+                  </div>
+                ))
+              : items.map((item) => (
+                  <Link key={`${item.title}-${item.link}`} to={item.link} className="group block w-[78px] shrink-0 select-none [-webkit-tap-highlight-color:transparent] sm:w-[90px] md:w-[102px]">
+                    <div className="aspect-square w-full overflow-hidden rounded-[15px] border border-border/60 bg-muted/40 md:rounded-[18px]">
+                      <img src={optimizeImage(item.image, 320, 82)} alt={item.title} loading="lazy" decoding="async" width={320} height={320} className="h-full w-full object-cover object-center" />
+                    </div>
+                    <div className="mt-1.5 text-center">
+                      <p className="truncate text-[8px] font-semibold text-foreground md:text-[9px]">{item.title}</p>
+                      <p className="mt-0.5 truncate font-serif text-[5px] uppercase tracking-[0.08em] text-muted-foreground md:text-[6px]">{item.subtitle}</p>
+                    </div>
+                  </Link>
+                ))}
           </div>
         </div>
       </div>
@@ -123,15 +115,13 @@ const HomePage = () => {
   });
 
   const featuredCategories = useMemo<FeaturedCategoryItem[]>(() => {
-    if (categoriesLoading || categories.length === 0) return fallbackFeaturedCategories;
-
     return categories.map((category: any) => ({
       title: category.name_ar || category.name || category.slug,
       subtitle: category.name || category.name_ar || category.slug,
-      image: category.image_url || fallbackCategoryImages[category.slug] || fallbackFeaturedCategories[0].image,
+      image: category.image_url || "/placeholder.svg",
       link: `/categories?parent=${category.slug}`,
     }));
-  }, [categories, categoriesLoading]);
+  }, [categories]);
 
   const brandsViewport = useNearViewport<HTMLDivElement>("120px");
 
@@ -151,7 +141,7 @@ const HomePage = () => {
       <main className="overflow-hidden bg-background">
         {showHomeSection("hero") && <HeroSlider />}
 
-        {showHomeSection("categories") && <CategoryCarousel items={featuredCategories} />}
+        {showHomeSection("categories") && <CategoryCarousel items={featuredCategories} loading={categoriesLoading} />}
 
         {showHomeSection("brands") && (
           <div ref={brandsViewport.ref} className="bg-background" style={{ minHeight: 92 }}>

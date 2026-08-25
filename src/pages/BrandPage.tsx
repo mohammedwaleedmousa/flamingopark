@@ -73,18 +73,6 @@ const BrandPage = () => {
     refetchOnWindowFocus: false,
   });
 
-  const brandPage = useMemo(() => {
-    const relation = brand?.brand_pages;
-
-    if (!relation) return null;
-
-    if (Array.isArray(relation)) {
-      return relation.find((page) => page.is_active !== false) || null;
-    }
-
-    return relation.is_active !== false ? relation : null;
-  }, [brand?.brand_pages]);
-
   const sections = useMemo(() => {
     return (brand?.brand_sections || [])
       .filter((section) => section.is_active !== false)
@@ -120,12 +108,6 @@ const BrandPage = () => {
     }));
   }, [sections, sectionProducts]);
 
-  const bannerImage = useMemo(() => {
-    const pageBanner = brandPage?.hero_image?.trim();
-    const fallbackBanner = brand?.hero_image?.trim();
-    return pageBanner || fallbackBanner || null;
-  }, [brandPage?.hero_image, brand?.hero_image]);
-
   if (!slug) return <Navigate to="/home" replace />;
 
   if (brandLoading) {
@@ -135,10 +117,6 @@ const BrandPage = () => {
         <CartDrawer />
 
         <main className="pb-14">
-          <div className="mx-auto w-full max-w-[1400px] px-3 pt-3 md:px-6 md:pt-5">
-            <div className="aspect-[16/6] w-full animate-pulse rounded-[16px] bg-muted/60 sm:aspect-[16/5] md:rounded-[22px]" />
-          </div>
-
           <div className="mx-auto w-full max-w-[1400px] px-3 py-7 md:px-6 md:py-10">
             <div className="mb-5">
               <div className="h-2 w-20 animate-pulse rounded-full bg-muted" />
@@ -195,24 +173,6 @@ const BrandPage = () => {
       <CartDrawer />
 
       <main className="flex-1 pb-12 md:pb-16">
-        {bannerImage && (
-          <section className="bg-background pt-3 md:pt-5">
-            <div className="mx-auto w-full max-w-[1400px] px-3 md:px-6">
-              <div className="w-full overflow-hidden rounded-[16px] bg-muted/30 md:rounded-[22px]">
-                <img
-                  src={optimizeImage(bannerImage, 1600, 88)}
-                  alt={`${brand.name} banner`}
-                  loading="eager"
-                  decoding="async"
-                  fetchPriority="high"
-                  onError={handleImageError}
-                  className="block h-auto w-full object-contain object-center"
-                />
-              </div>
-            </div>
-          </section>
-        )}
-
         <section className="bg-background py-7 md:py-11">
           <div className="mx-auto w-full max-w-[1400px] px-3 md:px-6">
             <div className="mb-4 flex items-end justify-between gap-3 md:mb-6">

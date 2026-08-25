@@ -141,13 +141,27 @@ const CategoriesPage = () => {
     const targetName = normalizeCategoryName(activeProductCategory.name_ar);
     const ids = new Set<string>();
     const pendingParentIds: string[] = [];
+    const categoryById = new Map(categories.map((category) => [category.id, category]));
+    const audienceRootIds = new Set(categories.filter((category) => !category.parent_id && ["men", "women", "babes", "kids"].includes(category.slug)).map((category) => category.id));
+
+    const isInsideAudienceTree = (category: Category) => {
+      let parentId = category.parent_id;
+
+      while (parentId) {
+        if (audienceRootIds.has(parentId)) return true;
+        parentId = categoryById.get(parentId)?.parent_id || null;
+      }
+
+      return false;
+    };
 
     categories.forEach((category) => {
       const sameCategory = category.id === activeProductCategory.id;
       const sameSlug = Boolean(targetSlug) && normalizeCategorySlug(category.slug) === targetSlug;
       const sameName = Boolean(targetName) && normalizeCategoryName(category.name_ar) === targetName;
+      const semanticMatch = (sameSlug || sameName) && !isInsideAudienceTree(category);
 
-      if (!sameCategory && !sameSlug && !sameName) return;
+      if (!sameCategory && !semanticMatch) return;
 
       ids.add(category.id);
       pendingParentIds.push(category.id);

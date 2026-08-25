@@ -34,6 +34,10 @@ const FALLBACK: Record<string, string> = {
   beauty: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=640&q=65",
 };
 
+const CATEGORY_SCOPE_ALIASES: Record<string, string[]> = {
+  "men:mens-shoes": ["shose", "shoes"],
+};
+
 const CategoriesPage = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { data: content } = useSiteContent("categories_page_");
@@ -106,8 +110,29 @@ const CategoriesPage = () => {
   const scopedCategoryIds = useMemo(() => {
     if (!activeProductCategory) return [];
 
-    return [activeProductCategory.id];
-  }, [activeProductCategory]);
+    const ids = new Set<string>([activeProductCategory.id]);
+    const aliasSlugs = CATEGORY_SCOPE_ALIASES[`${selectedParent?.slug || ""}:${activeProductCategory.slug}`] || [];
+    const aliasRoot = categories.find((category) => !category.parent_id && aliasSlugs.includes(category.slug));
+
+    if (aliasRoot) {
+      const pendingParentIds = [aliasRoot.id];
+      ids.add(aliasRoot.id);
+
+      while (pendingParentIds.length > 0) {
+        const parentId = pendingParentIds.shift();
+        if (!parentId) continue;
+
+        categories.forEach((category) => {
+          if (category.parent_id !== parentId || ids.has(category.id)) return;
+
+          ids.add(category.id);
+          pendingParentIds.push(category.id);
+        });
+      }
+    }
+
+    return Array.from(ids);
+  }, [activeProductCategory, categories, selectedParent?.slug]);
 
   const audienceRootOnly = Boolean(audienceContext && selectedParent && !selectedSub && ["men", "women"].includes(selectedParent.slug));
   const hasProductScope = Boolean(selectedSub && scopedCategoryIds.length > 0);

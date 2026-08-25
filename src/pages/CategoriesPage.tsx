@@ -47,7 +47,7 @@ const normalizeCategoryName = (value: string) =>
     .replace(/[\u064B-\u065F\u0670]/g, "")
     .replace(/[أإآ]/g, "ا")
     .replace(/ة/g, "ه")
-    .replace(/\b(رجاليه|رجالي|نسائيه|نسائي|اطفال|طفل|طفله)\b/g, "")
+    .replace(/رجاليه|رجالي|نسائيه|نسائي|اطفال|طفل|طفله/g, "")
     .replace(/^ال/, "")
     .replace(/\s+/g, " ")
     .trim();
@@ -58,9 +58,9 @@ const inferCategoryAudience = (category: Category | null) => {
   const slug = category.slug.toLowerCase();
   const name = category.name_ar.replace(/[أإآ]/g, "ا").replace(/ة/g, "ه");
 
-  if (/^(mens?|men)-/.test(slug) || /\b(رجاليه|رجالي|رجال)\b/.test(name)) return "men";
-  if (/^(womens?|women)-/.test(slug) || /\b(نسائيه|نسائي|نساء)\b/.test(name)) return "women";
-  if (/^(kids?|children)-/.test(slug) || /\b(اطفال|طفل|طفله)\b/.test(name)) return "kids";
+  if (/^(mens?|men)-/.test(slug) || name.includes("رجالي") || name.includes("رجال")) return "men";
+  if (/^(womens?|women)-/.test(slug) || name.includes("نسائي") || name.includes("نساء")) return "women";
+  if (/^(kids?|children)-/.test(slug) || name.includes("اطفال") || name.includes("طفل")) return "kids";
 
   return "";
 };

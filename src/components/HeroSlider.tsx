@@ -25,21 +25,21 @@ const fallbackSlides: HeroSlide[] = [
     title: "تسوق أحدث صيحات الموضة",
     desc: "اكتشف مجموعات مختارة من أفضل الماركات العالمية",
     cta: "اكتشف المجموعة",
-    link: "/products",
+    link: "/new-arrivals",
   },
   {
     image: "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1600&q=78",
     title: "أناقة تعكس شخصيتك",
     desc: "منتجات مختارة بتصميم عصري وجودة عالية",
     cta: "تسوق الآن",
-    link: "/products",
+    link: "/brands",
   },
   {
     image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=78",
     title: "تجربة تسوق مختلفة",
     desc: "مختارات عالمية في مكان واحد",
     cta: "استكشف فلامنجو",
-    link: "/products",
+    link: "/seasonal-offers",
   },
 ];
 

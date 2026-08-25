@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { useLayoutEffect } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 
@@ -8,7 +8,7 @@ type ReviewSummary = {
 };
 
 const ProductRatingSync = () => {
-  useEffect(() => {
+  useLayoutEffect(() => {
     const cache = new Map<string, ReviewSummary>();
     let disposed = false;
     let syncing = false;
@@ -24,10 +24,19 @@ const ProductRatingSync = () => {
 
       const ratingSpan = countSpan.previousElementSibling as HTMLSpanElement | null;
       const starsContainer = ratingSpan?.previousElementSibling as HTMLElement | null;
+      const container = starsContainer?.parentElement as HTMLElement | null;
 
-      if (!ratingSpan || !starsContainer) return null;
+      if (!ratingSpan || !starsContainer || !container) return null;
 
-      return { countSpan, ratingSpan, starsContainer };
+      return { countSpan, ratingSpan, starsContainer, container };
+    };
+
+    const hideDefaultRating = () => {
+      const block = findRatingBlock();
+      if (!block) return null;
+
+      block.container.style.visibility = "hidden";
+      return block;
     };
 
     const loadSummary = async (slug: string): Promise<ReviewSummary> => {
@@ -51,13 +60,25 @@ const ProductRatingSync = () => {
       return summary;
     };
 
+    const showNeutralRating = (block: ReturnType<typeof findRatingBlock>) => {
+      if (!block) return;
+
+      block.starsContainer.querySelectorAll<SVGElement>("svg").forEach((star) => {
+        star.style.fill = "transparent";
+        star.style.color = "#D8D0CD";
+      });
+      block.ratingSpan.textContent = "—";
+      block.countSpan.textContent = "(0 تقييم)";
+      block.container.style.visibility = "visible";
+    };
+
     const applySummary = async () => {
       if (disposed || syncing) return;
 
       const slug = getProductSlug();
       if (!slug) return;
 
-      const block = findRatingBlock();
+      const block = hideDefaultRating();
       if (!block) return;
 
       syncing = true;
@@ -66,9 +87,8 @@ const ProductRatingSync = () => {
         const summary = await loadSummary(slug);
         if (disposed) return;
 
-        const currentBlock = findRatingBlock() || block;
         const roundedRating = Math.round(summary.averageRating);
-        const stars = currentBlock.starsContainer.querySelectorAll<SVGElement>("svg");
+        const stars = block.starsContainer.querySelectorAll<SVGElement>("svg");
 
         stars.forEach((star, index) => {
           const active = summary.reviewCount > 0 && index < roundedRating;
@@ -76,17 +96,22 @@ const ProductRatingSync = () => {
           star.style.color = active ? "#DCA653" : "#D8D0CD";
         });
 
-        currentBlock.ratingSpan.textContent = summary.reviewCount > 0 ? summary.averageRating.toFixed(1) : "—";
-        currentBlock.countSpan.textContent = `(${summary.reviewCount} تقييم)`;
-        currentBlock.countSpan.setAttribute("data-real-product-rating", slug);
+        block.ratingSpan.textContent = summary.reviewCount > 0 ? summary.averageRating.toFixed(1) : "—";
+        block.countSpan.textContent = `(${summary.reviewCount} تقييم)`;
+        block.countSpan.setAttribute("data-real-product-rating", slug);
+        block.container.style.visibility = "visible";
       } catch (error) {
         console.error("Unable to load real product rating:", error);
+        showNeutralRating(block);
       } finally {
         syncing = false;
       }
     };
 
+    hideDefaultRating();
+
     const observer = new MutationObserver(() => {
+      hideDefaultRating();
       void applySummary();
     });
 

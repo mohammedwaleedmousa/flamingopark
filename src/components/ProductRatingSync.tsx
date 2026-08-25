@@ -1,4 +1,4 @@
-import { useLayoutEffect } from "react";
+import { useEffect } from "react";
 
 import { supabase } from "@/integrations/supabase/client";
 
@@ -7,18 +7,27 @@ type ReviewSummary = {
   averageRating: number;
 };
 
+type RatingBlock = {
+  countSpan: HTMLSpanElement;
+  ratingSpan: HTMLSpanElement;
+  starsContainer: HTMLElement;
+  container: HTMLElement;
+};
+
 const ProductRatingSync = () => {
-  useLayoutEffect(() => {
+  useEffect(() => {
     const cache = new Map<string, ReviewSummary>();
     let disposed = false;
-    let syncing = false;
+    let observer: MutationObserver | null = null;
+    let activeSlug: string | null = null;
+    let syncVersion = 0;
 
     const getProductSlug = () => {
       const match = window.location.pathname.match(/^\/product\/([^/?#]+)/);
       return match?.[1] ? decodeURIComponent(match[1]) : null;
     };
 
-    const findRatingBlock = () => {
+    const findRatingBlock = (): RatingBlock | null => {
       const countSpan = Array.from(document.querySelectorAll<HTMLSpanElement>("span")).find((span) => span.textContent?.trim() === "(128 تقييم)");
       if (!countSpan) return null;
 
@@ -27,16 +36,21 @@ const ProductRatingSync = () => {
       const container = starsContainer?.parentElement as HTMLElement | null;
 
       if (!ratingSpan || !starsContainer || !container) return null;
-
       return { countSpan, ratingSpan, starsContainer, container };
     };
 
-    const hideDefaultRating = () => {
-      const block = findRatingBlock();
-      if (!block) return null;
-
+    const hideDefaultRating = (block: RatingBlock) => {
       block.container.style.visibility = "hidden";
-      return block;
+    };
+
+    const showNeutralRating = (block: RatingBlock) => {
+      block.starsContainer.querySelectorAll<SVGElement>("svg").forEach((star) => {
+        star.style.fill = "transparent";
+        star.style.color = "#D8D0CD";
+      });
+      block.ratingSpan.textContent = "—";
+      block.countSpan.textContent = "(0 تقييم)";
+      block.container.style.visibility = "visible";
     };
 
     const loadSummary = async (slug: string): Promise<ReviewSummary> => {
@@ -60,37 +74,13 @@ const ProductRatingSync = () => {
       return summary;
     };
 
-    const showNeutralRating = (block: ReturnType<typeof findRatingBlock>) => {
-      if (!block) return;
-
-      block.starsContainer.querySelectorAll<SVGElement>("svg").forEach((star) => {
-        star.style.fill = "transparent";
-        star.style.color = "#D8D0CD";
-      });
-      block.ratingSpan.textContent = "—";
-      block.countSpan.textContent = "(0 تقييم)";
-      block.container.style.visibility = "visible";
-    };
-
-    const applySummary = async () => {
-      if (disposed || syncing) return;
-
-      const slug = getProductSlug();
-      if (!slug) return;
-
-      const block = hideDefaultRating();
-      if (!block) return;
-
-      syncing = true;
-
+    const applySummary = async (slug: string, block: RatingBlock, version: number) => {
       try {
         const summary = await loadSummary(slug);
-        if (disposed) return;
+        if (disposed || version !== syncVersion || slug !== activeSlug) return;
 
         const roundedRating = Math.round(summary.averageRating);
-        const stars = block.starsContainer.querySelectorAll<SVGElement>("svg");
-
-        stars.forEach((star, index) => {
+        block.starsContainer.querySelectorAll<SVGElement>("svg").forEach((star, index) => {
           const active = summary.reviewCount > 0 && index < roundedRating;
           star.style.fill = active ? "#DCA653" : "transparent";
           star.style.color = active ? "#DCA653" : "#D8D0CD";
@@ -102,25 +92,71 @@ const ProductRatingSync = () => {
         block.container.style.visibility = "visible";
       } catch (error) {
         console.error("Unable to load real product rating:", error);
-        showNeutralRating(block);
-      } finally {
-        syncing = false;
+        if (!disposed && version === syncVersion && slug === activeSlug) showNeutralRating(block);
       }
     };
 
-    hideDefaultRating();
+    const syncCurrentRoute = () => {
+      const slug = getProductSlug();
+      if (slug === activeSlug) return;
 
-    const observer = new MutationObserver(() => {
-      hideDefaultRating();
-      void applySummary();
-    });
+      activeSlug = slug;
+      syncVersion += 1;
+      const version = syncVersion;
 
-    observer.observe(document.documentElement, { childList: true, subtree: true });
-    void applySummary();
+      observer?.disconnect();
+      observer = null;
+
+      if (!slug) return;
+
+      const attach = () => {
+        if (disposed || version !== syncVersion || slug !== activeSlug) return false;
+
+        const block = findRatingBlock();
+        if (!block) return false;
+
+        hideDefaultRating(block);
+        observer?.disconnect();
+        observer = null;
+        void applySummary(slug, block, version);
+        return true;
+      };
+
+      if (attach()) return;
+
+      observer = new MutationObserver(() => {
+        attach();
+      });
+      observer.observe(document.body, { childList: true, subtree: true });
+    };
+
+    const handleNavigation = () => {
+      window.setTimeout(syncCurrentRoute, 0);
+    };
+
+    const handleDocumentClick = (event: MouseEvent) => {
+      const target = event.target as Element | null;
+      const anchor = target?.closest<HTMLAnchorElement>("a[href]");
+      if (!anchor) return;
+
+      try {
+        const url = new URL(anchor.href, window.location.href);
+        if (url.origin !== window.location.origin) return;
+        handleNavigation();
+      } catch {
+        return;
+      }
+    };
+
+    document.addEventListener("click", handleDocumentClick);
+    window.addEventListener("popstate", handleNavigation);
+    syncCurrentRoute();
 
     return () => {
       disposed = true;
-      observer.disconnect();
+      observer?.disconnect();
+      document.removeEventListener("click", handleDocumentClick);
+      window.removeEventListener("popstate", handleNavigation);
     };
   }, []);
 

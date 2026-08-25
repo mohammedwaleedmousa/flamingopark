@@ -14,6 +14,7 @@ import AppErrorBoundary from "./components/AppErrorBoundary";
 import ProductRatingSync from "./components/ProductRatingSync";
 import CheckoutCodGuard from "./components/CheckoutCodGuard";
 import "./index.css";
+import "./mobile-smooth.css";
 import "./desktop-storefront.css";
 import "./desktop-pages.css";
 

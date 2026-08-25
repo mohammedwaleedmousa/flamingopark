@@ -65,7 +65,7 @@ const CategoryCarousel = ({ items }: { items: FeaturedCategoryItem[] }) => {
             {items.map((item) => (
               <Link key={`${item.title}-${item.link}`} to={item.link} className="group block w-[78px] shrink-0 select-none [-webkit-tap-highlight-color:transparent] sm:w-[90px] md:w-[102px]">
                 <div className="aspect-square w-full overflow-hidden rounded-[15px] border border-border/60 bg-muted/40 md:rounded-[18px]">
-                  <img src={optimizeImage(item.image, 220, 68)} alt={item.title} loading="lazy" decoding="async" width={220} height={220} className="h-full w-full object-cover object-center" />
+                  <img src={optimizeImage(item.image, 320, 82)} alt={item.title} loading="lazy" decoding="async" width={320} height={320} className="h-full w-full object-cover object-center" />
                 </div>
                 <div className="mt-1.5 text-center">
                   <p className="truncate text-[8px] font-semibold text-foreground md:text-[9px]">{item.title}</p>

@@ -34,8 +34,35 @@ const FALLBACK: Record<string, string> = {
   beauty: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=640&q=65",
 };
 
-const CATEGORY_SCOPE_ALIASES: Record<string, string[]> = {
-  "men:mens-shoes": ["shose", "shoes"],
+const normalizeCategorySlug = (value: string) => {
+  const normalized = value.toLowerCase().trim().replace(/^(mens?|womens?|kids?)-/, "");
+  if (normalized === "shose") return "shoes";
+  if (normalized === "watchs") return "watches";
+  return normalized;
+};
+
+const normalizeCategoryName = (value: string) =>
+  value
+    .trim()
+    .replace(/[\u064B-\u065F\u0670]/g, "")
+    .replace(/[أإآ]/g, "ا")
+    .replace(/ة/g, "ه")
+    .replace(/رجاليه|رجالي|نسائيه|نسائي|اطفال|طفل|طفله/g, "")
+    .replace(/^ال/, "")
+    .replace(/\s+/g, " ")
+    .trim();
+
+const inferCategoryAudience = (category: Category | null) => {
+  if (!category) return "";
+
+  const slug = category.slug.toLowerCase();
+  const name = category.name_ar.replace(/[أإآ]/g, "ا").replace(/ة/g, "ه");
+
+  if (/^(mens?|men)-/.test(slug) || name.includes("رجالي") || name.includes("رجال")) return "men";
+  if (/^(womens?|women)-/.test(slug) || name.includes("نسائي") || name.includes("نساء")) return "women";
+  if (/^(kids?|children)-/.test(slug) || name.includes("اطفال") || name.includes("طفل")) return "kids";
+
+  return "";
 };
 
 const CategoriesPage = () => {
@@ -95,8 +122,8 @@ const CategoriesPage = () => {
     if (selectedParent?.slug === "men") return "men";
     if (selectedParent?.slug === "women") return "women";
     if (["babes", "kids"].includes(selectedParent?.slug || "")) return "kids";
-    return "";
-  }, [selectedParent?.slug]);
+    return inferCategoryAudience(selectedSub || selectedParent);
+  }, [selectedParent, selectedSub]);
 
   const audienceValues = useMemo(() => {
     if (audienceContext === "men") return ["men", "unisex"];
@@ -110,32 +137,53 @@ const CategoriesPage = () => {
   const scopedCategoryIds = useMemo(() => {
     if (!activeProductCategory) return [];
 
-    const ids = new Set<string>([activeProductCategory.id]);
-    const aliasSlugs = CATEGORY_SCOPE_ALIASES[`${selectedParent?.slug || ""}:${activeProductCategory.slug}`] || [];
-    const aliasRoot = categories.find((category) => !category.parent_id && aliasSlugs.includes(category.slug));
+    const targetSlug = normalizeCategorySlug(activeProductCategory.slug);
+    const targetName = normalizeCategoryName(activeProductCategory.name_ar);
+    const ids = new Set<string>();
+    const pendingParentIds: string[] = [];
+    const categoryById = new Map(categories.map((category) => [category.id, category]));
+    const audienceRootIds = new Set(categories.filter((category) => !category.parent_id && ["men", "women", "babes", "kids"].includes(category.slug)).map((category) => category.id));
 
-    if (aliasRoot) {
-      const pendingParentIds = [aliasRoot.id];
-      ids.add(aliasRoot.id);
+    const isInsideAudienceTree = (category: Category) => {
+      let parentId = category.parent_id;
 
-      while (pendingParentIds.length > 0) {
-        const parentId = pendingParentIds.shift();
-        if (!parentId) continue;
-
-        categories.forEach((category) => {
-          if (category.parent_id !== parentId || ids.has(category.id)) return;
-
-          ids.add(category.id);
-          pendingParentIds.push(category.id);
-        });
+      while (parentId) {
+        if (audienceRootIds.has(parentId)) return true;
+        parentId = categoryById.get(parentId)?.parent_id || null;
       }
+
+      return false;
+    };
+
+    categories.forEach((category) => {
+      const sameCategory = category.id === activeProductCategory.id;
+      const sameSlug = Boolean(targetSlug) && normalizeCategorySlug(category.slug) === targetSlug;
+      const sameName = Boolean(targetName) && normalizeCategoryName(category.name_ar) === targetName;
+      const semanticMatch = (sameSlug || sameName) && !isInsideAudienceTree(category);
+
+      if (!sameCategory && !semanticMatch) return;
+
+      ids.add(category.id);
+      pendingParentIds.push(category.id);
+    });
+
+    while (pendingParentIds.length > 0) {
+      const parentId = pendingParentIds.shift();
+      if (!parentId) continue;
+
+      categories.forEach((category) => {
+        if (category.parent_id !== parentId || ids.has(category.id)) return;
+
+        ids.add(category.id);
+        pendingParentIds.push(category.id);
+      });
     }
 
     return Array.from(ids);
-  }, [activeProductCategory, categories, selectedParent?.slug]);
+  }, [activeProductCategory, categories]);
 
   const audienceRootOnly = Boolean(audienceContext && selectedParent && !selectedSub && ["men", "women"].includes(selectedParent.slug));
-  const hasProductScope = Boolean(selectedSub && scopedCategoryIds.length > 0);
+  const hasProductScope = Boolean(activeProductCategory && scopedCategoryIds.length > 0);
 
   /* =========================================================
      INVALID SUB CATEGORY

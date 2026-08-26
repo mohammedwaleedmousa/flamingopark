@@ -1,0 +1,68 @@
+name: Apply admin brand form fix
+
+on:
+  push:
+    branches: [fix/admin-product-all-brands]
+
+permissions:
+  contents: write
+
+jobs:
+  patch:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: fix/admin-product-all-brands
+      - name: Patch product brand selector
+        shell: python
+        run: |
+          from pathlib import Path
+          import re
+
+          path = Path('src/pages/admin/AdminProductFormPage.tsx')
+          text = path.read_text(encoding='utf-8')
+
+          text, count = re.subn(
+              r"\ninterface BrandCategoryRow \{\n  brand_id: string;\n\}\n",
+              "\n",
+              text,
+              count=1,
+          )
+          assert count == 1, 'BrandCategoryRow block not found exactly once'
+
+          start = text.index("  const selectedCategoryScopeIds = useMemo(() => {")
+          end = text.index("  const getCategoryAudience =", start)
+          text = text[:start] + text[end:]
+
+          effect = """  useEffect(() => {\n    if (!formData.brand_id || filteredBrands.some((brand: any) => brand.id === formData.brand_id)) return;\n    setFormData((current) => ({ ...current, brand: '', brand_id: '' }));\n  }, [filteredBrands, formData.brand_id]);\n\n"""
+          assert effect in text, 'category-filter brand reset effect not found'
+          text = text.replace(effect, '', 1)
+
+          validation = """    if (selectedBrand && mappedBrandIds.size > 0 && !mappedBrandIds.has(selectedBrand.id)) {\n      toast({ title: 'الماركة غير مرتبطة بالقسم', description: 'اختر ماركة متاحة لهذا القسم أو حدّث ربط الماركات بالأقسام.', variant: 'destructive' });\n      setIsSaving(false);\n      return;\n    }\n\n"""
+          assert validation in text, 'category-brand submit validation not found'
+          text = text.replace(validation, '', 1)
+
+          old_map = "{filteredBrands.map((brand: any) => ("
+          new_map = "{brands.map((brand: any) => ("
+          assert text.count(old_map) == 1, 'filtered brand render occurrence mismatch'
+          text = text.replace(old_map, new_map, 1)
+
+          old_help = 'تظهر هنا الماركات المسجلة والمتوافقة مع القسم المختار فقط.'
+          new_help = 'تظهر هنا جميع الماركات المسجلة والنشطة.'
+          assert text.count(old_help) == 1, 'brand helper text occurrence mismatch'
+          text = text.replace(old_help, new_help, 1)
+
+          for forbidden in ('selectedCategoryScopeIds', 'mappedBrandRows', 'mappedBrandIds', 'filteredBrands', 'BrandCategoryRow'):
+              assert forbidden not in text, f'unexpected leftover: {forbidden}'
+
+          path.write_text(text, encoding='utf-8')
+      - name: Remove temporary workflow
+        run: rm .github/workflows/apply-brand-form-fix.yml
+      - name: Commit scoped fix
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/pages/admin/AdminProductFormPage.tsx .github/workflows/apply-brand-form-fix.yml
+          git commit -m "fix: show all active brands in product form"
+          git push origin HEAD:fix/admin-product-all-brands

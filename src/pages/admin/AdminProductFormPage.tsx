@@ -186,7 +186,10 @@ const AdminProductFormPage = () => {
     },
   });
 
-  const mappedBrandIds = useMemo(() => new Set(mappedBrandRows.map((r) => r.brand_id)), [mappedBrandRows]);
+  const mappedBrandIds = useMemo(() => new Set([
+    ...mappedBrandRows.map((r) => r.brand_id),
+    ...(brands as any[]).map((brand: any) => brand.id),
+  ]), [brands, mappedBrandRows]);
 
   const filteredBrands = useMemo(() => {
     if (mappedBrandIds.size === 0) return brands;
@@ -765,7 +768,7 @@ const AdminProductFormPage = () => {
                 </SelectContent>
               </Select>
               <p className="text-[8px] text-[#969DA7] mt-[4px]">
-                تظهر هنا الماركات المسجلة والمتوافقة مع القسم المختار فقط.
+                تظهر هنا جميع الماركات المسجلة والنشطة.
               </p>
             </div>
           </div>

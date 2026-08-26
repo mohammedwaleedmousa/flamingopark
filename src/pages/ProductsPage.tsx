@@ -18,7 +18,7 @@ import { toast } from "@/hooks/use-toast";
 import { clearCatalogScroll, restoreCatalogScroll } from "@/lib/catalogScroll";
 
 if ("scrollRestoration" in window.history) {
-  window.history.scrollRestoration = "auto";
+  window.history.scrollRestoration = "manual";
 }
 
 type ColorVariant = {
@@ -214,7 +214,7 @@ const QuickView = ({ product, onClose, isMobile }: { product: CatalogProduct | n
   };
 
   return (
-    <motion.aside initial={isMobile ? { y: "100%" } : { x: "100%" }} animate={isMobile ? { y: 0 } : { x: 0 }} exit={isMobile ? { y: "100%" } : { x: "100%" }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }} className={`fixed inset-y-0 right-0 z-[90] w-full overflow-y-auto bg-[#FFFDFC] shadow-[0_0_50px_rgba(65,45,38,.16)] ${isMobile ? "p-4 pb-24" : "max-w-2xl border-l border-[#ECE3DF] p-6"}`}>
+    <motion.aside initial={isMobile ? { y: "100%" } : { x: "100%" }} animate={isMobile ? { y: 0 } : { x: 0 }} exit={isMobile ? { y: "100%" } : { x: 0 }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }} className={`fixed inset-y-0 right-0 z-[90] w-full overflow-y-auto bg-[#FFFDFC] shadow-[0_0_50px_rgba(65,45,38,.16)] ${isMobile ? "p-4 pb-24" : "max-w-2xl border-l border-[#ECE3DF] p-6"}`}>
       <div className="mb-5 flex items-start justify-between gap-4">
         <div className="min-w-0 flex-1">
           <p className="mb-1 text-[9px] tracking-[0.22em] text-[#C5797D]">FLAMINGO</p>
@@ -341,8 +341,6 @@ const ProductsPage = () => {
   });
 
   const previousCatalogSearch = useRef(location.search);
-  const loadMoreScrollRef = useRef<number | null>(null);
-  const previousProductsLengthRef = useRef(0);
   const restoredCatalogKey = useRef<string | null>(null);
   const overlayScrollRef = useRef(0);
 
@@ -1083,8 +1081,6 @@ const ProductsPage = () => {
 
   useEffect(() => {
     setLoadedPage(1);
-    loadMoreScrollRef.current = null;
-    previousProductsLengthRef.current = 0;
   }, [
     categorySlug,
     searchQuery,
@@ -1105,7 +1101,6 @@ const ProductsPage = () => {
   useEffect(() => {
     if (isLoadingProducts) return;
     if (!products.length) return;
-    if (loadMoreScrollRef.current !== null) return;
     if (restoredCatalogKey.current === catalogScrollKey) return;
 
     restoreCatalogScroll(catalogScrollKey);
@@ -1116,52 +1111,6 @@ const ProductsPage = () => {
     isLoadingProducts,
     products.length,
     catalogScrollKey,
-  ]);
-
-  /* =========================================================
-     KEEP EXACT SCROLL AFTER LOAD MORE
-  ========================================================= */
-
-  useLayoutEffect(() => {
-    const previousLength =
-      previousProductsLengthRef.current;
-
-    const currentLength =
-      products.length;
-
-    if (
-      loadMoreScrollRef.current !== null &&
-      !isLoadingProducts &&
-      currentLength > previousLength
-    ) {
-      const savedScrollY =
-        loadMoreScrollRef.current;
-
-      requestAnimationFrame(() => {
-        window.scrollTo({
-          top: savedScrollY,
-          left: 0,
-          behavior: "auto",
-        });
-
-        requestAnimationFrame(() => {
-          window.scrollTo({
-            top: savedScrollY,
-            left: 0,
-            behavior: "auto",
-          });
-
-          loadMoreScrollRef.current =
-            null;
-        });
-      });
-    }
-
-    previousProductsLengthRef.current =
-      currentLength;
-  }, [
-    products.length,
-    isLoadingProducts,
   ]);
 
   /* =========================================================
@@ -1360,9 +1309,6 @@ const ProductsPage = () => {
       return;
     }
 
-    loadMoreScrollRef.current =
-      window.scrollY;
-
     setLoadedPage(
       (current) => current + 1
     );
@@ -1427,7 +1373,7 @@ const ProductsPage = () => {
       <Navbar />
       <CartDrawer />
 
-      <main className=" pb-24 md:pt-24 md:pb-20">
+      <main className="pb-24 md:pt-24 md:pb-20 [overflow-anchor:none]">
         {/* =========================================================
             HEADER
         ========================================================= */}
@@ -1461,7 +1407,7 @@ const ProductsPage = () => {
         {/* =========================================================
             PREMIUM TOOLBAR
         ========================================================= */}
-        <section className="sticky top-[68px] z-30 bg-[#FFFDFC]/94 px-3 py-2 backdrop-blur-xl md:top-[76px] md:px-6">
+        <section className="sticky top-[68px] z-30 transform-gpu bg-[#FFFDFC] px-3 py-2 [backface-visibility:hidden] md:top-[76px] md:px-6">
           <div className="mx-auto max-w-[1600px]">
             <div className="flex h-[48px] items-center overflow-hidden rounded-[15px] border border-[#EAE0DC] bg-white shadow-[0_8px_28px_rgba(65,45,38,.055)]">
               <button onClick={openFilters} className="group flex h-full min-w-0 flex-1 items-center justify-center gap-2 border-l border-[#EFE7E3] px-3 transition-colors active:bg-[#FBF5F3]">

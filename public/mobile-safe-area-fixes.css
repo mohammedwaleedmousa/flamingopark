@@ -61,3 +61,9 @@
     display: none !important;
   }
 }
+
+/* Product detail hero: preserve the whole product instead of cropping its top or bottom. */
+img.select-none.object-cover.object-bottom[draggable="false"] {
+  object-fit: contain !important;
+  object-position: center center !important;
+}

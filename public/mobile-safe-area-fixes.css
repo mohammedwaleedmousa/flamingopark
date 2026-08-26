@@ -62,7 +62,7 @@
   }
 }
 
-/* Product detail hero: keep the entire source image visible inside the zoom wrapper. */
+/* Product detail hero: fill the frame while keeping the product's top visible. */
 .react-transform-wrapper,
 .react-transform-component {
   width: 100% !important;
@@ -71,7 +71,7 @@
 
 .react-transform-component {
   display: flex !important;
-  align-items: center !important;
+  align-items: flex-start !important;
   justify-content: center !important;
 }
 
@@ -80,6 +80,6 @@
   height: 100% !important;
   max-width: 100% !important;
   max-height: 100% !important;
-  object-fit: contain !important;
-  object-position: center center !important;
+  object-fit: cover !important;
+  object-position: center top !important;
 }

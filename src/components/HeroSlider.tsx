@@ -17,6 +17,9 @@ type HeroSlide = {
   desc: string;
   cta: string;
   link: string;
+  imageZoom: number;
+  imagePositionX: number;
+  imagePositionY: number;
 };
 
 const fallbackSlides: HeroSlide[] = [
@@ -26,6 +29,9 @@ const fallbackSlides: HeroSlide[] = [
     desc: "اكتشف مجموعات مختارة من أفضل الماركات العالمية",
     cta: "اكتشف المجموعة",
     link: "/new-arrivals",
+    imageZoom: 1,
+    imagePositionX: 50,
+    imagePositionY: 50,
   },
   {
     image: "https://images.unsplash.com/photo-1445205170230-053b83016050?auto=format&fit=crop&w=1600&q=78",
@@ -33,6 +39,9 @@ const fallbackSlides: HeroSlide[] = [
     desc: "منتجات مختارة بتصميم عصري وجودة عالية",
     cta: "تسوق الآن",
     link: "/brands",
+    imageZoom: 1,
+    imagePositionX: 50,
+    imagePositionY: 50,
   },
   {
     image: "https://images.unsplash.com/photo-1441986300917-64674bd600d8?auto=format&fit=crop&w=1600&q=78",
@@ -40,6 +49,9 @@ const fallbackSlides: HeroSlide[] = [
     desc: "مختارات عالمية في مكان واحد",
     cta: "استكشف فلامنجو",
     link: "/products",
+    imageZoom: 1,
+    imagePositionX: 50,
+    imagePositionY: 50,
   },
 ];
 
@@ -52,19 +64,30 @@ const HeroSlider = () => {
   const { data: managedSlides = [] } = useQuery({
     queryKey: ["home-hero-banners"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("banners").select("image_url,title_ar,subtitle_ar,cta_text_ar,cta_link,page_slug").eq("is_active", true).order("sort_order", { ascending: true }).limit(3);
+      const { data, error } = await (supabase as any)
+        .from("banners")
+        .select("image_url,title_ar,subtitle_ar,cta_text_ar,cta_link,page_slug,image_zoom,image_position_x,image_position_y")
+        .eq("is_active", true)
+        .order("sort_order", { ascending: true })
+        .limit(3);
 
       if (error) throw error;
 
-      return (data || []).filter((slide: any) => Boolean(slide.image_url)).map((slide: any) => ({
-        image: String(slide.image_url),
-        title: String(slide.title_ar || ""),
-        desc: String(slide.subtitle_ar || ""),
-        cta: String(slide.cta_text_ar || "اكتشف المجموعة"),
-        link: slide.page_slug ? `/banner/${slide.page_slug}` : slide.cta_link || "/products",
-      })) as HeroSlide[];
+      return (data || [])
+        .filter((slide: any) => Boolean(slide.image_url))
+        .map((slide: any) => ({
+          image: String(slide.image_url),
+          title: String(slide.title_ar || ""),
+          desc: String(slide.subtitle_ar || ""),
+          cta: String(slide.cta_text_ar || "اكتشف المجموعة"),
+          link: slide.page_slug ? `/banner/${slide.page_slug}` : slide.cta_link || "/products",
+          imageZoom: Number(slide.image_zoom ?? 1),
+          imagePositionX: Number(slide.image_position_x ?? 50),
+          imagePositionY: Number(slide.image_position_y ?? 50),
+        })) as HeroSlide[];
     },
-    staleTime: 1000 * 60 * 10,
+    staleTime: 0,
+    refetchOnMount: "always",
     refetchOnWindowFocus: false,
   });
 
@@ -80,7 +103,20 @@ const HeroSlider = () => {
               <SwiperSlide key={`${slide.image}-${index}`}>
                 <div className="relative h-[230px] w-full overflow-hidden bg-muted/30 sm:h-[285px] md:h-[390px] lg:h-[450px]">
                   {loadedSlides.has(index) && (
-                    <img src={optimizeImage(slide.image, heroImageWidth, 74)} alt={slide.title || "Flamingo Park"} loading={index === 0 ? "eager" : "lazy"} decoding="async" fetchPriority={index === 0 ? "high" : "auto"} width={heroImageWidth} height={900} className="absolute inset-0 h-full w-full object-cover object-center" />
+                    <img
+                      src={optimizeImage(slide.image, heroImageWidth, 74)}
+                      alt={slide.title || "Flamingo Park"}
+                      loading={index === 0 ? "eager" : "lazy"}
+                      decoding="async"
+                      fetchPriority={index === 0 ? "high" : "auto"}
+                      width={heroImageWidth}
+                      height={900}
+                      className="absolute inset-0 h-full w-full object-cover object-center"
+                      style={{
+                        objectPosition: `${slide.imagePositionX}% ${slide.imagePositionY}%`,
+                        transform: `scale(${slide.imageZoom})`,
+                      }}
+                    />
                   )}
 
                   <div className="absolute inset-0 bg-gradient-to-l from-background/95 via-background/65 to-transparent sm:from-background/92 sm:via-background/52 md:via-background/42" />

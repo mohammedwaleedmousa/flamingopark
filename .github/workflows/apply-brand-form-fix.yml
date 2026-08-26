@@ -3,6 +3,8 @@ name: Apply admin brand form fix
 on:
   push:
     branches: [fix/admin-product-all-brands]
+  pull_request:
+    branches: [main]
 
 permissions:
   contents: write

@@ -156,7 +156,7 @@ const ProductCard = ({ product, index = 2, badge, onQuickView }: ProductCardProp
 
   return (
     <Link to={`/product/${product.slug}`} dir="rtl" onPointerEnter={() => void prefetchProductDetailPage()} onPointerDown={() => void prefetchProductDetailPage()} onFocus={() => void prefetchProductDetailPage()} onClick={() => saveCatalogScroll(`${location.pathname}${location.search}`)} className="block w-full min-w-0">
-      <article className="relative w-full min-w-0 overflow-hidden rounded-[15px] border border-[#EEE6E2] bg-white transition-transform duration-150 active:scale-[0.985] [content-visibility:auto] [contain-intrinsic-size:320px]">
+      <article className="relative w-full min-w-0 overflow-hidden rounded-[15px] border border-[#EEE6E2] bg-white transition-transform duration-150 active:scale-[0.985]">
         <div className="relative aspect-[4/5] w-full overflow-hidden bg-[#F1F0EE]">
           {!allImagesFailed && optimizedMainImage ? (
             <>

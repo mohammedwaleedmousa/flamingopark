@@ -59,7 +59,7 @@ const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSect
     <>
       {rendered.map(({ section, products }, sectionIndex) => (
         <div key={section.id}>
-          <section className={`bg-background py-7 md:py-12 ${sectionIndex > 0 ? "[content-visibility:auto] [contain-intrinsic-size:900px]" : ""}`}>
+          <section className="bg-background py-7 md:py-12">
             <div className="mx-auto w-full max-w-[1400px] px-3 md:px-6">
               <div className="mb-4 md:mb-7">
                 <div className="min-w-0">

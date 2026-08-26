@@ -74,7 +74,7 @@ const CategoryCarousel = ({ items, loading = false }: { items: FeaturedCategoryI
 
 const EditorialSection = () => {
   return (
-    <section className="bg-background px-4 py-11 md:py-20 [content-visibility:auto] [contain-intrinsic-size:420px]">
+    <section className="bg-background px-4 py-11 md:py-20">
       <div className="mx-auto max-w-[850px] text-center">
         <div className="mx-auto mb-4 flex items-center justify-center gap-2">
           <span className="h-px w-6 bg-border" />
@@ -126,7 +126,7 @@ const HomePage = () => {
   const brandsViewport = useNearViewport<HTMLDivElement>("120px");
 
   const imageBanner = showHomeSection("services") ? (
-    <div className="bg-background [content-visibility:auto] [contain-intrinsic-size:420px]">
+    <div className="bg-background">
       <FlamingoServices />
     </div>
   ) : null;

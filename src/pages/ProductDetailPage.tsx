@@ -111,7 +111,7 @@ const ProductDetailPage = () => {
   const { data: product, isLoading } = useQuery({
     queryKey: ["product", slug],
     queryFn: async () => {
-      const { data, error } = await supabase.from("products").select("id,name,name_ar,slug,price,original_price,discount,description,description_ar,images,category,category_id,brand,in_stock,stock_quantity,countries,is_featured,is_best_seller,accessories,has_sizes,sizes,features,color_variants,specs,return_policy,has_quality_variants,quality_variants").eq("slug", slug).eq("is_active", true).maybeSingle();
+      const { data, error } = await (supabase as any).from("products").select("id,name,name_ar,slug,price,original_price,discount,description,description_ar,images,category,category_id,brand,in_stock,stock_quantity,countries,is_featured,is_best_seller,accessories,has_sizes,sizes,features,color_variants,specs,return_policy,has_quality_variants,quality_variants,size_price_rule_id").eq("slug", slug).eq("is_active", true).maybeSingle();
 
       if (error) throw error;
       if (!data) return null;
@@ -148,6 +148,7 @@ const ProductDetailPage = () => {
         returnPolicy: (data as any).return_policy as string | null,
         hasQualityVariants: (data as any).has_quality_variants ?? false,
         qualityVariants: ((data as any).quality_variants || []) as QualityVariant[],
+        sizePriceRuleId: (data as any).size_price_rule_id as string | null,
       };
     },
     enabled: !!slug,
@@ -169,6 +170,29 @@ const ProductDetailPage = () => {
     staleTime: 15_000,
     gcTime: 1000 * 60 * 5,
     refetchOnWindowFocus: true,
+  });
+
+  const { data: sizePriceAdjustments = {} } = useQuery<Record<string, number>>({
+    queryKey: ["product-size-price-rule", product?.sizePriceRuleId],
+    enabled: !!product?.sizePriceRuleId,
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("size_price_rules")
+        .select("adjustments")
+        .eq("id", product!.sizePriceRuleId)
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (error) throw error;
+      const raw = data?.adjustments;
+      if (!raw || typeof raw !== "object" || Array.isArray(raw)) return {};
+
+      return Object.fromEntries(
+        Object.entries(raw as Record<string, unknown>)
+          .map(([size, amount]) => [size, Math.max(0, Number(amount) || 0)]),
+      );
+    },
+    staleTime: 1000 * 60 * 5,
   });
 
   /* =========================================================
@@ -365,6 +389,15 @@ const ProductDetailPage = () => {
      PRODUCT STATE
   ========================================================= */
 
+  const getSizePriceAdjustment = (size?: string | null) => {
+    if (!size) return 0;
+    const normalizedSize = normalizeInventoryValue(size);
+    const match = Object.entries(sizePriceAdjustments).find(([ruleSize]) => normalizeInventoryValue(ruleSize) === normalizedSize);
+    return match ? Math.max(0, Number(match[1]) || 0) : 0;
+  };
+
+  const sizePriceAdjustment = getSizePriceAdjustment(selectedSize);
+
   const accessoriesTotal =
     product.accessories?.reduce((sum, accessory, index) => {
       const key = `${index}-${accessory.name_ar}`;
@@ -374,7 +407,7 @@ const ProductDetailPage = () => {
 
   const activeQuality = product.hasQualityVariants && selectedQualityIdx !== null ? product.qualityVariants?.[selectedQualityIdx] : null;
 
-  const effectivePrice = activeQuality ? Number(activeQuality.price) : product.price;
+  const effectivePrice = (activeQuality ? Number(activeQuality.price) : product.price) + sizePriceAdjustment;
   const effectiveDescription = activeQuality?.description || product.descriptionAr || product.description;
   const totalPrice = effectivePrice + accessoriesTotal;
   const currency = currencySymbol;
@@ -562,8 +595,11 @@ const ProductDetailPage = () => {
         })) || [];
 
     const colorName = activeColorVariant?.name;
+    const cartProduct = sizePriceAdjustment > 0
+      ? ({ ...product, price: product.price + sizePriceAdjustment } as Product)
+      : (product as Product);
 
-    addToCart(product, quantity, selectedSize || undefined, selectedAccessories.length ? selectedAccessories : undefined, undefined, undefined, colorName);
+    addToCart(cartProduct, quantity, selectedSize || undefined, selectedAccessories.length ? selectedAccessories : undefined, undefined, undefined, colorName);
   };
 
   const handleAddToCart = () => {
@@ -988,11 +1024,14 @@ const ProductDetailPage = () => {
                   </div>
 
                   <div className="flex flex-wrap gap-2">
-                    {sizesToShow.map((size: string) => (
-                      <button type="button" key={size} onClick={() => { const sizeStock = getSizeStock(size); if (typeof sizeStock === "number" && sizeStock <= 0) { toast({ title: "المقاس غير متوفر", description: `المقاس ${size} نفد من المخزون.`, variant: "destructive" }); return; } setSelectedSize(size); setQuantity(1); }} className={`min-w-[58px] rounded-[8px] border px-3 py-2 text-[9px] font-semibold ${selectedSize === size ? "border-[#D4777D] bg-[#FFF5F3] text-[#A95B61]" : "border-[#E4DAD6] bg-white text-[#5E514D]"}`}>
-                        {size}
-                      </button>
-                    ))}
+                    {sizesToShow.map((size: string) => {
+                      const adjustment = getSizePriceAdjustment(size);
+                      return (
+                        <button type="button" key={size} onClick={() => { const sizeStock = getSizeStock(size); if (typeof sizeStock === "number" && sizeStock <= 0) { toast({ title: "المقاس غير متوفر", description: `المقاس ${size} نفد من المخزون.`, variant: "destructive" }); return; } setSelectedSize(size); setQuantity(1); }} className={`min-w-[58px] rounded-[8px] border px-3 py-2 text-[9px] font-semibold ${selectedSize === size ? "border-[#D4777D] bg-[#FFF5F3] text-[#A95B61]" : "border-[#E4DAD6] bg-white text-[#5E514D]"}`}>
+                          {size}{adjustment > 0 ? ` +${formatCurrency(adjustment)}` : ""}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
               )}

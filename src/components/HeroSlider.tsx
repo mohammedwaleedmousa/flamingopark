@@ -28,12 +28,13 @@ const HeroSlider = () => {
   const [loadedSlides, setLoadedSlides] = useState<Set<number>>(() => new Set([0]));
 
   const { data: managedSlides = [], isFetching } = useQuery({
-    queryKey: ["home-hero-banners", "admin-only-v2"],
+    queryKey: ["home-hero-banners", "admin-only-v3"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("banners")
         .select("image_url,title_ar,subtitle_ar,cta_text_ar,cta_link,page_slug,image_zoom,image_position_x,image_position_y")
         .eq("is_active", true)
+        .or("page_slug.is.null,page_slug.neq.between-products-banner")
         .order("sort_order", { ascending: true })
         .limit(3);
 

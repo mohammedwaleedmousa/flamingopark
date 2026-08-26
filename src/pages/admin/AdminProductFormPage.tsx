@@ -86,6 +86,7 @@ const AdminProductFormPage = () => {
     category: '',
     audience: '' as '' | 'men' | 'women' | 'kids' | 'unisex',
     brand: '',
+    brand_id: '',
     in_stock: true,
     is_featured: false,
     is_best_seller: false,
@@ -159,14 +160,27 @@ const AdminProductFormPage = () => {
     || categories.find((c) => c.slug === formData.category)
     || null;
 
+  const selectedCategoryScopeIds = useMemo(() => {
+    const ids: string[] = [];
+    let current = selectedCategory;
+
+    while (current) {
+      ids.push(current.id);
+      const parentId = current.parent_id;
+      current = parentId ? categories.find((category) => category.id === parentId) || null : null;
+    }
+
+    return ids;
+  }, [categories, selectedCategory]);
+
   const { data: mappedBrandRows = [] } = useQuery({
-    queryKey: ['category-brand-links', selectedCategory?.id],
-    enabled: !!selectedCategory,
+    queryKey: ['category-brand-links', selectedCategoryScopeIds.join(',')],
+    enabled: selectedCategoryScopeIds.length > 0,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from('brand_categories')
         .select('brand_id')
-        .eq('category_id', selectedCategory!.id);
+        .in('category_id', selectedCategoryScopeIds);
       if (error) throw error;
       return (data || []) as BrandCategoryRow[];
     },
@@ -178,6 +192,25 @@ const AdminProductFormPage = () => {
     if (mappedBrandIds.size === 0) return brands;
     return brands.filter((b: any) => mappedBrandIds.has(b.id));
   }, [brands, mappedBrandIds]);
+
+  const getCategoryAudience = (category: Category | null) => {
+    let current = category;
+
+    while (current) {
+      if (current.slug === 'men') return 'men' as const;
+      if (current.slug === 'women') return 'women' as const;
+      if (current.slug === 'kids' || current.slug === 'babes') return 'kids' as const;
+      const parentId = current.parent_id;
+      current = parentId ? categories.find((item) => item.id === parentId) || null : null;
+    }
+
+    return '' as const;
+  };
+
+  useEffect(() => {
+    if (!formData.brand_id || filteredBrands.some((brand: any) => brand.id === formData.brand_id)) return;
+    setFormData((current) => ({ ...current, brand: '', brand_id: '' }));
+  }, [filteredBrands, formData.brand_id]);
 
   useEffect(() => {
     if (isEditing) fetchProduct();
@@ -270,6 +303,7 @@ const AdminProductFormPage = () => {
         category: data.category || '',
         audience: (((data as any).audience || '') as '' | 'men' | 'women' | 'kids' | 'unisex'),
         brand: brandName,
+        brand_id: data.brand_id || '',
         in_stock: data.in_stock ?? true,
         is_featured: data.is_featured ?? false,
         is_best_seller: data.is_best_seller ?? false,
@@ -379,8 +413,28 @@ const AdminProductFormPage = () => {
     const selectedCat = categories.find((c) => c.id === selectedCategoryId)
       || categories.find((c) => c.slug === resolvedCategory)
       || null;
-    const brandName = formData.brand.trim();
-    const selectedBrand = (brands as any[]).find((b: any) => b.name?.trim() === brandName) || null;
+    const selectedBrand = (brands as any[]).find((brand: any) => brand.id === formData.brand_id) || null;
+    const brandName = selectedBrand?.name?.trim() || '';
+    const inferredAudience = getCategoryAudience(selectedCat);
+    const resolvedAudience = formData.audience || inferredAudience || null;
+
+    if (formData.brand_id && !selectedBrand) {
+      toast({ title: 'الماركة غير صالحة', description: 'اختر ماركة مسجلة من القائمة ثم أعد الحفظ.', variant: 'destructive' });
+      setIsSaving(false);
+      return;
+    }
+
+    if (selectedBrand && mappedBrandIds.size > 0 && !mappedBrandIds.has(selectedBrand.id)) {
+      toast({ title: 'الماركة غير مرتبطة بالقسم', description: 'اختر ماركة متاحة لهذا القسم أو حدّث ربط الماركات بالأقسام.', variant: 'destructive' });
+      setIsSaving(false);
+      return;
+    }
+
+    if (inferredAudience && resolvedAudience !== inferredAudience && resolvedAudience !== 'unisex') {
+      toast({ title: 'الجمهور لا يطابق القسم', description: 'عدّل الجمهور ليتوافق مع القسم المختار.', variant: 'destructive' });
+      setIsSaving(false);
+      return;
+    }
     const productData = {
       name: resolvedName,
       name_ar: formData.name_ar,
@@ -393,7 +447,7 @@ const AdminProductFormPage = () => {
       category: selectedCat?.slug || resolvedCategory || null,
       brand: brandName || null,
       category_id: selectedCat?.id ?? null,
-      audience: formData.audience || null,
+      audience: resolvedAudience,
       brand_id: selectedBrand?.id ?? null,
       in_stock: stockQty > 0 ? formData.in_stock : false,
       stock_quantity: stockQty,
@@ -422,21 +476,24 @@ const AdminProductFormPage = () => {
           .from('products')
           .update(productData)
           .eq('id', id)
-          .select('id,category,category_id')
+          .select('id,category,category_id,brand,brand_id,audience')
           .single();
         if (error) throw error;
-        if (selectedCat && savedProduct.category_id !== selectedCat.id) {
-          throw new Error('لم يتم حفظ القسم الفرعي المحدد. أعد اختيار القسم ثم احفظ مرة أخرى.');
+        if ((selectedCat && savedProduct.category_id !== selectedCat.id) || savedProduct.brand_id !== (selectedBrand?.id ?? null) || savedProduct.audience !== resolvedAudience) {
+          throw new Error('لم يتم حفظ تصنيف المنتج بالكامل. أعد اختيار القسم والماركة ثم احفظ مرة أخرى.');
         }
         savedProductId = savedProduct.id;
       } else {
         const { data: inserted, error } = await (supabase as any)
           .from('products')
           .insert(productData)
-          .select('id')
+          .select('id,category_id,brand_id,audience')
           .single();
         if (error) throw error;
         if (!inserted?.id) throw new Error('لم يتم إنشاء المنتج (استجابة فارغة)');
+        if ((selectedCat && inserted.category_id !== selectedCat.id) || inserted.brand_id !== (selectedBrand?.id ?? null) || inserted.audience !== resolvedAudience) {
+          throw new Error('تم إنشاء المنتج لكن لم يكتمل تصنيفه. افتح المنتج وأعد اختيار القسم والماركة.');
+        }
         savedProductId = inserted.id;
       }
 
@@ -631,7 +688,10 @@ const AdminProductFormPage = () => {
                   setSelectedCategoryId(category?.id || null);
                   setFormData((current) => ({
                     ...current,
-                    category: value,
+                    category: category?.slug || '',
+                    audience: getCategoryAudience(category),
+                    brand: '',
+                    brand_id: '',
                   }));
                 }}
               >
@@ -655,7 +715,13 @@ const AdminProductFormPage = () => {
                 onValueChange={(value) => {
                   const category = subCategoriesForSelectedParent.find((item) => item.id === value) || null;
                   setSelectedCategoryId(category?.id || null);
-                  setFormData((current) => ({ ...current, category: category?.slug || '' }));
+                  setFormData((current) => ({
+                    ...current,
+                    category: category?.slug || '',
+                    audience: getCategoryAudience(category),
+                    brand: '',
+                    brand_id: '',
+                  }));
                 }}
                 disabled={subCategoriesForSelectedParent.length === 0}
               >
@@ -677,18 +743,29 @@ const AdminProductFormPage = () => {
 
             <div>
               <label className="block text-[10px] font-medium text-[#6E7680] mb-[6px]">الماركة (اختياري)</label>
-              <Input
-                value={formData.brand}
-                onChange={(e) => setFormData((prev) => ({ ...prev, brand: e.target.value }))}
-                placeholder="اكتب اسم الماركة أو اختر من الاقتراحات"
-                list="registered-brands"
-                className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[10px] shadow-none focus-visible:border-[#D4D9E0] focus-visible:bg-white focus-visible:ring-0"
-              />
-              <datalist id="registered-brands">
-                {filteredBrands.map((brand: any) => <option key={brand.id} value={brand.name.trim()} />)}
-              </datalist>
+              <Select
+                value={formData.brand_id || 'none'}
+                onValueChange={(value) => {
+                  const brand = (brands as any[]).find((item: any) => item.id === value) || null;
+                  setFormData((current) => ({
+                    ...current,
+                    brand: brand?.name?.trim() || '',
+                    brand_id: brand?.id || '',
+                  }));
+                }}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="اختر ماركة مسجلة" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="none">بدون ماركة</SelectItem>
+                  {filteredBrands.map((brand: any) => (
+                    <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <p className="text-[8px] text-[#969DA7] mt-[4px]">
-                يمكنك كتابة ماركة حرة؛ تُربط بصفحة ماركة فقط عند مطابقة اسم ماركة مسجلة.
+                تظهر هنا الماركات المسجلة والمتوافقة مع القسم المختار فقط.
               </p>
             </div>
           </div>

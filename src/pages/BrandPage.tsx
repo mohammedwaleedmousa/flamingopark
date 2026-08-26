@@ -41,6 +41,7 @@ interface BrandRow {
 
 interface SectionProductRow {
   section_id: string;
+  products: { id: string } | null;
 }
 
 const BrandPage = () => {
@@ -85,8 +86,10 @@ const BrandPage = () => {
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("brand_section_products")
-        .select("section_id")
-        .in("section_id", sections.map((section) => section.id));
+        .select("section_id,products!inner(id)")
+        .in("section_id", sections.map((section) => section.id))
+        .eq("products.is_active", true)
+        .eq("products.brand_id", brand!.id);
 
       if (error) throw error;
       return (data || []) as SectionProductRow[];
@@ -98,7 +101,7 @@ const BrandPage = () => {
   const sectionsWithCount = useMemo(() => {
     const counts = new Map<string, number>();
 
-    sectionProducts.forEach((relation) => {
+    sectionProducts.filter((relation) => relation.products).forEach((relation) => {
       counts.set(relation.section_id, (counts.get(relation.section_id) || 0) + 1);
     });
 

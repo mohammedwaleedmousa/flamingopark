@@ -61,7 +61,7 @@ const HeroSlider = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [loadedSlides, setLoadedSlides] = useState<Set<number>>(() => new Set([0]));
 
-  const { data: managedSlides = [] } = useQuery({
+  const { data: managedSlides = [], isLoading } = useQuery({
     queryKey: ["home-hero-banners"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
@@ -98,7 +98,7 @@ const HeroSlider = () => {
     <section dir="rtl" className="w-full bg-background px-3 pt-3 md:px-6 md:pt-5">
       <div className="mx-auto w-full max-w-[1400px]">
         <div className="relative overflow-hidden rounded-[18px] border border-border/60 bg-muted/30 md:rounded-[22px]">
-          <Swiper modules={[Autoplay]} onSwiper={(swiper) => { swiperRef.current = swiper; }} onSlideChange={(swiper) => { setActiveIndex(swiper.realIndex); setLoadedSlides((current) => new Set(current).add(swiper.realIndex)); }} autoplay={{ delay: 5200, disableOnInteraction: false, pauseOnMouseEnter: true, waitForTransition: true }} speed={550} loop={slides.length > 1} loopPreventsSliding grabCursor touchRatio={1} resistance resistanceRatio={0.85} className="w-full">
+          <Swiper modules={[Autoplay]} onSwiper={(swiper) => { swiperRef.current = swiper; }} onSlideChange={(swiper) => { setActiveIndex(swiper.realIndex); setLoadedSlides((current) => new Set(current).add(swiper.realIndex)); }} autoplay={{ delay: 5200, disableOnInteraction: false, pauseOnMouseEnter: true, waitForTransition: true }} speed={550} loop={slides.length > 1} loopPreventsSliding grabCursor touchRatio={1} resistance resistanceRatio={0.85} className={`w-full ${isLoading ? "invisible" : ""}`}>
             {slides.map((slide, index) => (
               <SwiperSlide key={`${slide.image}-${index}`}>
                 <div className="relative h-[230px] w-full overflow-hidden bg-muted/30 sm:h-[285px] md:h-[390px] lg:h-[450px]">
@@ -152,7 +152,7 @@ const HeroSlider = () => {
             ))}
           </Swiper>
 
-          {slides.length > 1 && (
+          {!isLoading && slides.length > 1 && (
             <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 md:bottom-4">
               {slides.map((_, index) => (
                 <button key={index} type="button" aria-label={`الانتقال إلى العرض ${index + 1}`} onClick={() => swiperRef.current?.slideToLoop(index)} className={`h-[3px] rounded-full transition-all duration-300 ${activeIndex === index ? "w-7 bg-[#B86168]" : "w-2.5 bg-white/65"}`} />

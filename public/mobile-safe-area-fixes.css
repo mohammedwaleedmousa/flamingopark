@@ -62,8 +62,24 @@
   }
 }
 
-/* Product detail hero: preserve the whole product instead of cropping its top or bottom. */
-img.select-none.object-cover.object-bottom[draggable="false"] {
+/* Product detail hero: keep the entire source image visible inside the zoom wrapper. */
+.react-transform-wrapper,
+.react-transform-component {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.react-transform-component {
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+}
+
+.react-transform-component > img {
+  width: 100% !important;
+  height: 100% !important;
+  max-width: 100% !important;
+  max-height: 100% !important;
   object-fit: contain !important;
   object-position: center center !important;
 }

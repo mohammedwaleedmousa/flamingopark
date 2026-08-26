@@ -417,7 +417,7 @@ const AdminProductFormPage = () => {
       || categories.find((c) => c.slug === resolvedCategory)
       || null;
     const selectedBrand = (brands as any[]).find((brand: any) => brand.id === formData.brand_id) || null;
-    const brandName = selectedBrand?.name?.trim() || '';
+    const brandName = selectedBrand?.name?.trim() || formData.brand.trim();
     const inferredAudience = getCategoryAudience(selectedCat);
     const resolvedAudience = formData.audience || inferredAudience || null;
 
@@ -746,29 +746,37 @@ const AdminProductFormPage = () => {
 
             <div>
               <label className="block text-[10px] font-medium text-[#6E7680] mb-[6px]">الماركة (اختياري)</label>
-              <Select
-                value={formData.brand_id || 'none'}
-                onValueChange={(value) => {
-                  const brand = (brands as any[]).find((item: any) => item.id === value) || null;
+              <Input
+                value={formData.brand}
+                onChange={(e) => {
+                  const value = e.target.value;
+                  const normalized = value.trim().toLowerCase();
+                  const registeredBrand = (brands as any[]).find((item: any) => item.name?.trim().toLowerCase() === normalized) || null;
                   setFormData((current) => ({
                     ...current,
-                    brand: brand?.name?.trim() || '',
-                    brand_id: brand?.id || '',
+                    brand: value,
+                    brand_id: registeredBrand?.id || '',
                   }));
                 }}
-              >
-                <SelectTrigger>
-                  <SelectValue placeholder="اختر ماركة مسجلة" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="none">بدون ماركة</SelectItem>
-                  {filteredBrands.map((brand: any) => (
-                    <SelectItem key={brand.id} value={brand.id}>{brand.name}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                onClick={(e) => {
+                  try {
+                    e.currentTarget.showPicker?.();
+                  } catch {
+                    // The datalist still works in browsers without showPicker support.
+                  }
+                }}
+                list="registered-product-brands"
+                autoComplete="off"
+                placeholder="اختر من الماركات أو اكتب ماركة جديدة"
+                className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[10px] shadow-none focus-visible:border-[#D4D9E0] focus-visible:bg-white focus-visible:ring-0"
+              />
+              <datalist id="registered-product-brands">
+                {(brands as any[]).map((brand: any) => (
+                  <option key={brand.id} value={brand.name} />
+                ))}
+              </datalist>
               <p className="text-[8px] text-[#969DA7] mt-[4px]">
-                تظهر هنا جميع الماركات المسجلة والنشطة.
+                اختر ماركة مسجلة من القائمة، أو اكتب اسم ماركة جديدة إذا لم تكن موجودة.
               </p>
             </div>
           </div>

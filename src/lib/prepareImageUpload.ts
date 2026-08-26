@@ -26,11 +26,11 @@ const DIRECT_UPLOAD_MIMES = new Set([
   "image/avif",
 ]);
 
-const FAST_DIRECT_UPLOAD_BYTES = 650 * 1024;
-const TARGET_UPLOAD_BYTES = 520 * 1024;
-const DEFAULT_MAX_DIMENSION = 2000;
-const PRIMARY_WEBP_QUALITY = 0.88;
-const SECONDARY_WEBP_QUALITY = 0.82;
+const FAST_DIRECT_UPLOAD_BYTES = 900 * 1024;
+const TARGET_UPLOAD_BYTES = 1.25 * 1024 * 1024;
+const DEFAULT_MAX_DIMENSION = 2800;
+const PRIMARY_WEBP_QUALITY = 0.93;
+const SECONDARY_WEBP_QUALITY = 0.89;
 
 function createUploadId(): string {
   const cryptoApi = globalThis.crypto;

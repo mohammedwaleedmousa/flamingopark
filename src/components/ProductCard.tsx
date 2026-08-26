@@ -8,7 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { useCurrency } from "@/lib/currency";
 import { useFavorites } from "@/hooks/useFavorites";
 import { saveCatalogScroll } from "@/lib/catalogScroll";
-import { optimizeImage } from "@/lib/imageUrl";
+import { createImageSrcSet, optimizeImage } from "@/lib/imageUrl";
 import { prefetchProductDetailPage } from "@/lib/prefetchRoutes";
 
 type ColorVariant = {
@@ -72,9 +72,11 @@ const ProductCard = ({ product, index = 2, badge, onQuickView }: ProductCardProp
   const firstColorName = primaryColor?.name;
   const mainImage = imageCandidates[imageIndex];
 
-  // Keep the exact same image transformation quality. The speed gain comes from
-  // loading fewer off-screen images, not from compressing them harder.
-  const optimizedMainImage = useMemo(() => (mainImage ? optimizeImage(mainImage, 520, 76) : ""), [mainImage]);
+  const optimizedMainImage = useMemo(() => (mainImage ? optimizeImage(mainImage, 640, 82) : ""), [mainImage]);
+  const optimizedMainImageSrcSet = useMemo(
+    () => createImageSrcSet(mainImage, [240, 360, 520, 640], 82),
+    [mainImage],
+  );
 
   useEffect(() => {
     setImageIndex(0);
@@ -161,7 +163,7 @@ const ProductCard = ({ product, index = 2, badge, onQuickView }: ProductCardProp
           {!allImagesFailed && optimizedMainImage ? (
             <>
               {!imageLoaded && <div className="absolute inset-0 z-[2] animate-pulse bg-[#ECEAE8]" />}
-              <img key={`${product.id}-${imageIndex}-${mainImage}`} src={optimizedMainImage} alt={product.nameAr || product.name || "منتج فلامنجو"} loading={index < 2 ? "eager" : "lazy"} decoding="async" fetchPriority={index === 0 ? "high" : "auto"} onLoad={handleMainImageLoad} onError={handleMainImageError} width={520} height={650} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className={`absolute inset-0 h-full w-full select-none transition-opacity duration-150 ${imageLoaded ? "opacity-100" : "opacity-0"} ${imageFit === "cover" ? "object-cover object-center" : "scale-[1.035] object-contain object-center"}`} />
+              <img key={`${product.id}-${imageIndex}-${mainImage}`} src={optimizedMainImage} srcSet={optimizedMainImageSrcSet} alt={product.nameAr || product.name || "منتج فلامنجو"} loading={index < 2 ? "eager" : "lazy"} decoding="async" fetchPriority={index === 0 ? "high" : "auto"} onLoad={handleMainImageLoad} onError={handleMainImageError} width={640} height={800} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className={`absolute inset-0 h-full w-full select-none transition-opacity duration-150 ${imageLoaded ? "opacity-100" : "opacity-0"} ${imageFit === "cover" ? "object-cover object-center" : "scale-[1.035] object-contain object-center"}`} />
             </>
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#F1F0EE]">

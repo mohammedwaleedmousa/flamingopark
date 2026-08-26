@@ -228,7 +228,7 @@ const ProductDetailPage = () => {
       if (!firstImage) return;
 
       const image = new Image();
-      image.src = optimizeImage(firstImage, 900, 76);
+      image.src = optimizeImage(firstImage, 900, 84);
     });
   }, [product]);
 

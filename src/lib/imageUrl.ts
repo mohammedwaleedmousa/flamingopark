@@ -50,6 +50,20 @@ export const optimizeImage = (url?: string | null, width = 800, quality = 82): s
   }
 };
 
+export const createImageSrcSet = (
+  url: string | null | undefined,
+  widths: number[],
+  quality = 82,
+): string | undefined => {
+  if (!url?.trim()) return undefined;
+
+  const candidates = Array.from(new Set(widths.filter((width) => Number.isFinite(width) && width > 0)))
+    .sort((a, b) => a - b);
+
+  if (candidates.length === 0) return undefined;
+  return candidates.map((width) => `${optimizeImage(url, width, quality)} ${width}w`).join(", ");
+};
+
 export const handleImageError = (event: { currentTarget: HTMLImageElement }) => {
   const image = event.currentTarget;
 

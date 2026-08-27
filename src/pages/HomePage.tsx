@@ -45,7 +45,7 @@ const CategoryCarousel = ({ items, loading = false }: { items: FeaturedCategoryI
         </div>
 
         <div className="-mx-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden md:-mx-6 md:px-6">
-          <div className="flex w-max gap-2.5">
+          <div className="flex w-max gap-2.5 after:block after:w-3 after:shrink-0 after:content-[''] md:after:w-6">
             {loading
               ? Array.from({ length: 6 }).map((_, index) => (
                   <div key={index} className="block w-[78px] shrink-0 sm:w-[90px] md:w-[102px]" aria-hidden="true">

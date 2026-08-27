@@ -71,11 +71,16 @@ interface Order {
 }
 
 type TabMode = "review" | "accepted" | "rejected" | "all" | "files";
-type OrderStatusFilter = "all" | "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "completed" | "cancelled";
+type OrderStatusFilter = "all" | "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
 type InvoicePresenceFilter = "all" | "with_invoice" | "without_invoice";
 
 const INVOICE_PAGE_SIZE = 1000;
 const MAX_INVOICE_PAGES = 20;
+
+const normalizeOrderStatus = (status?: string | null) => {
+  const value = String(status || "pending").trim().toLowerCase();
+  return value === "completed" ? "delivered" : value;
+};
 
 const AdminInvoicesPage = () => {
   const queryClient = useQueryClient();
@@ -95,6 +100,13 @@ const AdminInvoicesPage = () => {
   const [rejectTargetIds, setRejectTargetIds] = useState<string[]>([]);
   const [rejectNote, setRejectNote] = useState("");
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+
+  const switchTab = (tab: TabMode) => {
+    setActiveTab(tab);
+    setSelectedIds([]);
+    setOrderStatusFilter("all");
+    setInvoicePresenceFilter("all");
+  };
 
   /* =========================================================
      ORDERS
@@ -202,7 +214,7 @@ const AdminInvoicesPage = () => {
       const searchable = `${order.order_number} ${order.customer_name} ${order.customer_phone}`.toLowerCase();
       const matchesSearch = !query || searchable.includes(query);
       const matchesDate = !dateFilter || toDateKey(new Date(order.created_at)) === dateFilter;
-      const matchesStatus = orderStatusFilter === "all" || order.status === orderStatusFilter;
+      const matchesStatus = orderStatusFilter === "all" || normalizeOrderStatus(order.status) === orderStatusFilter;
       const invoiceExists = hasInvoice(order);
       const matchesInvoice = invoicePresenceFilter === "all" || (invoicePresenceFilter === "with_invoice" && invoiceExists) || (invoicePresenceFilter === "without_invoice" && !invoiceExists);
 
@@ -263,13 +275,13 @@ const AdminInvoicesPage = () => {
       await queryClient.invalidateQueries({ queryKey: ["admin-invoice-orders"] });
 
       if (variables.status === "accepted") {
-        setActiveTab("accepted");
+        switchTab("accepted");
         toast({ title: variables.ids.length > 1 ? "تم قبول الفواتير" : "تم قبول الفاتورة", description: "تم نقلها إلى قسم الفواتير المقبولة." });
       } else if (variables.status === "rejected") {
-        setActiveTab("rejected");
+        switchTab("rejected");
         toast({ title: variables.ids.length > 1 ? "تم رفض الفواتير" : "تم رفض الفاتورة", description: "تم نقلها إلى قسم الفواتير المرفوضة." });
       } else if (variables.status === "pending") {
-        setActiveTab("review");
+        switchTab("review");
         toast({ title: "تمت إعادة الفاتورة للمراجعة" });
       }
     },
@@ -435,7 +447,7 @@ const AdminInvoicesPage = () => {
     await handleDataUpdated();
 
     setShowNewInvoice(false);
-    setActiveTab("all");
+    switchTab("all");
 
     if (!createdOrder?.id) return;
 
@@ -538,7 +550,6 @@ const AdminInvoicesPage = () => {
               <SelectItem value="processing">قيد التجهيز</SelectItem>
               <SelectItem value="shipped">تم الشحن</SelectItem>
               <SelectItem value="delivered">تم التوصيل</SelectItem>
-              <SelectItem value="completed">مكتمل</SelectItem>
               <SelectItem value="cancelled">ملغي</SelectItem>
             </SelectContent>
           </Select>
@@ -558,11 +569,11 @@ const AdminInvoicesPage = () => {
 
       <section className="overflow-hidden rounded-[14px] border border-[#E5E9EF] bg-white">
         <div className="grid grid-cols-2 gap-[4px] border-b border-[#E5E9EF] bg-[#FAFBFC] p-[5px] sm:grid-cols-5">
-          <InvoiceTabButton active={activeTab === "review"} onClick={() => { setActiveTab("review"); setSelectedIds([]); }} icon={FileClock} label="بانتظار المراجعة" count={stats.reviewPending} tone="amber" />
-          <InvoiceTabButton active={activeTab === "accepted"} onClick={() => { setActiveTab("accepted"); setSelectedIds([]); }} icon={CheckCircle2} label="المقبولة" count={stats.accepted} tone="green" />
-          <InvoiceTabButton active={activeTab === "rejected"} onClick={() => { setActiveTab("rejected"); setSelectedIds([]); }} icon={CircleOff} label="المرفوضة" count={stats.rejected} tone="coral" />
-          <InvoiceTabButton active={activeTab === "all"} onClick={() => { setActiveTab("all"); setSelectedIds([]); }} icon={ReceiptText} label="كل الطلبات" count={stats.totalOrders} tone="indigo" />
-          <InvoiceTabButton active={activeTab === "files"} onClick={() => { setActiveTab("files"); setSelectedIds([]); }} icon={FileText} label="أرشيف PDF" count={stats.files} tone="blue" />
+          <InvoiceTabButton active={activeTab === "review"} onClick={() => switchTab("review")} icon={FileClock} label="بانتظار المراجعة" count={stats.reviewPending} tone="amber" />
+          <InvoiceTabButton active={activeTab === "accepted"} onClick={() => switchTab("accepted")} icon={CheckCircle2} label="المقبولة" count={stats.accepted} tone="green" />
+          <InvoiceTabButton active={activeTab === "rejected"} onClick={() => switchTab("rejected")} icon={CircleOff} label="المرفوضة" count={stats.rejected} tone="coral" />
+          <InvoiceTabButton active={activeTab === "all"} onClick={() => switchTab("all")} icon={ReceiptText} label="كل الطلبات" count={stats.totalOrders} tone="indigo" />
+          <InvoiceTabButton active={activeTab === "files"} onClick={() => switchTab("files")} icon={FileText} label="أرشيف PDF" count={stats.files} tone="blue" />
         </div>
 
         {activeTab !== "files" && selectedIds.length > 0 && (
@@ -893,7 +904,7 @@ const paymentLabel = (method: string) => {
 };
 
 const OrderStatus = ({ status }: { status: string }) => {
-  const value = String(status || "pending").toLowerCase();
+  const value = normalizeOrderStatus(status);
 
   const config: Record<string, { label: string; className: string }> = {
     pending: { label: "قيد الانتظار", className: "border-[#EEDFC4] bg-[#FFF7E8] text-[#A9782F]" },
@@ -901,7 +912,6 @@ const OrderStatus = ({ status }: { status: string }) => {
     processing: { label: "قيد التجهيز", className: "border-[#E2DEF3] bg-[#F6F4FF] text-[#675CBA]" },
     shipped: { label: "تم الشحن", className: "border-[#D7E5EE] bg-[#F1F7FA] text-[#4F7C96]" },
     delivered: { label: "تم التوصيل", className: "border-[#D8E8DD] bg-[#EFF8F2] text-[#568468]" },
-    completed: { label: "مكتمل", className: "border-[#D8E8DD] bg-[#EFF8F2] text-[#568468]" },
     cancelled: { label: "ملغي", className: "border-[#F0D7D4] bg-[#FFF3F1] text-[#C15F56]" },
   };
 

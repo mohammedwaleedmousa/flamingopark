@@ -31,6 +31,23 @@
       }
     </style>
 
+    <style id="products-page-rtl-heading">
+      main:has(#products-grid) > section:first-of-type > div:first-child {
+        direction: rtl;
+        text-align: right !important;
+      }
+
+      main:has(#products-grid) > section:first-of-type > div:first-child > div:first-child {
+        justify-content: flex-start !important;
+      }
+
+      main:has(#products-grid) > section:first-of-type > div:first-child > p {
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        text-align: right !important;
+      }
+    </style>
+
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://flamingoparkaden.com/" />
     <meta property="og:image" content="https://flamingoparkaden.com/icons/flamingo.jpeg" />

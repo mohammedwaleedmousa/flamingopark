@@ -540,7 +540,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
           <div className="shrink-0 border-t border-[#E5E9EF] bg-white px-5 py-3">
             <div className="flex flex-col-reverse gap-[7px] sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-[6px] text-[9px] text-[#9AA2AC]">
-                <WalletCards className="h-[11px] w-[11px] />
+                <WalletCards className="h-[11px] w-[11px]" />
                 سعر الصرف المستخدم: 1 ر.س = {currencyRate.toLocaleString("en-US")} {currencySymbol}
               </div>
 

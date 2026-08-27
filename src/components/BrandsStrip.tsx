@@ -71,7 +71,7 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
         </div>
 
         <div className="-mx-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden md:-mx-6 md:px-6">
-          <div className="flex w-max gap-2.5">
+          <div className="flex w-max gap-2.5 after:block after:w-3 after:shrink-0 after:content-[''] md:after:w-6">
             {renderBrands.map((brand) => (
               <Link key={brand.id} to={`/brands/${brand.slug}`} aria-label={`عرض منتجات ${brand.name}`} className="group block w-[78px] shrink-0 select-none [-webkit-tap-highlight-color:transparent] sm:w-[90px] md:w-[102px]">
                 <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-[15px] border border-border/60 bg-white px-2.5 md:rounded-[18px] md:px-3">

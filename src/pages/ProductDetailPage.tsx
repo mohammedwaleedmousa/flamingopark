@@ -717,7 +717,6 @@ const ProductDetailPage = () => {
       desc: "جودة مضمونة",
     },
   ];
-
   const features = product.features?.length ? product.features.slice(0, 3) : defaultFeatures;
 
   const getFeatureIcon = (icon: string) => {
@@ -813,7 +812,7 @@ const ProductDetailPage = () => {
 
                 <div className="relative h-[56svh] min-h-[410px] max-h-[520px] w-full overflow-hidden bg-[#F4F2F0] sm:h-[60svh] sm:min-h-[450px] sm:max-h-[600px] md:h-auto md:min-h-0 md:max-h-none md:aspect-[4/5]">
   {/* MAIN PRODUCT */}
-  <motion.div key={`${activeColorVariant?.name || "default"}-${selectedQualityIdx ?? "default"}-${safeSelectedImage}`} initial={{ opacity: 0.65 }} animate={{ opacity: 1 }} transition={{ duration: 0.14 }} drag={displayImages.length > 1 ? "x" : false} dragConstraints={{ left: 0, right: 0 }} dragElastic={0.1} dragMomentum={false} onDragEnd={(_, info) => { if (displayImages.length <= 1) return; if (info.offset.x < -55 || info.velocity.x < -450) { nextImage(); return; } if (info.offset.x > 55 || info.velocity.x > 450) { prevImage(); } }} style={{ touchAction: "pan-y" }} className="h-full w-full cursor-grab active:cursor-grabbing">
+  <motion.div key={`${activeColorVariant?.name || "default"}-${selectedQualityIdx ?? "default"}-${safeSelectedImage}`} initial={{ opacity: 0.65 }} animate={{ opacity: 1 }} transition={{ duration: 0.14 }} drag={displayImages.length > 1 ? "x" : false} dragConstraints={{ left: 0, right: 0 }} dragElastic={0.1} dragMomentum={false} onDragEnd={(_, info) => { if (displayImages.length <= 1) return; if (info.offset.x < -55 || info.velocity.x < -450) { prevImage(); return; } if (info.offset.x > 55 || info.velocity.x > 450) { nextImage(); } }} style={{ touchAction: "pan-y" }} className="h-full w-full cursor-grab active:cursor-grabbing">
     <TransformWrapper minScale={1} maxScale={4} centerOnInit centerZoomedOut limitToBounds panning={{ disabled: true }} wheel={{ disabled: true }} doubleClick={{ disabled: true }}>
       <TransformComponent wrapperClass="!h-full !w-full !overflow-hidden" contentClass="!h-full !w-full">
         <img src={optimizeImage(currentImage, 1400, 84)} alt={product.nameAr || product.name} fetchPriority="high" decoding="async" onError={handleImageError} draggable={false} className="h-full w-full select-none object-cover object-bottom" />

@@ -46,9 +46,10 @@ const findLoadMoreButton = () => {
   if (!grid) return null;
 
   return (
-    Array.from(grid.querySelectorAll<HTMLButtonElement>("button")).find((button) =>
-      button.textContent?.includes("عرض المزيد"),
-    ) || null
+    Array.from(grid.querySelectorAll<HTMLButtonElement>("button")).find((button) => {
+      const text = button.textContent || "";
+      return text.includes("عرض المزيد") || text.includes("جاري التحميل");
+    }) || null
   );
 };
 
@@ -104,7 +105,7 @@ export const restoreCatalogScroll = (path: string) => {
     if (loadMoreButton) {
       missingLoadMoreAttempts = 0;
 
-      if (!loadMoreButton.disabled) {
+      if (!loadMoreButton.disabled && loadMoreButton.textContent?.includes("عرض المزيد")) {
         loadMoreButton.click();
       }
     } else {
@@ -112,7 +113,7 @@ export const restoreCatalogScroll = (path: string) => {
     }
 
     // Avoid an endless loop if the catalog changed or there is nothing else to load.
-    if (attempts >= 120 || missingLoadMoreAttempts >= 8) {
+    if (attempts >= 180 || missingLoadMoreAttempts >= 12) {
       finishRestore();
       return;
     }

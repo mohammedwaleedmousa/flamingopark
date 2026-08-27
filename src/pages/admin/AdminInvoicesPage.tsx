@@ -41,7 +41,7 @@ interface OrderItem {
   selected_accessories?: SelectedAccessory[];
 }
 
-type InvoiceReviewStatus = "unreviewed" | "pending" | "accepted" | "rejected";
+type InvoiceReviewStatus = "unreviewed" | "pending" | "accepted" | "rejected" | "returned";
 
 interface Order {
   id: string;
@@ -70,7 +70,7 @@ interface Order {
   delivery_companies?: { name: string } | null;
 }
 
-type TabMode = "review" | "accepted" | "rejected" | "all" | "files";
+type TabMode = "review" | "accepted" | "rejected" | "returned" | "all" | "files";
 type OrderStatusFilter = "all" | "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled";
 type InvoicePresenceFilter = "all" | "with_invoice" | "without_invoice";
 
@@ -100,6 +100,9 @@ const AdminInvoicesPage = () => {
   const [rejectTargetIds, setRejectTargetIds] = useState<string[]>([]);
   const [rejectNote, setRejectNote] = useState("");
   const [rejectDialogOpen, setRejectDialogOpen] = useState(false);
+  const [returnTargetIds, setReturnTargetIds] = useState<string[]>([]);
+  const [returnNote, setReturnNote] = useState("");
+  const [returnDialogOpen, setReturnDialogOpen] = useState(false);
 
   const switchTab = (tab: TabMode) => {
     setActiveTab(tab);
@@ -174,7 +177,7 @@ const AdminInvoicesPage = () => {
   const hasInvoice = (order: Order) => Boolean(order.invoice_url) || invoiceOrderNumberSet.has(order.order_number);
 
   const effectiveReviewStatus = (order: Order): InvoiceReviewStatus => {
-    if (order.invoice_review_status === "accepted" || order.invoice_review_status === "rejected" || order.invoice_review_status === "pending") return order.invoice_review_status;
+    if (order.invoice_review_status === "accepted" || order.invoice_review_status === "rejected" || order.invoice_review_status === "returned" || order.invoice_review_status === "pending") return order.invoice_review_status;
     return "pending";
   };
 
@@ -187,6 +190,7 @@ const AdminInvoicesPage = () => {
     const reviewPending = orders.filter((order) => effectiveReviewStatus(order) === "pending").length;
     const accepted = withInvoice.filter((order) => effectiveReviewStatus(order) === "accepted").length;
     const rejected = withInvoice.filter((order) => effectiveReviewStatus(order) === "rejected").length;
+    const returned = withInvoice.filter((order) => effectiveReviewStatus(order) === "returned").length;
     const withoutInvoice = orders.filter((order) => !hasInvoice(order)).length;
     const today = toDateKey(new Date());
     const generatedToday = invoices.filter((invoice) => toDateKey(new Date(invoice.created_at)) === today).length;
@@ -197,6 +201,7 @@ const AdminInvoicesPage = () => {
       reviewPending,
       accepted,
       rejected,
+      returned,
       withoutInvoice,
       files: invoices.length,
       generatedToday,
@@ -226,6 +231,7 @@ const AdminInvoicesPage = () => {
     if (activeTab === "review") return baseFilteredOrders.filter((order) => effectiveReviewStatus(order) === "pending");
     if (activeTab === "accepted") return baseFilteredOrders.filter((order) => hasInvoice(order) && effectiveReviewStatus(order) === "accepted");
     if (activeTab === "rejected") return baseFilteredOrders.filter((order) => hasInvoice(order) && effectiveReviewStatus(order) === "rejected");
+    if (activeTab === "returned") return baseFilteredOrders.filter((order) => hasInvoice(order) && effectiveReviewStatus(order) === "returned");
     return baseFilteredOrders;
   }, [baseFilteredOrders, activeTab, invoiceOrderNumberSet]);
 
@@ -252,7 +258,7 @@ const AdminInvoicesPage = () => {
       if (ids.length === 0) return;
 
       const currentUser = await supabase.auth.getUser();
-      const reviewed = status === "accepted" || status === "rejected";
+      const reviewed = status === "accepted" || status === "rejected" || status === "returned";
 
       const payload = {
         invoice_review_status: status,
@@ -271,6 +277,9 @@ const AdminInvoicesPage = () => {
       setRejectTargetIds([]);
       setRejectNote("");
       setRejectDialogOpen(false);
+      setReturnTargetIds([]);
+      setReturnNote("");
+      setReturnDialogOpen(false);
 
       await queryClient.invalidateQueries({ queryKey: ["admin-invoice-orders"] });
 
@@ -280,6 +289,9 @@ const AdminInvoicesPage = () => {
       } else if (variables.status === "rejected") {
         switchTab("rejected");
         toast({ title: variables.ids.length > 1 ? "تم رفض الفواتير" : "تم رفض الفاتورة", description: "تم نقلها إلى قسم الفواتير المرفوضة." });
+      } else if (variables.status === "returned") {
+        switchTab("returned");
+        toast({ title: variables.ids.length > 1 ? "تم تسجيل الفواتير كمرتجعة" : "تم تسجيل الفاتورة كمرتجعة", description: "تم نقلها إلى قسم الفواتير المرتجعة." });
       } else if (variables.status === "pending") {
         switchTab("review");
         toast({ title: "تمت إعادة الفاتورة للمراجعة" });
@@ -319,6 +331,22 @@ const AdminInvoicesPage = () => {
     setRejectTargetIds(validIds);
     setRejectNote("");
     setRejectDialogOpen(true);
+  };
+
+  const openReturnDialog = (ids: string[]) => {
+    const validIds = ids.filter((id) => {
+      const order = orders.find((row) => row.id === id);
+      return order && hasInvoice(order);
+    });
+
+    if (validIds.length === 0) {
+      toast({ title: "لا توجد فاتورة محفوظة", description: "أنشئ PDF للفاتورة أولًا قبل تسجيلها كمرتجعة.", variant: "destructive" });
+      return;
+    }
+
+    setReturnTargetIds(validIds);
+    setReturnNote("");
+    setReturnDialogOpen(true);
   };
 
   /* =========================================================
@@ -491,12 +519,13 @@ const AdminInvoicesPage = () => {
 
   return (
     <div className="w-full space-y-4" dir="rtl">
-      <AdminPageHeader category="المالية" title="مركز إدارة الفواتير" description="إنشاء ومراجعة واعتماد ورفض وأرشفة فواتير الطلبات من مكان واحد" actions={[{ label: "فاتورة جديدة", icon: Plus, onClick: () => setShowNewInvoice(true), variant: "primary" }]} />
+      <AdminPageHeader category="المالية" title="مركز إدارة الفواتير" description="إنشاء ومراجعة واعتماد ورفض وإرجاع وأرشفة فواتير الطلبات من مكان واحد" actions={[{ label: "فاتورة جديدة", icon: Plus, onClick: () => setShowNewInvoice(true), variant: "primary" }]} />
 
-      <section className="grid grid-cols-2 gap-[9px] xl:grid-cols-5">
+      <section className="grid grid-cols-2 gap-[9px] xl:grid-cols-6">
         <InvoiceStatCard title="بانتظار المراجعة" value={stats.reviewPending.toLocaleString("en-US")} helper="فواتير تحتاج قبول أو رفض" icon={FileClock} tone="amber" />
         <InvoiceStatCard title="الفواتير المقبولة" value={stats.accepted.toLocaleString("en-US")} helper="اعتمدت وأصبحت نهائية" icon={FileCheck2} tone="green" />
         <InvoiceStatCard title="الفواتير المرفوضة" value={stats.rejected.toLocaleString("en-US")} helper="تحتاج تعديلًا أو إعادة مراجعة" icon={CircleOff} tone="coral" />
+        <InvoiceStatCard title="الفواتير المرتجعة" value={stats.returned.toLocaleString("en-US")} helper="تم تسجيلها كمرتجعة" icon={RotateCcw} tone="indigo" />
         <InvoiceStatCard title="طلبات بدون فاتورة" value={stats.withoutInvoice.toLocaleString("en-US")} helper="لم يتم إنشاء PDF لها بعد" icon={ReceiptText} tone="indigo" />
         <InvoiceStatCard title="أرشيف PDF" value={stats.files.toLocaleString("en-US")} helper={`${stats.generatedToday} ملف أُنشئ اليوم`} icon={FileText} tone="blue" />
       </section>
@@ -507,7 +536,7 @@ const AdminInvoicesPage = () => {
             <ShieldCheck className="mt-[1px] h-[13px] w-[13px] shrink-0 text-[#B17C37]" />
             <div>
               <p className="text-[10px] font-semibold text-[#9A7139]">{stats.reviewPending.toLocaleString("ar-EG")} فاتورة بانتظار قرار المراجعة</p>
-              <p className="mt-[3px] text-[9px] leading-5 text-[#8A7659]">راجع البيانات والمنتجات والمبالغ، ثم اضغط قبول لنقل الفاتورة إلى المقبولة أو رفض مع كتابة الملاحظة.</p>
+              <p className="mt-[3px] text-[9px] leading-5 text-[#8A7659]">راجع البيانات والمنتجات والمبالغ، ثم اختر قبول أو رفض أو تسجيل الفاتورة كمرتجعة.</p>
             </div>
           </div>
         </section>
@@ -568,10 +597,11 @@ const AdminInvoicesPage = () => {
       </section>
 
       <section className="overflow-hidden rounded-[14px] border border-[#E5E9EF] bg-white">
-        <div className="grid grid-cols-2 gap-[4px] border-b border-[#E5E9EF] bg-[#FAFBFC] p-[5px] sm:grid-cols-5">
+        <div className="grid grid-cols-2 gap-[4px] border-b border-[#E5E9EF] bg-[#FAFBFC] p-[5px] sm:grid-cols-6">
           <InvoiceTabButton active={activeTab === "review"} onClick={() => switchTab("review")} icon={FileClock} label="بانتظار المراجعة" count={stats.reviewPending} tone="amber" />
           <InvoiceTabButton active={activeTab === "accepted"} onClick={() => switchTab("accepted")} icon={CheckCircle2} label="المقبولة" count={stats.accepted} tone="green" />
           <InvoiceTabButton active={activeTab === "rejected"} onClick={() => switchTab("rejected")} icon={CircleOff} label="المرفوضة" count={stats.rejected} tone="coral" />
+          <InvoiceTabButton active={activeTab === "returned"} onClick={() => switchTab("returned")} icon={RotateCcw} label="المرتجعة" count={stats.returned} tone="indigo" />
           <InvoiceTabButton active={activeTab === "all"} onClick={() => switchTab("all")} icon={ReceiptText} label="كل الطلبات" count={stats.totalOrders} tone="indigo" />
           <InvoiceTabButton active={activeTab === "files"} onClick={() => switchTab("files")} icon={FileText} label="أرشيف PDF" count={stats.files} tone="blue" />
         </div>
@@ -581,8 +611,9 @@ const AdminInvoicesPage = () => {
             <p className="text-[10px] font-semibold text-[#59616B]">تم تحديد {selectedIds.length.toLocaleString("ar-EG")} فاتورة</p>
 
             <div className="flex flex-wrap gap-[6px]">
-              {activeTab !== "accepted" && <Button type="button" onClick={() => acceptInvoices(selectedIds)} disabled={updateReviewMutation.isPending} className="h-[34px] rounded-[8px] bg-[#5E8A69] px-3 text-[10px] font-semibold text-white shadow-none hover:bg-[#52785C]"><ThumbsUp className="ml-[5px] h-[11px] w-[11px]" />قبول المحدد</Button>}
-              {activeTab !== "rejected" && <Button type="button" variant="outline" onClick={() => openRejectDialog(selectedIds)} disabled={updateReviewMutation.isPending} className="h-[34px] rounded-[8px] border-[#F0D7D4] bg-white px-3 text-[10px] font-semibold text-[#B95C54] shadow-none"><ThumbsDown className="ml-[5px] h-[11px] w-[11px]" />رفض المحدد</Button>}
+              {activeTab !== "accepted" && activeTab !== "returned" && <Button type="button" onClick={() => acceptInvoices(selectedIds)} disabled={updateReviewMutation.isPending} className="h-[34px] rounded-[8px] bg-[#5E8A69] px-3 text-[10px] font-semibold text-white shadow-none hover:bg-[#52785C]"><ThumbsUp className="ml-[5px] h-[11px] w-[11px]" />قبول المحدد</Button>}
+              {activeTab !== "rejected" && activeTab !== "returned" && <Button type="button" variant="outline" onClick={() => openRejectDialog(selectedIds)} disabled={updateReviewMutation.isPending} className="h-[34px] rounded-[8px] border-[#F0D7D4] bg-white px-3 text-[10px] font-semibold text-[#B95C54] shadow-none"><ThumbsDown className="ml-[5px] h-[11px] w-[11px]" />رفض المحدد</Button>}
+              {activeTab !== "returned" && <Button type="button" variant="outline" onClick={() => openReturnDialog(selectedIds)} disabled={updateReviewMutation.isPending} className="h-[34px] rounded-[8px] border-[#E2DEF3] bg-white px-3 text-[10px] font-semibold text-[#675CBA] shadow-none"><RotateCcw className="ml-[5px] h-[11px] w-[11px]" />تسجيل كمرتجعة</Button>}
               <Button type="button" variant="outline" onClick={() => setSelectedIds([])} className="h-[34px] rounded-[8px] border-[#E3E7EC] bg-white px-3 text-[10px] font-semibold text-[#707883] shadow-none">إلغاء التحديد</Button>
             </div>
           </div>
@@ -604,6 +635,7 @@ const AdminInvoicesPage = () => {
             onOpenEditor={handleOpenInvoiceEditor}
             onAccept={(order) => acceptInvoices([order.id])}
             onReject={(order) => openRejectDialog([order.id])}
+            onReturn={(order) => openReturnDialog([order.id])}
             onReturnToReview={(order) => updateReviewMutation.mutate({ ids: [order.id], status: "pending" })}
             reviewBusy={updateReviewMutation.isPending}
           />
@@ -638,6 +670,34 @@ const AdminInvoicesPage = () => {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={returnDialogOpen} onOpenChange={(open) => { if (!open && !updateReviewMutation.isPending) setReturnDialogOpen(false); }}>
+        <DialogContent dir="rtl" className="max-w-[520px] rounded-[16px] border-[#E4E8ED] bg-[#F7F8FA] p-0">
+          <DialogHeader className="border-b border-[#E6E9EE] bg-white px-5 py-4">
+            <div className="flex items-center gap-[10px]">
+              <div className="flex h-[36px] w-[36px] items-center justify-center rounded-[11px] bg-[#F1EFFF] text-[#675CBA]"><RotateCcw className="h-[15px] w-[15px]" /></div>
+              <div>
+                <DialogTitle className="text-right text-[14px] font-semibold text-[#343B45]">تسجيل الفاتورة كمرتجعة</DialogTitle>
+                <DialogDescription className="mt-[3px] text-right text-[10px] text-[#9299A3]">اكتب سبب الإرجاع ليبقى محفوظًا مع الفاتورة ويمكن الرجوع إليه لاحقًا.</DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+
+          <div className="space-y-[10px] p-[12px]">
+            <div>
+              <p className="mb-[6px] text-[10px] font-semibold text-[#68717B]">سبب الإرجاع</p>
+              <Textarea value={returnNote} onChange={(event) => setReturnNote(event.target.value)} rows={5} placeholder="مثال: العميل أعاد الطلب، المنتج غير مناسب..." className="resize-none rounded-[9px] border-[#E2E6EB] bg-white text-[10px] leading-6 shadow-none focus-visible:ring-0" />
+            </div>
+
+            <div className="rounded-[9px] border border-[#E2DEF3] bg-[#F8F7FF] p-[9px] text-[9px] leading-5 text-[#675CBA]">سيتم نقل {returnTargetIds.length.toLocaleString("ar-EG")} فاتورة إلى قسم المرتجعة، مع الاحتفاظ بملاحظة سبب الإرجاع.</div>
+          </div>
+
+          <div className="flex items-center justify-end gap-[7px] border-t border-[#E5E9EF] bg-white px-5 py-3">
+            <Button type="button" variant="outline" disabled={updateReviewMutation.isPending} onClick={() => setReturnDialogOpen(false)} className="h-[36px] rounded-[9px] border-[#E1E5EA] px-4 text-[10px] font-semibold text-[#707883] shadow-none">إلغاء</Button>
+            <Button type="button" disabled={updateReviewMutation.isPending} onClick={() => updateReviewMutation.mutate({ ids: returnTargetIds, status: "returned", note: returnNote })} className="h-[36px] rounded-[9px] bg-[#675CBA] px-5 text-[10px] font-semibold text-white shadow-none hover:bg-[#5A50A5]">{updateReviewMutation.isPending && <Loader2 className="ml-[5px] h-[11px] w-[11px] animate-spin" />}تأكيد الإرجاع</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <AlertDialog open={Boolean(deleteTarget)} onOpenChange={(open) => { if (!open) setDeleteTarget(null); }}>
         <AlertDialogContent dir="rtl" className="max-w-[430px] rounded-[15px] border-[#E4E8ED] bg-white p-5">
           <AlertDialogHeader>
@@ -663,9 +723,9 @@ const AdminInvoicesPage = () => {
    ORDERS PANEL
 ========================================================= */
 
-const OrdersPanel = ({ orders, loading, fetching, invoiceOrderNumberSet, activeTab, selectedIds, allVisibleSelected, onToggleAll, onToggleSelected, onOpenEditor, onAccept, onReject, onReturnToReview, reviewBusy }: { orders: Order[]; loading: boolean; fetching: boolean; invoiceOrderNumberSet: Set<string>; activeTab: TabMode; selectedIds: string[]; allVisibleSelected: boolean; onToggleAll: () => void; onToggleSelected: (id: string) => void; onOpenEditor: (order: Order) => void; onAccept: (order: Order) => void; onReject: (order: Order) => void; onReturnToReview: (order: Order) => void; reviewBusy: boolean }) => {
+const OrdersPanel = ({ orders, loading, fetching, invoiceOrderNumberSet, activeTab, selectedIds, allVisibleSelected, onToggleAll, onToggleSelected, onOpenEditor, onAccept, onReject, onReturn, onReturnToReview, reviewBusy }: { orders: Order[]; loading: boolean; fetching: boolean; invoiceOrderNumberSet: Set<string>; activeTab: TabMode; selectedIds: string[]; allVisibleSelected: boolean; onToggleAll: () => void; onToggleSelected: (id: string) => void; onOpenEditor: (order: Order) => void; onAccept: (order: Order) => void; onReject: (order: Order) => void; onReturn: (order: Order) => void; onReturnToReview: (order: Order) => void; reviewBusy: boolean }) => {
   if (loading) return <PanelLoading text="جاري تحميل الفواتير..." />;
-  if (orders.length === 0) return <PanelEmpty icon={activeTab === "accepted" ? FileCheck2 : activeTab === "rejected" ? CircleOff : ReceiptText} title={activeTab === "accepted" ? "لا توجد فواتير مقبولة" : activeTab === "rejected" ? "لا توجد فواتير مرفوضة" : activeTab === "review" ? "لا توجد فواتير بانتظار المراجعة" : "لا توجد طلبات"} description="لا توجد نتائج مطابقة للقسم والفلاتر الحالية." />;
+  if (orders.length === 0) return <PanelEmpty icon={activeTab === "accepted" ? FileCheck2 : activeTab === "rejected" ? CircleOff : activeTab === "returned" ? RotateCcw : ReceiptText} title={activeTab === "accepted" ? "لا توجد فواتير مقبولة" : activeTab === "rejected" ? "لا توجد فواتير مرفوضة" : activeTab === "returned" ? "لا توجد فواتير مرتجعة" : activeTab === "review" ? "لا توجد فواتير بانتظار المراجعة" : "لا توجد طلبات"} description="لا توجد نتائج مطابقة للقسم والفلاتر الحالية." />;
 
   return (
     <>
@@ -680,7 +740,7 @@ const OrdersPanel = ({ orders, loading, fetching, invoiceOrderNumberSet, activeT
         </div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1320px]">
+          <table className="w-full min-w-[1380px]">
             <thead>
               <tr className="h-[44px] border-b border-[#EAEDF1] bg-[#FAFBFC] text-[10px] font-semibold text-[#858D97]">
                 <th className="w-[44px] px-[10px] text-center"><Checkbox checked={allVisibleSelected} onCheckedChange={onToggleAll} /></th>
@@ -692,7 +752,7 @@ const OrdersPanel = ({ orders, loading, fetching, invoiceOrderNumberSet, activeT
                 <th className="px-[12px] text-right">حالة الفاتورة</th>
                 <th className="px-[12px] text-right">المراجعة</th>
                 <th className="px-[12px] text-right">التاريخ</th>
-                <th className="w-[210px] px-[12px] text-center">الإجراءات</th>
+                <th className="w-[260px] px-[12px] text-center">الإجراءات</th>
               </tr>
             </thead>
 
@@ -716,11 +776,13 @@ const OrdersPanel = ({ orders, loading, fetching, invoiceOrderNumberSet, activeT
                       <div className="flex items-center justify-center gap-[4px]">
                         <button type="button" onClick={() => onOpenEditor(order)} className="flex h-[31px] items-center justify-center gap-[5px] rounded-[8px] border border-[#E2DEF3] bg-white px-[8px] text-[9px] font-semibold text-[#675CBA] hover:bg-[#F5F3FF]"><Pencil className="h-[10px] w-[10px]" />عرض</button>
 
-                        {invoiceExists && reviewStatus !== "accepted" && <button type="button" disabled={reviewBusy} onClick={() => onAccept(order)} className="flex h-[31px] items-center justify-center gap-[5px] rounded-[8px] border border-[#D8E8DD] bg-white px-[8px] text-[9px] font-semibold text-[#568468] hover:bg-[#EFF8F2]"><Check className="h-[10px] w-[10px]" />قبول</button>}
+                        {invoiceExists && reviewStatus !== "accepted" && reviewStatus !== "returned" && <button type="button" disabled={reviewBusy} onClick={() => onAccept(order)} className="flex h-[31px] items-center justify-center gap-[5px] rounded-[8px] border border-[#D8E8DD] bg-white px-[8px] text-[9px] font-semibold text-[#568468] hover:bg-[#EFF8F2]"><Check className="h-[10px] w-[10px]" />قبول</button>}
 
-                        {invoiceExists && reviewStatus !== "rejected" && <button type="button" disabled={reviewBusy} onClick={() => onReject(order)} className="flex h-[31px] items-center justify-center gap-[5px] rounded-[8px] border border-[#F0D7D4] bg-white px-[8px] text-[9px] font-semibold text-[#B95C54] hover:bg-[#FFF3F1]"><X className="h-[10px] w-[10px]" />رفض</button>}
+                        {invoiceExists && reviewStatus !== "rejected" && reviewStatus !== "returned" && <button type="button" disabled={reviewBusy} onClick={() => onReject(order)} className="flex h-[31px] items-center justify-center gap-[5px] rounded-[8px] border border-[#F0D7D4] bg-white px-[8px] text-[9px] font-semibold text-[#B95C54] hover:bg-[#FFF3F1]"><X className="h-[10px] w-[10px]" />رفض</button>}
 
-                        {invoiceExists && (reviewStatus === "accepted" || reviewStatus === "rejected") && <button type="button" disabled={reviewBusy} title="إعادة للمراجعة" onClick={() => onReturnToReview(order)} className="flex h-[31px] w-[31px] items-center justify-center rounded-[8px] border border-[#E3E7EC] bg-white text-[#707883] hover:bg-[#F7F8FA]"><RotateCcw className="h-[10px] w-[10px]" /></button>}
+                        {invoiceExists && reviewStatus !== "returned" && <button type="button" disabled={reviewBusy} onClick={() => onReturn(order)} className="flex h-[31px] items-center justify-center gap-[5px] rounded-[8px] border border-[#E2DEF3] bg-white px-[8px] text-[9px] font-semibold text-[#675CBA] hover:bg-[#F5F3FF]"><RotateCcw className="h-[10px] w-[10px]" />مرتجعة</button>}
+
+                        {invoiceExists && (reviewStatus === "accepted" || reviewStatus === "rejected" || reviewStatus === "returned") && <button type="button" disabled={reviewBusy} title="إعادة للمراجعة" onClick={() => onReturnToReview(order)} className="flex h-[31px] w-[31px] items-center justify-center rounded-[8px] border border-[#E3E7EC] bg-white text-[#707883] hover:bg-[#F7F8FA]"><RotateCcw className="h-[10px] w-[10px]" /></button>}
                       </div>
                     </td>
                   </tr>
@@ -764,6 +826,7 @@ const OrdersPanel = ({ orders, loading, fetching, invoiceOrderNumberSet, activeT
                 </div>
 
                 {order.invoice_review_note && reviewStatus === "rejected" && <div className="mt-[8px] rounded-[8px] border border-[#F0D7D4] bg-[#FFF8F7] p-[8px] text-[9px] leading-5 text-[#A6635C]">سبب الرفض: {order.invoice_review_note}</div>}
+                {order.invoice_review_note && reviewStatus === "returned" && <div className="mt-[8px] rounded-[8px] border border-[#E2DEF3] bg-[#F8F7FF] p-[8px] text-[9px] leading-5 text-[#675CBA]">سبب الإرجاع: {order.invoice_review_note}</div>}
               </div>
 
               <div className="grid grid-cols-2 gap-[5px] border-t border-[#EDF0F3] bg-[#FAFBFC] p-[7px]">
@@ -771,12 +834,11 @@ const OrdersPanel = ({ orders, loading, fetching, invoiceOrderNumberSet, activeT
 
                 {invoiceExists && reviewStatus === "pending" && <button type="button" disabled={reviewBusy} onClick={() => onAccept(order)} className="flex h-[35px] items-center justify-center gap-[5px] rounded-[8px] border border-[#D8E8DD] bg-white text-[9px] font-semibold text-[#568468]"><Check className="h-[10px] w-[10px]" />قبول الفاتورة</button>}
 
-                {invoiceExists && reviewStatus === "accepted" && <button type="button" disabled={reviewBusy} onClick={() => onReturnToReview(order)} className="flex h-[35px] items-center justify-center gap-[5px] rounded-[8px] border border-[#E3E7EC] bg-white text-[9px] font-semibold text-[#707883]"><RotateCcw className="h-[10px] w-[10px]" />إعادة للمراجعة</button>}
-
-                {invoiceExists && reviewStatus === "rejected" && <button type="button" disabled={reviewBusy} onClick={() => onReturnToReview(order)} className="flex h-[35px] items-center justify-center gap-[5px] rounded-[8px] border border-[#E3E7EC] bg-white text-[9px] font-semibold text-[#707883]"><RotateCcw className="h-[10px] w-[10px]" />إعادة للمراجعة</button>}
+                {invoiceExists && (reviewStatus === "accepted" || reviewStatus === "rejected" || reviewStatus === "returned") && <button type="button" disabled={reviewBusy} onClick={() => onReturnToReview(order)} className="flex h-[35px] items-center justify-center gap-[5px] rounded-[8px] border border-[#E3E7EC] bg-white text-[9px] font-semibold text-[#707883]"><RotateCcw className="h-[10px] w-[10px]" />إعادة للمراجعة</button>}
               </div>
 
-              {invoiceExists && reviewStatus === "pending" && <div className="border-t border-[#EDF0F3] bg-[#FAFBFC] px-[7px] pb-[7px]"><button type="button" disabled={reviewBusy} onClick={() => onReject(order)} className="flex h-[35px] w-full items-center justify-center gap-[5px] rounded-[8px] border border-[#F0D7D4] bg-white text-[9px] font-semibold text-[#B95C54]"><X className="h-[10px] w-[10px]" />رفض الفاتورة</button></div>}
+              {invoiceExists && reviewStatus === "pending" && <div className="grid grid-cols-2 gap-[5px] border-t border-[#EDF0F3] bg-[#FAFBFC] px-[7px] pb-[7px]"><button type="button" disabled={reviewBusy} onClick={() => onReject(order)} className="flex h-[35px] w-full items-center justify-center gap-[5px] rounded-[8px] border border-[#F0D7D4] bg-white text-[9px] font-semibold text-[#B95C54]"><X className="h-[10px] w-[10px]" />رفض الفاتورة</button><button type="button" disabled={reviewBusy} onClick={() => onReturn(order)} className="flex h-[35px] w-full items-center justify-center gap-[5px] rounded-[8px] border border-[#E2DEF3] bg-white text-[9px] font-semibold text-[#675CBA]"><RotateCcw className="h-[10px] w-[10px]" />مرتجعة</button></div>}
+              {invoiceExists && reviewStatus !== "pending" && reviewStatus !== "returned" && <div className="border-t border-[#EDF0F3] bg-[#FAFBFC] px-[7px] pb-[7px]"><button type="button" disabled={reviewBusy} onClick={() => onReturn(order)} className="flex h-[35px] w-full items-center justify-center gap-[5px] rounded-[8px] border border-[#E2DEF3] bg-white text-[9px] font-semibold text-[#675CBA]"><RotateCcw className="h-[10px] w-[10px]" />تسجيل كمرتجعة</button></div>}
             </article>
           );
         })}
@@ -836,7 +898,7 @@ const InvoiceFilesPanel = ({ invoices, loading, fetching, onOpen, onPrint, onDel
 ========================================================= */
 
 const effectiveStatusFromOrder = (order: Order, invoiceExists: boolean): InvoiceReviewStatus => {
-  if (order.invoice_review_status === "accepted" || order.invoice_review_status === "rejected" || order.invoice_review_status === "pending") return order.invoice_review_status;
+  if (order.invoice_review_status === "accepted" || order.invoice_review_status === "rejected" || order.invoice_review_status === "returned" || order.invoice_review_status === "pending") return order.invoice_review_status;
   return invoiceExists ? "pending" : "unreviewed";
 };
 
@@ -844,6 +906,7 @@ const tabTitle = (tab: TabMode) => {
   if (tab === "review") return "فواتير بانتظار المراجعة";
   if (tab === "accepted") return "الفواتير المقبولة";
   if (tab === "rejected") return "الفواتير المرفوضة";
+  if (tab === "returned") return "الفواتير المرتجعة";
   return "كل الطلبات والفواتير";
 };
 
@@ -927,6 +990,7 @@ const InvoicePresence = ({ available }: { available: boolean }) => {
 const ReviewStatus = ({ status, note }: { status: InvoiceReviewStatus; note?: string | null }) => {
   if (status === "accepted") return <span className="inline-flex h-[25px] items-center gap-[5px] rounded-[7px] border border-[#D8E8DD] bg-[#EFF8F2] px-[8px] text-[9px] font-semibold text-[#568468]"><CheckCircle2 className="h-[9px] w-[9px]" />مقبولة</span>;
   if (status === "rejected") return <span title={note || "مرفوضة"} className="inline-flex h-[25px] items-center gap-[5px] rounded-[7px] border border-[#F0D7D4] bg-[#FFF3F1] px-[8px] text-[9px] font-semibold text-[#C15F56]"><CircleOff className="h-[9px] w-[9px]" />مرفوضة</span>;
+  if (status === "returned") return <span title={note || "مرتجعة"} className="inline-flex h-[25px] items-center gap-[5px] rounded-[7px] border border-[#E2DEF3] bg-[#F6F4FF] px-[8px] text-[9px] font-semibold text-[#675CBA]"><RotateCcw className="h-[9px] w-[9px]" />مرتجعة</span>;
   if (status === "pending") return <span className="inline-flex h-[25px] items-center gap-[5px] rounded-[7px] border border-[#EEDFC4] bg-[#FFF7E8] px-[8px] text-[9px] font-semibold text-[#A9782F]"><FileClock className="h-[9px] w-[9px]" />بانتظار المراجعة</span>;
   return <span className="inline-flex h-[25px] items-center gap-[5px] rounded-[7px] border border-[#E3E6EA] bg-[#F5F6F8] px-[8px] text-[9px] font-semibold text-[#818994]"><ReceiptText className="h-[9px] w-[9px]" />غير منشأة</span>;
 };

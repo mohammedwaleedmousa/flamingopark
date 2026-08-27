@@ -93,7 +93,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
   const [customerNotes, setCustomerNotes] = useState("");
 
   const [paymentMethod, setPaymentMethod] = useState("cod");
-  const [orderStatus, setOrderStatus] = useState("completed");
+  const [orderStatus, setOrderStatus] = useState("pending");
   const [currencyMode, setCurrencyMode] = useState("SAR");
   const [deliveryCompanyId, setDeliveryCompanyId] = useState("none");
   const [deliveryFee, setDeliveryFee] = useState(0);
@@ -163,7 +163,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
     setCustomerRegion("");
     setCustomerNotes("");
     setPaymentMethod("cod");
-    setOrderStatus("completed");
+    setOrderStatus("pending");
     setCurrencyMode("SAR");
     setDeliveryCompanyId("none");
     setDeliveryFee(0);
@@ -374,7 +374,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
                   </div>
 
                   <Field label="ملاحظات العميل">
-                    <Textarea rows={3} value={customerNotes} onChange={(event) => setCustomerNotes(event.target.value)} placeholder="أي ملاحظات خاصة بالفاتورة أو التوصيل..." className="resize-none rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[10.5px] leading-6 shadow-none focus-visible:bg-white focus-visible:ring-0" />
+                    <Textarea rows={3} value={customerNotes} onChange={(event) => setCustomerNotes(event.target.value)} placeholder="أي ملاحظات خاصة بالفاتورة أو التوصيل..." className="resize-none rounded-[9px] border border-[#E2E6EB] bg-[#F8FAFC] text-[10.5px] leading-6 shadow-none focus-visible:bg-white focus-visible:ring-0" />
                   </Field>
                 </FormSection>
 
@@ -470,7 +470,9 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
                         <SelectItem value="pending">قيد الانتظار</SelectItem>
                         <SelectItem value="confirmed">مؤكد</SelectItem>
                         <SelectItem value="processing">قيد التجهيز</SelectItem>
-                        <SelectItem value="completed">مكتمل</SelectItem>
+                        <SelectItem value="shipped">تم الشحن</SelectItem>
+                        <SelectItem value="delivered">تم التوصيل</SelectItem>
+                        <SelectItem value="cancelled">ملغي</SelectItem>
                       </SelectContent>
                     </Select>
                   </Field>
@@ -538,7 +540,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
           <div className="shrink-0 border-t border-[#E5E9EF] bg-white px-5 py-3">
             <div className="flex flex-col-reverse gap-[7px] sm:flex-row sm:items-center sm:justify-between">
               <div className="flex items-center gap-[6px] text-[9px] text-[#9AA2AC]">
-                <WalletCards className="h-[11px] w-[11px]" />
+                <WalletCards className="h-[11px] w-[11px] />
                 سعر الصرف المستخدم: 1 ر.س = {currencyRate.toLocaleString("en-US")} {currencySymbol}
               </div>
 

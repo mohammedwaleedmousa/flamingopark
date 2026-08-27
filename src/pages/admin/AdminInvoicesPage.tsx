@@ -175,7 +175,7 @@ const AdminInvoicesPage = () => {
 
   const effectiveReviewStatus = (order: Order): InvoiceReviewStatus => {
     if (order.invoice_review_status === "accepted" || order.invoice_review_status === "rejected" || order.invoice_review_status === "pending") return order.invoice_review_status;
-    return hasInvoice(order) ? "pending" : "unreviewed";
+    return "pending";
   };
 
   /* =========================================================
@@ -184,7 +184,7 @@ const AdminInvoicesPage = () => {
 
   const stats = useMemo(() => {
     const withInvoice = orders.filter(hasInvoice);
-    const reviewPending = withInvoice.filter((order) => effectiveReviewStatus(order) === "pending").length;
+    const reviewPending = orders.filter((order) => effectiveReviewStatus(order) === "pending").length;
     const accepted = withInvoice.filter((order) => effectiveReviewStatus(order) === "accepted").length;
     const rejected = withInvoice.filter((order) => effectiveReviewStatus(order) === "rejected").length;
     const withoutInvoice = orders.filter((order) => !hasInvoice(order)).length;
@@ -223,7 +223,7 @@ const AdminInvoicesPage = () => {
   }, [orders, searchQuery, dateFilter, orderStatusFilter, invoicePresenceFilter, invoiceOrderNumberSet]);
 
   const filteredOrders = useMemo(() => {
-    if (activeTab === "review") return baseFilteredOrders.filter((order) => hasInvoice(order) && effectiveReviewStatus(order) === "pending");
+    if (activeTab === "review") return baseFilteredOrders.filter((order) => effectiveReviewStatus(order) === "pending");
     if (activeTab === "accepted") return baseFilteredOrders.filter((order) => hasInvoice(order) && effectiveReviewStatus(order) === "accepted");
     if (activeTab === "rejected") return baseFilteredOrders.filter((order) => hasInvoice(order) && effectiveReviewStatus(order) === "rejected");
     return baseFilteredOrders;

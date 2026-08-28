@@ -19,6 +19,11 @@ const getViewportAwareWidth = (requestedWidth: number) => {
   return requestedWidth;
 };
 
+const isHeicImage = (pathname: string) => {
+  const path = pathname.toLowerCase();
+  return path.endsWith(".heic") || path.endsWith(".heif");
+};
+
 export const optimizeImage = (url?: string | null, width = 800, quality = 82): string => {
   if (!url || !url.trim()) return "/placeholder.svg";
 
@@ -36,11 +41,15 @@ export const optimizeImage = (url?: string | null, width = 800, quality = 82): s
     }
 
     if (u.hostname.endsWith("supabase.co") && u.pathname.includes("/storage/v1/object/public/")) {
-      // صور تفاصيل المنتجات الحالية مخزنة أصلًا كصور WebP داخل color-variants.
-      // المسار المحوّل قد يتأخر قبل أن يفشل ثم يرجع للصورة الأصلية، لذلك
-      // للصور الكبيرة الخاصة بالتفاصيل نطلب الملف العام مباشرة. الكروت
-      // تستمر باستخدام Image Transformation لأنها تطلب أحجامًا أصغر (<= 640px).
-      if (width >= 900 && u.pathname.includes("/uploads/color-variants/")) {
+      const colorVariantImage = u.pathname.includes("/uploads/color-variants/");
+      const heicImage = isHeicImage(u.pathname);
+
+      // الصورة الرئيسية في تفاصيل المنتج تطلب 1400px. للصور العادية نستخدم
+      // الملف العام مباشرة حتى لا تنتظر الصفحة فشل Image Transformation.
+      // مهم: طلبات preload تستخدم 900px؛ لا نجعلها تحمل الملفات الأصلية حتى
+      // لا تبدأ عدة صور كبيرة بالتوازي وتسرق الباندويث من الصورة الرئيسية.
+      // HEIC يبقى عبر Image Transformation لأن المتصفح قد يتأخر أو لا يدعمه.
+      if (width >= 1200 && colorVariantImage && !heicImage) {
         return u.toString();
       }
 

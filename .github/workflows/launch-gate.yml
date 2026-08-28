@@ -20,6 +20,7 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+      - run: node scripts/verify-critical-flows.mjs
       - run: npm run lint
       - run: npx tsc -p tsconfig.app.json --noEmit
       - run: npm run build

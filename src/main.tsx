@@ -13,6 +13,7 @@ import App from "./App.tsx";
 import AppErrorBoundary from "./components/AppErrorBoundary";
 import ProductRatingSync from "./components/ProductRatingSync";
 import CheckoutCodGuard from "./components/CheckoutCodGuard";
+import CustomerCartSync from "./components/CustomerCartSync";
 import "./index.css";
 import "./mobile-smooth.css";
 import "./desktop-storefront.css";
@@ -32,4 +33,4 @@ if (typeof window !== "undefined") {
   }
 }
 
-createRoot(document.getElementById("root")!).render(<AppErrorBoundary><><ProductRatingSync /><CheckoutCodGuard /><App /></></AppErrorBoundary>);
+createRoot(document.getElementById("root")!).render(<AppErrorBoundary><><ProductRatingSync /><CheckoutCodGuard /><CustomerCartSync /><App /></></AppErrorBoundary>);

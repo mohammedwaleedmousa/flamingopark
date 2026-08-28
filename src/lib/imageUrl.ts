@@ -4,13 +4,10 @@ const getViewportAwareWidth = (requestedWidth: number) => {
   const viewportWidth = Math.max(320, window.innerWidth || requestedWidth);
   const devicePixelRatio = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
 
-  // صور التفاصيل الكبيرة لا تحتاج أن تكون أعرض من عدد البكسلات الفعلي
-  // الذي تستطيع الشاشة إظهاره. نحافظ على 3x للشاشات عالية الكثافة.
   if (requestedWidth >= 1200) {
     return Math.max(720, Math.min(requestedWidth, Math.ceil(viewportWidth * devicePixelRatio)));
   }
 
-  // الصور المتوسطة (مثل صور الألوان المسبقة) يكفيها حتى 2x على الهاتف.
   if (requestedWidth >= 700) {
     const mediumDpr = Math.min(devicePixelRatio, 2);
     return Math.max(640, Math.min(requestedWidth, Math.ceil(viewportWidth * mediumDpr)));
@@ -19,45 +16,44 @@ const getViewportAwareWidth = (requestedWidth: number) => {
   return requestedWidth;
 };
 
-const isHeicImage = (pathname: string) => {
-  const path = pathname.toLowerCase();
-  return path.endsWith(".heic") || path.endsWith(".heif");
-};
-
 export const optimizeImage = (url?: string | null, width = 800, quality = 82): string => {
   if (!url || !url.trim()) return "/placeholder.svg";
 
   try {
     const u = new URL(url, window.location.origin);
-    const optimizedWidth = getViewportAwareWidth(width);
+    let optimizedWidth = getViewportAwareWidth(width);
+    let optimizedQuality = quality;
 
     if (u.hostname.endsWith("unsplash.com")) {
       u.searchParams.set("w", String(optimizedWidth));
-      u.searchParams.set("q", String(quality));
+      u.searchParams.set("q", String(optimizedQuality));
       u.searchParams.set("auto", "format");
       u.searchParams.set("fit", "max");
-
       return u.toString();
     }
 
     if (u.hostname.endsWith("supabase.co") && u.pathname.includes("/storage/v1/object/public/")) {
       const colorVariantImage = u.pathname.includes("/uploads/color-variants/");
-      const heicImage = isHeicImage(u.pathname);
 
-      // الصورة الرئيسية في تفاصيل المنتج تطلب 1400px. للصور العادية نستخدم
-      // الملف العام مباشرة حتى لا تنتظر الصفحة فشل Image Transformation.
-      // مهم: طلبات preload تستخدم 900px؛ لا نجعلها تحمل الملفات الأصلية حتى
-      // لا تبدأ عدة صور كبيرة بالتوازي وتسرق الباندويث من الصورة الرئيسية.
-      // HEIC يبقى عبر Image Transformation لأن المتصفح قد يتأخر أو لا يدعمه.
-      if (width >= 1200 && colorVariantImage && !heicImage) {
-        return u.toString();
+      // ProductDetailPage asks for 1400px, while ProductCard already loads 640px.
+      // Reuse the exact 640/82 transformed URL so clicking a product can use the
+      // browser cache immediately instead of starting another large image request.
+      if (colorVariantImage && width >= 1200) {
+        optimizedWidth = 640;
+        optimizedQuality = 82;
+      }
+
+      // ProductDetailPage also preloads color images at 900px. Keep those light so
+      // they cannot compete with the primary image on slower mobile connections.
+      if (colorVariantImage && width >= 700 && width < 1200) {
+        optimizedWidth = Math.min(optimizedWidth, 360);
+        optimizedQuality = Math.min(optimizedQuality, 76);
       }
 
       u.pathname = u.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
       u.searchParams.set("width", String(optimizedWidth));
-      u.searchParams.set("quality", String(quality));
+      u.searchParams.set("quality", String(optimizedQuality));
       u.searchParams.set("resize", "contain");
-
       return u.toString();
     }
 

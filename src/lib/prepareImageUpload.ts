@@ -26,11 +26,11 @@ const DIRECT_UPLOAD_MIMES = new Set([
   "image/avif",
 ]);
 
-const FAST_DIRECT_UPLOAD_BYTES = 900 * 1024;
-const TARGET_UPLOAD_BYTES = 1.25 * 1024 * 1024;
-const DEFAULT_MAX_DIMENSION = 2800;
-const PRIMARY_WEBP_QUALITY = 0.93;
-const SECONDARY_WEBP_QUALITY = 0.89;
+const FAST_DIRECT_UPLOAD_BYTES = 450 * 1024;
+const DEFAULT_TARGET_UPLOAD_BYTES = 1024 * 1024;
+const DEFAULT_MAX_DIMENSION = 2200;
+const WEBP_QUALITIES = [0.9, 0.84, 0.78, 0.7];
+const MIN_TARGET_BYTES = 250 * 1024;
 
 function createUploadId(): string {
   const cryptoApi = globalThis.crypto;
@@ -122,6 +122,20 @@ function canvasToWebp(canvas: HTMLCanvasElement, quality: number): Promise<Blob>
   });
 }
 
+function resizeCanvas(source: HTMLCanvasElement, scale: number): HTMLCanvasElement {
+  const target = document.createElement("canvas");
+  target.width = Math.max(1, Math.round(source.width * scale));
+  target.height = Math.max(1, Math.round(source.height * scale));
+
+  const ctx = target.getContext("2d");
+  if (!ctx) throw new Error("تعذر تجهيز الصورة");
+
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(source, 0, 0, target.width, target.height);
+  return target;
+}
+
 async function imageElementToCanvas(file: File, maxDimension: number): Promise<HTMLCanvasElement> {
   const objectUrl = URL.createObjectURL(file);
 
@@ -130,7 +144,7 @@ async function imageElementToCanvas(file: File, maxDimension: number): Promise<H
     image.decoding = "async";
 
     await new Promise<void>((resolve, reject) => {
-      const timer = window.setTimeout(() => reject(new Error("انتهت مهلة قراءة الصورة")), 2500);
+      const timer = window.setTimeout(() => reject(new Error("انتهت مهلة قراءة الصورة")), 5000);
 
       image.onload = () => {
         window.clearTimeout(timer);
@@ -189,8 +203,8 @@ async function bitmapToCanvas(file: File, maxDimension: number): Promise<HTMLCan
   }
 }
 
-async function compressLargeStandardImage(file: File, maxDimension: number): Promise<File> {
-  if (file.size <= FAST_DIRECT_UPLOAD_BYTES) return file;
+async function compressLargeStandardImage(file: File, maxDimension: number, targetBytes: number): Promise<File> {
+  if (file.size <= Math.min(FAST_DIRECT_UPLOAD_BYTES, targetBytes)) return file;
 
   let canvas: HTMLCanvasElement;
 
@@ -202,37 +216,70 @@ async function compressLargeStandardImage(file: File, maxDimension: number): Pro
     try {
       canvas = await imageElementToCanvas(file, maxDimension);
     } catch (imageError) {
-      console.warn("Local image compression unavailable; uploading original image:", imageError);
-      return file;
+      console.warn("Local image compression unavailable:", imageError);
+      if (file.size <= targetBytes) return file;
+      throw new Error("تعذر ضغط الصورة الكبيرة. جرّب صورة أصغر ثم أعد الرفع.");
     }
   }
 
-  try {
-    let blob = await canvasToWebp(canvas, PRIMARY_WEBP_QUALITY);
+  let workingCanvas = canvas;
 
-    if (blob.size > TARGET_UPLOAD_BYTES * 1.25) {
-      const smaller = await canvasToWebp(canvas, SECONDARY_WEBP_QUALITY);
-      if (smaller.size < blob.size) blob = smaller;
+  try {
+    let bestBlob: Blob | null = null;
+
+    for (const quality of WEBP_QUALITIES) {
+      const blob = await canvasToWebp(workingCanvas, quality);
+      if (!bestBlob || blob.size < bestBlob.size) bestBlob = blob;
+      if (blob.size <= targetBytes) {
+        bestBlob = blob;
+        break;
+      }
     }
 
-    if (blob.size >= file.size) return file;
+    if (bestBlob && bestBlob.size > targetBytes && workingCanvas.width > 900 && workingCanvas.height > 900) {
+      const scale = Math.max(0.55, Math.min(0.92, Math.sqrt(targetBytes / bestBlob.size) * 0.92));
+      const smallerCanvas = resizeCanvas(workingCanvas, scale);
+      if (workingCanvas !== canvas) {
+        workingCanvas.width = 1;
+        workingCanvas.height = 1;
+      }
+      workingCanvas = smallerCanvas;
 
-    return new File([blob], `${createUploadId()}.webp`, {
+      for (const quality of [0.82, 0.75, 0.68]) {
+        const blob = await canvasToWebp(workingCanvas, quality);
+        if (!bestBlob || blob.size < bestBlob.size) bestBlob = blob;
+        if (blob.size <= targetBytes) {
+          bestBlob = blob;
+          break;
+        }
+      }
+    }
+
+    if (!bestBlob) throw new Error("تعذر ضغط الصورة");
+
+    if (bestBlob.size >= file.size && file.size <= targetBytes) return file;
+
+    if (bestBlob.size > targetBytes * 1.15) {
+      throw new Error("الصورة ما زالت كبيرة بعد الضغط. اختر صورة أصغر أو أقل دقة.");
+    }
+
+    return new File([bestBlob], `${createUploadId()}.webp`, {
       type: "image/webp",
       lastModified: Date.now(),
     });
-  } catch (compressionError) {
-    console.warn("WebP compression failed; uploading original image:", compressionError);
-    return file;
   } finally {
     canvas.width = 1;
     canvas.height = 1;
+    if (workingCanvas !== canvas) {
+      workingCanvas.width = 1;
+      workingCanvas.height = 1;
+    }
   }
 }
 
 async function convertHeicToJpeg(file: File): Promise<File> {
   try {
-    const convertedBlob = await heicTo({ blob: file, type: "image/jpeg", quality: 0.94 });
+    const convertedBlob = await heicTo({ blob: file, type: "image/jpeg", quality: 0.92 });
     return new File([convertedBlob], `${createUploadId()}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
   } catch (heicToError) {
     console.warn("heic-to failed, trying heic2any:", heicToError);
@@ -240,7 +287,7 @@ async function convertHeicToJpeg(file: File): Promise<File> {
 
   try {
     const { default: heic2any } = await import("heic2any");
-    const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.94 });
+    const converted = await heic2any({ blob: file, toType: "image/jpeg", quality: 0.92 });
     const convertedBlob = Array.isArray(converted) ? converted[0] : converted;
     return new File([convertedBlob], `${createUploadId()}.jpg`, { type: "image/jpeg", lastModified: Date.now() });
   } catch (heic2anyError) {
@@ -249,15 +296,21 @@ async function convertHeicToJpeg(file: File): Promise<File> {
   }
 }
 
+function getTargetBytes(maxSizeMB?: number) {
+  if (!Number.isFinite(maxSizeMB) || !maxSizeMB || maxSizeMB <= 0) return DEFAULT_TARGET_UPLOAD_BYTES;
+  return Math.max(MIN_TARGET_BYTES, Math.round(maxSizeMB * 1024 * 1024));
+}
+
 export async function prepareImageUpload(
   file: File,
   opts: { maxSizeMB?: number; maxWidthOrHeight?: number } = {},
 ): Promise<File> {
   const declaredMime = inferImageMimeType(file);
+  const maxDimension = opts.maxWidthOrHeight ?? DEFAULT_MAX_DIMENSION;
+  const targetBytes = getTargetBytes(opts.maxSizeMB);
 
-  // أسرع مسار للصور القياسية: لا نقرأ حتى ترويسة الملف إذا كان المتصفح قد أعطانا MIME موثوقًا.
   if (DIRECT_UPLOAD_MIMES.has(declaredMime)) {
-    return compressLargeStandardImage(file, opts.maxWidthOrHeight ?? DEFAULT_MAX_DIMENSION);
+    return compressLargeStandardImage(file, maxDimension, targetBytes);
   }
 
   const sniffedMime = await sniffImageMimeType(file);
@@ -268,12 +321,12 @@ export async function prepareImageUpload(
   const normalizedFile = normalizeFile(file, mime);
 
   if (DIRECT_UPLOAD_MIMES.has(mime)) {
-    return compressLargeStandardImage(normalizedFile, opts.maxWidthOrHeight ?? DEFAULT_MAX_DIMENSION);
+    return compressLargeStandardImage(normalizedFile, maxDimension, targetBytes);
   }
 
   if (mime === "image/heic" || mime === "image/heif") {
     const converted = await convertHeicToJpeg(normalizedFile);
-    return compressLargeStandardImage(converted, opts.maxWidthOrHeight ?? DEFAULT_MAX_DIMENSION);
+    return compressLargeStandardImage(converted, maxDimension, targetBytes);
   }
 
   throw new Error("نوع الصورة غير مدعوم. استخدم JPG أو PNG أو WebP أو AVIF أو HEIC.");

@@ -19,6 +19,33 @@
   .overflow-x-auto {
     -webkit-overflow-scrolling: touch;
   }
+
+  /*
+   * ProductDetailPage uses react-zoom-pan-pinch around the hero image.
+   * Mobile Safari can postpone painting an asynchronously decoded image while
+   * it lives inside the library's transformed layer, even though the image
+   * request has already completed. Keep the same visual layout on phones but
+   * remove that composited transform layer so the product image paints as soon
+   * as the browser receives it. Desktop zoom remains unchanged.
+   */
+  .react-transform-wrapper,
+  .react-transform-component {
+    width: 100% !important;
+    height: 100% !important;
+  }
+
+  .react-transform-component {
+    transform: none !important;
+    will-change: auto !important;
+  }
+
+  .react-transform-component img[fetchpriority="high"],
+  .react-transform-component img[fetchPriority="high"] {
+    display: block !important;
+    visibility: visible !important;
+    opacity: 1 !important;
+    content-visibility: visible !important;
+  }
 }
 
 @media (max-width: 767px) and (prefers-reduced-motion: reduce) {

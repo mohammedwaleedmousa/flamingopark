@@ -39,9 +39,13 @@ const getConfig = (env: Env) => {
   return { url: url.replace(/\/$/, ""), key };
 };
 
-const fetchRows = async (config: { url: string; key: string }, table: string) => {
+const fetchRows = async (
+  config: { url: string; key: string },
+  table: string,
+  dateColumn: "updated_at" | "created_at" = "updated_at",
+) => {
   const url = new URL(`${config.url}/rest/v1/${table}`);
-  url.searchParams.set("select", "slug,updated_at");
+  url.searchParams.set("select", `slug,${dateColumn}`);
   url.searchParams.set("is_active", "eq.true");
   url.searchParams.set("slug", "not.is.null");
   url.searchParams.set("limit", "1000");
@@ -55,7 +59,12 @@ const fetchRows = async (config: { url: string; key: string }, table: string) =>
   });
 
   if (!response.ok) throw new Error(`${table} sitemap query failed: ${response.status}`);
-  return response.json<Array<SitemapRow>>();
+
+  const rows = await response.json<Array<Record<string, unknown>>>();
+  return rows.map((row) => ({
+    slug: typeof row.slug === "string" ? row.slug : null,
+    updated_at: typeof row[dateColumn] === "string" ? String(row[dateColumn]) : null,
+  })) satisfies SitemapRow[];
 };
 
 const entry = (path: string, updatedAt?: string | null, priority = "0.7", changefreq = "weekly") => {
@@ -72,7 +81,7 @@ export const onRequestGet: PagesFunction<Env> = async ({ env }) => {
       const [products, brands, categories] = await Promise.all([
         fetchRows(config, "products"),
         fetchRows(config, "brands"),
-        fetchRows(config, "categories"),
+        fetchRows(config, "categories", "created_at"),
       ]);
 
       for (const row of products) {

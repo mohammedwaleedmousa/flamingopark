@@ -36,6 +36,14 @@ export const optimizeImage = (url?: string | null, width = 800, quality = 82): s
     }
 
     if (u.hostname.endsWith("supabase.co") && u.pathname.includes("/storage/v1/object/public/")) {
+      // صور تفاصيل المنتجات الحالية مخزنة أصلًا كصور WebP داخل color-variants.
+      // المسار المحوّل قد يتأخر قبل أن يفشل ثم يرجع للصورة الأصلية، لذلك
+      // للصور الكبيرة الخاصة بالتفاصيل نطلب الملف العام مباشرة. الكروت
+      // تستمر باستخدام Image Transformation لأنها تطلب أحجامًا أصغر (<= 640px).
+      if (width >= 900 && u.pathname.includes("/uploads/color-variants/")) {
+        return u.toString();
+      }
+
       u.pathname = u.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
       u.searchParams.set("width", String(optimizedWidth));
       u.searchParams.set("quality", String(quality));

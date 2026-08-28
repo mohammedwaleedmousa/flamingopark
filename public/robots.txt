@@ -1,8 +1,20 @@
 User-agent: Googlebot
 Allow: /
+Disallow: /admin/
+Disallow: /checkout
+Disallow: /account
+Disallow: /my-orders
+Disallow: /my-shipments
+Disallow: /notifications
 
 User-agent: Bingbot
 Allow: /
+Disallow: /admin/
+Disallow: /checkout
+Disallow: /account
+Disallow: /my-orders
+Disallow: /my-shipments
+Disallow: /notifications
 
 User-agent: Twitterbot
 Allow: /
@@ -12,9 +24,12 @@ Allow: /
 
 User-agent: *
 Allow: /
+Disallow: /admin/
+Disallow: /checkout
+Disallow: /account
+Disallow: /my-orders
+Disallow: /my-shipments
+Disallow: /notifications
 
-# Sitemap
 Sitemap: https://flamingoparkaden.com/sitemap.xml
-
-# Host
 Host: https://flamingoparkaden.com

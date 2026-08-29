@@ -5,6 +5,7 @@ import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 import { supabase } from "@/integrations/supabase/client";
+import { isBannerCurrentlyVisible } from "@/lib/bannerSchedule";
 
 type BannerPageRow = {
   id: string;
@@ -16,23 +17,26 @@ type BannerPageRow = {
   page_content_ar: string | null;
   cta_text_ar: string | null;
   cta_link: string | null;
+  starts_at: string | null;
+  ends_at: string | null;
 };
 
 const BannerPage = () => {
   const { slug } = useParams<{ slug: string }>();
 
   const { data: banner, isLoading } = useQuery({
-    queryKey: ["banner-page", slug],
+    queryKey: ["banner-page", slug, "scheduled-v1"],
     enabled: !!slug,
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("banners")
-        .select("id,title_ar,subtitle_ar,image_url,page_slug,page_title_ar,page_content_ar,cta_text_ar,cta_link")
+        .select("id,title_ar,subtitle_ar,image_url,page_slug,page_title_ar,page_content_ar,cta_text_ar,cta_link,starts_at,ends_at")
         .eq("page_slug", slug)
         .eq("is_active", true)
         .maybeSingle();
       if (error) throw error;
-      return data as BannerPageRow | null;
+      if (!data || !isBannerCurrentlyVisible(data)) return null;
+      return data as BannerPageRow;
     },
   });
 

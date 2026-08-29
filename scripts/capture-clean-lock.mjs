@@ -1,21 +1,15 @@
-import { readFile } from "node:fs/promises";
+import { execFileSync } from "node:child_process";
 
-const url = "https://hcomhdkmtqttzghjxjcb.supabase.co";
-const key = "sb_publishable_f4o2ZyRlCQ4h3H186FZ4Mg_FsXRvx9T";
+execFileSync("npm", ["install", "--package-lock-only", "--ignore-scripts"], { stdio: "inherit" });
 
-const content = await readFile("package-lock.json", "utf8");
-const response = await fetch(`${url}/rest/v1/rpc/_tmp_capture_clean_lock`, {
-  method: "POST",
-  headers: {
-    apikey: key,
-    Authorization: `Bearer ${key}`,
-    "Content-Type": "application/json",
-  },
-  body: JSON.stringify({
-    p_token: "1378cb3d0ebd6faaa46474194ae19e15e25a4a083ce3da2325d8c86593ebbb10",
-    p_content: content,
-  }),
-});
+const changed = execFileSync("git", ["status", "--porcelain", "--", "package-lock.json"], { encoding: "utf8" }).trim();
+if (!changed) {
+  console.log("package-lock.json is already clean");
+  process.exit(0);
+}
 
-if (!response.ok) throw new Error(`Lock capture failed: ${response.status} ${await response.text()}`);
-console.log(`Captured clean package-lock.json (${content.length} bytes)`);
+execFileSync("git", ["config", "user.name", "cloudflare-pages[bot]"], { stdio: "inherit" });
+execFileSync("git", ["config", "user.email", "cloudflare-pages[bot]@users.noreply.github.com"], { stdio: "inherit" });
+execFileSync("git", ["add", "package-lock.json"], { stdio: "inherit" });
+execFileSync("git", ["commit", "-m", "chore: regenerate lockfile without Vercel"], { stdio: "inherit" });
+execFileSync("git", ["push", "origin", "HEAD:chore/remove-vercel"], { stdio: "inherit" });

@@ -1,5 +1,4 @@
 import { supabase } from "@/integrations/supabase/client";
-import { listEntityRevisions, type AdminRevision } from "@/lib/adminProductivity";
 
 export type ProductAudience = "men" | "women" | "kids" | "unisex";
 
@@ -23,6 +22,18 @@ export type ProductClassificationRow = {
   brandSuggestion: ClassificationSuggestion | null;
   categorySuggestion: ClassificationSuggestion | null;
   audienceSuggestion: ClassificationSuggestion | null;
+};
+
+export type ProductRevision = {
+  id: string;
+  entity_type: string;
+  entity_id: string;
+  action: string;
+  before_data: Record<string, unknown> | null;
+  after_data: Record<string, unknown> | null;
+  metadata: Record<string, unknown>;
+  created_by: string | null;
+  created_at: string;
 };
 
 type Brand = { id: string; name: string; slug: string | null };
@@ -103,6 +114,7 @@ const audienceFromText = (text: string): ClassificationSuggestion | null => {
     { value: "men", label: "رجالي", terms: ["men", "mens", "male", "man", "رجالي", "رجاليه", "رجالية", "رجال"] },
     { value: "unisex", label: "للجميع", terms: ["unisex", "للجميع"] },
   ];
+
   for (const group of groups) {
     const hit = group.terms.find((term) => {
       const termTokens = tokens(term);
@@ -116,6 +128,7 @@ const audienceFromText = (text: string): ClassificationSuggestion | null => {
 const brandSuggestion = (product: Product, brands: Brand[]): ClassificationSuggestion | null => {
   const text = normalize(`${product.name} ${product.name_ar} ${product.slug}`);
   let best: ClassificationSuggestion | null = null;
+
   for (const brand of brands) {
     const slug = brand.slug || "";
     const aliases = [brand.name, slug, ...(BRAND_ALIASES[slug] || [])].map(normalize).filter(Boolean);
@@ -125,7 +138,9 @@ const brandSuggestion = (product: Product, brands: Brand[]): ClassificationSugge
       const tokenMatch = aliasTokens.length > 0 && aliasTokens.every((token) => hasToken(text, token));
       if (!exact && !tokenMatch) continue;
       const confidence = alias.length <= 2 ? 0.88 : exact ? 0.98 : 0.93;
-      if (!best || confidence > best.confidence) best = { value: brand.id, label: brand.name, confidence, reasons: [`تطابق «${alias}» مع اسم المنتج`] };
+      if (!best || confidence > best.confidence) {
+        best = { value: brand.id, label: brand.name, confidence, reasons: [`تطابق «${alias}» مع اسم المنتج`] };
+      }
     }
   }
   return best;
@@ -134,16 +149,22 @@ const brandSuggestion = (product: Product, brands: Brand[]): ClassificationSugge
 const categorySuggestion = (product: Product, categories: Category[], products: Product[]): ClassificationSuggestion | null => {
   const text = normalize(`${product.name} ${product.name_ar} ${product.slug}`);
   let best: ClassificationSuggestion | null = null;
+
   for (const category of categories) {
-    const terms = [category.name, category.name_ar, category.slug, ...(CATEGORY_KEYWORDS[category.slug] || [])].map(normalize).filter((term) => term.length > 2);
+    const terms = [category.name, category.name_ar, category.slug, ...(CATEGORY_KEYWORDS[category.slug] || [])]
+      .map(normalize)
+      .filter((term) => term.length > 2);
     const hit = terms.find((term) => {
       const termTokens = tokens(term);
       return termTokens.length === 1 ? hasToken(text, termTokens[0]) : hasPhrase(text, term);
     });
     if (!hit) continue;
     const confidence = CATEGORY_KEYWORDS[category.slug]?.some((term) => normalize(term) === hit) ? 0.94 : 0.88;
-    if (!best || confidence > best.confidence) best = { value: category.id, label: category.name_ar || category.name, confidence, reasons: [`تطابق «${hit}» مع القسم`] };
+    if (!best || confidence > best.confidence) {
+      best = { value: category.id, label: category.name_ar || category.name, confidence, reasons: [`تطابق «${hit}» مع القسم`] };
+    }
   }
+
   if (best) return best;
 
   const peerTokens = tokens(`${product.name} ${product.name_ar}`).filter((token) => token.length >= 4).slice(0, 8);
@@ -154,6 +175,7 @@ const categorySuggestion = (product: Product, categories: Category[], products: 
     const matches = peerTokens.filter((token) => hasToken(peerText, token)).length;
     if (matches >= 2) counts.set(peer.category_id, (counts.get(peer.category_id) || 0) + matches);
   }
+
   const top = [...counts.entries()].sort((a, b) => b[1] - a[1])[0];
   if (top && top[1] >= 4) {
     const category = categories.find((item) => item.id === top[0]);
@@ -163,10 +185,11 @@ const categorySuggestion = (product: Product, categories: Category[], products: 
 };
 
 export const loadProductClassificationSuggestions = async (): Promise<ProductClassificationRow[]> => {
+  const client = supabase as any;
   const [{ data: productsData, error: productsError }, { data: brandsData, error: brandsError }, { data: categoriesData, error: categoriesError }] = await Promise.all([
-    (supabase as any).from("products").select("id,name,name_ar,slug,brand_id,brand,category_id,category,audience").order("updated_at", { ascending: false }),
-    (supabase as any).from("brands").select("id,name,slug").order("sort_order"),
-    (supabase as any).from("categories").select("id,name,name_ar,slug,parent_id").eq("is_active", true).order("sort_order"),
+    client.from("products").select("id,name,name_ar,slug,brand_id,brand,category_id,category,audience").order("updated_at", { ascending: false }),
+    client.from("brands").select("id,name,slug").order("sort_order"),
+    client.from("categories").select("id,name,name_ar,slug,parent_id").eq("is_active", true).order("sort_order"),
   ]);
   if (productsError) throw productsError;
   if (brandsError) throw brandsError;
@@ -199,9 +222,19 @@ export const undoProductRevision = async (revisionId: string) => {
   return data;
 };
 
-export const listProductRevisions = async (productId: string, limit = 20): Promise<AdminRevision[]> => listEntityRevisions("product", productId, limit);
+export const listProductRevisions = async (productId: string, limit = 20): Promise<ProductRevision[]> => {
+  const { data, error } = await (supabase as any)
+    .from("admin_change_revisions")
+    .select("id,entity_type,entity_id,action,before_data,after_data,metadata,created_by,created_at")
+    .eq("entity_type", "product")
+    .eq("entity_id", productId)
+    .order("created_at", { ascending: false })
+    .limit(Math.max(1, Math.min(100, limit)));
+  if (error) throw error;
+  return (data ?? []) as ProductRevision[];
+};
 
-export const reversibleFields = (revision: AdminRevision) => {
+export const reversibleFields = (revision: ProductRevision) => {
   if (!["quick_update", "classification_update"].includes(revision.action)) return [] as string[];
   const fields = Array.isArray(revision.metadata?.fields) ? revision.metadata.fields.map(String) : [];
   return fields.filter((field) => ["price", "is_active", "brand_id", "category_id", "audience"].includes(field));

@@ -1,9 +1,7 @@
 import { readFile } from "node:fs/promises";
 
-const url = process.env.VITE_SUPABASE_URL;
-const key = process.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-if (!url || !key) throw new Error("Missing Supabase build environment");
+const url = "https://hcomhdkmtqttzghjxjcb.supabase.co";
+const key = "sb_publishable_f4o2ZyRlCQ4h3H186FZ4Mg_FsXRvx9T";
 
 const content = await readFile("package-lock.json", "utf8");
 const response = await fetch(`${url}/rest/v1/rpc/_tmp_capture_clean_lock`, {

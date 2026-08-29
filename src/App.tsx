@@ -10,7 +10,6 @@ import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
 import { DateRangeProvider } from "@/lib/analytics/dateRange";
 import { hydrateCurrencies } from "@/lib/currency";
-import { SpeedInsights } from "@vercel/speed-insights/react";
 import { MotionConfig } from "framer-motion";
 import CustomerAssistantEntry from "@/components/CustomerAssistantEntry";
 import CustomerSessionSync from "@/components/CustomerSessionSync";
@@ -219,7 +218,6 @@ const App = () => {
         <BrowserRouter>
           <ScrollToTop />
           <AnalyticsTracker />
-          <SpeedInsights />
           {SHOW_CUSTOMER_ASSISTANT && <CustomerAssistantEntry />}
           <Suspense fallback={<RouteFallback />}>
             <Routes>

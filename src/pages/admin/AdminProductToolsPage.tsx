@@ -12,6 +12,7 @@ import {
   getProductInventoryModes,
   quickUpdateAdminProduct,
   type ProductInventoryMode,
+  type ProductQuickPatch,
 } from "@/lib/adminProductTools";
 
 interface ToolProduct {
@@ -90,7 +91,7 @@ const AdminProductToolsPage = () => {
   const save = async (product: ToolProduct) => {
     const draft = drafts[product.id];
     if (!draft) return;
-    const patch: Record<string, unknown> = {};
+    const patch: ProductQuickPatch = {};
     const nextPrice = Number(draft.price);
     const nextStock = Number(draft.stock);
 

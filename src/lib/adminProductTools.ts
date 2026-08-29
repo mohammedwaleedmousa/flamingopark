@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { requireAdminPermission } from "@/lib/adminPermissionActions";
 
 export type ProductQuickPatch = Partial<{
   price: number;
@@ -43,9 +44,8 @@ export type CatalogHealthSummary = {
 };
 
 export const duplicateAdminProduct = async (productId: string) => {
-  const { data, error } = await (supabase as any).rpc("admin_duplicate_product", {
-    p_product_id: productId,
-  });
+  await requireAdminPermission("products.edit");
+  const { data, error } = await (supabase as any).rpc("admin_duplicate_product", { p_product_id: productId });
   if (error) throw error;
   if (!data) throw new Error("لم يتم إنشاء نسخة المنتج");
   return String(data);
@@ -53,6 +53,12 @@ export const duplicateAdminProduct = async (productId: string) => {
 
 export const quickUpdateAdminProduct = async (productId: string, patch: ProductQuickPatch) => {
   if (Object.keys(patch).length === 0) return null;
+
+  const inventoryFields = "stock_quantity" in patch || "in_stock" in patch;
+  const productFields = Object.keys(patch).some((field) => !["stock_quantity", "in_stock"].includes(field));
+  if (inventoryFields) await requireAdminPermission("inventory.adjust");
+  if (productFields) await requireAdminPermission("products.edit");
+
   const { data, error } = await (supabase as any).rpc("admin_quick_update_product", {
     p_product_id: productId,
     p_patch: patch,
@@ -62,9 +68,7 @@ export const quickUpdateAdminProduct = async (productId: string, patch: ProductQ
 };
 
 export const getCatalogHealth = async (limit = 250) => {
-  const { data, error } = await (supabase as any).rpc("admin_catalog_health", {
-    p_limit: Math.max(1, Math.min(2000, limit)),
-  });
+  const { data, error } = await (supabase as any).rpc("admin_catalog_health", { p_limit: Math.max(1, Math.min(2000, limit)) });
   if (error) throw error;
   return (data ?? []) as CatalogHealthRow[];
 };

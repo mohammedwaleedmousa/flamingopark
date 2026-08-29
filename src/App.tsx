@@ -88,6 +88,7 @@ const AdminCatalogHealthPage = lazy(() => import("./pages/admin/AdminCatalogHeal
 const AdminProductFormPage = lazy(() => import("./pages/admin/AdminProductFormPage"));
 const AdminSizePriceRulesPage = lazy(() => import("./pages/admin/AdminSizePriceRulesPage"));
 const AdminOrdersPage = lazy(() => import("./pages/admin/AdminOrdersPage"));
+const AdminOrderPreparationPage = lazy(() => import("./pages/admin/AdminOrderPreparationPage"));
 const AdminCustomersPage = lazy(() => import("./pages/admin/AdminCustomersPage"));
 const AdminBannersPage = lazy(() => import("./pages/admin/AdminBannersPage"));
 const AdminSettingsPage = lazy(() => import("./pages/admin/AdminSettingsPage"));
@@ -268,6 +269,7 @@ const App = () => {
               <Route path="products/:id" element={<AdminProductFormPage />} />
               <Route path="size-price-rules" element={<AdminSizePriceRulesPage />} />
               <Route path="orders" element={<AdminOrdersPage />} />
+              <Route path="order-preparation" element={<AdminOrderPreparationPage />} />
               <Route path="customers" element={<AdminCustomersPage />} />
               <Route path="banners" element={<AdminBannersPage />} />
               <Route path="campaigns" element={<AdminCampaignsPage />} />

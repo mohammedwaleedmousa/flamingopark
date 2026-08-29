@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import AdminProductToolsPage from "@/pages/admin/AdminProductToolsPage";
 import AdminProductExcelPage from "@/pages/admin/AdminProductExcelPage";
+import AdminProductClassificationPage from "@/pages/admin/AdminProductClassificationPage";
 import {
   CATALOG_ISSUE_LABELS,
   getCatalogHealth,
@@ -157,6 +158,10 @@ const AdminCatalogHealthPage = () => {
             </div>
           )}
         </div>
+      </div>
+
+      <div className="border-t border-border pt-8">
+        <AdminProductClassificationPage />
       </div>
 
       <div className="border-t border-border pt-8">

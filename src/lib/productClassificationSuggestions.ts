@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { requireAdminPermission } from "@/lib/adminPermissionActions";
 
 export type ProductAudience = "men" | "women" | "kids" | "unisex";
 
@@ -211,12 +212,14 @@ export const loadProductClassificationSuggestions = async (): Promise<ProductCla
 };
 
 export const applyProductClassification = async (productId: string, patch: { brand_id?: string; category_id?: string; audience?: ProductAudience }) => {
+  await requireAdminPermission("products.edit");
   const { data, error } = await (supabase as any).rpc("admin_apply_product_classification", { p_product_id: productId, p_patch: patch });
   if (error) throw error;
   return data;
 };
 
 export const undoProductRevision = async (revisionId: string) => {
+  await requireAdminPermission("products.edit");
   const { data, error } = await (supabase as any).rpc("admin_undo_product_revision", { p_revision_id: revisionId });
   if (error) throw error;
   return data;

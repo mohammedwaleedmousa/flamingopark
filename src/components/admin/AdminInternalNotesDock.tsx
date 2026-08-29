@@ -13,6 +13,7 @@ import {
   listOrderInternalNotes,
   type InternalNote,
 } from "@/lib/adminProductivity";
+import { requireAdminPermission } from "@/lib/adminPermissionActions";
 import { cn } from "@/lib/utils";
 
 type OrderOption = {
@@ -101,8 +102,13 @@ const AdminInternalNotesDock = (props: Props) => {
     }
     setSaving(true);
     try {
-      if (props.mode === "customer") await addCustomerInternalNote(entityId, clean, pinned);
-      else await addOrderInternalNote(entityId, clean, pinned);
+      if (props.mode === "customer") {
+        await requireAdminPermission("customers.manage");
+        await addCustomerInternalNote(entityId, clean, pinned);
+      } else {
+        await requireAdminPermission("orders.manage");
+        await addOrderInternalNote(entityId, clean, pinned);
+      }
       setNote("");
       setPinned(false);
       await loadNotes();

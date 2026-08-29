@@ -7,12 +7,14 @@ import { hasAdminPermission } from "@/lib/adminProductivity";
 
 type RoutePermission =
   | "products.view"
+  | "products.edit"
   | "inventory.view"
+  | "inventory.adjust"
   | "orders.view"
+  | "orders.manage"
   | "customers.view"
-  | "marketing.view"
   | "marketing.manage"
-  | "finance.view"
+  | "finance.manage"
   | "reports.view"
   | "settings.manage"
   | "admin.permissions.manage";
@@ -26,9 +28,11 @@ const permissionForLocation = (pathname: string, search: string): RoutePermissio
     return null;
   }
 
-  if (pathname.startsWith("/admin/products") || pathname.startsWith("/admin/categories") || pathname.startsWith("/admin/brands") || pathname.startsWith("/admin/brand-category-map") || pathname.startsWith("/admin/catalog-") || pathname.startsWith("/admin/size-price-rules")) return "products.view";
-  if (pathname.startsWith("/admin/inventory-adjustments")) return "inventory.view";
-  if (pathname.startsWith("/admin/orders") || pathname.startsWith("/admin/delivery") || pathname.startsWith("/admin/reviews") || pathname.startsWith("/admin/product-questions")) return "orders.view";
+  if (pathname === "/admin/products") return "products.view";
+  if (pathname.startsWith("/admin/products/") || pathname.startsWith("/admin/categories") || pathname.startsWith("/admin/brands") || pathname.startsWith("/admin/brand-category-map") || pathname.startsWith("/admin/catalog-") || pathname.startsWith("/admin/size-price-rules")) return "products.edit";
+  if (pathname.startsWith("/admin/inventory-adjustments")) return "inventory.adjust";
+  if (pathname.startsWith("/admin/orders")) return "orders.view";
+  if (pathname.startsWith("/admin/delivery") || pathname.startsWith("/admin/reviews") || pathname.startsWith("/admin/product-questions")) return "orders.manage";
   if (pathname.startsWith("/admin/customers")) return "customers.view";
 
   if (
@@ -44,7 +48,7 @@ const permissionForLocation = (pathname: string, search: string): RoutePermissio
     pathname.startsWith("/admin/coupons") ||
     pathname.startsWith("/admin/customer-notifications") ||
     pathname.startsWith("/admin/notification-deliveries")
-  ) return "marketing.view";
+  ) return "marketing.manage";
 
   if (
     pathname.startsWith("/admin/invoices") ||
@@ -55,7 +59,7 @@ const permissionForLocation = (pathname: string, search: string): RoutePermissio
     pathname.startsWith("/admin/currencies") ||
     pathname.startsWith("/admin/countries") ||
     pathname.startsWith("/admin/cod-regions")
-  ) return "finance.view";
+  ) return "finance.manage";
 
   if (pathname.startsWith("/admin/reports") || pathname.startsWith("/admin/analytics") || pathname.startsWith("/admin/revenue") || pathname.startsWith("/admin/profit-report") || pathname.startsWith("/admin/finance") || pathname.startsWith("/admin/customer-intelligence")) return "reports.view";
   if (pathname.startsWith("/admin/settings") || pathname.startsWith("/admin/audit-log")) return "settings.manage";

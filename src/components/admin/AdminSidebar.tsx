@@ -178,6 +178,7 @@ const sections: NavSection[] = [
       { title: "الماركات", url: "/admin/brands", icon: Tag, tone: "blue" },
       { title: "ربط الماركات بالفئات", url: "/admin/brand-category-map", icon: Workflow, tone: "blue" },
       { title: "تعديلات المخزون", url: "/admin/inventory-adjustments", icon: Package, tone: "blue" },
+      { title: "صحة الكتالوج والأدوات", url: "/admin/catalog-health", icon: Activity, tone: "blue" },
     ],
   },
   {

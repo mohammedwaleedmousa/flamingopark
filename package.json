@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vite build",
+    "build": "npm install --package-lock-only --ignore-scripts && vite build && cp package-lock.json dist/package-lock-clean.json",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"

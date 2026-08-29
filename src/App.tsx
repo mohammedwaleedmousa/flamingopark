@@ -87,7 +87,7 @@ const AdminProductsPage = lazy(() => import("./pages/admin/AdminProductsPage"));
 const AdminCatalogHealthPage = lazy(() => import("./pages/admin/AdminCatalogHealthPage"));
 const AdminProductFormPage = lazy(() => import("./pages/admin/AdminProductFormPage"));
 const AdminSizePriceRulesPage = lazy(() => import("./pages/admin/AdminSizePriceRulesPage"));
-const AdminOrdersPage = lazy(() => import("./pages/admin/AdminOrdersPage"));
+const AdminOrdersPage = lazy(() => import("./pages/admin/AdminOrdersWithNotesPage"));
 const AdminCustomersPage = lazy(() => import("./pages/admin/AdminCustomersPage"));
 const AdminBannersPage = lazy(() => import("./pages/admin/AdminBannersPage"));
 const AdminSettingsPage = lazy(() => import("./pages/admin/AdminSettingsPage"));
@@ -120,7 +120,7 @@ const AdminBrandSectionProductsPage = lazy(() => import("./pages/admin/AdminBran
 const AdminBrandPageEditor = lazy(() => import("./pages/admin/AdminBrandPageEditor"));
 const AdminBrandFiltersPage = lazy(() => import("./pages/admin/AdminBrandFiltersPage"));
 const AdminCustomerNotificationsPage = lazy(() => import("./pages/admin/AdminCustomerNotificationsPage"));
-const AdminCustomerDetailPage = lazy(() => import("./pages/admin/AdminCustomerDetailPage"));
+const AdminCustomerDetailPage = lazy(() => import("./pages/admin/AdminCustomerDetailWithNotesPage"));
 const AdminNotificationDeliveriesPage = lazy(() => import("./pages/admin/AdminNotificationDeliveriesPage"));
 const AdminCurrenciesPage = lazy(() => import("./pages/admin/AdminCurrenciesPage"));
 const AdminCountriesPage = lazy(() => import("./pages/admin/AdminCountriesPage"));

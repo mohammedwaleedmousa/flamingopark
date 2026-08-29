@@ -3,20 +3,22 @@ import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { isBannerCurrentlyVisible } from "@/lib/bannerSchedule";
 import { optimizeImage } from "@/lib/imageUrl";
 
 const FlamingoServices = () => {
   const { data: banner } = useQuery({
-    queryKey: ["between-products-banner"],
+    queryKey: ["between-products-banner", "scheduled-v1"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("banners")
-        .select("title_ar,subtitle_ar,image_url,cta_text_ar,cta_link,image_zoom,image_position_x,image_position_y")
+        .select("title_ar,subtitle_ar,image_url,cta_text_ar,cta_link,image_zoom,image_position_x,image_position_y,starts_at,ends_at")
         .eq("title", "Between products banner")
         .eq("is_active", true)
         .maybeSingle();
 
       if (error) throw error;
+      if (!data || !isBannerCurrentlyVisible(data)) return null;
       return data;
     },
     staleTime: 0,

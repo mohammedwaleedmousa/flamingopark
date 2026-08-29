@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "npm install --package-lock-only --ignore-scripts && node scripts/capture-clean-lock.mjs && vite build",
+    "build": "node scripts/capture-clean-lock.mjs && vite build",
     "build:dev": "vite build --mode development",
     "lint": "eslint .",
     "preview": "vite preview"

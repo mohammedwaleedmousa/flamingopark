@@ -9,6 +9,7 @@ import {
   PackageSearch,
   RefreshCw,
   Search,
+  Sparkles,
   Tags,
   Wrench,
 } from "lucide-react";
@@ -18,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { toast } from "@/hooks/use-toast";
 import AdminProductToolsPage from "@/pages/admin/AdminProductToolsPage";
 import AdminProductExcelPage from "@/pages/admin/AdminProductExcelPage";
+import AdminProductClassificationPage from "@/pages/admin/AdminProductClassificationPage";
 import { cn } from "@/lib/utils";
 import {
   CATALOG_ISSUE_LABELS,
@@ -37,10 +39,11 @@ const EMPTY_SUMMARY: CatalogHealthSummary = {
   stock_mismatch: 0,
 };
 
-type ToolTab = "health" | "quick" | "excel";
+type ToolTab = "health" | "classification" | "quick" | "excel";
 
 const TABS: Array<{ id: ToolTab; label: string; helper: string; icon: typeof PackageSearch }> = [
   { id: "health", label: "صحة الكتالوج", helper: "المشكلات والبيانات الناقصة", icon: PackageSearch },
+  { id: "classification", label: "التصنيف والسجل", helper: "اقتراحات وتراجع آمن", icon: Sparkles },
   { id: "quick", label: "تعديل سريع", helper: "السعر والحالة والنسخ", icon: Wrench },
   { id: "excel", label: "Excel", helper: "تصدير وتحديث جماعي", icon: FileSpreadsheet },
 ];
@@ -97,7 +100,7 @@ const AdminCatalogHealthPage = () => {
       />
 
       <section className="rounded-[16px] border border-[#E5E9EF] bg-white p-[6px]">
-        <div className="grid gap-[6px] md:grid-cols-3">
+        <div className="grid gap-[6px] sm:grid-cols-2 xl:grid-cols-4">
           {TABS.map(({ id, label, helper, icon: Icon }) => {
             const active = activeTab === id;
             return (
@@ -213,6 +216,7 @@ const AdminCatalogHealthPage = () => {
         </div>
       )}
 
+      {activeTab === "classification" && <AdminProductClassificationPage />}
       {activeTab === "quick" && <AdminProductToolsPage embedded />}
       {activeTab === "excel" && <AdminProductExcelPage embedded />}
     </div>

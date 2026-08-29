@@ -51,6 +51,7 @@ const normalize = (value: string | null | undefined) =>
 
 const tokens = (value: string) => normalize(value).split(/\s+/).filter((token) => token.length > 1);
 const includesToken = (text: string, token: string) => ` ${text} `.includes(` ${token} `);
+const includesPhrase = (text: string, phrase: string) => ` ${text} `.includes(` ${normalize(phrase)} `);
 
 const BRAND_ALIASES: Record<string, string[]> = {
   lv: ["lv", "louis vuitton", "لويس فيتون", "لويس فيتن"],
@@ -74,31 +75,35 @@ const CATEGORY_KEYWORDS: Record<string, string[]> = {
   necklaces: ["necklace", "necklaces", "chain", "سلسال", "قلاده", "قلادة", "قلادات"],
   earring: ["earring", "earrings", "حلق", "اقراط", "أقراط"],
   watchs: ["watch", "watches", "ساعه", "ساعة", "ساعات"],
-  "mens-watches": ["mens watch", "men watch", "رجالي"],
-  "other-watches": ["womens watch", "women watch", "نسائي"],
-  "mens-shoes": ["mens shoes", "men shoes", "رجالي"],
+  "mens-watches": ["mens watch", "men watch", "male watch", "ساعه رجالي", "ساعة رجالية", "ساعات رجالية"],
+  "other-watches": ["womens watch", "women watch", "female watch", "ساعه نسائي", "ساعة نسائية", "ساعات نسائية"],
+  "mens-shoes": ["mens shoes", "men shoes", "male shoes", "حذاء رجالي", "احذيه رجالي", "أحذية رجالية"],
   sports: ["sneaker", "sneakers", "sport", "sports", "رياضي", "سبورت"],
   sandals: ["sandal", "sandals", "صندل"],
   boot: ["boot", "boots", "بوت"],
   high: ["heel", "heels", "كعب"],
   flat: ["flat", "flats", "فلات"],
   dresses: ["dress", "dresses", "فستان", "فساتين"],
-  "womens-sets": ["set", "sets", "طقم", "اطقم", "أطقم"],
-  "mens-pants": ["pants", "trousers", "بنطلون", "بناطيل"],
-  "kids-clothing": ["kids clothing", "طفل", "اطفال", "أطفال"],
-  "kids-dresses": ["kids dress", "فستان اطفال", "فساتين اطفال"],
+  "womens-sets": ["womens set", "women set", "طقم نسائي", "اطقم نسائي", "أطقم نسائية"],
+  "mens-pants": ["mens pants", "men pants", "بنطلون رجالي", "بناطيل رجالية"],
+  "kids-clothing": ["kids clothing", "child clothing", "ملابس اطفال", "ملابس أطفال"],
+  "kids-dresses": ["kids dress", "فستان اطفال", "فساتين اطفال", "فساتين أطفال"],
   cap: ["cap", "hat", "كاب", "قبعه", "قبعة"],
 };
 
 const audienceFromText = (text: string): ClassificationSuggestion | null => {
+  const normalized = normalize(text);
   const groups: Array<{ value: ProductAudience; label: string; terms: string[] }> = [
     { value: "kids", label: "أطفال", terms: ["kids", "kid", "children", "child", "baby", "babies", "اطفال", "أطفال", "طفل", "ولادي", "بناتي"] },
-    { value: "men", label: "رجالي", terms: ["men", "mens", "male", "man", "رجالي", "رجال"] },
-    { value: "women", label: "نسائي", terms: ["women", "womens", "female", "lady", "ladies", "نسائي", "حريمي", "بناتي"] },
+    { value: "women", label: "نسائي", terms: ["women", "womens", "female", "lady", "ladies", "نسائي", "نسائيه", "نسائية", "حريمي"] },
+    { value: "men", label: "رجالي", terms: ["men", "mens", "male", "man", "رجالي", "رجاليه", "رجالية", "رجال"] },
     { value: "unisex", label: "للجميع", terms: ["unisex", "للجميع"] },
   ];
   for (const group of groups) {
-    const hit = group.terms.find((term) => normalize(text).includes(normalize(term)));
+    const hit = group.terms.find((term) => {
+      const termTokens = tokens(term);
+      return termTokens.length === 1 ? includesToken(normalized, termTokens[0]) : includesPhrase(normalized, term);
+    });
     if (hit) return { value: group.value, label: group.label, confidence: 0.94, reasons: [`الكلمة «${hit}» موجودة في بيانات المنتج`] };
   }
   return null;
@@ -110,8 +115,8 @@ const brandSuggestion = (product: Product, brands: Brand[]): ClassificationSugge
   for (const brand of brands) {
     const aliases = [brand.name, brand.slug, ...(BRAND_ALIASES[brand.slug] || [])].map(normalize).filter(Boolean);
     for (const alias of aliases) {
-      const exactPhrase = text.includes(alias);
       const aliasTokens = tokens(alias);
+      const exactPhrase = aliasTokens.length > 1 ? includesPhrase(text, alias) : aliasTokens.length === 1 && includesToken(text, aliasTokens[0]);
       const tokenMatch = aliasTokens.length > 0 && aliasTokens.every((token) => includesToken(text, token));
       if (!exactPhrase && !tokenMatch) continue;
       const confidence = alias.length <= 2 ? 0.88 : exactPhrase ? 0.98 : 0.93;
@@ -131,7 +136,10 @@ const categorySuggestion = (product: Product, categories: Category[], products: 
     const terms = [category.name, category.name_ar, category.slug, ...(CATEGORY_KEYWORDS[category.slug] || [])]
       .map(normalize)
       .filter((term) => term.length > 2);
-    const hit = terms.find((term) => text.includes(term));
+    const hit = terms.find((term) => {
+      const termTokens = tokens(term);
+      return termTokens.length === 1 ? includesToken(text, termTokens[0]) : includesPhrase(text, term);
+    });
     if (!hit) continue;
     const confidence = CATEGORY_KEYWORDS[category.slug]?.some((term) => normalize(term) === hit) ? 0.94 : 0.88;
     if (!best || confidence > best.confidence) {
@@ -197,7 +205,7 @@ export const undoProductRevision = async (revisionId: string) => {
 export const listProductRevisions = async (productId: string, limit = 20): Promise<AdminRevision[]> => listEntityRevisions("product", productId, limit);
 
 export const reversibleFields = (revision: AdminRevision) => {
-  if (!['quick_update', 'classification_update'].includes(revision.action)) return [] as string[];
+  if (!["quick_update", "classification_update"].includes(revision.action)) return [] as string[];
   const fields = Array.isArray(revision.metadata?.fields) ? revision.metadata.fields.map(String) : [];
-  return fields.filter((field) => ['price', 'is_active', 'brand_id', 'category_id', 'audience'].includes(field));
+  return fields.filter((field) => ["price", "is_active", "brand_id", "category_id", "audience"].includes(field));
 };

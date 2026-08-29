@@ -3,6 +3,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { exportXlsx } from "@/lib/xlsxExport";
 import { readXlsxObjects, type XlsxCellValue } from "@/lib/xlsxImport";
 import { quickUpdateAdminProduct } from "@/lib/adminProductTools";
+import { requireAdminPermission } from "@/lib/adminPermissionActions";
 
 const BOOLEAN_VALUES = new Map<string, boolean>([
   ["true", true], ["false", false], ["1", true], ["0", false],
@@ -201,6 +202,11 @@ export const previewProductWorkbook = async (file: File): Promise<ProductExcelPr
 export const applyProductWorkbookPreview = async (preview: ProductExcelPreviewRow[]) => {
   if (preview.some((row) => row.mode === "error")) throw new Error("يوجد صفوف فيها أخطاء. أصلحها قبل التنفيذ.");
   const actionable = preview.filter((row) => row.mode === "create" || row.mode === "update");
+  if (actionable.length === 0) return 0;
+
+  await requireAdminPermission("products.bulk_update");
+  await requireAdminPermission("products.edit");
+
   for (const row of actionable) {
     if (row.mode === "update" && row.productId) {
       await quickUpdateAdminProduct(row.productId, row.payload as any);
@@ -246,6 +252,9 @@ export const previewInventoryWorkbook = async (file: File): Promise<InventoryExc
 export const applyInventoryWorkbookPreview = async (preview: InventoryExcelPreviewRow[]) => {
   if (preview.some((row) => row.mode === "error")) throw new Error("يوجد صفوف مخزون فيها أخطاء. أصلحها قبل التنفيذ.");
   const actionable = preview.filter((row) => row.mode === "update");
+  if (actionable.length === 0) return 0;
+
+  await requireAdminPermission("inventory.adjust");
   for (const row of actionable) {
     const { error } = await (supabase as any).rpc("admin_update_inventory_sku_from_excel", { p_sku_id: row.skuId, p_stock_quantity: row.after });
     if (error) throw new Error(`فشل الصف ${row.rowNumber}: ${error.message}`);

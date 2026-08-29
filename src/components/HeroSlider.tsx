@@ -7,6 +7,7 @@ import { Autoplay } from "swiper/modules";
 import { ArrowLeft } from "phosphor-react";
 
 import { supabase } from "@/integrations/supabase/client";
+import { isBannerCurrentlyVisible } from "@/lib/bannerSchedule";
 import { optimizeImage } from "@/lib/imageUrl";
 
 import "swiper/css";
@@ -28,20 +29,21 @@ const HeroSlider = () => {
   const [loadedSlides, setLoadedSlides] = useState<Set<number>>(() => new Set([0]));
 
   const { data: managedSlides = [], isFetching } = useQuery({
-    queryKey: ["home-hero-banners", "admin-only-v4"],
+    queryKey: ["home-hero-banners", "admin-only-v5-scheduled"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("banners")
-        .select("image_url,title,title_ar,subtitle_ar,cta_text_ar,cta_link,page_slug,image_zoom,image_position_x,image_position_y")
+        .select("image_url,title,title_ar,subtitle_ar,cta_text_ar,cta_link,page_slug,image_zoom,image_position_x,image_position_y,starts_at,ends_at")
         .eq("is_active", true)
         .neq("title", "Between products banner")
         .order("sort_order", { ascending: true })
-        .limit(3);
+        .limit(20);
 
       if (error) throw error;
 
       return (data || [])
-        .filter((slide: any) => Boolean(String(slide.image_url || "").trim()))
+        .filter((slide: any) => Boolean(String(slide.image_url || "").trim()) && isBannerCurrentlyVisible(slide))
+        .slice(0, 3)
         .map((slide: any) => ({
           image: String(slide.image_url),
           title: String(slide.title_ar || ""),

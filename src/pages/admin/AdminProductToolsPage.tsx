@@ -30,7 +30,11 @@ interface ToolProduct {
 
 type Draft = { price: string; stock: string; is_active: boolean };
 
-const AdminProductToolsPage = () => {
+type AdminProductToolsPageProps = {
+  embedded?: boolean;
+};
+
+const AdminProductToolsPage = ({ embedded = false }: AdminProductToolsPageProps) => {
   const navigate = useNavigate();
   const [products, setProducts] = useState<ToolProduct[]>([]);
   const [modes, setModes] = useState<Map<string, ProductInventoryMode>>(new Map());
@@ -128,84 +132,98 @@ const AdminProductToolsPage = () => {
   };
 
   return (
-    <div className="w-full space-y-5" dir="rtl">
-      <AdminPageHeader
-        category="الكتالوج والمخزون"
-        title="أدوات المنتجات السريعة"
-        description="تعديلات صغيرة وآمنة بدون فتح نموذج المنتج الكامل."
-        actions={[
-          { label: "صحة الكتالوج", icon: PackageSearch, href: "/admin/catalog-health" },
-          { label: "إدارة المنتجات", icon: ExternalLink, href: "/admin/products" },
-        ]}
-      />
-
-      <div className="rounded-xl border border-border bg-card p-4">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="relative w-full sm:max-w-md">
-            <Search className="absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-            <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="اسم المنتج، الرابط أو الماركة" className="pr-9" />
-          </div>
-          <Button variant="outline" onClick={() => void load()} disabled={loading}>
-            {loading ? <Loader2 className="ml-2 h-4 w-4 animate-spin" /> : <RefreshCw className="ml-2 h-4 w-4" />}
-            تحديث
-          </Button>
-        </div>
-
-        <div className="mt-3 flex items-start gap-2 rounded-lg border border-border bg-muted/40 p-3 text-xs text-muted-foreground">
-          <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-          <p>إذا كان المنتج يستخدم مقاسات أو SKU، يبقى تعديل المخزون من نموذج المنتج/المخزون الحالي فقط. السعر والحالة يمكن تعديلهما هنا بأمان.</p>
-        </div>
-      </div>
-
-      {loading ? (
-        <div className="grid min-h-64 place-items-center"><Loader2 className="h-6 w-6 animate-spin" /></div>
-      ) : (
-        <div className="overflow-x-auto rounded-xl border border-border bg-card">
-          <table className="w-full min-w-[930px] text-sm">
-            <thead>
-              <tr className="border-b text-right text-xs text-muted-foreground">
-                <th className="px-4 py-3 font-medium">المنتج</th>
-                <th className="px-4 py-3 font-medium">السعر</th>
-                <th className="px-4 py-3 font-medium">المخزون</th>
-                <th className="px-4 py-3 font-medium">نشط</th>
-                <th className="px-4 py-3 font-medium">إجراءات</th>
-              </tr>
-            </thead>
-            <tbody>
-              {products.map((product) => {
-                const draft = drafts[product.id];
-                const isSku = modes.get(product.id) === "sku";
-                const busy = busyId === product.id;
-                return (
-                  <tr key={product.id} className="border-b last:border-0">
-                    <td className="px-4 py-3">
-                      <Link to={`/admin/products/${product.id}`} className="font-medium hover:underline">{product.name_ar || product.name}</Link>
-                      <p className="mt-1 text-xs text-muted-foreground">{[product.brand, product.category].filter(Boolean).join(" • ") || product.slug}</p>
-                    </td>
-                    <td className="px-4 py-3"><Input className="w-28" inputMode="decimal" value={draft?.price ?? ""} onChange={(e) => setDrafts((current) => ({ ...current, [product.id]: { ...current[product.id], price: e.target.value } }))} /></td>
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <Input className="w-24" inputMode="numeric" disabled={isSku} value={draft?.stock ?? "0"} onChange={(e) => setDrafts((current) => ({ ...current, [product.id]: { ...current[product.id], stock: e.target.value } }))} />
-                        {isSku && <span className="text-[11px] text-muted-foreground">SKU</span>}
-                      </div>
-                    </td>
-                    <td className="px-4 py-3"><Checkbox checked={draft?.is_active ?? false} onCheckedChange={(value) => setDrafts((current) => ({ ...current, [product.id]: { ...current[product.id], is_active: value === true } }))} /></td>
-                    <td className="px-4 py-3">
-                      <div className="flex gap-2">
-                        <Button size="sm" disabled={!changed.has(product.id) || busy} onClick={() => void save(product)}>
-                          {busy ? <Loader2 className="ml-1 h-4 w-4 animate-spin" /> : <Save className="ml-1 h-4 w-4" />}حفظ
-                        </Button>
-                        <Button size="sm" variant="outline" disabled={busy} onClick={() => void duplicate(product)}><Copy className="ml-1 h-4 w-4" />نسخ</Button>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-          {products.length === 0 && <div className="grid min-h-48 place-items-center text-sm text-muted-foreground">لا توجد منتجات مطابقة</div>}
-        </div>
+    <div className="w-full space-y-4" dir="rtl">
+      {!embedded && (
+        <AdminPageHeader
+          category="الكتالوج والمخزون"
+          title="أدوات المنتجات السريعة"
+          description="تعديلات صغيرة وآمنة بدون فتح نموذج المنتج الكامل."
+          actions={[
+            { label: "صحة الكتالوج", icon: PackageSearch, href: "/admin/catalog-health" },
+            { label: "إدارة المنتجات", icon: ExternalLink, href: "/admin/products" },
+          ]}
+        />
       )}
+
+      <section className="overflow-hidden rounded-[16px] border border-[#E5E9EF] bg-white">
+        <div className="flex flex-col gap-[10px] border-b border-[#EDF0F3] px-[14px] py-[11px] sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-center gap-[8px]">
+            <div className="flex h-[30px] w-[30px] items-center justify-center rounded-[9px] bg-[#F1EFFF] text-[#675CBA]">
+              <Search className="h-[13px] w-[13px]" strokeWidth={1.8} />
+            </div>
+            <div>
+              <p className="text-[10px] font-semibold text-[#444B55]">البحث والتعديل السريع</p>
+              <p className="mt-[2px] text-[7px] text-[#9BA2AC]">آخر 150 منتجًا مع أدوات الحفظ والنسخ</p>
+            </div>
+          </div>
+
+          <div className="flex w-full gap-[7px] sm:w-auto">
+            <div className="relative min-w-0 flex-1 sm:w-[300px]">
+              <Search className="pointer-events-none absolute right-[11px] top-1/2 h-[12px] w-[12px] -translate-y-1/2 text-[#969EA8]" />
+              <Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="اسم المنتج، الرابط أو الماركة" className="h-[36px] rounded-[9px] border-[#E3E7EC] bg-[#F8FAFC] pr-[32px] text-[9px] shadow-none placeholder:text-[#A4ABB4] focus-visible:ring-0" />
+            </div>
+            <Button variant="outline" onClick={() => void load()} disabled={loading} className="h-[36px] rounded-[9px] border-[#E3E7EC] px-[10px] text-[8px] shadow-none">
+              {loading ? <Loader2 className="ml-[5px] h-[12px] w-[12px] animate-spin" /> : <RefreshCw className="ml-[5px] h-[12px] w-[12px]" />}
+              تحديث
+            </Button>
+          </div>
+        </div>
+
+        <div className="flex items-start gap-[7px] border-b border-[#EDF0F3] bg-[#FBFCFD] px-[14px] py-[9px] text-[7.5px] text-[#7D8590]">
+          <ShieldAlert className="mt-[1px] h-[12px] w-[12px] shrink-0 text-[#9A8052]" />
+          <p>مخزون المنتجات التي تستخدم مقاسات أو SKU يُعدّل من نظام المخزون الحالي فقط. السعر والحالة والنسخ متاحة هنا بأمان.</p>
+        </div>
+
+        {loading ? (
+          <div className="grid min-h-64 place-items-center"><Loader2 className="h-5 w-5 animate-spin text-[#9098A3]" /></div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[930px] text-sm">
+              <thead className="bg-[#FBFCFD]">
+                <tr className="border-b border-[#EDF0F3] text-right text-[8px] text-[#8E96A1]">
+                  <th className="px-4 py-[10px] font-semibold">المنتج</th>
+                  <th className="px-4 py-[10px] font-semibold">السعر</th>
+                  <th className="px-4 py-[10px] font-semibold">المخزون</th>
+                  <th className="px-4 py-[10px] font-semibold">نشط</th>
+                  <th className="px-4 py-[10px] font-semibold">إجراءات</th>
+                </tr>
+              </thead>
+              <tbody>
+                {products.map((product) => {
+                  const draft = drafts[product.id];
+                  const isSku = modes.get(product.id) === "sku";
+                  const busy = busyId === product.id;
+                  return (
+                    <tr key={product.id} className="border-b border-[#F0F2F4] last:border-0 hover:bg-[#FCFDFD]">
+                      <td className="px-4 py-[10px]">
+                        <Link to={`/admin/products/${product.id}`} className="text-[9.5px] font-semibold text-[#424A54] hover:underline">{product.name_ar || product.name}</Link>
+                        <p className="mt-[2px] text-[7px] text-[#9BA2AC]">{[product.brand, product.category].filter(Boolean).join(" • ") || product.slug}</p>
+                      </td>
+                      <td className="px-4 py-[10px]"><Input className="h-[32px] w-28 rounded-[8px] border-[#E3E7EC] bg-[#F9FAFB] text-[8.5px] shadow-none focus-visible:ring-0" inputMode="decimal" value={draft?.price ?? ""} onChange={(e) => setDrafts((current) => ({ ...current, [product.id]: { ...current[product.id], price: e.target.value } }))} /></td>
+                      <td className="px-4 py-[10px]">
+                        <div className="flex items-center gap-[6px]">
+                          <Input className="h-[32px] w-24 rounded-[8px] border-[#E3E7EC] bg-[#F9FAFB] text-[8.5px] shadow-none focus-visible:ring-0 disabled:opacity-55" inputMode="numeric" disabled={isSku} value={draft?.stock ?? "0"} onChange={(e) => setDrafts((current) => ({ ...current, [product.id]: { ...current[product.id], stock: e.target.value } }))} />
+                          {isSku && <span className="rounded-[6px] bg-[#F1F3F5] px-[6px] py-[3px] text-[6.5px] font-semibold text-[#858D98]">SKU</span>}
+                        </div>
+                      </td>
+                      <td className="px-4 py-[10px]"><Checkbox checked={draft?.is_active ?? false} onCheckedChange={(value) => setDrafts((current) => ({ ...current, [product.id]: { ...current[product.id], is_active: value === true } }))} /></td>
+                      <td className="px-4 py-[10px]">
+                        <div className="flex gap-[6px]">
+                          <Button size="sm" disabled={!changed.has(product.id) || busy} onClick={() => void save(product)} className="h-[30px] rounded-[8px] px-[9px] text-[8px] shadow-none">
+                            {busy ? <Loader2 className="ml-[4px] h-[11px] w-[11px] animate-spin" /> : <Save className="ml-[4px] h-[11px] w-[11px]" />}حفظ
+                          </Button>
+                          <Button size="sm" variant="outline" disabled={busy} onClick={() => void duplicate(product)} className="h-[30px] rounded-[8px] border-[#E1E5EA] px-[9px] text-[8px] shadow-none"><Copy className="ml-[4px] h-[11px] w-[11px]" />نسخ</Button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+            {products.length === 0 && <div className="grid min-h-48 place-items-center text-[9px] text-[#9098A3]">لا توجد منتجات مطابقة</div>}
+          </div>
+        )}
+      </section>
     </div>
   );
 };

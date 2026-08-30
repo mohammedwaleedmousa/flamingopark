@@ -4,6 +4,7 @@ import { ChevronLeft, ExternalLink, Loader2, Search, UserRound, X } from "lucide
 
 import { supabase } from "@/integrations/supabase/client";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
+import { ADMIN_LOGIN_PATH, adminPath, legacyAdminPathToCurrent, normalizeAdminPathForLegacyRules } from "@/lib/adminRoutes";
 
 import AdminSidebar from "./AdminSidebar";
 import NotificationsDropdown from "./NotificationsDropdown";
@@ -240,6 +241,7 @@ const pageMetaRules: PageMetaRule[] = [
 const AdminLayout = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const legacyPathname = normalizeAdminPathForLegacyRules(location.pathname);
 
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -258,18 +260,18 @@ const AdminLayout = () => {
   ========================================================= */
 
   const currentPageMeta = useMemo(() => {
-    if (location.pathname === "/admin") return { title: "لوحة التحكم", section: "الرئيسية" };
+    if (legacyPathname === "/admin") return { title: "لوحة التحكم", section: "الرئيسية" };
 
-    const exactRule = pageMetaRules.find((rule) => rule.exact && location.pathname === rule.match);
+    const exactRule = pageMetaRules.find((rule) => rule.exact && legacyPathname === rule.match);
 
     if (exactRule) return exactRule;
 
-    const partialRule = pageMetaRules.find((rule) => !rule.exact && location.pathname.startsWith(rule.match));
+    const partialRule = pageMetaRules.find((rule) => !rule.exact && legacyPathname.startsWith(rule.match));
 
     if (partialRule) return partialRule;
 
     return { title: "لوحة الإدارة", section: "Flamingo Park" };
-  }, [location.pathname]);
+  }, [legacyPathname]);
 
   /* =========================================================
      SEARCH
@@ -307,21 +309,21 @@ const AdminLayout = () => {
       const { data: { user } } = await supabase.auth.getUser();
 
       if (!user) {
-        navigate("/admin/login");
+        navigate(ADMIN_LOGIN_PATH);
         return;
       }
 
       const { data: roleData } = await supabase.from("user_roles").select("role").eq("user_id", user.id).eq("role", "admin").maybeSingle();
 
       if (!roleData) {
-        navigate("/admin/login");
+        navigate(ADMIN_LOGIN_PATH);
         return;
       }
 
       setIsAdmin(true);
     } catch (error) {
       console.error("Auth check error:", error);
-      navigate("/admin/login");
+      navigate(ADMIN_LOGIN_PATH);
     } finally {
       setIsLoading(false);
     }
@@ -442,7 +444,7 @@ const AdminLayout = () => {
     setSearchQuery("");
     setSearchFocused(false);
     setMobileSearchOpen(false);
-    navigate(url);
+    navigate(legacyAdminPathToCurrent(url));
   };
 
   /* =========================================================
@@ -515,7 +517,7 @@ const AdminLayout = () => {
 
                 <div className="mx-[3px] hidden h-[25px] w-px bg-[#E8EBEF] lg:block" />
 
-                <button type="button" onClick={() => navigate("/admin/settings")} className="group flex min-w-0 items-center gap-[8px] rounded-[11px] px-[3px] py-[2px] transition-colors hover:bg-[#F7F9FB]">
+                <button type="button" onClick={() => navigate(adminPath("settings"))} className="group flex min-w-0 items-center gap-[8px] rounded-[11px] px-[3px] py-[2px] transition-colors hover:bg-[#F7F9FB]">
                   <div className="relative flex h-[36px] w-[36px] shrink-0 items-center justify-center rounded-[11px] bg-[linear-gradient(135deg,#EEEAFE_0%,#E7F5FB_100%)] text-[11px] font-bold uppercase text-[#655DA0]">
                     {userName ? userName.charAt(0).toUpperCase() : <UserRound className="h-[14px] w-[14px]" strokeWidth={1.7} />}
                     <span className="absolute bottom-0 left-0 h-[9px] w-[9px] rounded-full border-2 border-white bg-[#65A77C]" />

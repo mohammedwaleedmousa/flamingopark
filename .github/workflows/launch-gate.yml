@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-22.04
+    runs-on: windows-2022
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4

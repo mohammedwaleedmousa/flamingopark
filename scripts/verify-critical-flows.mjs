@@ -35,6 +35,12 @@ const checks = [
     needles: ["products", "brands", "categories", "application/xml"],
     message: "The storefront sitemap must continue including dynamic catalog routes.",
   },
+  {
+    file: "src/main.tsx",
+    needles: ["createRoot", "startRuntimeMonitoring"],
+    forbidden: ["./pages/ProductDetailPage"],
+    message: "The product-detail route must stay lazy and must not be eagerly imported by the application entrypoint.",
+  },
 ];
 
 let failures = 0;
@@ -51,9 +57,11 @@ for (const check of checks) {
 
   const normalized = source.toLowerCase();
   const missing = check.needles.filter((needle) => !normalized.includes(needle.toLowerCase()));
-  if (missing.length) {
+  const forbidden = (check.forbidden || []).filter((needle) => normalized.includes(needle.toLowerCase()));
+  if (missing.length || forbidden.length) {
     console.error(`FAIL ${check.file}: ${check.message}`);
-    console.error(`  Missing: ${missing.join(", ")}`);
+    if (missing.length) console.error(`  Missing: ${missing.join(", ")}`);
+    if (forbidden.length) console.error(`  Forbidden: ${forbidden.join(", ")}`);
     failures += 1;
     continue;
   }

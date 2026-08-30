@@ -78,11 +78,13 @@ type TrackPayload = {
     | "add_to_cart"
     | "remove_from_cart"
     | "begin_checkout"
+    | "purchase"
     | "search"
     | "add_to_wishlist"
     | "ad_click";
   path?: string;
   product_id?: string | null;
+  order_id?: string | null;
   value?: number | null;
   metadata?: Record<string, any>;
 };
@@ -106,7 +108,7 @@ export async function track(payload: TrackPayload): Promise<boolean> {
       device: getDevice(),
       country: null,
       product_id: payload.product_id ?? null,
-      order_id: null,
+      order_id: payload.order_id ?? null,
       value: payload.value ?? null,
       metadata: payload.metadata ?? {},
     });
@@ -125,6 +127,7 @@ export async function track(payload: TrackPayload): Promise<boolean> {
         page_path: payload.path,
         value: payload.value ?? undefined,
         product_id: payload.product_id ?? undefined,
+        order_id: payload.order_id ?? undefined,
         ...payload.metadata,
       });
     }

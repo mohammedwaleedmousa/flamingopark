@@ -3,7 +3,6 @@ import { Link, useLocation } from "react-router-dom";
 import { Loader2, LockKeyhole } from "lucide-react";
 import AdminLayoutBase from "@/components/admin/AdminLayoutBase";
 import { supabase } from "@/integrations/supabase/client";
-import { hasAdminPermission } from "@/lib/adminProductivity";
 
 type RoutePermission =
   | "products.view"
@@ -18,6 +17,16 @@ type RoutePermission =
   | "reports.view"
   | "settings.manage"
   | "admin.permissions.manage";
+
+type PermissionSnapshot = {
+  userId: string;
+  values: Map<string, boolean>;
+  expiresAt: number;
+};
+
+const PERMISSION_CACHE_TTL_MS = 60_000;
+let permissionSnapshot: PermissionSnapshot | null = null;
+let permissionSnapshotPromise: Promise<PermissionSnapshot | null> | null = null;
 
 const permissionForLocation = (pathname: string, search: string): RoutePermission | null => {
   if (pathname === "/admin") {
@@ -64,6 +73,67 @@ const permissionForLocation = (pathname: string, search: string): RoutePermissio
   if (pathname.startsWith("/admin/reports") || pathname.startsWith("/admin/analytics") || pathname.startsWith("/admin/revenue") || pathname.startsWith("/admin/profit-report") || pathname.startsWith("/admin/finance") || pathname.startsWith("/admin/customer-intelligence")) return "reports.view";
   if (pathname.startsWith("/admin/settings") || pathname.startsWith("/admin/audit-log")) return "settings.manage";
   return null;
+};
+
+const getCachedPermission = (permission: RoutePermission) => {
+  if (!permissionSnapshot || permissionSnapshot.expiresAt <= Date.now()) return undefined;
+  return permissionSnapshot.values.get(permission) !== false;
+};
+
+const loadPermissionSnapshot = async (): Promise<PermissionSnapshot | null> => {
+  const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+  if (sessionError) throw sessionError;
+
+  const userId = sessionData.session?.user?.id;
+  if (!userId) return null;
+
+  if (permissionSnapshot?.userId === userId && permissionSnapshot.expiresAt > Date.now()) {
+    return permissionSnapshot;
+  }
+
+  if (permissionSnapshotPromise) return permissionSnapshotPromise;
+
+  permissionSnapshotPromise = (async () => {
+    const { data, error } = await supabase
+      .from("admin_user_permissions")
+      .select("permission, granted")
+      .eq("user_id", userId);
+
+    if (error) throw error;
+
+    const values = new Map<string, boolean>();
+    (data ?? []).forEach((row) => values.set(String(row.permission), row.granted !== false));
+
+    permissionSnapshot = {
+      userId,
+      values,
+      expiresAt: Date.now() + PERMISSION_CACHE_TTL_MS,
+    };
+
+    return permissionSnapshot;
+  })();
+
+  try {
+    return await permissionSnapshotPromise;
+  } finally {
+    permissionSnapshotPromise = null;
+  }
+};
+
+const resolveAdminPermission = async (permission: RoutePermission) => {
+  const snapshot = await loadPermissionSnapshot();
+  if (!snapshot) return true;
+  return snapshot.values.get(permission) !== false;
+};
+
+const prefetchPrimaryAdminRoutes = () => {
+  void Promise.allSettled([
+    import("@/pages/admin/AdminOrdersWithNotesPage"),
+    import("@/pages/admin/AdminProductsPage"),
+    import("@/pages/admin/AdminCustomersPage"),
+    import("@/pages/admin/reports/ReportsOverviewPage"),
+    import("@/pages/admin/reports/ReportsCustomersPage"),
+  ]);
 };
 
 const adminInteractiveColorOverrides = `
@@ -251,8 +321,28 @@ const adminInteractiveColorOverrides = `
 const AdminLayout = () => {
   const location = useLocation();
   const requiredPermission = useMemo(() => permissionForLocation(location.pathname, location.search), [location.pathname, location.search]);
-  const [checking, setChecking] = useState(Boolean(requiredPermission));
-  const [allowed, setAllowed] = useState(true);
+  const cachedPermission = requiredPermission ? getCachedPermission(requiredPermission) : true;
+  const [checking, setChecking] = useState(Boolean(requiredPermission) && cachedPermission === undefined);
+  const [allowed, setAllowed] = useState(cachedPermission ?? true);
+
+  useEffect(() => {
+    const warmTimer = window.setTimeout(() => {
+      void loadPermissionSnapshot().catch((error) => console.error("Admin permission warmup failed:", error));
+      prefetchPrimaryAdminRoutes();
+    }, 250);
+
+    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
+      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
+        permissionSnapshot = null;
+        permissionSnapshotPromise = null;
+      }
+    });
+
+    return () => {
+      window.clearTimeout(warmTimer);
+      authListener.subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     let active = true;
@@ -264,14 +354,16 @@ const AdminLayout = () => {
         return;
       }
 
+      const cached = getCachedPermission(requiredPermission);
+      if (cached !== undefined) {
+        setAllowed(cached);
+        setChecking(false);
+        return;
+      }
+
       setChecking(true);
       try {
-        const { data } = await supabase.auth.getUser();
-        if (!data.user) {
-          if (active) setAllowed(true);
-          return;
-        }
-        const granted = await hasAdminPermission(requiredPermission);
+        const granted = await resolveAdminPermission(requiredPermission);
         if (active) setAllowed(granted);
       } catch (error) {
         console.error("Admin route permission check failed:", error);

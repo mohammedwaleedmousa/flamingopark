@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { Loader2, LockKeyhole } from "lucide-react";
 import AdminLayoutBase from "@/components/admin/AdminLayoutBase";
 import { supabase } from "@/integrations/supabase/client";
+import { adminPath, normalizeAdminPathForLegacyRules } from "@/lib/adminRoutes";
 
 type RoutePermission =
   | "products.view"
@@ -29,6 +30,8 @@ let permissionSnapshot: PermissionSnapshot | null = null;
 let permissionSnapshotPromise: Promise<PermissionSnapshot | null> | null = null;
 
 const permissionForLocation = (pathname: string, search: string): RoutePermission | null => {
+  pathname = normalizeAdminPathForLegacyRules(pathname);
+
   if (pathname === "/admin") {
     const workspace = new URLSearchParams(search).get("workspace");
     if (workspace === "team") return "admin.permissions.manage";
@@ -388,7 +391,7 @@ const AdminLayout = () => {
           <div className="mx-auto flex h-[46px] w-[46px] items-center justify-center rounded-[13px] bg-[#F1EFFF] text-[#675CBA]"><LockKeyhole className="h-[19px] w-[19px]" /></div>
           <h1 className="mt-4 text-[13px] font-semibold text-[#404852]">لا تملك صلاحية فتح هذه الصفحة</h1>
           <p className="mt-2 text-[8px] leading-6 text-[#8E96A1]">الصلاحية المطلوبة: <span dir="ltr" className="font-mono">{requiredPermission}</span>. يمكن لمدير الصلاحيات إعادة تفعيلها من مساحة الفريق.</p>
-          <Link to="/admin" className="mt-5 inline-flex h-[34px] items-center justify-center rounded-[9px] bg-[#675CBA] px-4 text-[8px] font-semibold text-white">العودة للوحة التحكم</Link>
+          <Link to={adminPath()} className="mt-5 inline-flex h-[34px] items-center justify-center rounded-[9px] bg-[#675CBA] px-4 text-[8px] font-semibold text-white">العودة للوحة التحكم</Link>
         </div>
       </div>
     );

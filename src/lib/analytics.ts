@@ -78,13 +78,11 @@ type TrackPayload = {
     | "add_to_cart"
     | "remove_from_cart"
     | "begin_checkout"
-    | "purchase"
     | "search"
     | "add_to_wishlist"
     | "ad_click";
   path?: string;
   product_id?: string | null;
-  order_id?: string | null;
   value?: number | null;
   metadata?: Record<string, any>;
 };
@@ -108,7 +106,7 @@ export async function track(payload: TrackPayload): Promise<boolean> {
       device: getDevice(),
       country: null,
       product_id: payload.product_id ?? null,
-      order_id: payload.order_id ?? null,
+      order_id: null,
       value: payload.value ?? null,
       metadata: payload.metadata ?? {},
     });
@@ -121,14 +119,12 @@ export async function track(payload: TrackPayload): Promise<boolean> {
   }
 
   try {
-    // Forward independently so a database outage does not suppress GA events.
     const gtag = (window as any).gtag;
     if (typeof gtag === "function") {
       gtag("event", payload.event_type, {
         page_path: payload.path,
         value: payload.value ?? undefined,
         product_id: payload.product_id ?? undefined,
-        order_id: payload.order_id ?? undefined,
         ...payload.metadata,
       });
     }
@@ -137,6 +133,32 @@ export async function track(payload: TrackPayload): Promise<boolean> {
   }
 
   return persisted;
+}
+
+export async function recordPurchaseAnalytics(orderId: string, trackingToken: string): Promise<boolean> {
+  if (!orderId || !trackingToken) return false;
+
+  try {
+    const utm = getStoredUTM();
+    const { data, error } = await (supabase as any).rpc("record_purchase_analytics", {
+      p_order_id: orderId,
+      p_tracking_token: trackingToken,
+      p_session_id: getSessionId(),
+      p_path: window.location.pathname,
+      p_referrer: utm.referrer ?? null,
+      p_utm_source: utm.utm_source ?? null,
+      p_utm_medium: utm.utm_medium ?? null,
+      p_utm_campaign: utm.utm_campaign ?? null,
+      p_utm_content: utm.utm_content ?? null,
+      p_device: getDevice(),
+    });
+
+    if (error) throw error;
+    return data === true;
+  } catch (err) {
+    if (import.meta.env.DEV) console.warn("[analytics] verified purchase track failed", err);
+    return false;
+  }
 }
 
 export async function logAudit(action: string, entity_type: string, entity_id?: string, details?: Record<string, any>) {

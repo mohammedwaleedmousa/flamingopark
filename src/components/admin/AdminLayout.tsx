@@ -67,6 +67,70 @@ const permissionForLocation = (pathname: string, search: string): RoutePermissio
 };
 
 const adminInteractiveColorOverrides = `
+  .admin-workspace .btn-unified {
+    background: linear-gradient(135deg, #7368C7 0%, #6258B8 100%) !important;
+    border-color: #6258B8 !important;
+    color: #FFFFFF !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .admin-workspace .btn-unified:hover {
+    background: linear-gradient(135deg, #675CBA 0%, #594FAB 100%) !important;
+    border-color: #594FAB !important;
+    color: #FFFFFF !important;
+    box-shadow: none !important;
+    transform: none !important;
+  }
+
+  .admin-workspace .btn-unified[data-variant="outline"] {
+    background: #FFFFFF !important;
+    border-color: #DDE2E8 !important;
+    color: #5F6874 !important;
+  }
+
+  .admin-workspace .btn-unified[data-variant="outline"]:hover {
+    background: #F5F6FB !important;
+    border-color: #CBCFE4 !important;
+    color: #51489A !important;
+  }
+
+  .admin-workspace .btn-unified[data-variant="secondary"] {
+    background: #F1EFFF !important;
+    border-color: #DDD8F4 !important;
+    color: #51489A !important;
+  }
+
+  .admin-workspace .btn-unified[data-variant="secondary"]:hover {
+    background: #E8E4FF !important;
+    border-color: #CEC7EF !important;
+    color: #443B8C !important;
+  }
+
+  .admin-workspace .btn-unified[data-variant="ghost"] {
+    background: transparent !important;
+    border-color: transparent !important;
+    color: #626A75 !important;
+  }
+
+  .admin-workspace .btn-unified[data-variant="ghost"]:hover {
+    background: #F2F4F7 !important;
+    border-color: #E3E7EC !important;
+    color: #4D5560 !important;
+  }
+
+  .admin-workspace .btn-unified[data-variant="destructive"] {
+    background: #C95F5F !important;
+    border-color: #B95353 !important;
+    color: #FFFFFF !important;
+  }
+
+  .admin-workspace .btn-unified[data-variant="destructive"]:hover {
+    background: #B95353 !important;
+    border-color: #A94A4A !important;
+    color: #FFFFFF !important;
+  }
+
   .admin-workspace button[class*="bg-[#C66A7F]"],
   .admin-workspace a[class*="bg-[#C66A7F]"],
   .admin-workspace [role="button"][class*="bg-[#C66A7F]"] {

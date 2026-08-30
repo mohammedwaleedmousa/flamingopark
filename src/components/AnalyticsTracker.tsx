@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { captureUTM, track } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
+import { ADMIN_BASE_PATH, LEGACY_ADMIN_BASE_PATH } from "@/lib/adminRoutes";
 
 const SITE_URL = "https://flamingoparkaden.com";
 const DEFAULT_TITLE = "Flamingo Park | فلامنجو بارك";
@@ -70,6 +71,12 @@ const applySeo = ({
   upsertJsonLd(jsonLd);
 };
 
+const isAdminRoute = (pathname: string) =>
+  pathname === ADMIN_BASE_PATH ||
+  pathname.startsWith(`${ADMIN_BASE_PATH}/`) ||
+  pathname === LEGACY_ADMIN_BASE_PATH ||
+  pathname.startsWith(`${LEGACY_ADMIN_BASE_PATH}/`);
+
 /**
  * Fires page_view analytics and keeps customer-facing route SEO metadata in sync.
  * Admin traffic is intentionally excluded from analytics and SEO mutations.
@@ -83,7 +90,7 @@ const AnalyticsTracker = () => {
   }, []);
 
   useEffect(() => {
-    if (pathname.startsWith("/admin")) return;
+    if (isAdminRoute(pathname)) return;
     const key = pathname + search;
     if (key === last.current) return;
     last.current = key;
@@ -91,7 +98,7 @@ const AnalyticsTracker = () => {
   }, [pathname, search]);
 
   useEffect(() => {
-    if (pathname.startsWith("/admin")) return;
+    if (isAdminRoute(pathname)) return;
 
     let cancelled = false;
     const canonical = `${SITE_URL}${pathname === "/" ? "/" : pathname}`;

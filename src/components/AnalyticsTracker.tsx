@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { captureUTM, track } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
+import { useStore } from "@/store/useStore";
 
 const SITE_URL = "https://flamingoparkaden.com";
 const DEFAULT_TITLE = "Flamingo Park | فلامنجو بارك";
@@ -71,12 +72,15 @@ const applySeo = ({
 };
 
 /**
- * Fires page_view analytics and keeps customer-facing route SEO metadata in sync.
+ * Fires page-view and commerce analytics while keeping customer-facing route SEO metadata in sync.
  * Admin traffic is intentionally excluded from analytics and SEO mutations.
  */
 const AnalyticsTracker = () => {
   const { pathname, search } = useLocation();
+  const cart = useStore((state) => state.cart);
+  const getCartTotal = useStore((state) => state.getCartTotal);
   const last = useRef<string>("");
+  const lastCommerce = useRef<string>("");
 
   useEffect(() => {
     captureUTM();
@@ -87,8 +91,31 @@ const AnalyticsTracker = () => {
     const key = pathname + search;
     if (key === last.current) return;
     last.current = key;
-    track({ event_type: "page_view", path: pathname });
+    void track({ event_type: "page_view", path: pathname });
   }, [pathname, search]);
+
+  useEffect(() => {
+    if (pathname !== "/checkout" || cart.length === 0) return;
+    const key = `checkout:${pathname}:${cart.map((item) => `${item.product.id}:${item.quantity}`).join("|")}`;
+    if (lastCommerce.current === key) return;
+    lastCommerce.current = key;
+
+    void track({
+      event_type: "begin_checkout",
+      value: getCartTotal(),
+      metadata: {
+        items_count: cart.reduce((sum, item) => sum + item.quantity, 0),
+        unique_products: cart.length,
+        items: cart.map((item) => ({
+          product_id: item.product.id,
+          name: item.product.nameAr || item.product.name,
+          quantity: item.quantity,
+          selected_size: item.selectedSize || null,
+          selected_color: item.selectedColor || item.variantColor || null,
+        })),
+      },
+    });
+  }, [pathname, cart, getCartTotal]);
 
   useEffect(() => {
     if (pathname.startsWith("/admin")) return;
@@ -101,7 +128,7 @@ const AnalyticsTracker = () => {
         const slug = decodeURIComponent(pathname.slice("/product/".length));
         const { data } = await (supabase as any)
           .from("products")
-          .select("name,name_ar,slug,price,description,description_ar,images,brand,in_stock")
+          .select("id,name,name_ar,slug,price,description,description_ar,images,brand,in_stock")
           .eq("slug", slug)
           .eq("is_active", true)
           .maybeSingle();
@@ -114,6 +141,22 @@ const AnalyticsTracker = () => {
           const description = String(data.description_ar || data.description || `تسوق ${name} من Flamingo Park.`).trim().slice(0, 180);
           const image = Array.isArray(data.images) && data.images[0] ? String(data.images[0]) : DEFAULT_IMAGE;
           const price = Number(data.price);
+
+          const commerceKey = `product:${data.id}`;
+          if (lastCommerce.current !== commerceKey) {
+            lastCommerce.current = commerceKey;
+            void track({
+              event_type: "product_view",
+              product_id: data.id,
+              value: Number.isFinite(price) ? price : null,
+              metadata: {
+                name,
+                brand: brand || null,
+                slug: data.slug,
+                in_stock: Boolean(data.in_stock),
+              },
+            });
+          }
 
           applySeo({
             title,

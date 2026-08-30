@@ -138,6 +138,12 @@ const adminInteractiveColorOverrides = `
     color: #FFFFFF !important;
   }
 
+  .admin-workspace button[class*="bg-[#FFF0F1]"],
+  .admin-workspace button [class*="bg-[#FFF0F1]"],
+  .admin-workspace a[class*="bg-[#FFF0F1]"],
+  .admin-workspace a [class*="bg-[#FFF0F1]"],
+  .admin-workspace [role="button"][class*="bg-[#FFF0F1]"],
+  .admin-workspace [role="button"] [class*="bg-[#FFF0F1]"],
   .admin-workspace button[class*="bg-[#FFF0F4]"],
   .admin-workspace button [class*="bg-[#FFF0F4]"],
   .admin-workspace button[class*="bg-[#FBDDE6]"],
@@ -157,6 +163,12 @@ const adminInteractiveColorOverrides = `
     background-color: #F1EFFF !important;
   }
 
+  .admin-workspace button[class*="text-[#B96670]"],
+  .admin-workspace button [class*="text-[#B96670]"],
+  .admin-workspace a[class*="text-[#B96670]"],
+  .admin-workspace a [class*="text-[#B96670]"],
+  .admin-workspace [role="button"][class*="text-[#B96670]"],
+  .admin-workspace [role="button"] [class*="text-[#B96670]"],
   .admin-workspace button[class*="text-[#C66E82]"],
   .admin-workspace button [class*="text-[#C66E82]"],
   .admin-workspace button[class*="text-[#B85D72]"],

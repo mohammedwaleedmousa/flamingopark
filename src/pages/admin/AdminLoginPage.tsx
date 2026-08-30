@@ -5,6 +5,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { ADMIN_BASE_PATH } from '@/lib/adminRoutes';
 import { Lock, Mail, Loader2, LogIn } from 'lucide-react';
 import Logo from '@/components/Logo';
 
@@ -30,7 +31,7 @@ const AdminLoginPage = () => {
           .maybeSingle();
 
         if (roleData) {
-          navigate('/admin');
+          navigate(ADMIN_BASE_PATH);
         }
       }
     };
@@ -78,7 +79,7 @@ const AdminLoginPage = () => {
         description: 'تم تسجيل الدخول بنجاح',
       });
 
-      navigate('/admin');
+      navigate(ADMIN_BASE_PATH);
     } catch (error: any) {
       console.error('Auth error:', error);
       let errorMessage = 'حدث خطأ أثناء العملية';

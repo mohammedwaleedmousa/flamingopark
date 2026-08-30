@@ -115,7 +115,7 @@ const Navbar = () => {
 
     let cancelled = false;
 
-    const timer = window.setTimeout(async () => {
+    const loadSuggestions = async () => {
       const pattern = `%${value}%`;
 
       const [productsResult, brandsResult, categoriesResult] = await Promise.all([
@@ -143,11 +143,12 @@ const Navbar = () => {
       });
 
       setSuggestions(unique.slice(0, 8));
-    }, 220);
+    };
+
+    void loadSuggestions();
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timer);
     };
   }, [searchTerm]);
 

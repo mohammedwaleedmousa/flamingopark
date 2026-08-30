@@ -37,14 +37,19 @@ const checks = [
   },
   {
     file: "src/main.tsx",
-    needles: ["createRoot", "startRuntimeMonitoring"],
+    needles: ["createRoot", "startRuntimeMonitoring", "CustomerCartSync"],
     forbidden: ["./pages/ProductDetailPage"],
-    message: "The product-detail route must stay lazy and must not be eagerly imported by the application entrypoint.",
+    message: "The entrypoint must keep product detail lazy while mounting the invisible cart persistence service.",
   },
   {
     file: "src/components/AnalyticsTracker.tsx",
     needles: ["product_view", "begin_checkout", "lastProductView", "lastCheckout", "isAdminRoute"],
     message: "Customer conversion analytics must keep product-view and checkout-start tracking while excluding admin routes.",
+  },
+  {
+    file: "src/components/CustomerCartSync.tsx",
+    needles: ["customer_carts", "onConflict: \"user_id\"", "status: itemCount > 0 ? \"active\" : \"cleared\"", "lastPayload"],
+    message: "Authenticated carts must remain debounced, deduplicated and persisted for recovery without affecting UI.",
   },
 ];
 

@@ -191,6 +191,61 @@ const adminInteractiveColorOverrides = `
   .admin-workspace [role="button"][class*="border-[#EFD7DF]"] {
     border-color: #E4E0F8 !important;
   }
+
+  .admin-workspace button[role="combobox"] {
+    border-color: #DDE2E8 !important;
+    background: #F8FAFC !important;
+    color: #59634D !important;
+    box-shadow: none !important;
+  }
+
+  .admin-workspace button[role="combobox"]:hover {
+    border-color: #CBD3DC !important;
+    background: #F3F5F8 !important;
+  }
+
+  .admin-workspace button[role="combobox"][data-state="open"] {
+    border-color: #8D86C9 !important;
+    background: #FFFFFF !important;
+    box-shadow: 0 0 0 3px rgba(103, 92, 186, 0.10) !important;
+  }
+
+  [role="listbox"] {
+    border: 1px solid #DDE2E8 !important;
+    border-radius: 10px !important;
+    background: #FFFFFF !important;
+    padding: 4px !important;
+    color: #4F5864 !important;
+    box-shadow: 0 14px 30px rgba(52, 61, 75, 0.14) !important;
+  }
+
+  [role="option"] {
+    min-height: 34px;
+    border-radius: 8px !important;
+    background: transparent !important;
+    color: #535D68 !important;
+    transition: background-color 120ms ease, color 120ms ease !important;
+  }
+
+  [role="option"][data-highlighted] {
+    background: #F3F1FC !important;
+    color: #51489A !important;
+  }
+
+  [role="option"][data-state="checked"] {
+    background: #ECE9FB !important;
+    color: #51489A !important;
+    font-weight: 600 !important;
+  }
+
+  [role="option"][data-state="checked"][data-highlighted] {
+    background: #E5E1F8 !important;
+    color: #443B8C !important;
+  }
+
+  [role="option"] svg {
+    color: #675CBA !important;
+  }
 `;
 
 const AdminLayout = () => {

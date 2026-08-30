@@ -41,6 +41,11 @@ const checks = [
     forbidden: ["./pages/ProductDetailPage"],
     message: "The product-detail route must stay lazy and must not be eagerly imported by the application entrypoint.",
   },
+  {
+    file: "src/components/AnalyticsTracker.tsx",
+    needles: ["product_view", "begin_checkout", "lastProductView", "lastCheckout", "isAdminRoute"],
+    message: "Customer conversion analytics must keep product-view and checkout-start tracking while excluding admin routes.",
+  },
 ];
 
 let failures = 0;

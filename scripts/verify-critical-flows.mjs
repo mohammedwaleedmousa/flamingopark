@@ -36,6 +36,11 @@ const checks = [
     message: "Analytics database and GA delivery must remain isolated so one failing destination cannot break the storefront or suppress the other destination.",
   },
   {
+    file: "src/store/useStore.ts",
+    needles: ["getCartItemUnitTotal", "event_type: \"add_to_cart\"", "event_type: \"remove_from_cart\"", "selected_size", "selected_color"],
+    message: "Cart add/remove analytics must use the same item-value calculation and preserve variant selection metadata.",
+  },
+  {
     file: "functions/sitemap.xml.ts",
     needles: ["products", "brands", "categories", "application/xml"],
     message: "The storefront sitemap must continue including dynamic catalog routes.",

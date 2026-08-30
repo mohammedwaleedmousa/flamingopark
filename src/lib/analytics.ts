@@ -89,11 +89,13 @@ type TrackPayload = {
   metadata?: Record<string, any>;
 };
 
-export async function track(payload: TrackPayload) {
+export async function track(payload: TrackPayload): Promise<boolean> {
+  let persisted = false;
+
   try {
     const utm = getStoredUTM();
     const { data: { user } } = await supabase.auth.getUser();
-    await supabase.from("analytics_events").insert({
+    const { error } = await supabase.from("analytics_events").insert({
       event_type: payload.event_type,
       session_id: getSessionId(),
       user_id: user?.id ?? null,
@@ -111,7 +113,15 @@ export async function track(payload: TrackPayload) {
       metadata: payload.metadata ?? {},
     });
 
-    // Forward to Google Analytics (gtag) when present
+    if (error) throw error;
+    persisted = true;
+  } catch (err) {
+    // Analytics must never block or break storefront actions.
+    if (import.meta.env.DEV) console.warn("[analytics] database track failed", err);
+  }
+
+  try {
+    // Forward independently so a database outage does not suppress GA events.
     const gtag = (window as any).gtag;
     if (typeof gtag === "function") {
       gtag("event", payload.event_type, {
@@ -123,16 +133,17 @@ export async function track(payload: TrackPayload) {
       });
     }
   } catch (err) {
-    // Never let analytics break the app
-    if (import.meta.env.DEV) console.warn("[analytics] track failed", err);
+    if (import.meta.env.DEV) console.warn("[analytics] gtag forward failed", err);
   }
+
+  return persisted;
 }
 
 export async function logAudit(action: string, entity_type: string, entity_id?: string, details?: Record<string, any>) {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) return;
-    await supabase.from("audit_logs").insert({
+    const { error } = await supabase.from("audit_logs").insert({
       actor_id: user.id,
       actor_email: user.email ?? null,
       action,
@@ -140,6 +151,7 @@ export async function logAudit(action: string, entity_type: string, entity_id?: 
       entity_id: entity_id ?? null,
       details: details ?? {},
     });
+    if (error) throw error;
   } catch (err) {
     if (import.meta.env.DEV) console.warn("[audit] log failed", err);
   }

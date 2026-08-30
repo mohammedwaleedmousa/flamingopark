@@ -3,6 +3,7 @@ import { useLocation } from "react-router-dom";
 import { captureUTM, track } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
 import { ADMIN_BASE_PATH, LEGACY_ADMIN_BASE_PATH } from "@/lib/adminRoutes";
+import { useStore } from "@/store/useStore";
 
 const SITE_URL = "https://flamingoparkaden.com";
 const DEFAULT_TITLE = "Flamingo Park | فلامنجو بارك";
@@ -78,12 +79,16 @@ const isAdminRoute = (pathname: string) =>
   pathname.startsWith(`${LEGACY_ADMIN_BASE_PATH}/`);
 
 /**
- * Fires page_view analytics and keeps customer-facing route SEO metadata in sync.
+ * Fires customer-facing page and commerce analytics while keeping route SEO metadata in sync.
  * Admin traffic is intentionally excluded from analytics and SEO mutations.
  */
 const AnalyticsTracker = () => {
   const { pathname, search } = useLocation();
-  const last = useRef<string>("");
+  const cart = useStore((state) => state.cart);
+  const getCartTotal = useStore((state) => state.getCartTotal);
+  const lastPageView = useRef<string>("");
+  const lastProductView = useRef<string>("");
+  const lastCheckout = useRef<string>("");
 
   useEffect(() => {
     captureUTM();
@@ -92,10 +97,39 @@ const AnalyticsTracker = () => {
   useEffect(() => {
     if (isAdminRoute(pathname)) return;
     const key = pathname + search;
-    if (key === last.current) return;
-    last.current = key;
-    track({ event_type: "page_view", path: pathname });
+    if (key === lastPageView.current) return;
+    lastPageView.current = key;
+    void track({ event_type: "page_view", path: pathname });
   }, [pathname, search]);
+
+  useEffect(() => {
+    if (isAdminRoute(pathname) || pathname !== "/checkout" || cart.length === 0) return;
+
+    const cartSignature = cart
+      .map((item) => [item.product.id, item.variantId || "", item.selectedSize || "", item.selectedColor || item.variantColor || "", item.quantity].join(":"))
+      .sort()
+      .join("|");
+    const key = `checkout:${cartSignature}`;
+    if (lastCheckout.current === key) return;
+    lastCheckout.current = key;
+
+    void track({
+      event_type: "begin_checkout",
+      value: getCartTotal(),
+      metadata: {
+        items_count: cart.reduce((sum, item) => sum + item.quantity, 0),
+        unique_products: new Set(cart.map((item) => item.product.id)).size,
+        items: cart.map((item) => ({
+          product_id: item.product.id,
+          name: item.product.nameAr || item.product.name,
+          quantity: item.quantity,
+          variant_id: item.variantId || null,
+          selected_size: item.selectedSize || null,
+          selected_color: item.selectedColor || item.variantColor || null,
+        })),
+      },
+    });
+  }, [pathname, cart, getCartTotal]);
 
   useEffect(() => {
     if (isAdminRoute(pathname)) return;
@@ -108,7 +142,7 @@ const AnalyticsTracker = () => {
         const slug = decodeURIComponent(pathname.slice("/product/".length));
         const { data } = await (supabase as any)
           .from("products")
-          .select("name,name_ar,slug,price,description,description_ar,images,brand,in_stock")
+          .select("id,name,name_ar,slug,price,description,description_ar,images,brand,in_stock")
           .eq("slug", slug)
           .eq("is_active", true)
           .maybeSingle();
@@ -121,6 +155,22 @@ const AnalyticsTracker = () => {
           const description = String(data.description_ar || data.description || `تسوق ${name} من Flamingo Park.`).trim().slice(0, 180);
           const image = Array.isArray(data.images) && data.images[0] ? String(data.images[0]) : DEFAULT_IMAGE;
           const price = Number(data.price);
+          const productViewKey = `product:${data.id}`;
+
+          if (lastProductView.current !== productViewKey) {
+            lastProductView.current = productViewKey;
+            void track({
+              event_type: "product_view",
+              product_id: data.id,
+              value: Number.isFinite(price) ? price : null,
+              metadata: {
+                name,
+                brand: brand || null,
+                slug: data.slug,
+                in_stock: Boolean(data.in_stock),
+              },
+            });
+          }
 
           applySeo({
             title,

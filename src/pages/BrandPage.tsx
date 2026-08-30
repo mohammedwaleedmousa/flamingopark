@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link, Navigate, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, ChevronRight } from "lucide-react";
 
 import Navbar from "@/components/Navbar";
 import Footer from "@/components/Footer";
@@ -178,7 +178,9 @@ const BrandPage = () => {
       <main className="flex-1 pb-12 md:pb-16">
         <section className="bg-background py-7 md:py-11">
           <div className="mx-auto w-full max-w-[1400px] px-3 md:px-6">
-            <div className="mb-4 flex items-end justify-between gap-3 md:mb-6">
+            <Link to="/home" className="inline-flex items-center gap-1 text-[10px] text-muted-foreground transition-colors hover:text-[#A95B61] md:text-[11px]"><ChevronRight className="h-3.5 w-3.5" strokeWidth={1.5} />الرئيسية</Link>
+
+            <div className="mb-4 mt-4 flex items-end justify-between gap-3 md:mb-6">
               <div>
                 <div className="mb-1.5 flex items-center gap-2">
                   <span className="h-[2px] w-4 rounded-full bg-[#D4777D]" />

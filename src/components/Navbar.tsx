@@ -18,7 +18,7 @@ import {
   User,
 } from "phosphor-react";
 import type { Icon } from "phosphor-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 
 import { useStore } from "@/store/useStore";
@@ -26,6 +26,7 @@ import { useFavorites } from "@/hooks/useFavorites";
 import { useAuthActions } from "@/hooks/useAuthActions";
 import { useCurrency, getActiveCurrencies } from "@/lib/currency";
 import { useCustomerNotifications } from "@/hooks/useCustomerNotifications";
+import { supabase } from "@/integrations/supabase/client";
 
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import {
@@ -36,6 +37,11 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
+type SearchSuggestion = {
+  value: string;
+  type: "منتج" | "ماركة" | "قسم";
+};
 
 const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
   <section className="mt-6">
@@ -79,6 +85,8 @@ const NavItem = ({
 const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+  const [searchFocused, setSearchFocused] = useState(false);
+  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
 
   const navigate = useNavigate();
 
@@ -94,6 +102,52 @@ const Navbar = () => {
   });
 
   const { mode, setMode, short } = useCurrency();
+
+  useEffect(() => {
+    const value = searchTerm.trim();
+
+    if (!value) {
+      setSuggestions([]);
+      return;
+    }
+
+    let cancelled = false;
+
+    const timer = window.setTimeout(async () => {
+      const pattern = `%${value}%`;
+
+      const [productsResult, brandsResult, categoriesResult] = await Promise.all([
+        supabase.from("products").select("name_ar").eq("is_active", true).ilike("name_ar", pattern).limit(10),
+        supabase.from("brands").select("name").eq("is_active", true).ilike("name", pattern).limit(6),
+        supabase.from("categories").select("name_ar").ilike("name_ar", pattern).limit(6),
+      ]);
+
+      if (cancelled) return;
+
+      const raw: SearchSuggestion[] = [
+        ...((productsResult.data || []) as Array<{ name_ar: string | null }>).map((row) => ({ value: String(row.name_ar || "").trim(), type: "منتج" as const })),
+        ...((brandsResult.data || []) as Array<{ name: string | null }>).map((row) => ({ value: String(row.name || "").trim(), type: "ماركة" as const })),
+        ...((categoriesResult.data || []) as Array<{ name_ar: string | null }>).map((row) => ({ value: String(row.name_ar || "").trim(), type: "قسم" as const })),
+      ].filter((item) => item.value);
+
+      const normalizedValue = value.toLocaleLowerCase("ar");
+      const unique = Array.from(new Map(raw.map((item) => [`${item.type}:${item.value.toLocaleLowerCase("ar")}`, item])).values());
+
+      unique.sort((a, b) => {
+        const aStarts = a.value.toLocaleLowerCase("ar").startsWith(normalizedValue) ? 0 : 1;
+        const bStarts = b.value.toLocaleLowerCase("ar").startsWith(normalizedValue) ? 0 : 1;
+
+        return aStarts - bStarts || a.value.localeCompare(b.value, "ar");
+      });
+
+      setSuggestions(unique.slice(0, 8));
+    }, 220);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [searchTerm]);
 
   const staticLabels: Record<string, { label: string; flag: string }> = {
     SAR: {
@@ -116,16 +170,20 @@ const Navbar = () => {
     flag: staticLabels[currency.code]?.flag ?? "💱",
   }));
 
+  const runSearch = (value: string) => {
+    const cleaned = value.trim();
+
+    if (!cleaned) return;
+
+    navigate(`/products?search=${encodeURIComponent(cleaned)}`);
+    setSearchTerm("");
+    setSuggestions([]);
+    setSearchFocused(false);
+  };
+
   const submitSearch = (e: React.FormEvent) => {
     e.preventDefault();
-
-    const value = searchTerm.trim();
-
-    if (!value) return;
-
-    navigate(`/products?search=${encodeURIComponent(value)}`);
-
-    setSearchTerm("");
+    runSearch(searchTerm);
   };
 
   const handleLogout = async () => {
@@ -276,12 +334,42 @@ const Navbar = () => {
 
           {/* SEARCH */}
 
-          <form onSubmit={submitSearch} className="pb-3">
+          <form onSubmit={submitSearch} className="relative pb-3">
             <label className="relative block">
               <MagnifyingGlass size={18} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#A79A95]" />
 
-              <input value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="ابحث عن منتج، ماركة أو قسم..." enterKeyHint="search" autoComplete="off" className="h-11 w-full rounded-2xl border border-[#EDE4E0] bg-[#F7F7F7] pr-11 pl-4 text-[13px] text-[#443A37] outline-none placeholder:text-[#A99D98] focus:border-[#DDB6B2] focus:bg-white" />
+              <input
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                onFocus={() => setSearchFocused(true)}
+                onBlur={() => window.setTimeout(() => setSearchFocused(false), 120)}
+                placeholder="ابحث عن منتج، ماركة أو قسم..."
+                enterKeyHint="search"
+                autoComplete="off"
+                aria-autocomplete="list"
+                aria-expanded={searchFocused && suggestions.length > 0}
+                className="h-11 w-full rounded-2xl border border-[#EDE4E0] bg-[#F7F7F7] pr-11 pl-4 text-[13px] text-[#443A37] outline-none placeholder:text-[#A99D98] focus:border-[#DDB6B2] focus:bg-white"
+              />
             </label>
+
+            {searchFocused && searchTerm.trim() && suggestions.length > 0 && (
+              <div role="listbox" className="absolute inset-x-0 top-[calc(100%-8px)] z-[70] overflow-hidden rounded-2xl border border-[#E8DDD9] bg-white shadow-[0_14px_35px_rgba(78,55,50,0.12)]">
+                {suggestions.map((suggestion, index) => (
+                  <button
+                    key={`${suggestion.type}-${suggestion.value}-${index}`}
+                    type="button"
+                    role="option"
+                    onMouseDown={(e) => e.preventDefault()}
+                    onClick={() => runSearch(suggestion.value)}
+                    className="flex w-full items-center gap-3 border-b border-[#F3ECE9] px-4 py-3 text-right transition-colors last:border-b-0 hover:bg-[#FFF8F6] active:bg-[#FFF3F1]"
+                  >
+                    <MagnifyingGlass size={15} className="shrink-0 text-[#B86A70]" />
+                    <span className="min-w-0 flex-1 truncate text-[12px] font-medium text-[#4A3E3A]">{suggestion.value}</span>
+                    <span className="shrink-0 rounded-full bg-[#F8F3F1] px-2 py-1 text-[8px] text-[#8E807B]">{suggestion.type}</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </form>
         </div>
       </header>

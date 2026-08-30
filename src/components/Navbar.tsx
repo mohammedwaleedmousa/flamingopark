@@ -18,7 +18,7 @@ import {
   User,
 } from "phosphor-react";
 import type { Icon } from "phosphor-react";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 
 import { useStore } from "@/store/useStore";
@@ -41,6 +41,39 @@ import {
 type SearchSuggestion = {
   value: string;
   type: "منتج" | "ماركة" | "قسم";
+};
+
+let searchIndexCache: SearchSuggestion[] | null = null;
+let searchIndexPromise: Promise<SearchSuggestion[]> | null = null;
+
+const normalizeSearch = (value: string) => value.trim().toLocaleLowerCase("ar");
+
+const loadSearchIndex = async () => {
+  if (searchIndexCache) return searchIndexCache;
+  if (searchIndexPromise) return searchIndexPromise;
+
+  searchIndexPromise = (async () => {
+    const [productsResult, brandsResult, categoriesResult] = await Promise.all([
+      supabase.from("products").select("name_ar,name").eq("is_active", true).limit(1000),
+      supabase.from("brands").select("name").eq("is_active", true).limit(500),
+      supabase.from("categories").select("name_ar,name").eq("is_active", true).limit(500),
+    ]);
+
+    const raw: SearchSuggestion[] = [
+      ...((productsResult.data || []) as Array<{ name_ar: string | null; name: string | null }>).map((row) => ({ value: String(row.name_ar || row.name || "").trim(), type: "منتج" as const })),
+      ...((brandsResult.data || []) as Array<{ name: string | null }>).map((row) => ({ value: String(row.name || "").trim(), type: "ماركة" as const })),
+      ...((categoriesResult.data || []) as Array<{ name_ar: string | null; name: string | null }>).map((row) => ({ value: String(row.name_ar || row.name || "").trim(), type: "قسم" as const })),
+    ].filter((item) => item.value);
+
+    searchIndexCache = Array.from(new Map(raw.map((item) => [`${item.type}:${normalizeSearch(item.value)}`, item])).values());
+    return searchIndexCache;
+  })();
+
+  try {
+    return await searchIndexPromise;
+  } finally {
+    searchIndexPromise = null;
+  }
 };
 
 const Section = ({ label, children }: { label: string; children: React.ReactNode }) => (
@@ -86,8 +119,9 @@ const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
-  const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const [searchIndex, setSearchIndex] = useState<SearchSuggestion[]>(() => searchIndexCache || []);
   const restoreScrollOnUnlockRef = useRef(true);
+  const searchResultsRef = useRef<HTMLDivElement | null>(null);
 
   const navigate = useNavigate();
 
@@ -106,54 +140,35 @@ const Navbar = () => {
   const searchPanelOpen = searchFocused && searchTerm.trim().length > 0;
 
   useEffect(() => {
-    const value = searchTerm.trim();
-
-    if (!value) {
-      setSuggestions([]);
-      return;
-    }
-
     let cancelled = false;
 
-    const loadSuggestions = async () => {
-      const pattern = `%${value}%`;
-
-      const [productsResult, brandsResult, categoriesResult] = await Promise.all([
-        supabase.from("products").select("name_ar").eq("is_active", true).ilike("name_ar", pattern).limit(10),
-        supabase.from("brands").select("name").eq("is_active", true).ilike("name", pattern).limit(6),
-        supabase.from("categories").select("name_ar").ilike("name_ar", pattern).limit(6),
-      ]);
-
-      if (cancelled) return;
-
-      const raw: SearchSuggestion[] = [
-        ...((productsResult.data || []) as Array<{ name_ar: string | null }>).map((row) => ({ value: String(row.name_ar || "").trim(), type: "منتج" as const })),
-        ...((brandsResult.data || []) as Array<{ name: string | null }>).map((row) => ({ value: String(row.name || "").trim(), type: "ماركة" as const })),
-        ...((categoriesResult.data || []) as Array<{ name_ar: string | null }>).map((row) => ({ value: String(row.name_ar || "").trim(), type: "قسم" as const })),
-      ].filter((item) => item.value);
-
-      const normalizedValue = value.toLocaleLowerCase("ar");
-      const unique = Array.from(new Map(raw.map((item) => [`${item.type}:${item.value.toLocaleLowerCase("ar")}`, item])).values());
-
-      unique.sort((a, b) => {
-        const aStarts = a.value.toLocaleLowerCase("ar").startsWith(normalizedValue) ? 0 : 1;
-        const bStarts = b.value.toLocaleLowerCase("ar").startsWith(normalizedValue) ? 0 : 1;
-
-        return aStarts - bStarts || a.value.localeCompare(b.value, "ar");
-      });
-
-      setSuggestions(unique.slice(0, 8));
-    };
-
-    void loadSuggestions();
+    void loadSearchIndex().then((index) => {
+      if (!cancelled) setSearchIndex(index);
+    });
 
     return () => {
       cancelled = true;
     };
-  }, [searchTerm]);
+  }, []);
+
+  const suggestions = useMemo(() => {
+    const value = normalizeSearch(searchTerm);
+    if (!value) return [];
+
+    return searchIndex
+      .filter((item) => normalizeSearch(item.value).includes(value))
+      .sort((a, b) => {
+        const aValue = normalizeSearch(a.value);
+        const bValue = normalizeSearch(b.value);
+        const aStarts = aValue.startsWith(value) ? 0 : 1;
+        const bStarts = bValue.startsWith(value) ? 0 : 1;
+        return aStarts - bStarts || a.value.localeCompare(b.value, "ar");
+      })
+      .slice(0, 20);
+  }, [searchIndex, searchTerm]);
 
   useEffect(() => {
-    if (!searchPanelOpen) return;
+    if (!searchFocused) return;
 
     const scrollY = window.scrollY;
     const body = document.body;
@@ -166,7 +181,16 @@ const Navbar = () => {
       width: body.style.width,
       overflow: body.style.overflow,
     };
-    const previousOverscroll = html.style.overscrollBehavior;
+    const previousHtml = {
+      overflow: html.style.overflow,
+      overscrollBehavior: html.style.overscrollBehavior,
+    };
+
+    const preventBackgroundScroll = (event: Event) => {
+      const target = event.target as Node | null;
+      if (target && searchResultsRef.current?.contains(target)) return;
+      event.preventDefault();
+    };
 
     restoreScrollOnUnlockRef.current = true;
     body.style.position = "fixed";
@@ -175,16 +199,24 @@ const Navbar = () => {
     body.style.right = "0";
     body.style.width = "100%";
     body.style.overflow = "hidden";
+    html.style.overflow = "hidden";
     html.style.overscrollBehavior = "none";
 
+    document.addEventListener("touchmove", preventBackgroundScroll, { passive: false });
+    document.addEventListener("wheel", preventBackgroundScroll, { passive: false });
+
     return () => {
+      document.removeEventListener("touchmove", preventBackgroundScroll);
+      document.removeEventListener("wheel", preventBackgroundScroll);
+
       body.style.position = previousBody.position;
       body.style.top = previousBody.top;
       body.style.left = previousBody.left;
       body.style.right = previousBody.right;
       body.style.width = previousBody.width;
       body.style.overflow = previousBody.overflow;
-      html.style.overscrollBehavior = previousOverscroll;
+      html.style.overflow = previousHtml.overflow;
+      html.style.overscrollBehavior = previousHtml.overscrollBehavior;
 
       if (restoreScrollOnUnlockRef.current) {
         window.scrollTo(0, scrollY);
@@ -192,7 +224,7 @@ const Navbar = () => {
 
       restoreScrollOnUnlockRef.current = true;
     };
-  }, [searchPanelOpen]);
+  }, [searchFocused]);
 
   const staticLabels: Record<string, { label: string; flag: string }> = {
     SAR: {
@@ -219,7 +251,6 @@ const Navbar = () => {
     restoreScrollOnUnlockRef.current = true;
     setSearchFocused(false);
     setSearchTerm("");
-    setSuggestions([]);
   };
 
   const runSearch = (value: string) => {
@@ -230,7 +261,6 @@ const Navbar = () => {
     restoreScrollOnUnlockRef.current = false;
     navigate(`/products?search=${encodeURIComponent(cleaned)}`);
     setSearchTerm("");
-    setSuggestions([]);
     setSearchFocused(false);
   };
 
@@ -251,6 +281,8 @@ const Navbar = () => {
   return (
     <>
       <header dir="rtl" className="fixed inset-x-0 top-0 z-50 border-b border-[#F0E5E1] bg-white">
+        {searchFocused && <div aria-hidden="true" className="fixed inset-x-0 bottom-0 top-[112px] z-[55] touch-none bg-white/96 md:top-[120px]" />}
+
         <div className="mx-auto max-w-7xl px-4 md:px-8">
           {/* TOP ROW */}
 
@@ -387,7 +419,7 @@ const Navbar = () => {
 
           {/* SEARCH */}
 
-          <form onSubmit={submitSearch} className="relative pb-3">
+          <form onSubmit={submitSearch} className="relative z-[70] pb-3">
             <label className="relative block">
               <MagnifyingGlass size={18} className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-[#A79A95]" />
 
@@ -404,14 +436,14 @@ const Navbar = () => {
               />
             </label>
 
-            {searchPanelOpen && (
+            {searchFocused && (
               <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={closeSearch} aria-label="إغلاق البحث" className="absolute left-3 top-[22px] z-[80] flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-[20px] font-light leading-none text-[#8F817C] transition-colors hover:bg-[#F5EFED] hover:text-[#B86168] active:bg-[#F3E9E6]">
                 ×
               </button>
             )}
 
             {searchPanelOpen && suggestions.length > 0 && (
-              <div role="listbox" className="absolute inset-x-0 top-[calc(100%-8px)] z-[70] max-h-[min(55vh,420px)] overflow-y-auto overscroll-contain rounded-2xl border border-[#E8DDD9] bg-white shadow-[0_14px_35px_rgba(78,55,50,0.12)] [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              <div ref={searchResultsRef} role="listbox" className="absolute inset-x-0 top-[calc(100%-8px)] z-[75] max-h-[calc(100dvh-135px)] touch-pan-y overflow-y-auto overscroll-contain rounded-2xl border border-[#E8DDD9] bg-white shadow-[0_14px_35px_rgba(78,55,50,0.12)] [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {suggestions.map((suggestion, index) => (
                   <button
                     key={`${suggestion.type}-${suggestion.value}-${index}`}

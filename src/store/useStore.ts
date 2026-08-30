@@ -111,6 +111,21 @@ interface StoreState {
   logout: () => void;
 }
 
+const getCartItemUnitTotal = (item: CartItem) => {
+  const variant = item.variantId && item.product.variants
+    ? item.product.variants.find((candidate) => candidate.id === item.variantId)
+    : undefined;
+  const basePrice = variant?.price ?? item.product.price;
+  const discount = variant?.discount ?? item.product.discount;
+  const productPrice = discount ? basePrice * (1 - discount / 100) : basePrice;
+  const accessoriesTotal = (item.selectedAccessories || []).reduce(
+    (sum, accessory) => sum + accessory.price * accessory.quantity,
+    0
+  );
+
+  return productPrice + accessoriesTotal;
+};
+
 export const useStore = create<StoreState>()(
   persist(
     (set, get) => ({
@@ -144,15 +159,14 @@ export const useStore = create<StoreState>()(
           }
         }
 
-
         const accPrice = (selectedAccessories ?? []).reduce(
           (s, a) => s + a.price * a.quantity,
           0
         );
 
         // Determine unit price taking variant override into account
-        const variant = variantId && (product as any).variants
-          ? (product as any).variants.find((v: any) => v.id === variantId)
+        const variant = variantId && product.variants
+          ? product.variants.find((candidate) => candidate.id === variantId)
           : undefined;
 
         const unitPriceSource = variant && (variant.price ?? variant.discount !== undefined)
@@ -160,16 +174,18 @@ export const useStore = create<StoreState>()(
           : product.price;
 
         const unitDiscount = variant && variant.discount !== undefined ? variant.discount : product.discount;
-
         const unit = unitDiscount ? unitPriceSource * (1 - unitDiscount / 100) : unitPriceSource;
 
-        track({
+        void track({
           event_type: "add_to_cart",
           product_id: product.id,
           value: (unit + accPrice) * quantity,
           metadata: {
             name: product.nameAr || product.name,
             quantity,
+            variant_id: variantId || null,
+            selected_size: selectedSize || null,
+            selected_color: selectedColor || variantColor || null,
           },
         });
 
@@ -211,8 +227,29 @@ export const useStore = create<StoreState>()(
       },
 
       removeFromCart: (productId, variantId) => {
+        const cart = get().cart;
+        const removedItems = cart.filter((item) => {
+          if (variantId) return item.product.id === productId && item.variantId === variantId;
+          return item.product.id === productId;
+        });
+
+        removedItems.forEach((item) => {
+          void track({
+            event_type: "remove_from_cart",
+            product_id: item.product.id,
+            value: getCartItemUnitTotal(item) * item.quantity,
+            metadata: {
+              name: item.product.nameAr || item.product.name,
+              quantity: item.quantity,
+              variant_id: item.variantId || null,
+              selected_size: item.selectedSize || null,
+              selected_color: item.selectedColor || item.variantColor || null,
+            },
+          });
+        });
+
         set({
-          cart: get().cart.filter((item) => {
+          cart: cart.filter((item) => {
             if (variantId) return !(item.product.id === productId && item.variantId === variantId);
             return item.product.id !== productId;
           }),
@@ -239,26 +276,10 @@ export const useStore = create<StoreState>()(
       closeCart: () => set({ isCartOpen: false }),
 
       getCartTotal: () => {
-        return get().cart.reduce((total, item) => {
-          // Price may be overridden by variant
-          const variant = item.variantId && (item.product as any).variants
-            ? (item.product as any).variants.find((v: any) => v.id === item.variantId)
-            : undefined;
-
-          const basePrice = variant && variant.price !== undefined ? variant.price : item.product.price;
-          const discount = variant && variant.discount !== undefined ? variant.discount : item.product.discount;
-
-          const price = discount ? basePrice * (1 - discount / 100) : basePrice;
-
-          const accessoriesTotal = item.selectedAccessories
-            ? item.selectedAccessories.reduce(
-                (sum, acc) => sum + acc.price * acc.quantity,
-                0
-              )
-            : 0;
-
-          return total + (price + accessoriesTotal) * item.quantity;
-        }, 0);
+        return get().cart.reduce(
+          (total, item) => total + getCartItemUnitTotal(item) * item.quantity,
+          0
+        );
       },
 
       getCartCount: () =>

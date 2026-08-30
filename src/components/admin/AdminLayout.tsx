@@ -66,6 +66,57 @@ const permissionForLocation = (pathname: string, search: string): RoutePermissio
   return null;
 };
 
+const adminInteractiveColorOverrides = `
+  .admin-workspace button[class*="bg-[#C66A7F]"],
+  .admin-workspace a[class*="bg-[#C66A7F]"],
+  .admin-workspace [role="button"][class*="bg-[#C66A7F]"] {
+    background-color: #675CBA !important;
+    color: #FFFFFF !important;
+  }
+
+  .admin-workspace button[class*="bg-[#FFF0F4]"],
+  .admin-workspace button [class*="bg-[#FFF0F4]"],
+  .admin-workspace button[class*="bg-[#FBDDE6]"],
+  .admin-workspace button [class*="bg-[#FBDDE6]"],
+  .admin-workspace button[class*="bg-[#FFF3F6]"],
+  .admin-workspace button [class*="bg-[#FFF3F6]"],
+  .admin-workspace button[class*="bg-[#FBE1E8]"],
+  .admin-workspace button [class*="bg-[#FBE1E8]"],
+  .admin-workspace button[class*="bg-[#FFF7F9]"],
+  .admin-workspace button [class*="bg-[#FFF7F9]"],
+  .admin-workspace a[class*="bg-[#FFF0F4]"],
+  .admin-workspace a [class*="bg-[#FFF0F4]"],
+  .admin-workspace a[class*="bg-[#FBDDE6]"],
+  .admin-workspace a [class*="bg-[#FBDDE6]"],
+  .admin-workspace [role="button"] [class*="bg-[#FFF0F4]"],
+  .admin-workspace [role="button"] [class*="bg-[#FBDDE6]"] {
+    background-color: #F1EFFF !important;
+  }
+
+  .admin-workspace button[class*="text-[#C66E82]"],
+  .admin-workspace button [class*="text-[#C66E82]"],
+  .admin-workspace button[class*="text-[#B85D72]"],
+  .admin-workspace button [class*="text-[#B85D72]"],
+  .admin-workspace button[class*="text-[#C66A7F]"],
+  .admin-workspace button [class*="text-[#C66A7F]"],
+  .admin-workspace button[class*="text-[#B15B70]"],
+  .admin-workspace button [class*="text-[#B15B70]"],
+  .admin-workspace button[class*="text-[#BC6377]"],
+  .admin-workspace button [class*="text-[#BC6377]"],
+  .admin-workspace a[class*="text-[#C66E82]"],
+  .admin-workspace a [class*="text-[#C66E82]"],
+  .admin-workspace a[class*="text-[#B85D72]"],
+  .admin-workspace a [class*="text-[#B85D72]"] {
+    color: #675CBA !important;
+  }
+
+  .admin-workspace button[class*="border-[#EFD7DF]"],
+  .admin-workspace a[class*="border-[#EFD7DF]"],
+  .admin-workspace [role="button"][class*="border-[#EFD7DF]"] {
+    border-color: #E4E0F8 !important;
+  }
+`;
+
 const AdminLayout = () => {
   const location = useLocation();
   const requiredPermission = useMemo(() => permissionForLocation(location.pathname, location.search), [location.pathname, location.search]);
@@ -111,7 +162,7 @@ const AdminLayout = () => {
     return (
       <div className="fixed inset-0 grid place-items-center bg-[#F6F8FA] px-5" dir="rtl">
         <div className="w-full max-w-[420px] rounded-[18px] border border-[#E5E9EF] bg-white p-6 text-center shadow-sm">
-          <div className="mx-auto flex h-[46px] w-[46px] items-center justify-center rounded-[13px] bg-[#FFF0F1] text-[#B96670]"><LockKeyhole className="h-[19px] w-[19px]" /></div>
+          <div className="mx-auto flex h-[46px] w-[46px] items-center justify-center rounded-[13px] bg-[#F1EFFF] text-[#675CBA]"><LockKeyhole className="h-[19px] w-[19px]" /></div>
           <h1 className="mt-4 text-[13px] font-semibold text-[#404852]">لا تملك صلاحية فتح هذه الصفحة</h1>
           <p className="mt-2 text-[8px] leading-6 text-[#8E96A1]">الصلاحية المطلوبة: <span dir="ltr" className="font-mono">{requiredPermission}</span>. يمكن لمدير الصلاحيات إعادة تفعيلها من مساحة الفريق.</p>
           <Link to="/admin" className="mt-5 inline-flex h-[34px] items-center justify-center rounded-[9px] bg-[#675CBA] px-4 text-[8px] font-semibold text-white">العودة للوحة التحكم</Link>
@@ -120,7 +171,19 @@ const AdminLayout = () => {
     );
   }
 
-  return <AdminLayoutBase />;
+  return (
+    <>
+      <style>{adminInteractiveColorOverrides}</style>
+      <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 z-[100] flex h-[3px] overflow-hidden">
+        <span className="flex-1 bg-[#7163C1]" />
+        <span className="flex-1 bg-[#5680CF]" />
+        <span className="flex-1 bg-[#4C9687]" />
+        <span className="flex-1 bg-[#C66A7F]" />
+        <span className="flex-1 bg-[#C38838]" />
+      </div>
+      <AdminLayoutBase />
+    </>
+  );
 };
 
 export default AdminLayout;

@@ -18,7 +18,7 @@ import {
   User,
 } from "phosphor-react";
 import type { Icon } from "phosphor-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 
 import { useStore } from "@/store/useStore";
@@ -87,6 +87,7 @@ const Navbar = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [suggestions, setSuggestions] = useState<SearchSuggestion[]>([]);
+  const restoreScrollOnUnlockRef = useRef(true);
 
   const navigate = useNavigate();
 
@@ -102,6 +103,7 @@ const Navbar = () => {
   });
 
   const { mode, setMode, short } = useCurrency();
+  const searchPanelOpen = searchFocused && searchTerm.trim().length > 0;
 
   useEffect(() => {
     const value = searchTerm.trim();
@@ -149,6 +151,48 @@ const Navbar = () => {
     };
   }, [searchTerm]);
 
+  useEffect(() => {
+    if (!searchPanelOpen) return;
+
+    const scrollY = window.scrollY;
+    const body = document.body;
+    const html = document.documentElement;
+    const previousBody = {
+      position: body.style.position,
+      top: body.style.top,
+      left: body.style.left,
+      right: body.style.right,
+      width: body.style.width,
+      overflow: body.style.overflow,
+    };
+    const previousOverscroll = html.style.overscrollBehavior;
+
+    restoreScrollOnUnlockRef.current = true;
+    body.style.position = "fixed";
+    body.style.top = `-${scrollY}px`;
+    body.style.left = "0";
+    body.style.right = "0";
+    body.style.width = "100%";
+    body.style.overflow = "hidden";
+    html.style.overscrollBehavior = "none";
+
+    return () => {
+      body.style.position = previousBody.position;
+      body.style.top = previousBody.top;
+      body.style.left = previousBody.left;
+      body.style.right = previousBody.right;
+      body.style.width = previousBody.width;
+      body.style.overflow = previousBody.overflow;
+      html.style.overscrollBehavior = previousOverscroll;
+
+      if (restoreScrollOnUnlockRef.current) {
+        window.scrollTo(0, scrollY);
+      }
+
+      restoreScrollOnUnlockRef.current = true;
+    };
+  }, [searchPanelOpen]);
+
   const staticLabels: Record<string, { label: string; flag: string }> = {
     SAR: {
       label: "ريال سعودي",
@@ -170,11 +214,19 @@ const Navbar = () => {
     flag: staticLabels[currency.code]?.flag ?? "💱",
   }));
 
+  const closeSearch = () => {
+    restoreScrollOnUnlockRef.current = true;
+    setSearchFocused(false);
+    setSearchTerm("");
+    setSuggestions([]);
+  };
+
   const runSearch = (value: string) => {
     const cleaned = value.trim();
 
     if (!cleaned) return;
 
+    restoreScrollOnUnlockRef.current = false;
     navigate(`/products?search=${encodeURIComponent(cleaned)}`);
     setSearchTerm("");
     setSuggestions([]);
@@ -342,18 +394,23 @@ const Navbar = () => {
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 onFocus={() => setSearchFocused(true)}
-                onBlur={() => window.setTimeout(() => setSearchFocused(false), 120)}
                 placeholder="ابحث عن منتج، ماركة أو قسم..."
                 enterKeyHint="search"
                 autoComplete="off"
                 aria-autocomplete="list"
-                aria-expanded={searchFocused && suggestions.length > 0}
-                className="h-11 w-full rounded-2xl border border-[#EDE4E0] bg-[#F7F7F7] pr-11 pl-4 text-[13px] text-[#443A37] outline-none placeholder:text-[#A99D98] focus:border-[#DDB6B2] focus:bg-white"
+                aria-expanded={searchPanelOpen && suggestions.length > 0}
+                className="h-11 w-full rounded-2xl border border-[#EDE4E0] bg-[#F7F7F7] pr-11 pl-11 text-[13px] text-[#443A37] outline-none placeholder:text-[#A99D98] focus:border-[#DDB6B2] focus:bg-white"
               />
             </label>
 
-            {searchFocused && searchTerm.trim() && suggestions.length > 0 && (
-              <div role="listbox" className="absolute inset-x-0 top-[calc(100%-8px)] z-[70] overflow-hidden rounded-2xl border border-[#E8DDD9] bg-white shadow-[0_14px_35px_rgba(78,55,50,0.12)]">
+            {searchPanelOpen && (
+              <button type="button" onMouseDown={(e) => e.preventDefault()} onClick={closeSearch} aria-label="إغلاق البحث" className="absolute left-3 top-[22px] z-[80] flex h-7 w-7 -translate-y-1/2 items-center justify-center rounded-full text-[20px] font-light leading-none text-[#8F817C] transition-colors hover:bg-[#F5EFED] hover:text-[#B86168] active:bg-[#F3E9E6]">
+                ×
+              </button>
+            )}
+
+            {searchPanelOpen && suggestions.length > 0 && (
+              <div role="listbox" className="absolute inset-x-0 top-[calc(100%-8px)] z-[70] max-h-[min(55vh,420px)] overflow-y-auto overscroll-contain rounded-2xl border border-[#E8DDD9] bg-white shadow-[0_14px_35px_rgba(78,55,50,0.12)] [-webkit-overflow-scrolling:touch] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 {suggestions.map((suggestion, index) => (
                   <button
                     key={`${suggestion.type}-${suggestion.value}-${index}`}

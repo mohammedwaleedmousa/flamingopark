@@ -48,8 +48,8 @@ const checks = [
   },
   {
     file: "src/components/CustomerCartSync.tsx",
-    needles: ["customer_carts", "onConflict: \"user_id\"", "status: itemCount > 0 ? \"active\" : \"cleared\"", "existingCart?.status === \"converted\"", "converted_order_id", "lastPayload"],
-    message: "Authenticated carts must remain debounced and persisted while preserving converted carts after successful checkout.",
+    needles: ["customer_carts", "onConflict: \"user_id\"", "status: itemCount > 0 ? \"active\" : \"cleared\"", "getConfirmedOrderId", "status: \"converted\"", "converted_order_id", "hadItems", "lastPayload"],
+    message: "Authenticated carts must remain debounced, distinguish manual clearing from checkout conversion, and never overwrite a previous recovery state on an empty app start.",
   },
 ];
 

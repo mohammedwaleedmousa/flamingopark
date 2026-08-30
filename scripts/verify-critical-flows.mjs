@@ -32,8 +32,8 @@ const checks = [
   },
   {
     file: "src/lib/analytics.ts",
-    needles: ["Promise<boolean>", "if (error) throw error", "database track failed", "gtag forward failed", "return persisted"],
-    message: "Analytics database and GA delivery must remain isolated so one failing destination cannot break the storefront or suppress the other destination.",
+    needles: ["Promise<boolean>", "if (error) throw error", "database track failed", "gtag forward failed", "recordPurchaseAnalytics", "record_purchase_analytics", "return persisted"],
+    message: "Analytics delivery must remain isolated and purchase persistence must use the verified server-side RPC.",
   },
   {
     file: "src/store/useStore.ts",
@@ -53,8 +53,9 @@ const checks = [
   },
   {
     file: "src/components/AnalyticsTracker.tsx",
-    needles: ["product_view", "begin_checkout", "purchase", "lastProductView", "lastCheckout", "lastPurchase", "converted_order_id", "isAdminRoute"],
-    message: "Customer conversion analytics must preserve the full product-to-purchase funnel and mark converted carts without affecting admin routes.",
+    needles: ["product_view", "begin_checkout", "recordPurchaseAnalytics", "trackingToken", "gtag(\"event\", \"purchase\"", "lastProductView", "lastCheckout", "lastPurchase", "converted_order_id", "isAdminRoute"],
+    forbidden: ["event_type: \"purchase\""],
+    message: "Customer conversion analytics must use verified purchase persistence, preserve the funnel, and avoid direct client purchase inserts.",
   },
   {
     file: "src/components/CustomerCartSync.tsx",

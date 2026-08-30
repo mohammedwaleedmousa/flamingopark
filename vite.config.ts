@@ -36,7 +36,6 @@ export default defineConfig(({ mode }) => ({
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "./src"),
-      "react-zoom-pan-pinch": path.resolve(__dirname, "./src/lib/instantZoomCompat.tsx"),
     },
   },
 }));

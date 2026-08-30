@@ -19,6 +19,20 @@ const CustomerCartSync = () => {
       if (!user) return;
 
       const itemCount = cart.reduce((sum, item) => sum + item.quantity, 0);
+
+      if (itemCount === 0) {
+        const { data: existingCart } = await (supabase as any)
+          .from("customer_carts")
+          .select("status,converted_order_id")
+          .eq("user_id", user.id)
+          .maybeSingle();
+
+        if (existingCart?.status === "converted" && existingCart?.converted_order_id) {
+          lastPayload.current = `converted:${existingCart.converted_order_id}`;
+          return;
+        }
+      }
+
       const cartValue = cart.reduce((sum, item) => {
         const variant = item.variantId && item.product.variants
           ? item.product.variants.find((candidate) => candidate.id === item.variantId)
@@ -61,6 +75,7 @@ const CustomerCartSync = () => {
         {
           user_id: user.id,
           ...stablePayload,
+          ...(itemCount > 0 ? { converted_order_id: null } : {}),
           abandoned_at: null,
           last_activity_at: now,
           updated_at: now,

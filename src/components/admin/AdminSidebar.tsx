@@ -50,6 +50,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useAuthActions } from "@/hooks/useAuthActions";
 import { Sidebar, useSidebar } from "@/components/ui/sidebar";
 import { cn } from "@/lib/utils";
+import { ADMIN_LOGIN_PATH, adminPath, legacyAdminPathToCurrent, normalizeAdminPathForLegacyRules } from "@/lib/adminRoutes";
 
 type Tone = "indigo" | "coral" | "blue" | "teal" | "rose" | "amber" | "green" | "violet" | "cyan" | "slate";
 
@@ -267,6 +268,7 @@ const AdminSidebar = () => {
   const { logout } = useAuthActions();
 
   const collapsed = state === "collapsed";
+  const legacyPathname = normalizeAdminPathForLegacyRules(location.pathname);
 
   const [userEmail, setUserEmail] = useState("");
 
@@ -286,9 +288,9 @@ const AdminSidebar = () => {
   });
 
   const isActive = (item: NavItem) => {
-    if (item.exact) return location.pathname === item.url;
+    if (item.exact) return legacyPathname === item.url;
 
-    return location.pathname === item.url || location.pathname.startsWith(`${item.url}/`);
+    return legacyPathname === item.url || legacyPathname.startsWith(`${item.url}/`);
   };
 
   const isSectionActive = (section: NavSection) => {
@@ -339,7 +341,7 @@ const AdminSidebar = () => {
 
   const handleSectionClick = (section: NavSection) => {
     if (collapsed) {
-      navigate(section.items[0].url);
+      navigate(legacyAdminPathToCurrent(section.items[0].url));
       closeMobile();
       return;
     }
@@ -351,7 +353,7 @@ const AdminSidebar = () => {
     if (!window.confirm("هل تريد تسجيل الخروج من لوحة التحكم؟")) return;
 
     await logout({
-      redirectTo: "/admin/login",
+      redirectTo: ADMIN_LOGIN_PATH,
       successTitle: "تم تسجيل الخروج بنجاح",
       onSuccess: () => setUserEmail(""),
     });
@@ -374,7 +376,7 @@ const AdminSidebar = () => {
         {/* HEADER */}
 
         <div className="shrink-0 px-[10px] pb-[7px] pt-[12px]">
-          <button type="button" onClick={() => navigate("/admin")} className={cn("flex w-full items-center rounded-[16px] border border-[#E7EAF0] bg-white transition-colors duration-150 hover:border-[#DDE1E8] hover:bg-[#FDFDFE]", collapsed ? "h-[52px] justify-center" : "h-[62px] gap-[10px] px-[9px]")}>
+          <button type="button" onClick={() => navigate(adminPath())} className={cn("flex w-full items-center rounded-[16px] border border-[#E7EAF0] bg-white transition-colors duration-150 hover:border-[#DDE1E8] hover:bg-[#FDFDFE]", collapsed ? "h-[52px] justify-center" : "h-[62px] gap-[10px] px-[9px]")}>
             <div className="flex h-[42px] w-[42px] shrink-0 items-center justify-center overflow-hidden rounded-[13px] border border-[#EEEAF2] bg-white">
               <img src="/icons/flamingo.jpeg" alt="Flamingo Park" className="h-[33px] w-[33px] object-contain" />
             </div>
@@ -403,9 +405,9 @@ const AdminSidebar = () => {
 
         {!collapsed && (
           <div className="mx-[10px] mb-[5px] flex gap-[5px]">
-            <QuickAction icon={Plus} label="إضافة منتج" tone="blue" onClick={() => navigate("/admin/products/new")} />
-            <QuickAction icon={ShoppingBag} label="الطلبات" tone="coral" onClick={() => navigate("/admin/orders")} />
-            <QuickAction icon={BarChart3} label="التقارير" tone="cyan" onClick={() => navigate("/admin/reports")} />
+            <QuickAction icon={Plus} label="إضافة منتج" tone="blue" onClick={() => navigate(adminPath("products/new"))} />
+            <QuickAction icon={ShoppingBag} label="الطلبات" tone="coral" onClick={() => navigate(adminPath("orders"))} />
+            <QuickAction icon={BarChart3} label="التقارير" tone="cyan" onClick={() => navigate(adminPath("reports"))} />
           </div>
         )}
 
@@ -488,7 +490,7 @@ const AdminSidebar = () => {
         <div className="shrink-0 border-t border-[#E9ECF0] bg-white/70 p-[8px]">
           {userEmail ? (
             <>
-              <button type="button" onClick={() => navigate("/admin/settings")} className={cn("group flex w-full items-center rounded-[11px] transition-colors duration-150 hover:bg-white", collapsed ? "h-[43px] justify-center" : "gap-[8px] px-[6px] py-[5px]")}>
+              <button type="button" onClick={() => navigate(adminPath("settings"))} className={cn("group flex w-full items-center rounded-[11px] transition-colors duration-150 hover:bg-white", collapsed ? "h-[43px] justify-center" : "gap-[8px] px-[6px] py-[5px]")}>
                 <div className="relative flex h-[34px] w-[34px] shrink-0 items-center justify-center rounded-[10px] bg-[#EEEAFB] text-[10.5px] font-bold uppercase text-[#665DA0]">
                   {userEmail.charAt(0).toUpperCase()}
                   <span className="absolute bottom-0 left-0 h-[8px] w-[8px] rounded-full border-2 border-white bg-[#65A77C]" />
@@ -512,7 +514,7 @@ const AdminSidebar = () => {
               </button>
             </>
           ) : (
-            <button type="button" onClick={() => navigate("/admin/login")} className="flex h-[38px] w-full items-center justify-center rounded-[10px] bg-[#675CBA] text-[10px] font-semibold text-white transition-colors hover:bg-[#5B50AC]">تسجيل الدخول</button>
+            <button type="button" onClick={() => navigate(ADMIN_LOGIN_PATH)} className="flex h-[38px] w-full items-center justify-center rounded-[10px] bg-[#675CBA] text-[10px] font-semibold text-white transition-colors hover:bg-[#5B50AC]">تسجيل الدخول</button>
           )}
         </div>
       </div>
@@ -527,7 +529,7 @@ const MainItem = ({ item, active, collapsed, count, onNavigate }: { item: NavIte
   const displayCount = count !== undefined ? (count > 999 ? "999+" : count.toLocaleString("en-US")) : null;
 
   return (
-    <NavLink to={item.url} end={item.exact} onClick={onNavigate} title={collapsed ? item.title : undefined} className={cn("group relative flex w-full items-center rounded-[11px] border transition-colors duration-150", collapsed ? "h-[43px] justify-center border-transparent" : "h-[43px] gap-[8px] px-[7px]", active ? tone.active : "border-transparent text-[#626A75] hover:border-[#EDF0F3] hover:bg-white hover:text-[#313740]")}>
+    <NavLink to={legacyAdminPathToCurrent(item.url)} end={item.exact} onClick={onNavigate} title={collapsed ? item.title : undefined} className={cn("group relative flex w-full items-center rounded-[11px] border transition-colors duration-150", collapsed ? "h-[43px] justify-center border-transparent" : "h-[43px] gap-[8px] px-[7px]", active ? tone.active : "border-transparent text-[#626A75] hover:border-[#EDF0F3] hover:bg-white hover:text-[#313740]")}>
       {active && <span className={cn("absolute right-0 top-1/2 h-[20px] w-[3px] -translate-y-1/2 rounded-l-full", tone.line)} />}
 
       <span className={cn("flex h-[30px] w-[30px] shrink-0 items-center justify-center rounded-[9px] transition-colors duration-150", active ? tone.activeIcon : tone.icon)}>
@@ -552,7 +554,7 @@ const SubItem = ({ item, active, onNavigate }: { item: NavItem; active: boolean;
   const tone = toneStyles[item.tone];
 
   return (
-    <NavLink to={item.url} end={item.exact} onClick={onNavigate} className={cn("group flex h-[29px] w-full items-center gap-[6px] rounded-[7px] px-[6px] transition-colors duration-150", active ? `${tone.active} font-semibold` : "font-medium text-[#858D97] hover:bg-white hover:text-[#4C5560]")}>
+    <NavLink to={legacyAdminPathToCurrent(item.url)} end={item.exact} onClick={onNavigate} className={cn("group flex h-[29px] w-full items-center gap-[6px] rounded-[7px] px-[6px] transition-colors duration-150", active ? `${tone.active} font-semibold` : "font-medium text-[#858D97] hover:bg-white hover:text-[#4C5560]")}>
       <span className={cn("flex h-[19px] w-[19px] shrink-0 items-center justify-center rounded-[6px]", active ? tone.activeIcon : "text-[#A1A7B0]")}>
         <Icon className="h-[10.5px] w-[10.5px]" strokeWidth={1.8} />
       </span>

@@ -10,6 +10,7 @@ import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
 import { DateRangeProvider } from "@/lib/analytics/dateRange";
 import { hydrateCurrencies } from "@/lib/currency";
+import { ADMIN_BASE_PATH, ADMIN_ROUTE_UNLOCK_KEY, adminPath, legacyAdminPathToCurrent } from "@/lib/adminRoutes";
 import { MotionConfig } from "framer-motion";
 import CustomerAssistantEntry from "@/components/CustomerAssistantEntry";
 import CustomerSessionSync from "@/components/CustomerSessionSync";
@@ -179,6 +180,24 @@ const AuthRedirect = () => {
   return <CustomerAuthPage />;
 };
 
+const AdminRouteUnlock = ({ children }: { children: React.ReactNode }) => {
+  useEffect(() => {
+    window.sessionStorage.setItem(ADMIN_ROUTE_UNLOCK_KEY, "1");
+  }, []);
+
+  return <>{children}</>;
+};
+
+const LegacyAdminRouteBridge = () => {
+  const location = useLocation();
+  const unlocked = window.sessionStorage.getItem(ADMIN_ROUTE_UNLOCK_KEY) === "1";
+
+  if (!unlocked) return <NotFound />;
+
+  const targetPath = legacyAdminPathToCurrent(location.pathname);
+  return <Navigate to={`${targetPath}${location.search}${location.hash}`} replace />;
+};
+
 const ScrollToTop = () => {
   const { pathname } = useLocation();
   const navType = useNavigationType();
@@ -259,8 +278,8 @@ const App = () => {
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
             <Route path="/order-tracking" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
             {/* Admin Routes */}
-            <Route path="/admin/login" element={<AdminLoginPage />} />
-            <Route path="/admin" element={<AdminLayout />}>
+            <Route path={adminPath("login")} element={<AdminRouteUnlock><AdminLoginPage /></AdminRouteUnlock>} />
+            <Route path={ADMIN_BASE_PATH} element={<AdminRouteUnlock><AdminLayout /></AdminRouteUnlock>}>
               <Route index element={<AdminDashboard />} />
               <Route path="products" element={<AdminProductsPage />} />
               <Route path="catalog-health" element={<AdminCatalogHealthPage />} />
@@ -285,11 +304,11 @@ const App = () => {
               <Route path="reports" element={<ReportsOverviewPage />} />
               <Route path="reports/finance" element={<ReportsFinancePage />} />
               <Route path="reports/customers" element={<ReportsCustomersPage />} />
-              <Route path="analytics" element={<Navigate to="/admin/reports" replace />} />
-              <Route path="revenue" element={<Navigate to="/admin/reports" replace />} />
-              <Route path="profit-report" element={<Navigate to="/admin/reports/finance" replace />} />
-              <Route path="finance" element={<Navigate to="/admin/reports/finance" replace />} />
-              <Route path="customer-intelligence" element={<Navigate to="/admin/reports/customers" replace />} />
+              <Route path="analytics" element={<Navigate to={adminPath("reports")} replace />} />
+              <Route path="revenue" element={<Navigate to={adminPath("reports")} replace />} />
+              <Route path="profit-report" element={<Navigate to={adminPath("reports/finance")} replace />} />
+              <Route path="finance" element={<Navigate to={adminPath("reports/finance")} replace />} />
+              <Route path="customer-intelligence" element={<Navigate to={adminPath("reports/customers")} replace />} />
               <Route path="offers" element={<AdminOffersPage />} />
               <Route path="coupons" element={<AdminCouponsPage />} />
               <Route path="audit-log" element={<AdminAuditLogPage />} />
@@ -300,8 +319,8 @@ const App = () => {
               <Route path="inventory-adjustments" element={<AdminInventoryAdjustmentsPage />} />
               <Route path="settings" element={<AdminSettingsPage />} />
               <Route path="customer-experience" element={<AdminCustomerExperiencePage />} />
-              <Route path="product-experience" element={<Navigate to="/admin/products" replace />} />
-              <Route path="storefront-map" element={<Navigate to="/admin/sections" replace />} />
+              <Route path="product-experience" element={<Navigate to={adminPath("products")} replace />} />
+              <Route path="storefront-map" element={<Navigate to={adminPath("sections")} replace />} />
               <Route path="brand-pages" element={<AdminBrandPagesPage />} />
               <Route path="brand-pages/new" element={<AdminBrandPageEditor />} />
               <Route path="brand-pages/:id" element={<AdminBrandPageEditor />} />
@@ -318,6 +337,7 @@ const App = () => {
               <Route path="brand-sections/:id/products" element={<AdminBrandSectionProductsPage />} />
             </Route>
 
+            <Route path="/admin/*" element={<LegacyAdminRouteBridge />} />
             <Route path="*" element={<NotFound />} />
             </Routes>
           </Suspense>

@@ -9,6 +9,7 @@ const SITE_URL = "https://flamingoparkaden.com";
 const DEFAULT_TITLE = "Flamingo Park | فلامنجو بارك";
 const DEFAULT_DESCRIPTION = "Flamingo Park - متجر إلكتروني فاخر للأزياء والإكسسوارات والماركات العالمية.";
 const DEFAULT_IMAGE = `${SITE_URL}/icons/flamingo.jpeg`;
+const PURCHASE_SESSION_PREFIX = "fl-purchase-tracked:";
 
 const upsertMeta = (selector: string, attrs: Record<string, string>, content: string) => {
   let element = document.head.querySelector<HTMLMetaElement>(selector);
@@ -83,12 +84,14 @@ const isAdminRoute = (pathname: string) =>
  * Admin traffic is intentionally excluded from analytics and SEO mutations.
  */
 const AnalyticsTracker = () => {
-  const { pathname, search } = useLocation();
+  const location = useLocation();
+  const { pathname, search } = location;
   const cart = useStore((state) => state.cart);
   const getCartTotal = useStore((state) => state.getCartTotal);
   const lastPageView = useRef<string>("");
   const lastProductView = useRef<string>("");
   const lastCheckout = useRef<string>("");
+  const lastPurchase = useRef<string>("");
 
   useEffect(() => {
     captureUTM();
@@ -134,6 +137,65 @@ const AnalyticsTracker = () => {
       },
     });
   }, [pathname, cart, getCartTotal]);
+
+  useEffect(() => {
+    if (pathname !== "/order-confirmation") return;
+
+    const orderData = (location.state as { orderData?: Record<string, any> } | null)?.orderData;
+    const orderId = String(orderData?.orderId || "").trim();
+    if (!orderId || lastPurchase.current === orderId) return;
+
+    const sessionKey = `${PURCHASE_SESSION_PREFIX}${orderId}`;
+    try {
+      if (sessionStorage.getItem(sessionKey) === "1") {
+        lastPurchase.current = orderId;
+        return;
+      }
+    } catch {
+      // Session storage is optional; the ref still prevents render duplicates.
+    }
+
+    lastPurchase.current = orderId;
+    const total = Number(orderData?.total);
+    const items = Array.isArray(orderData?.items) ? orderData.items : [];
+
+    void track({
+      event_type: "purchase",
+      order_id: orderId,
+      value: Number.isFinite(total) ? total : null,
+      metadata: {
+        order_number: orderData?.orderNumber || null,
+        currency: orderData?.currencyMode || null,
+        payment_method: orderData?.paymentMethod || null,
+        items_count: items.reduce((sum: number, item: any) => sum + Math.max(0, Number(item?.quantity) || 0), 0),
+        unique_products: new Set(items.map((item: any) => item?.product_id).filter(Boolean)).size,
+      },
+    });
+
+    void (async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await (supabase as any)
+        .from("customer_carts")
+        .update({
+          status: "converted",
+          converted_order_id: orderId,
+          abandoned_at: null,
+          updated_at: new Date().toISOString(),
+        })
+        .eq("user_id", user.id)
+        .in("status", ["active", "abandoned", "cleared"]);
+
+      if (error && import.meta.env.DEV) console.warn("[analytics] cart conversion sync failed", error);
+    })();
+
+    try {
+      sessionStorage.setItem(sessionKey, "1");
+    } catch {
+      // Ignore storage failures; analytics must never break checkout confirmation.
+    }
+  }, [pathname, location.state]);
 
   useEffect(() => {
     if (isAdminRoute(pathname)) return;

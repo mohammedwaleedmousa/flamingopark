@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
-import { captureUTM, track } from "@/lib/analytics";
+import { captureUTM, recordPurchaseAnalytics, track } from "@/lib/analytics";
 import { supabase } from "@/integrations/supabase/client";
 import { ADMIN_BASE_PATH, LEGACY_ADMIN_BASE_PATH } from "@/lib/adminRoutes";
 import { useStore } from "@/store/useStore";
@@ -143,7 +143,8 @@ const AnalyticsTracker = () => {
 
     const orderData = (location.state as { orderData?: Record<string, any> } | null)?.orderData;
     const orderId = String(orderData?.orderId || "").trim();
-    if (!orderId || lastPurchase.current === orderId) return;
+    const trackingToken = String(orderData?.trackingToken || "").trim();
+    if (!orderId || !trackingToken || lastPurchase.current === orderId) return;
 
     const sessionKey = `${PURCHASE_SESSION_PREFIX}${orderId}`;
     try {
@@ -159,18 +160,36 @@ const AnalyticsTracker = () => {
     const total = Number(orderData?.total);
     const items = Array.isArray(orderData?.items) ? orderData.items : [];
 
-    void track({
-      event_type: "purchase",
-      order_id: orderId,
-      value: Number.isFinite(total) ? total : null,
-      metadata: {
-        order_number: orderData?.orderNumber || null,
-        currency: orderData?.currencyMode || null,
-        payment_method: orderData?.paymentMethod || null,
-        items_count: items.reduce((sum: number, item: any) => sum + Math.max(0, Number(item?.quantity) || 0), 0),
-        unique_products: new Set(items.map((item: any) => item?.product_id).filter(Boolean)).size,
-      },
-    });
+    void (async () => {
+      const persisted = await recordPurchaseAnalytics(orderId, trackingToken);
+      if (!persisted) {
+        lastPurchase.current = "";
+        return;
+      }
+
+      try {
+        sessionStorage.setItem(sessionKey, "1");
+      } catch {
+        // Ignore storage failures; analytics must never break checkout confirmation.
+      }
+    })();
+
+    try {
+      const gtag = (window as any).gtag;
+      if (typeof gtag === "function") {
+        gtag("event", "purchase", {
+          page_path: pathname,
+          transaction_id: orderId,
+          value: Number.isFinite(total) ? total : undefined,
+          currency: orderData?.currencyMode || undefined,
+          payment_method: orderData?.paymentMethod || undefined,
+          items_count: items.reduce((sum: number, item: any) => sum + Math.max(0, Number(item?.quantity) || 0), 0),
+          unique_products: new Set(items.map((item: any) => item?.product_id).filter(Boolean)).size,
+        });
+      }
+    } catch (err) {
+      if (import.meta.env.DEV) console.warn("[analytics] purchase gtag forward failed", err);
+    }
 
     void (async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -189,12 +208,6 @@ const AnalyticsTracker = () => {
 
       if (error && import.meta.env.DEV) console.warn("[analytics] cart conversion sync failed", error);
     })();
-
-    try {
-      sessionStorage.setItem(sessionKey, "1");
-    } catch {
-      // Ignore storage failures; analytics must never break checkout confirmation.
-    }
   }, [pathname, location.state]);
 
   useEffect(() => {

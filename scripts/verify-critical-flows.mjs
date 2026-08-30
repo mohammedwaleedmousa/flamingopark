@@ -31,6 +31,11 @@ const checks = [
     message: "Runtime monitoring must continue capturing errors and slow product resources.",
   },
   {
+    file: "src/lib/analytics.ts",
+    needles: ["Promise<boolean>", "if (error) throw error", "database track failed", "gtag forward failed", "return persisted"],
+    message: "Analytics database and GA delivery must remain isolated so one failing destination cannot break the storefront or suppress the other destination.",
+  },
+  {
     file: "functions/sitemap.xml.ts",
     needles: ["products", "brands", "categories", "application/xml"],
     message: "The storefront sitemap must continue including dynamic catalog routes.",

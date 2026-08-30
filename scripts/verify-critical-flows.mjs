@@ -43,13 +43,13 @@ const checks = [
   },
   {
     file: "src/components/AnalyticsTracker.tsx",
-    needles: ["product_view", "begin_checkout", "lastProductView", "lastCheckout", "isAdminRoute"],
-    message: "Customer conversion analytics must keep product-view and checkout-start tracking while excluding admin routes.",
+    needles: ["product_view", "begin_checkout", "purchase", "lastProductView", "lastCheckout", "lastPurchase", "converted_order_id", "isAdminRoute"],
+    message: "Customer conversion analytics must preserve the full product-to-purchase funnel and mark converted carts without affecting admin routes.",
   },
   {
     file: "src/components/CustomerCartSync.tsx",
-    needles: ["customer_carts", "onConflict: \"user_id\"", "status: itemCount > 0 ? \"active\" : \"cleared\"", "lastPayload"],
-    message: "Authenticated carts must remain debounced, deduplicated and persisted for recovery without affecting UI.",
+    needles: ["customer_carts", "onConflict: \"user_id\"", "status: itemCount > 0 ? \"active\" : \"cleared\"", "existingCart?.status === \"converted\"", "converted_order_id", "lastPayload"],
+    message: "Authenticated carts must remain debounced and persisted while preserving converted carts after successful checkout.",
   },
 ];
 

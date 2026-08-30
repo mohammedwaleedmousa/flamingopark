@@ -7,8 +7,8 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), "u
 const checks = [
   {
     file: "src/pages/CheckoutPage.tsx",
-    needles: ["create_secure_order_v2", "p_items", "p_delivery_company_id"],
-    message: "Checkout must continue using the secure server-side order RPC.",
+    needles: ["create_secure_order_v2", "p_items", "p_delivery_company_id", "trackingToken: createdOrder.tracking_token"],
+    message: "Checkout must continue using the secure server-side order RPC and pass its tracking token only into confirmation state.",
   },
   {
     file: "supabase/migrations/20260817112000_launch_readiness_customer_orders.sql",
@@ -56,6 +56,17 @@ const checks = [
     needles: ["product_view", "begin_checkout", "recordPurchaseAnalytics", "trackingToken", "gtag(\"event\", \"purchase\"", "lastProductView", "lastCheckout", "lastPurchase", "converted_order_id", "isAdminRoute"],
     forbidden: ["event_type: \"purchase\""],
     message: "Customer conversion analytics must use verified purchase persistence, preserve the funnel, and avoid direct client purchase inserts.",
+  },
+  {
+    file: "supabase/migrations/20260830213726_lock_purchase_analytics_to_verified_rpc.sql",
+    needles: ["Anyone can insert non-purchase events", "order_id is null", "begin_checkout"],
+    forbidden: ["event_type = 'purchase'"],
+    message: "Direct browser inserts must not be allowed to persist purchase events.",
+  },
+  {
+    file: "supabase/migrations/20260830213751_remove_legacy_direct_purchase_trigger.sql",
+    needles: ["drop trigger if exists analytics_events_verify_purchase", "drop function if exists public.normalize_purchase_analytics_event"],
+    message: "The obsolete direct-purchase normalization trigger must stay removed after verified RPC cutover.",
   },
   {
     file: "src/components/CustomerCartSync.tsx",

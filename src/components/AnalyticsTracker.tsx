@@ -103,7 +103,11 @@ const AnalyticsTracker = () => {
   }, [pathname, search]);
 
   useEffect(() => {
-    if (isAdminRoute(pathname) || pathname !== "/checkout" || cart.length === 0) return;
+    if (isAdminRoute(pathname)) return;
+    if (pathname !== "/checkout" || cart.length === 0) {
+      lastCheckout.current = "";
+      return;
+    }
 
     const cartSignature = cart
       .map((item) => [item.product.id, item.variantId || "", item.selectedSize || "", item.selectedColor || item.variantColor || "", item.quantity].join(":"))
@@ -133,6 +137,7 @@ const AnalyticsTracker = () => {
 
   useEffect(() => {
     if (isAdminRoute(pathname)) return;
+    if (!pathname.startsWith("/product/")) lastProductView.current = "";
 
     let cancelled = false;
     const canonical = `${SITE_URL}${pathname === "/" ? "/" : pathname}`;

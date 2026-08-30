@@ -7,8 +7,8 @@ const read = (relativePath) => fs.readFileSync(path.join(root, relativePath), "u
 const checks = [
   {
     file: "src/pages/CheckoutPage.tsx",
-    needles: ["create_secure_order_v2", "p_items", "p_delivery_company_id"],
-    message: "Checkout must continue using the secure server-side order RPC.",
+    needles: ["create_secure_order_v2", "p_items", "p_delivery_company_id", "trackingToken: createdOrder.tracking_token"],
+    message: "Checkout must continue using the secure server-side order RPC and pass its tracking token only into confirmation state.",
   },
   {
     file: "supabase/migrations/20260817112000_launch_readiness_customer_orders.sql",
@@ -31,9 +31,47 @@ const checks = [
     message: "Runtime monitoring must continue capturing errors and slow product resources.",
   },
   {
+    file: "src/lib/analytics.ts",
+    needles: ["Promise<boolean>", "if (error) throw error", "database track failed", "gtag forward failed", "recordPurchaseAnalytics", "record_purchase_analytics", "return persisted"],
+    message: "Analytics delivery must remain isolated and purchase persistence must use the verified server-side RPC.",
+  },
+  {
+    file: "src/store/useStore.ts",
+    needles: ["getCartItemUnitTotal", "event_type: \"add_to_cart\"", "event_type: \"remove_from_cart\"", "selected_size", "selected_color"],
+    message: "Cart add/remove analytics must use the same item-value calculation and preserve variant selection metadata.",
+  },
+  {
     file: "functions/sitemap.xml.ts",
     needles: ["products", "brands", "categories", "application/xml"],
     message: "The storefront sitemap must continue including dynamic catalog routes.",
+  },
+  {
+    file: "src/main.tsx",
+    needles: ["createRoot", "startRuntimeMonitoring", "CustomerCartSync"],
+    forbidden: ["./pages/ProductDetailPage"],
+    message: "The entrypoint must keep product detail lazy while mounting the invisible cart persistence service.",
+  },
+  {
+    file: "src/components/AnalyticsTracker.tsx",
+    needles: ["product_view", "begin_checkout", "recordPurchaseAnalytics", "trackingToken", "gtag(\"event\", \"purchase\"", "lastProductView", "lastCheckout", "lastPurchase", "converted_order_id", "isAdminRoute"],
+    forbidden: ["event_type: \"purchase\""],
+    message: "Customer conversion analytics must use verified purchase persistence, preserve the funnel, and avoid direct client purchase inserts.",
+  },
+  {
+    file: "supabase/migrations/20260830213726_lock_purchase_analytics_to_verified_rpc.sql",
+    needles: ["Anyone can insert non-purchase events", "order_id is null", "begin_checkout"],
+    forbidden: ["event_type = 'purchase'"],
+    message: "Direct browser inserts must not be allowed to persist purchase events.",
+  },
+  {
+    file: "supabase/migrations/20260830213751_remove_legacy_direct_purchase_trigger.sql",
+    needles: ["drop trigger if exists analytics_events_verify_purchase", "drop function if exists public.normalize_purchase_analytics_event"],
+    message: "The obsolete direct-purchase normalization trigger must stay removed after verified RPC cutover.",
+  },
+  {
+    file: "src/components/CustomerCartSync.tsx",
+    needles: ["customer_carts", "onConflict: \"user_id\"", "status: itemCount > 0 ? \"active\" : \"cleared\"", "getConfirmedOrderId", "status: \"converted\"", "converted_order_id", "hadItems", "lastPayload"],
+    message: "Authenticated carts must remain debounced, distinguish manual clearing from checkout conversion, and never overwrite a previous recovery state on an empty app start.",
   },
 ];
 
@@ -51,9 +89,11 @@ for (const check of checks) {
 
   const normalized = source.toLowerCase();
   const missing = check.needles.filter((needle) => !normalized.includes(needle.toLowerCase()));
-  if (missing.length) {
+  const forbidden = (check.forbidden || []).filter((needle) => normalized.includes(needle.toLowerCase()));
+  if (missing.length || forbidden.length) {
     console.error(`FAIL ${check.file}: ${check.message}`);
-    console.error(`  Missing: ${missing.join(", ")}`);
+    if (missing.length) console.error(`  Missing: ${missing.join(", ")}`);
+    if (forbidden.length) console.error(`  Forbidden: ${forbidden.join(", ")}`);
     failures += 1;
     continue;
   }

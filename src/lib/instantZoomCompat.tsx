@@ -1,4 +1,5 @@
-import { createContext, useContext, useMemo, useRef, useState, type MouseEvent, type ReactNode, type TouchEvent, type WheelEvent } from "react";
+import { cloneElement, isValidElement, useEffect, useRef, useState, type KeyboardEvent, type MouseEvent, type PointerEvent, type ReactElement, type ReactNode, type TouchEvent, type WheelEvent } from "react";
+import { createPortal } from "react-dom";
 
 type Point = {
   x: number;
@@ -11,8 +12,6 @@ type TransformWrapperProps = {
     zoomOut: () => void;
     resetTransform: () => void;
   }) => ReactNode);
-  minScale?: number;
-  maxScale?: number;
   [key: string]: unknown;
 };
 
@@ -23,17 +22,9 @@ type TransformComponentProps = {
   [key: string]: unknown;
 };
 
-type ZoomContextValue = {
-  scale: number;
-  minScale: number;
-  maxScale: number;
-  position: Point;
-  setScale: (scale: number) => void;
-  setPosition: (position: Point) => void;
-  resetTransform: () => void;
-};
-
-const ZoomContext = createContext<ZoomContextValue | null>(null);
+const MIN_SCALE = 1;
+const MAX_SCALE = 4;
+const CLICK_MOVE_THRESHOLD = 9;
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
 
@@ -48,80 +39,67 @@ const touchDistance = (touches: TouchList) => {
   return Math.hypot(x, y);
 };
 
-export const TransformWrapper = ({ children, minScale = 1, maxScale = 4 }: TransformWrapperProps) => {
-  const safeMinScale = Math.max(0.5, minScale);
-  const safeMaxScale = Math.max(safeMinScale, maxScale);
-  const [scale, setScaleState] = useState(safeMinScale);
-  const [position, setPosition] = useState<Point>({ x: 0, y: 0 });
-
-  const setScale = (nextScale: number) => {
-    const clampedScale = clamp(nextScale, safeMinScale, safeMaxScale);
-
-    setScaleState(clampedScale);
-
-    if (clampedScale <= safeMinScale + 0.001) {
-      setPosition({ x: 0, y: 0 });
-    }
+export const TransformWrapper = ({ children }: TransformWrapperProps) => {
+  const controls = {
+    zoomIn: () => undefined,
+    zoomOut: () => undefined,
+    resetTransform: () => undefined,
   };
 
-  const resetTransform = () => {
-    setScaleState(safeMinScale);
-    setPosition({ x: 0, y: 0 });
-  };
-
-  const controls = useMemo(
-    () => ({
-      zoomIn: () => setScale(scale * 1.4),
-      zoomOut: () => setScale(scale / 1.4),
-      resetTransform,
-    }),
-    [scale, safeMinScale, safeMaxScale],
-  );
-
-  return (
-    <ZoomContext.Provider
-      value={{
-        scale,
-        minScale: safeMinScale,
-        maxScale: safeMaxScale,
-        position,
-        setScale,
-        setPosition,
-        resetTransform,
-      }}
-    >
-      {typeof children === "function" ? children(controls) : children}
-    </ZoomContext.Provider>
-  );
+  return <>{typeof children === "function" ? children(controls) : children}</>;
 };
 
 export const TransformComponent = ({ children, wrapperClass = "", contentClass = "" }: TransformComponentProps) => {
-  const zoom = useContext(ZoomContext);
-  const wrapperRef = useRef<HTMLDivElement | null>(null);
+  const viewportRef = useRef<HTMLDivElement | null>(null);
+  const pointerStartRef = useRef<Point | null>(null);
   const dragStartRef = useRef<Point | null>(null);
   const dragOriginRef = useRef<Point>({ x: 0, y: 0 });
   const pinchDistanceRef = useRef(0);
-  const pinchScaleRef = useRef(1);
-  const lastTapRef = useRef(0);
+  const pinchScaleRef = useRef(MIN_SCALE);
+  const [isOpen, setIsOpen] = useState(false);
+  const [scale, setScale] = useState(MIN_SCALE);
+  const [position, setPosition] = useState<Point>({ x: 0, y: 0 });
   const [isInteracting, setIsInteracting] = useState(false);
 
-  if (!zoom) {
-    return (
-      <div className={wrapperClass}>
-        <div className={contentClass}>{children}</div>
-      </div>
-    );
-  }
+  const isZoomed = scale > MIN_SCALE + 0.01;
 
-  const { scale, minScale, maxScale, position, setScale, setPosition, resetTransform } = zoom;
-  const isZoomed = scale > minScale + 0.01;
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const handleEscape = (event: globalThis.KeyboardEvent) => {
+      if (event.key === "Escape") closeZoom();
+    };
+
+    window.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", handleEscape);
+    };
+  }, [isOpen]);
+
+  const resetTransform = () => {
+    setScale(MIN_SCALE);
+    setPosition({ x: 0, y: 0 });
+  };
+
+  const closeZoom = () => {
+    setIsOpen(false);
+    setIsInteracting(false);
+    dragStartRef.current = null;
+    pinchDistanceRef.current = 0;
+    resetTransform();
+  };
 
   const clampPosition = (next: Point, nextScale = scale) => {
-    const wrapper = wrapperRef.current;
+    const viewport = viewportRef.current;
 
-    if (!wrapper || nextScale <= minScale + 0.01) return { x: 0, y: 0 };
+    if (!viewport || nextScale <= MIN_SCALE + 0.01) return { x: 0, y: 0 };
 
-    const rect = wrapper.getBoundingClientRect();
+    const rect = viewport.getBoundingClientRect();
     const maxX = Math.max(0, (rect.width * (nextScale - 1)) / 2);
     const maxY = Math.max(0, (rect.height * (nextScale - 1)) / 2);
 
@@ -132,7 +110,7 @@ export const TransformComponent = ({ children, wrapperClass = "", contentClass =
   };
 
   const applyScale = (nextScale: number) => {
-    const clampedScale = clamp(nextScale, minScale, maxScale);
+    const clampedScale = clamp(nextScale, MIN_SCALE, MAX_SCALE);
 
     setScale(clampedScale);
     setPosition(clampPosition(position, clampedScale));
@@ -144,15 +122,43 @@ export const TransformComponent = ({ children, wrapperClass = "", contentClass =
       return;
     }
 
-    applyScale(Math.min(maxScale, Math.max(2.5, minScale * 2.5)));
+    applyScale(2.5);
+  };
+
+  const openZoom = () => {
+    setIsOpen(true);
+    resetTransform();
+  };
+
+  const handlePreviewPointerDown = (event: PointerEvent<HTMLDivElement>) => {
+    pointerStartRef.current = { x: event.clientX, y: event.clientY };
+  };
+
+  const handlePreviewPointerUp = (event: PointerEvent<HTMLDivElement>) => {
+    const start = pointerStartRef.current;
+    pointerStartRef.current = null;
+
+    if (!start) return;
+
+    const moved = Math.hypot(event.clientX - start.x, event.clientY - start.y);
+
+    if (moved <= CLICK_MOVE_THRESHOLD) {
+      openZoom();
+    }
+  };
+
+  const handlePreviewKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+
+    event.preventDefault();
+    openZoom();
   };
 
   const handleWheel = (event: WheelEvent<HTMLDivElement>) => {
     event.preventDefault();
     event.stopPropagation();
 
-    const factor = event.deltaY < 0 ? 1.18 : 1 / 1.18;
-    applyScale(scale * factor);
+    applyScale(scale * (event.deltaY < 0 ? 1.16 : 1 / 1.16));
   };
 
   const handleDoubleClick = (event: MouseEvent<HTMLDivElement>) => {
@@ -165,7 +171,6 @@ export const TransformComponent = ({ children, wrapperClass = "", contentClass =
     if (!isZoomed || event.button !== 0) return;
 
     event.preventDefault();
-    event.stopPropagation();
     setIsInteracting(true);
     dragStartRef.current = { x: event.clientX, y: event.clientY };
     dragOriginRef.current = position;
@@ -175,14 +180,13 @@ export const TransformComponent = ({ children, wrapperClass = "", contentClass =
     if (!isZoomed || !dragStartRef.current) return;
 
     event.preventDefault();
-    event.stopPropagation();
 
-    const next = {
-      x: dragOriginRef.current.x + event.clientX - dragStartRef.current.x,
-      y: dragOriginRef.current.y + event.clientY - dragStartRef.current.y,
-    };
-
-    setPosition(clampPosition(next));
+    setPosition(
+      clampPosition({
+        x: dragOriginRef.current.x + event.clientX - dragStartRef.current.x,
+        y: dragOriginRef.current.y + event.clientY - dragStartRef.current.y,
+      }),
+    );
   };
 
   const stopMousePan = () => {
@@ -193,7 +197,6 @@ export const TransformComponent = ({ children, wrapperClass = "", contentClass =
   const handleTouchStart = (event: TouchEvent<HTMLDivElement>) => {
     if (event.touches.length === 2) {
       event.preventDefault();
-      event.stopPropagation();
       setIsInteracting(true);
       pinchDistanceRef.current = touchDistance(event.touches);
       pinchScaleRef.current = scale;
@@ -201,24 +204,9 @@ export const TransformComponent = ({ children, wrapperClass = "", contentClass =
       return;
     }
 
-    if (event.touches.length !== 1) return;
-
-    const now = Date.now();
-    const isDoubleTap = now - lastTapRef.current < 260;
-    lastTapRef.current = now;
-
-    if (isDoubleTap) {
-      event.preventDefault();
-      event.stopPropagation();
-      toggleZoom();
-      lastTapRef.current = 0;
-      return;
-    }
-
-    if (!isZoomed) return;
+    if (!isZoomed || event.touches.length !== 1) return;
 
     event.preventDefault();
-    event.stopPropagation();
     setIsInteracting(true);
     const touch = event.touches[0];
     dragStartRef.current = { x: touch.clientX, y: touch.clientY };
@@ -228,26 +216,22 @@ export const TransformComponent = ({ children, wrapperClass = "", contentClass =
   const handleTouchMove = (event: TouchEvent<HTMLDivElement>) => {
     if (event.touches.length === 2 && pinchDistanceRef.current > 0) {
       event.preventDefault();
-      event.stopPropagation();
-
       const distance = touchDistance(event.touches);
-      const ratio = distance / pinchDistanceRef.current;
-      applyScale(pinchScaleRef.current * ratio);
+      applyScale(pinchScaleRef.current * (distance / pinchDistanceRef.current));
       return;
     }
 
     if (!isZoomed || event.touches.length !== 1 || !dragStartRef.current) return;
 
     event.preventDefault();
-    event.stopPropagation();
-
     const touch = event.touches[0];
-    const next = {
-      x: dragOriginRef.current.x + touch.clientX - dragStartRef.current.x,
-      y: dragOriginRef.current.y + touch.clientY - dragStartRef.current.y,
-    };
 
-    setPosition(clampPosition(next));
+    setPosition(
+      clampPosition({
+        x: dragOriginRef.current.x + touch.clientX - dragStartRef.current.x,
+        y: dragOriginRef.current.y + touch.clientY - dragStartRef.current.y,
+      }),
+    );
   };
 
   const handleTouchEnd = () => {
@@ -256,37 +240,102 @@ export const TransformComponent = ({ children, wrapperClass = "", contentClass =
     setIsInteracting(false);
   };
 
+  const zoomChild = isValidElement(children)
+    ? cloneElement(children as ReactElement<{ className?: string }>, {
+        className: `${(children as ReactElement<{ className?: string }>).props.className || ""} !object-contain !object-center`,
+      })
+    : children;
+
   return (
-    <div
-      ref={wrapperRef}
-      className={`instant-zoom-wrapper ${wrapperClass}`}
-      onWheel={handleWheel}
-      onDoubleClick={handleDoubleClick}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={stopMousePan}
-      onMouseLeave={stopMousePan}
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-      onTouchCancel={handleTouchEnd}
-      style={{
-        overflow: "hidden",
-        touchAction: isZoomed ? "none" : "pan-y",
-        cursor: isZoomed ? (isInteracting ? "grabbing" : "grab") : "zoom-in",
-      }}
-    >
+    <>
       <div
-        className={`instant-zoom-content ${contentClass}`}
-        style={{
-          transform: `translate3d(${position.x}px, ${position.y}px, 0) scale(${scale})`,
-          transformOrigin: "center center",
-          transition: isInteracting ? "none" : "transform 140ms ease-out",
-          willChange: isZoomed ? "transform" : "auto",
+        className={`instant-zoom-preview ${wrapperClass}`}
+        role="button"
+        tabIndex={0}
+        aria-label="تكبير صورة المنتج"
+        onPointerDown={handlePreviewPointerDown}
+        onPointerUp={handlePreviewPointerUp}
+        onPointerCancel={() => {
+          pointerStartRef.current = null;
         }}
+        onKeyDown={handlePreviewKeyDown}
+        style={{ cursor: "zoom-in" }}
       >
-        {children}
+        <div className={contentClass}>{children}</div>
       </div>
-    </div>
+
+      {isOpen &&
+        createPortal(
+          <div
+            className="fixed inset-0 z-[9999] bg-white/98"
+            role="dialog"
+            aria-modal="true"
+            aria-label="تكبير صورة المنتج"
+          >
+            <button
+              type="button"
+              onClick={closeZoom}
+              aria-label="إغلاق التكبير"
+              className="absolute right-3 top-3 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-[#E7DDD9] bg-white/95 text-[27px] font-light leading-none text-[#554844] shadow-sm md:right-5 md:top-5"
+            >
+              ×
+            </button>
+
+            <div
+              ref={viewportRef}
+              className="absolute inset-0 overflow-hidden px-2 pb-16 pt-14 md:px-12 md:pb-20 md:pt-16"
+              onWheel={handleWheel}
+              onDoubleClick={handleDoubleClick}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={stopMousePan}
+              onMouseLeave={stopMousePan}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              onTouchCancel={handleTouchEnd}
+              style={{
+                touchAction: "none",
+                cursor: isZoomed ? (isInteracting ? "grabbing" : "grab") : "zoom-in",
+              }}
+            >
+              <div
+                className="flex h-full w-full items-center justify-center"
+                style={{
+                  transform: `translate3d(${position.x}px, ${position.y}px, 0) scale(${scale})`,
+                  transformOrigin: "center center",
+                  transition: isInteracting ? "none" : "transform 140ms ease-out",
+                  willChange: isZoomed ? "transform" : "auto",
+                }}
+              >
+                <div className="h-full w-full">{zoomChild}</div>
+              </div>
+            </div>
+
+            <div className="absolute bottom-3 left-1/2 z-20 flex -translate-x-1/2 items-center gap-2 rounded-full border border-[#E7DDD9] bg-white/95 p-1.5 shadow-sm md:bottom-5">
+              <button
+                type="button"
+                onClick={() => applyScale(scale / 1.35)}
+                disabled={scale <= MIN_SCALE + 0.01}
+                aria-label="تصغير الصورة"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-[20px] text-[#554844] disabled:opacity-30"
+              >
+                −
+              </button>
+              <span className="min-w-[46px] text-center text-[10px] font-semibold text-[#786863]">{Math.round(scale * 100)}%</span>
+              <button
+                type="button"
+                onClick={() => applyScale(scale * 1.35)}
+                disabled={scale >= MAX_SCALE - 0.01}
+                aria-label="تكبير الصورة"
+                className="flex h-9 w-9 items-center justify-center rounded-full text-[20px] text-[#554844] disabled:opacity-30"
+              >
+                +
+              </button>
+            </div>
+          </div>,
+          document.body,
+        )}
+    </>
   );
 };

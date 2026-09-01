@@ -63,6 +63,19 @@ export const TransformComponent = ({ children, wrapperClass = "", contentClass =
 
   const isZoomed = scale > MIN_SCALE + 0.01;
 
+  const resetTransform = () => {
+    setScale(MIN_SCALE);
+    setPosition({ x: 0, y: 0 });
+  };
+
+  const closeZoom = () => {
+    setIsOpen(false);
+    setIsInteracting(false);
+    dragStartRef.current = null;
+    pinchDistanceRef.current = 0;
+    resetTransform();
+  };
+
   useEffect(() => {
     if (!isOpen) return;
 
@@ -80,19 +93,6 @@ export const TransformComponent = ({ children, wrapperClass = "", contentClass =
       window.removeEventListener("keydown", handleEscape);
     };
   }, [isOpen]);
-
-  const resetTransform = () => {
-    setScale(MIN_SCALE);
-    setPosition({ x: 0, y: 0 });
-  };
-
-  const closeZoom = () => {
-    setIsOpen(false);
-    setIsInteracting(false);
-    dragStartRef.current = null;
-    pinchDistanceRef.current = 0;
-    resetTransform();
-  };
 
   const clampPosition = (next: Point, nextScale = scale) => {
     const viewport = viewportRef.current;
@@ -267,7 +267,7 @@ export const TransformComponent = ({ children, wrapperClass = "", contentClass =
       {isOpen &&
         createPortal(
           <div
-            className="fixed inset-0 z-[9999] bg-white/98"
+            className="fixed inset-0 z-[9999] bg-white"
             role="dialog"
             aria-modal="true"
             aria-label="تكبير صورة المنتج"

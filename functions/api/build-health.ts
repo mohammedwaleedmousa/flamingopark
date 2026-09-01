@@ -1,4 +1,4 @@
-const RELEASE_ID = "2026-08-28-build-health-1";
+const RELEASE_ID = "2026-09-01-checkout-cod-1";
 
 export const onRequestGet: PagesFunction = async () => {
   return Response.json(

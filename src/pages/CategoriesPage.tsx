@@ -609,7 +609,7 @@ const CategoriesPage = () => {
                 {subCategories.map((category, index) => (
                   <Link key={category.id} to={`/categories?parent=${selectedParent.slug}&sub=${category.slug}`} className="group overflow-hidden rounded-[16px] border border-[#EEE5E1] bg-white">
                     <div className="aspect-square overflow-hidden bg-[#F4F1EF]">
-                      <img src={category.image_url || FALLBACK[category.slug] || FALLBACK.women} alt={category.name_ar} loading={index < 2 ? "eager" : "lazy"} decoding="async" className="h-full w-full object-cover md:transition-transform md:duration-300 md:group-hover:scale-[1.02]" />
+                      <img src={category.image_url || FALLBACK[category.slug] || FALLBACK.women} alt={category.name_ar} loading={index < 2 ? "eager" : "lazy"} decoding="async" className="h-full w-full object-contain object-[center_43%] p-1.5 md:p-2 md:transition-transform md:duration-300 md:group-hover:scale-[1.01]" />
                     </div>
 
                     <div className="flex min-h-[52px] items-center justify-between gap-2 px-3 py-2.5">

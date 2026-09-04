@@ -6,6 +6,7 @@ Disallow: /account
 Disallow: /my-orders
 Disallow: /my-shipments
 Disallow: /notifications
+Disallow: /order-tracking
 
 User-agent: Bingbot
 Allow: /
@@ -15,6 +16,7 @@ Disallow: /account
 Disallow: /my-orders
 Disallow: /my-shipments
 Disallow: /notifications
+Disallow: /order-tracking
 
 User-agent: Twitterbot
 Allow: /
@@ -30,6 +32,7 @@ Disallow: /account
 Disallow: /my-orders
 Disallow: /my-shipments
 Disallow: /notifications
+Disallow: /order-tracking
 
 Sitemap: https://flamingoparkaden.com/sitemap.xml
 Host: https://flamingoparkaden.com

@@ -12,6 +12,7 @@ import ProductListFilters, { type ProductListFilterValues } from "@/components/P
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
 import { useSiteContent, getSiteText } from "@/hooks/useSiteContent";
+import { createImageSrcSet, handleImageError, optimizeImage } from "@/lib/imageUrl";
 
 interface Category {
   id: string;
@@ -559,7 +560,7 @@ const CategoriesPage = () => {
               <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3 md:gap-5">
                 {parents.map((category, index) => (
                   <Link key={category.id} to={`/categories?parent=${category.slug}`} className="group relative aspect-[4/5] overflow-hidden rounded-[17px] bg-[#F4F1EF] md:rounded-[20px]">
-                    <img src={category.image_url || FALLBACK[category.slug] || FALLBACK.women} alt={category.name_ar} loading={index < 2 ? "eager" : "lazy"} fetchPriority={index < 2 ? "high" : "auto"} decoding="async" className="h-full w-full object-cover md:transition-transform md:duration-300 md:group-hover:scale-[1.02]" />
+                    <img src={optimizeImage(category.image_url || FALLBACK[category.slug] || FALLBACK.women, 960, 78)} srcSet={createImageSrcSet(category.image_url || FALLBACK[category.slug] || FALLBACK.women, [360, 640, 960], 78)} sizes="(max-width: 767px) 50vw, 33vw" alt={category.name_ar} loading={index < 2 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" width={960} height={1200} onError={handleImageError} className="h-full w-full object-cover md:transition-transform md:duration-300 md:group-hover:scale-[1.02]" />
 
                     <div className="absolute inset-0 bg-gradient-to-t from-black/55 via-transparent to-transparent" />
 
@@ -609,7 +610,7 @@ const CategoriesPage = () => {
                 {subCategories.map((category, index) => (
                   <Link key={category.id} to={`/categories?parent=${selectedParent.slug}&sub=${category.slug}`} className="group overflow-hidden rounded-[16px] border border-[#EEE5E1] bg-white">
                     <div className="aspect-square overflow-hidden bg-[#F4F1EF]">
-                      <img src={category.image_url || FALLBACK[category.slug] || FALLBACK.women} alt={category.name_ar} loading={index < 2 ? "eager" : "lazy"} decoding="async" className="h-full w-full object-cover md:transition-transform md:duration-300 md:group-hover:scale-[1.02]" />
+                      <img src={optimizeImage(category.image_url || FALLBACK[category.slug] || FALLBACK.women, 640, 78)} srcSet={createImageSrcSet(category.image_url || FALLBACK[category.slug] || FALLBACK.women, [240, 400, 640], 78)} sizes="(max-width: 639px) 50vw, (max-width: 767px) 33vw, 25vw" alt={category.name_ar} loading={index < 2 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" width={640} height={640} onError={handleImageError} className="h-full w-full object-cover md:transition-transform md:duration-300 md:group-hover:scale-[1.02]" />
                     </div>
 
                     <div className="flex min-h-[52px] items-center justify-between gap-2 px-3 py-2.5">

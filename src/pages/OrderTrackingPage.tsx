@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Check, CheckCircle2, Clock3, Home, MapPin, MessageCircle, Package, RefreshCw, Truck, XCircle } from "lucide-react";
@@ -47,10 +47,52 @@ const STATUS_LABELS: Record<NormalizedStatus, string> = {
 };
 
 const OrderTrackingPage = () => {
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   const selectedOrder = searchParams.get("order")?.trim() || "";
   const trackingToken = searchParams.get("token")?.trim() || "";
+  const [orderDraft, setOrderDraft] = useState(selectedOrder);
+  const [tokenDraft, setTokenDraft] = useState(trackingToken);
+  const [formError, setFormError] = useState("");
+
+  useEffect(() => {
+    setOrderDraft(selectedOrder);
+    setTokenDraft(trackingToken);
+  }, [selectedOrder, trackingToken]);
+
+  const handleOrderDraftChange = (value: string) => {
+    setFormError("");
+
+    try {
+      const url = new URL(value, window.location.origin);
+      const pastedOrder = url.searchParams.get("order")?.trim();
+
+      if (pastedOrder) {
+        setOrderDraft(pastedOrder);
+        setTokenDraft(url.searchParams.get("token")?.trim() || "");
+        return;
+      }
+    } catch {
+      // A normal order number is expected most of the time.
+    }
+
+    setOrderDraft(value);
+  };
+
+  const handleTrackingSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    const orderNumber = orderDraft.trim();
+    const token = tokenDraft.trim();
+
+    if (!orderNumber) {
+      setFormError("أدخل رقم الطلب أولاً.");
+      return;
+    }
+
+    setFormError("");
+    setSearchParams(token ? { order: orderNumber, token } : { order: orderNumber });
+  };
 
   /* =========================================================
      ORDER
@@ -59,13 +101,17 @@ const OrderTrackingPage = () => {
   const { data: order, isLoading, isFetching, isError, refetch } = useQuery({
     queryKey: ["tracking-order", selectedOrder, trackingToken],
     enabled: Boolean(selectedOrder),
-    refetchInterval: 10000,
+    refetchInterval: (query) => (query.state.data ? 10000 : false),
     refetchOnWindowFocus: true,
     refetchOnMount: "always",
     queryFn: async () => {
       let resolvedToken = trackingToken;
 
       if (!resolvedToken) {
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        if (!sessionData.session?.user) return null;
+
         const { data: authData, error: authError } = await supabase.auth.getUser();
         if (authError) throw authError;
         if (!authData.user) return null;
@@ -240,24 +286,43 @@ const OrderTrackingPage = () => {
           </header>
 
           {/* =================================================
-              MISSING DATA
+              TRACKING SEARCH
           ================================================= */}
 
-          {missingTrackingInfo && (
-            <div className="rounded-[14px] border border-[#E8DDD9] bg-white px-4 py-5 text-center">
-              <span className="mx-auto flex h-10 w-10 items-center justify-center rounded-full bg-[#FAECE9]">
-                <Package className="h-4 w-4 text-[#C66C72]" strokeWidth={1.5} />
-              </span>
+          {(missingTrackingInfo || (!isLoading && !isError && !order)) && (
+            <form onSubmit={handleTrackingSubmit} className="rounded-[15px] border border-[#E8DDD9] bg-white px-4 py-5 md:px-5">
+              <div className="flex items-start gap-3">
+                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#FAECE9]">
+                  <Package className="h-4 w-4 text-[#C66C72]" strokeWidth={1.5} />
+                </span>
+                <div>
+                  <h2 className="text-[11px] font-semibold text-[#4A3E3A]">{missingTrackingInfo ? "أدخل بيانات طلبك" : "تحقق من بيانات التتبع"}</h2>
+                  <p className="mt-1 text-[7px] leading-5 text-[#998B86]">يمكنك لصق رابط التتبع كاملًا، أو إدخال رقم الطلب والرمز الموجودين في صفحة تأكيد الطلب.</p>
+                </div>
+              </div>
 
-              <h2 className="mt-3 text-[11px] font-semibold text-[#4A3E3A]">رابط التتبع غير مكتمل</h2>
+              <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
+                <div>
+                  <label htmlFor="tracking-order-number" className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">رقم الطلب أو رابط التتبع *</label>
+                  <input id="tracking-order-number" name="order_number" value={orderDraft} onChange={(event) => handleOrderDraftChange(event.target.value)} autoComplete="off" inputMode="text" dir="ltr" placeholder="FLM-12345" className="h-11 w-full rounded-[10px] border border-[#E6DCD8] bg-white px-3 text-left font-mono text-[9px] text-[#483C38] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA]" />
+                </div>
 
-              <p className="mx-auto mt-1.5 max-w-[320px] text-[7px] leading-5 text-[#998B86]">يجب أن يحتوي رابط التتبع على رقم الطلب.</p>
+                <div>
+                  <label htmlFor="tracking-token" className="mb-1.5 block text-[8px] font-medium text-[#5B4E49]">رمز التتبع <span className="font-normal text-[#AA9D98]">(للزائر)</span></label>
+                  <input id="tracking-token" name="tracking_token" value={tokenDraft} onChange={(event) => { setTokenDraft(event.target.value); setFormError(""); }} autoComplete="off" dir="ltr" placeholder="رمز التتبع" className="h-11 w-full rounded-[10px] border border-[#E6DCD8] bg-white px-3 text-left font-mono text-[9px] text-[#483C38] outline-none placeholder:text-[#ADA19C] focus:border-[#D9AEAA]" />
+                </div>
+              </div>
 
-              <Link to="/home" className="mx-auto mt-4 flex h-[38px] w-fit items-center justify-center gap-1.5 rounded-[9px] border border-[#D9AEAA] bg-white px-5 text-[8px] font-semibold text-[#A95B61]">
-                <Home className="h-3.5 w-3.5" strokeWidth={1.5} />
-                العودة للرئيسية
-              </Link>
-            </div>
+              {formError && <p role="alert" className="mt-2 text-[7px] font-medium text-[#A45D5D]">{formError}</p>}
+
+              <div className="mt-4 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-[6px] leading-5 text-[#A0938E]">إذا كنت مسجّل الدخول، يكفي رقم الطلب الخاص بحسابك.</p>
+                <button type="submit" className="flex h-10 items-center justify-center gap-2 rounded-[10px] bg-[#D4777D] px-5 text-[8px] font-semibold text-white active:bg-[#C96B72]">
+                  <Truck className="h-3.5 w-3.5" strokeWidth={1.5} />
+                  تتبع الطلب
+                </button>
+              </div>
+            </form>
           )}
 
           {/* =================================================
@@ -299,12 +364,9 @@ const OrderTrackingPage = () => {
           ================================================= */}
 
           {!missingTrackingInfo && !isLoading && !isError && !order && (
-            <div className="rounded-[14px] border border-[#E9D0CE] bg-[#FFF8F7] px-4 py-5 text-center">
-              <Package className="mx-auto h-7 w-7 text-[#A76D68]" strokeWidth={1.4} />
-
-              <p className="mt-2 text-[9px] font-semibold text-[#815953]">لم يتم العثور على الطلب</p>
-
-              <p className="mt-1 text-[7px] text-[#A08782]">تأكد أن الطلب يخص حسابك أو استخدم رابط التتبع الأصلي.</p>
+            <div className="mt-3 rounded-[12px] border border-[#E9D0CE] bg-[#FFF8F7] px-4 py-3 text-center">
+              <p className="text-[8px] font-semibold text-[#815953]">تعذر مطابقة بيانات الطلب</p>
+              <p className="mt-1 text-[7px] leading-5 text-[#A08782]">راجع رقم الطلب ورمز التتبع دون مسافات إضافية، أو تواصل معنا للمساعدة.</p>
             </div>
           )}
 

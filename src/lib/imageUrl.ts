@@ -16,12 +16,13 @@ const getViewportAwareWidth = (requestedWidth: number) => {
   return requestedWidth;
 };
 
-export const optimizeImage = (url?: string | null, width = 800, quality = 82): string => {
+const buildOptimizedImageUrl = (url: string | null | undefined, width: number, quality: number, viewportAware: boolean): string => {
   if (!url || !url.trim()) return "/placeholder.svg";
 
   try {
-    const u = new URL(url, window.location.origin);
-    let optimizedWidth = getViewportAwareWidth(width);
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://flamingoparkaden.com";
+    const u = new URL(url, baseUrl);
+    let optimizedWidth = viewportAware ? getViewportAwareWidth(width) : width;
     let optimizedQuality = quality;
 
     if (u.hostname.endsWith("unsplash.com")) {
@@ -38,14 +39,14 @@ export const optimizeImage = (url?: string | null, width = 800, quality = 82): s
       // ProductDetailPage asks for 1400px, while ProductCard already loads 640px.
       // Reuse the exact 640/82 transformed URL so clicking a product can use the
       // browser cache immediately instead of starting another large image request.
-      if (colorVariantImage && width >= 1200) {
+      if (viewportAware && colorVariantImage && width >= 1200) {
         optimizedWidth = 640;
         optimizedQuality = 82;
       }
 
       // ProductDetailPage also preloads color images at 900px. Keep those light so
       // they cannot compete with the primary image on slower mobile connections.
-      if (colorVariantImage && width >= 700 && width < 1200) {
+      if (viewportAware && colorVariantImage && width >= 700 && width < 1200) {
         optimizedWidth = Math.min(optimizedWidth, 360);
         optimizedQuality = Math.min(optimizedQuality, 76);
       }
@@ -63,6 +64,8 @@ export const optimizeImage = (url?: string | null, width = 800, quality = 82): s
   }
 };
 
+export const optimizeImage = (url?: string | null, width = 800, quality = 82): string => buildOptimizedImageUrl(url, width, quality, true);
+
 export const createImageSrcSet = (
   url: string | null | undefined,
   widths: number[],
@@ -74,7 +77,7 @@ export const createImageSrcSet = (
     .sort((a, b) => a - b);
 
   if (candidates.length === 0) return undefined;
-  return candidates.map((width) => `${optimizeImage(url, width, quality)} ${width}w`).join(", ");
+  return candidates.map((width) => `${buildOptimizedImageUrl(url, width, quality, false)} ${width}w`).join(", ");
 };
 
 export const handleImageError = (event: { currentTarget: HTMLImageElement }) => {
@@ -84,10 +87,12 @@ export const handleImageError = (event: { currentTarget: HTMLImageElement }) => 
 
   if (image.src.includes("/storage/v1/render/image/public/") && image.dataset.originalTried !== "1") {
     image.dataset.originalTried = "1";
+    image.removeAttribute("srcset");
     image.src = image.src.replace("/storage/v1/render/image/public/", "/storage/v1/object/public/").split("?")[0];
     return;
   }
 
   image.dataset.fallbackApplied = "1";
+  image.removeAttribute("srcset");
   image.src = "/placeholder.svg";
 };

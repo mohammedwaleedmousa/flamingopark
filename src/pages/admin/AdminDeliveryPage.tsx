@@ -19,6 +19,7 @@ interface DeliveryCompany {
   country: string;
   base_fee: number;
   delivery_days: string | null;
+  service_scope: DeliveryScope;
   is_active: boolean | null;
   created_at?: string;
 }
@@ -28,11 +29,13 @@ type DeliveryForm = {
   country: string;
   base_fee: number;
   delivery_days: string;
+  service_scope: DeliveryScope;
   is_active: boolean;
 };
 
 type StatusFilter = "all" | "active" | "inactive" | "used";
 type SortMode = "name" | "fee_low" | "fee_high" | "orders";
+type DeliveryScope = "aden" | "outside" | "all";
 
 const SINGLE_COUNTRY = "GLOBAL";
 
@@ -41,6 +44,7 @@ const emptyForm = (): DeliveryForm => ({
   country: SINGLE_COUNTRY,
   base_fee: 0,
   delivery_days: "",
+  service_scope: "outside",
   is_active: true,
 });
 
@@ -62,7 +66,7 @@ const AdminDeliveryPage = () => {
   const { data: companies = [], isLoading, isFetching } = useQuery({
     queryKey: ["admin-delivery-companies"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("delivery_companies").select("id,name,country,base_fee,delivery_days,is_active,created_at").order("name", { ascending: true });
+      const { data, error } = await supabase.from("delivery_companies").select("id,name,country,base_fee,delivery_days,service_scope,is_active,created_at").order("name", { ascending: true });
 
       if (error) throw error;
 
@@ -164,6 +168,7 @@ const AdminDeliveryPage = () => {
       country: company.country || SINGLE_COUNTRY,
       base_fee: Number(company.base_fee || 0),
       delivery_days: company.delivery_days || "",
+      service_scope: company.service_scope || "outside",
       is_active: company.is_active ?? true,
     });
     setIsDialogOpen(true);
@@ -204,6 +209,7 @@ const AdminDeliveryPage = () => {
         country: SINGLE_COUNTRY,
         base_fee: baseFee,
         delivery_days: deliveryDays || null,
+        service_scope: data.service_scope,
         is_active: data.is_active,
       };
 
@@ -442,6 +448,7 @@ const AdminDeliveryPage = () => {
                 <th className="px-[12px] text-right">شركة التوصيل</th>
                 <th className="px-[12px] text-right">الرسوم</th>
                 <th className="px-[12px] text-right">مدة التوصيل</th>
+                <th className="px-[12px] text-right">نطاق الخدمة</th>
                 <th className="px-[12px] text-right">الطلبات</th>
                 <th className="px-[12px] text-right">الحالة</th>
                 <th className="w-[110px] px-[12px] text-center">الإجراءات</th>
@@ -451,7 +458,7 @@ const AdminDeliveryPage = () => {
             <tbody>
               {filteredCompanies.length === 0 ? (
                 <tr>
-                  <td colSpan={6}>
+                  <td colSpan={7}>
                     <DeliveryEmpty />
                   </td>
                 </tr>
@@ -483,6 +490,10 @@ const AdminDeliveryPage = () => {
                           <Clock3 className="h-[10px] w-[10px] text-[#8D949E]" />
                           <span className="text-[8px] font-medium text-[#727A84]">{company.delivery_days || "غير محددة"}</span>
                         </div>
+                      </td>
+
+                      <td className="px-[12px]">
+                        <span className="inline-flex h-[25px] items-center rounded-[7px] border border-[#E2DEF3] bg-[#F5F3FF] px-[7px] text-[6.5px] font-semibold text-[#675CBA]">{deliveryScopeLabel(company.service_scope)}</span>
                       </td>
 
                       <td className="px-[12px]">
@@ -538,6 +549,7 @@ const AdminDeliveryPage = () => {
                       <div className="min-w-0">
                         <h3 className="truncate text-[11px] font-semibold text-[#3B424C]">{company.name}</h3>
                         <p className="mt-[3px] text-[7px] text-[#9299A3]">{company.delivery_days || "مدة التوصيل غير محددة"}</p>
+                        <p className="mt-[3px] text-[7px] font-medium text-[#675CBA]">{deliveryScopeLabel(company.service_scope)}</p>
                       </div>
                     </div>
 
@@ -599,6 +611,19 @@ const AdminDeliveryPage = () => {
                     <Input value={formData.delivery_days} onChange={(event) => setFormData((current) => ({ ...current, delivery_days: event.target.value }))} placeholder="مثال: 2-3 أيام" className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[9.5px] shadow-none focus-visible:bg-white focus-visible:ring-0" />
                   </Field>
                 </div>
+
+                <Field label="نطاق الخدمة" required>
+                  <Select value={formData.service_scope} onValueChange={(value) => setFormData((current) => ({ ...current, service_scope: value as DeliveryScope }))}>
+                    <SelectTrigger className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[9.5px] shadow-none focus:ring-0">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="aden">داخل عدن فقط</SelectItem>
+                      <SelectItem value="outside">خارج عدن فقط</SelectItem>
+                      <SelectItem value="all">كل المحافظات</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </Field>
               </FormSection>
 
               <FormSection title="الظهور في المتجر" icon={CheckCircle2}>
@@ -652,6 +677,12 @@ const AdminDeliveryPage = () => {
 };
 
 const formatMoney = (value: number) => `${Number(value || 0).toLocaleString("en-US", { maximumFractionDigits: 2 })} ر.ي`;
+
+const deliveryScopeLabel = (scope: DeliveryScope) => {
+  if (scope === "aden") return "داخل عدن فقط";
+  if (scope === "all") return "كل المحافظات";
+  return "خارج عدن فقط";
+};
 
 const DeliveryStatCard = ({ title, value, helper, icon: Icon, tone }: { title: string; value: string; helper: string; icon: LucideIcon; tone: "indigo" | "green" | "blue" | "coral" }) => {
   const style = {

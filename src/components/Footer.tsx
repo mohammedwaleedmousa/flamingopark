@@ -5,9 +5,10 @@ const cols: { title: string; links: { label: string; href: string }[] }[] = [
   {
     title: "خدمة العملاء",
     links: [
+      { label: "تتبع الطلب", href: "/order-tracking" },
       { label: "اتصل بنا", href: "/store-info#contact" },
-      { label: "الشحن والتوصيل", href: "/store-info#shipping" },
-      { label: "الإرجاع والاستبدال", href: "/store-info#returns" },
+      { label: "الشحن والتوصيل", href: "/shipping-policy" },
+      { label: "الإرجاع والاستبدال", href: "/returns-policy" },
       { label: "الأسئلة الشائعة", href: "/store-info#faq" },
     ],
   },
@@ -15,7 +16,8 @@ const cols: { title: string; links: { label: string; href: string }[] }[] = [
     title: "فلامنجو",
     links: [
       { label: "عن فلامنجو", href: "/store-info#about" },
-      { label: "معلومات المتجر", href: "/store-info#contact" },
+      { label: "سياسة الخصوصية", href: "/privacy-policy" },
+      { label: "الشروط والأحكام", href: "/terms" },
       { label: "الماركات", href: "/brands" },
       { label: "باركود المتجر", href: "/qr-code" },
     ],

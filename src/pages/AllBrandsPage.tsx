@@ -8,7 +8,7 @@ import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 
 import { supabase } from "@/integrations/supabase/client";
-import { handleImageError } from "@/lib/imageUrl";
+import { createImageSrcSet, handleImageError, optimizeImage } from "@/lib/imageUrl";
 
 interface BrandRow {
   id: string;
@@ -157,13 +157,13 @@ const AllBrandsPage = () => {
 
           {!isLoading && list.length > 0 && (
             <div className="grid grid-cols-3 gap-x-3 gap-y-7 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 md:gap-x-4 md:gap-y-9">
-              {list.map((brand) => (
+              {list.map((brand, index) => (
                 <Link key={brand.id} to={`/brands/${brand.slug}`} aria-label={`عرض منتجات ${brand.name}`} className="group block min-w-0 select-none text-center [-webkit-tap-highlight-color:transparent]">
                   {/* LOGO CARD */}
 
                   <div className="flex aspect-square w-full items-center justify-center overflow-hidden rounded-[15px] border border-border/70 bg-white p-5 transition-all duration-200 group-hover:border-[#D7C8C2] group-hover:shadow-[0_8px_24px_rgba(52,40,34,0.045)] md:rounded-[18px] md:p-7">
                     {brand.logo_url ? (
-                      <img src={brand.logo_url} alt={brand.name} loading="lazy" decoding="async" onError={handleImageError} className="block h-full w-full object-contain object-center transition-transform duration-200 group-hover:scale-[1.025]" />
+                      <img src={optimizeImage(brand.logo_url, 320, 76)} srcSet={createImageSrcSet(brand.logo_url, [120, 220, 320], 76)} sizes="(max-width: 639px) 33vw, (max-width: 767px) 25vw, (max-width: 1023px) 20vw, 16vw" alt={brand.name} loading={index < 6 ? "eager" : "lazy"} fetchPriority={index === 0 ? "high" : "auto"} decoding="async" width={320} height={320} onError={handleImageError} className="block h-full w-full object-contain object-center transition-transform duration-200 group-hover:scale-[1.025]" />
                     ) : (
                       <span className="max-w-full truncate px-1 font-serif text-[11px] font-semibold text-[#403633] md:text-[13px]">{brand.name}</span>
                     )}

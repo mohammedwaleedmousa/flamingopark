@@ -12,7 +12,6 @@ import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import AppErrorBoundary from "./components/AppErrorBoundary";
 import ProductRatingSync from "./components/ProductRatingSync";
-import CheckoutCodGuard from "./components/CheckoutCodGuard";
 import CustomerCartSync from "./components/CustomerCartSync";
 import { startRuntimeMonitoring } from "./lib/runtimeMonitoring";
 import "./index.css";
@@ -22,4 +21,4 @@ import "./desktop-pages.css";
 
 startRuntimeMonitoring();
 
-createRoot(document.getElementById("root")!).render(<AppErrorBoundary><><ProductRatingSync /><CheckoutCodGuard /><CustomerCartSync /><App /></></AppErrorBoundary>);
+createRoot(document.getElementById("root")!).render(<AppErrorBoundary><><ProductRatingSync /><CustomerCartSync /><App /></></AppErrorBoundary>);

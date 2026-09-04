@@ -26,7 +26,7 @@ const AdminSettingsPage = () => {
 
   const [storeInfo, setStoreInfo] = useState({
     name: "Flamingo",
-    email: "info@flamingo.com",
+    email: "",
     phone: "",
   });
 
@@ -69,7 +69,7 @@ const AdminSettingsPage = () => {
                 const info = value as Record<string, string>;
                 setStoreInfo({
                   name: info.name || "Flamingo",
-                  email: info.email || "info@flamingo.com",
+                  email: info.email || "",
                   phone: info.phone || info.phone_ye || info.phone_sa || "",
                 });
               }
@@ -304,10 +304,11 @@ const AdminSettingsPage = () => {
             <Input value={storeInfo.name} onChange={(e) => setStoreInfo({ ...storeInfo, name: e.target.value })} />
           </div>
           <div>
-            <label className="block text-sm text-muted-foreground mb-2">البريد الإلكتروني</label>
+            <label className="block text-sm text-muted-foreground mb-2">البريد الإلكتروني الموثّق (اختياري)</label>
             <Input
               value={storeInfo.email}
               onChange={(e) => setStoreInfo({ ...storeInfo, email: e.target.value })}
+              placeholder="اتركه فارغًا حتى يتوفر بريد رسمي يعمل"
               dir="ltr"
             />
           </div>

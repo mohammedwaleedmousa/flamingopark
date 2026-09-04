@@ -79,6 +79,7 @@ const StoreInfoPage = lazy(() => import("./pages/StoreInfoPage"));
 const BannerPage = lazy(() => import("./pages/bannerPage"));
 const NotificationsPage = lazy(() => import("./pages/NotificationsPage"));
 const OrderTrackingPage = lazy(() => import("./pages/OrderTrackingPage"));
+const PolicyPage = lazy(() => import("./pages/PolicyPage"));
 
 // Admin pages
 const AdminLoginPage = lazy(() => import("./pages/admin/AdminLoginPage"));
@@ -147,7 +148,6 @@ const customerPageForPath = (pathname: string) => {
   if (pathname.startsWith("/product/")) return "products";
   if (pathname.startsWith("/brand")) return "brands";
   if (pathname === "/order-confirmation") return "checkout";
-  if (pathname === "/order-tracking") return "my-orders";
   if (pathname === "/seasonal-offers") return "offers";
   return pathname.slice(1);
 };
@@ -276,7 +276,11 @@ const App = () => {
             <Route path="/store-info" element={<ProtectedRoute><StoreInfoPage /></ProtectedRoute>} />
             <Route path="/banner/:slug" element={<ProtectedRoute><BannerPage /></ProtectedRoute>} />
             <Route path="/notifications" element={<ProtectedRoute><NotificationsPage /></ProtectedRoute>} />
-            <Route path="/order-tracking" element={<ProtectedRoute><OrderTrackingPage /></ProtectedRoute>} />
+            <Route path="/order-tracking" element={<OrderTrackingPage />} />
+            <Route path="/privacy-policy" element={<PolicyPage />} />
+            <Route path="/terms" element={<PolicyPage />} />
+            <Route path="/returns-policy" element={<PolicyPage />} />
+            <Route path="/shipping-policy" element={<PolicyPage />} />
             {/* Admin Routes */}
             <Route path={adminPath("login")} element={<AdminRouteUnlock><AdminLoginPage /></AdminRouteUnlock>} />
             <Route path={ADMIN_BASE_PATH} element={<AdminRouteUnlock><AdminLayout /></AdminRouteUnlock>}>

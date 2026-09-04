@@ -287,6 +287,12 @@ const AnalyticsTracker = () => {
         "/new-arrivals": { title: "وصل حديثاً | Flamingo Park", description: "اكتشف أحدث المنتجات التي وصلت إلى Flamingo Park." },
         "/best-sellers": { title: "الأكثر مبيعاً | Flamingo Park", description: "تسوق المنتجات الأكثر مبيعاً واختياراً لدى عملاء Flamingo Park." },
         "/seasonal-offers": { title: "العروض | Flamingo Park", description: "اكتشف أحدث عروض Flamingo Park والمنتجات المختارة بأسعار مميزة." },
+        "/store-info": { title: "عن المتجر والتواصل | Flamingo Park", description: "تعرف على Flamingo Park ووسائل التواصل وخدمة العملاء ومعلومات الشحن والإرجاع." },
+        "/order-tracking": { title: "تتبع الطلب | Flamingo Park", description: "تابع حالة طلبك في Flamingo Park بأمان باستخدام رقم الطلب ورمز التتبع." },
+        "/shipping-policy": { title: "سياسة الشحن والتوصيل | Flamingo Park", description: "تفاصيل نطاق التوصيل والرسوم والمدة التقديرية وتتبع طلبات Flamingo Park." },
+        "/returns-policy": { title: "سياسة الإرجاع والاستبدال | Flamingo Park", description: "شروط ومدة وإجراءات الإرجاع والاستبدال لدى Flamingo Park." },
+        "/privacy-policy": { title: "سياسة الخصوصية | Flamingo Park", description: "تعرف على كيفية معالجة Flamingo Park لبيانات الطلب والحساب وحمايتها." },
+        "/terms": { title: "الشروط والأحكام | Flamingo Park", description: "شروط استخدام متجر Flamingo Park والطلب والدفع والتوصيل." },
       };
 
       const meta = pageMeta[pathname] || { title: DEFAULT_TITLE, description: DEFAULT_DESCRIPTION };

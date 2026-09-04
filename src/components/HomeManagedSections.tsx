@@ -5,32 +5,45 @@ import { ArrowLeft } from "lucide-react";
 import ProductCard from "@/components/ProductCard";
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
+import { useCustomerExperience } from "@/hooks/useCustomerExperience";
 
 type ManagedSection = { id: string; title: string; title_ar: string; filter_type: string | null; max_products: number | null; show_view_all: boolean | null; view_all_link: string | null; sort_order: number | null };
-type ProductRow = Record<string, any> & { section_ids?: string[] | null; created_at?: string | null; sort_order?: number | null };
+type ProductRow = Record<string, any> & { section_ids?: string[] | null; sort_order?: number | null };
 type HomeManagedSectionsProps = { betweenSections?: ReactNode; afterSections?: ReactNode };
 
+const SUPPORTED_FILTERS = new Set(["featured", "best_seller", "discounted", "new", "all"]);
+const sectionLimit = (section: ManagedSection) => Math.max(1, Math.min(60, Number(section.max_products ?? 8)));
+
 const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSectionsProps) => {
+  const { data: customerExperience } = useCustomerExperience();
+
   const { data: sections = [] } = useQuery({
     queryKey: ["home-managed-sections"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("homepage_sections").select("id,title,title_ar,filter_type,max_products,show_view_all,view_all_link,sort_order").eq("is_active", true).in("filter_type", ["featured", "best_seller"]).order("sort_order", { ascending: true });
+      const { data, error } = await supabase.from("homepage_sections").select("id,title,title_ar,filter_type,max_products,show_view_all,view_all_link,sort_order").eq("is_active", true).order("sort_order", { ascending: true });
       if (error) throw error;
-      return (data || []) as ManagedSection[];
+      return (data || []).filter((section: ManagedSection) => Boolean(section.filter_type && SUPPORTED_FILTERS.has(section.filter_type))) as ManagedSection[];
     },
     staleTime: 60_000,
     refetchOnWindowFocus: false,
   });
 
-  const sectionIds = useMemo(() => sections.map((section) => section.id), [sections]);
+  const visibleSections = useMemo(() => sections.filter((section) => {
+    if (section.filter_type === "featured" && customerExperience?.homeSections.featuredProducts === false) return false;
+    if (section.filter_type === "best_seller" && customerExperience?.homeSections.bestSellers === false) return false;
+    if (section.filter_type === "new" && customerExperience?.homeSections.newArrivals === false) return false;
+    return true;
+  }), [sections, customerExperience]);
+
+  const sectionIds = useMemo(() => visibleSections.map((section) => section.id), [visibleSections]);
 
   const { data: rows = [] } = useQuery({
     queryKey: ["home-managed-section-products", sectionIds.join(",")],
     enabled: sectionIds.length > 0,
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("products")
-        .select(`${PRODUCT_CARD_SELECT},section_ids,created_at,sort_order`)
+        .select(`${PRODUCT_CARD_SELECT},section_ids,sort_order`)
         .eq("is_active", true)
         .eq("in_stock", true)
         .overlaps("section_ids", sectionIds)
@@ -42,18 +55,15 @@ const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSect
     refetchOnWindowFocus: false,
   });
 
-  const rendered = useMemo(() => sections.map((section) => {
-    const explicit = rows.filter((row) => Array.isArray(row.section_ids) && row.section_ids.includes(section.id));
-    let source = explicit.length ? explicit : rows.filter((row) => {
-      if (section.filter_type === "featured") return Boolean(row.is_featured);
-      if (section.filter_type === "best_seller") return Boolean(row.is_best_seller);
-      return true;
-    });
-    source = [...source].sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
-    return { section, products: source.slice(0, 8).map((row) => mapProductCard(row as any)) };
-  }).filter(({ products }) => products.length > 0), [rows, sections]);
+  const rendered = useMemo(() => visibleSections.map((section) => {
+    const source = rows
+      .filter((row) => Array.isArray(row.section_ids) && row.section_ids.includes(section.id))
+      .sort((a, b) => Number(a.sort_order || 0) - Number(b.sort_order || 0));
 
-  if (!rendered.length) return null;
+    return { section, products: source.slice(0, sectionLimit(section)).map((row) => mapProductCard(row as any)) };
+  }).filter(({ products }) => products.length > 0), [rows, visibleSections]);
+
+  if (!rendered.length) return <>{betweenSections}{afterSections}</>;
 
   return (
     <>
@@ -88,7 +98,7 @@ const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSect
             </div>
           </section>
 
-          {sectionIndex === 0 && rendered.length > 1 ? betweenSections : null}
+          {sectionIndex === 0 ? betweenSections : null}
         </div>
       ))}
 

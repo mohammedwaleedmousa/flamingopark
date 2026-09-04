@@ -4,7 +4,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigationType } from "react-router-dom";
-import { useStore } from "@/store/useStore";
 import { useCustomerExperience } from "@/hooks/useCustomerExperience";
 import LoadingScreen from "@/components/LoadingScreen";
 import AnalyticsTracker from "@/components/AnalyticsTracker";
@@ -148,7 +147,8 @@ const customerPageForPath = (pathname: string) => {
   if (pathname.startsWith("/brand")) return "brands";
   if (pathname === "/order-confirmation") return "checkout";
   if (pathname === "/order-tracking") return "my-orders";
-  if (pathname === "/seasonal-offers") return "offers";
+  if (pathname === "/seasonal-offers" || pathname === "/offers") return "offers";
+  if (pathname === "/curated") return "products";
   return pathname.slice(1);
 };
 
@@ -250,6 +250,8 @@ const App = () => {
             <Route path="/products" element={<ProtectedRoute><ProductsPage /></ProtectedRoute>} />
             <Route path="/search" element={<ProtectedRoute><SearchPage /></ProtectedRoute>} />
             <Route path="/seasonal-offers" element={<ProtectedRoute><SeasonalOffersPage /></ProtectedRoute>} />
+            <Route path="/offers" element={<Navigate to="/seasonal-offers" replace />} />
+            <Route path="/curated" element={<Navigate to="/products" replace />} />
             <Route path="/campaign/:slug" element={<ProtectedRoute><CampaignPage /></ProtectedRoute>} />
             <Route path="/categories" element={<ProtectedRoute><CategoriesPage /></ProtectedRoute>} />
             <Route path="/best-sellers" element={<ProtectedRoute><BestSellersPage /></ProtectedRoute>} />

@@ -60,8 +60,10 @@ const StoreInfoPage = () => {
 
   const whatsappNumber = storeInfo?.whatsapp || storeInfo?.whatsapp_ye || storeInfo?.whatsapp_sa;
   const phone = String(storeInfo?.phone_sa || storeInfo?.phone_ye || storeInfo?.phone || "+967778579777");
-  const email = String(storeInfo?.email || "info@flamingopark.com");
-  const whatsappDigits = whatsappNumber ? String(whatsappNumber).replace(/\D/g, "") : "";
+  const email = String(storeInfo?.email || "").trim();
+  const placeholderEmails = new Set(["info@flamingo.com", "info@flamingopark.com"]);
+  const showEmail = Boolean(email && !placeholderEmails.has(email.toLowerCase()));
+  const whatsappDigits = String(whatsappNumber || phone).replace(/\D/g, "");
 
   const pillars = [
     {
@@ -73,8 +75,8 @@ const StoreInfoPage = () => {
     {
       icon: Shield,
       number: "02",
-      title: getSiteText(content, "store_info_pillar_2_title", "أصالة مضمونة"),
-      desc: getSiteText(content, "store_info_pillar_2_desc", "كل منتج يمرّ بفحص جودة قبل أن يصل إليك."),
+      title: getSiteText(content, "store_info_pillar_2_title", "جودة مفحوصة"),
+      desc: getSiteText(content, "store_info_pillar_2_desc", "نراجع حالة كل منتج وتفاصيله قبل تجهيزه للتوصيل."),
     },
     {
       icon: Truck,
@@ -91,15 +93,20 @@ const StoreInfoPage = () => {
       icon: Phone,
       href: `tel:${phone}`,
     },
-    {
+    ...(showEmail ? [{
       label: getSiteText(content, "store_info_email_label", "البريد الإلكتروني"),
       value: email,
       icon: Mail,
       href: `mailto:${email}`,
-    },
+    }] : [{
+      label: "واتساب",
+      value: `+${whatsappDigits}`,
+      icon: MessageCircle,
+      href: `https://wa.me/${whatsappDigits}`,
+    }]),
     {
       label: getSiteText(content, "store_info_hours_label", "ساعات العمل"),
-      value: getSiteText(content, "store_info_hours_value", "السبت – الخميس · 10:00 – 22:00"),
+      value: getSiteText(content, "store_info_hours_value", "يوميًا · استقبال الطلبات على مدار الساعة"),
       icon: Clock,
       href: "",
     },
@@ -215,8 +222,8 @@ const StoreInfoPage = () => {
             <span className="mt-4 block font-serif text-[6px] tracking-[0.2em] text-[#B86168]">SHIPPING</span>
             <h2 className="mt-1.5 text-[15px] font-semibold text-[#493B38] md:text-[18px]">{getSiteText(content, "store_info_shipping_details_title", "الشحن والتوصيل")}</h2>
             <p className="mt-2 text-[8px] leading-6 text-[#94857F] md:text-[10px]">{getSiteText(content, "store_info_shipping_details_desc", "اختر شركة التوصيل أثناء إتمام الطلب. تظهر الرسوم والمعلومات المتاحة عن التوصيل قبل تأكيد الطلب، وبعد الإنشاء يمكنك متابعة حالة الطلب من صفحة التتبع.")}</p>
-            <Link to="/order-tracking" className="mt-4 inline-flex items-center gap-1.5 text-[8px] font-semibold text-[#B86168]">
-              تتبع طلبك
+            <Link to="/shipping-policy" className="mt-4 inline-flex items-center gap-1.5 text-[8px] font-semibold text-[#B86168]">
+              اقرأ سياسة الشحن
               <ArrowLeft className="h-3 w-3" strokeWidth={1.5} />
             </Link>
           </article>
@@ -236,6 +243,7 @@ const StoreInfoPage = () => {
             ) : (
               <Link to="/store-info#contact" className="mt-4 inline-flex items-center gap-1.5 text-[8px] font-semibold text-[#B86168]">تواصل معنا<ArrowLeft className="h-3 w-3" strokeWidth={1.5} /></Link>
             )}
+            <Link to="/returns-policy" className="mr-4 mt-4 inline-flex items-center gap-1.5 text-[8px] font-semibold text-[#6E876E]">شروط الإرجاع<ArrowLeft className="h-3 w-3" strokeWidth={1.5} /></Link>
           </article>
         </section>
 

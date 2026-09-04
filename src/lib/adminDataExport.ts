@@ -168,7 +168,7 @@ const customerDetailDefinition = (id: string): ExportDefinition => ({
   loadRows: async () => {
     const { data: customer, error } = await db.from("customers").select("*").eq("id", id).maybeSingle();
     if (error) throw error;
-    let query = db.from("orders").select("*").eq("customer_id", id).range(0, 4999);
+    const query = db.from("orders").select("*").eq("customer_id", id).range(0, 4999);
     const { data: orders, error: ordersError } = await query;
     if (ordersError) throw ordersError;
     if ((orders || []).length) return orders.map(mapOrder);

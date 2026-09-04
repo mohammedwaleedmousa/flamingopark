@@ -30,7 +30,7 @@ interface OrderItem {
   selected_accessories?: SelectedAccessory[];
 }
 
-type InvoiceReviewStatus = "unreviewed" | "pending" | "accepted" | "rejected";
+type InvoiceReviewStatus = "unreviewed" | "pending" | "accepted" | "rejected" | "returned";
 
 interface Order {
   id: string;
@@ -52,6 +52,7 @@ interface Order {
   currency_code?: string | null;
   currency_mode?: string | null;
   exchange_rate_snapshot?: number | null;
+  total_base?: number | null;
   invoice_url?: string | null;
   invoice_review_status?: InvoiceReviewStatus;
   invoice_reviewed_at?: string | null;
@@ -96,10 +97,8 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
   const rateSnapshot = Number(displayOrder?.exchange_rate_snapshot || getRateSnapshot(currencyMode) || currencyMeta?.rate || 1);
   const currencySymbol = currencyMeta?.symbol || currencyMode;
 
-  const toDisplay = (baseValue: number) => {
-    const value = Number(baseValue || 0) * rateSnapshot;
-    return currencyMode === "SAR" ? Math.round(value * 100) / 100 : Math.round(value);
-  };
+  // Orders store invoice-facing amounts in their selected native currency.
+  const toDisplay = (nativeValue: number) => Number(nativeValue || 0);
 
   const toBase = (displayValue: number) => {
     const value = Number(displayValue || 0);
@@ -115,10 +114,6 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
 
     current.items.forEach((item) => {
       subtotal += Number(item.price || 0) * Math.max(1, Number(item.quantity || 1));
-
-      item.selected_accessories?.forEach((accessory) => {
-        subtotal += Number(accessory.price || 0) * Math.max(1, Number(accessory.quantity || 1));
-      });
     });
 
     const deliveryFee = Number(current.delivery_fee || 0);
@@ -231,7 +226,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
         delivery_fee: Number(editedOrder.delivery_fee || 0),
         discount_amount: Number(editedOrder.discount_amount || 0),
         total: calculatedTotals.total,
-        total_base: calculatedTotals.total,
+        total_base: toBase(calculatedTotals.total),
         invoice_review_status: shouldReturnToReview ? "pending" : "unreviewed",
         invoice_reviewed_at: null,
         invoice_reviewed_by: null,

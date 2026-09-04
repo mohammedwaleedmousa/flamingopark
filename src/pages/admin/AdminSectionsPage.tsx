@@ -1,4 +1,4 @@
-import { useMemo, useState, type FormEvent, type LucideIcon, type ReactNode } from "react";
+import { useMemo, useState, type FormEvent, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
@@ -8,7 +8,7 @@ import { Switch } from "@/components/ui/switch";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { CheckCircle2, ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, Layers3, LayoutGrid, Link2, Loader2, Pencil, Plus, Search, ShoppingBag, Sparkles, Trash2, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronUp, Eye, EyeOff, GripVertical, Layers3, LayoutGrid, Link2, Loader2, Pencil, Plus, Search, ShoppingBag, Sparkles, Trash2, X, type LucideIcon } from "lucide-react";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 

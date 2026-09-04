@@ -271,7 +271,7 @@ const CustomerAuthPage = () => {
         return;
       }
 
-      let loginData = await signInCompatible(phone, password).catch(() => null);
+      const loginData = await signInCompatible(phone, password).catch(() => null);
 
       if (!loginData?.user) {
         const migrated = await migrateLegacyCustomer(phone, password);

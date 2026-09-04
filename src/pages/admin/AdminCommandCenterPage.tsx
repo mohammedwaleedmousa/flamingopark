@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type LucideIcon } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import {
   AlertTriangle,
@@ -22,6 +22,7 @@ import {
   Users,
   XCircle,
   Zap,
+  type LucideIcon,
 } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { Button } from "@/components/ui/button";

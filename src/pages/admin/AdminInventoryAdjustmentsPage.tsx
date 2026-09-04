@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type LucideIcon, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
-import { AlertTriangle, Boxes, CheckCircle2, ClipboardCheck, History, Layers3, Loader2, Minus, Package, PackagePlus, Pencil, Plus, RefreshCw, RotateCcw, Save, Search, SlidersHorizontal, Trash2, TrendingDown, TrendingUp, Wallet, X } from "lucide-react";
+import { AlertTriangle, Boxes, CheckCircle2, ClipboardCheck, History, Layers3, Loader2, Minus, Package, PackagePlus, Pencil, Plus, RefreshCw, RotateCcw, Save, Search, SlidersHorizontal, Trash2, TrendingDown, TrendingUp, Wallet, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 type VariantSizeEntry = string | { size?: string; stock?: number };

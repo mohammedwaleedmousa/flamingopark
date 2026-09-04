@@ -389,7 +389,7 @@ const Navbar = () => {
                   </button>
                 </DropdownMenuTrigger>
 
-                <DropdownMenuContent align="end" dir="rtl" className="w-60 rounded-[14px] border-[#E8DDD9] bg-white">
+                <DropdownMenuContent align="end" className="w-60 rounded-[14px] border-[#E8DDD9] bg-white">
                   <DropdownMenuLabel className="text-xs text-[#5A4C48]">اختر العملة</DropdownMenuLabel>
 
                   <DropdownMenuSeparator className="bg-[#EEE5E1]" />

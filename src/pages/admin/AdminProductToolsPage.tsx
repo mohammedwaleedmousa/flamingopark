@@ -54,7 +54,7 @@ const AdminProductToolsPage = ({ embedded = false }: AdminProductToolsPageProps)
 
       const q = search.trim();
       if (q) {
-        const term = `%${q.replaceAll(",", " ")}%`;
+        const term = `%${q.split(",").join(" ")}%`;
         query = query.or(`name.ilike.${term},name_ar.ilike.${term},slug.ilike.${term},brand.ilike.${term}`);
       }
 

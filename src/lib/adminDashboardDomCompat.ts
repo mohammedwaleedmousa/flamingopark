@@ -6,14 +6,13 @@ if (typeof window !== "undefined" && typeof Element !== "undefined" && window.lo
 
     Element.prototype.closest = function closest(selector: string) {
       if (selector === "div.rounded-[16px]") {
-        let current: Element | null = this;
+        const findRoundedPanel = (element: Element | null): Element | null => {
+          if (!element) return null;
+          if (element.tagName === "DIV" && element.classList.contains("rounded-[16px]")) return element;
+          return findRoundedPanel(element.parentElement);
+        };
 
-        while (current) {
-          if (current.tagName === "DIV" && current.classList.contains("rounded-[16px]")) return current;
-          current = current.parentElement;
-        }
-
-        return null;
+        return findRoundedPanel(this);
       }
 
       return nativeClosest.call(this, selector);

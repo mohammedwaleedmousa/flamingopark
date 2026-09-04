@@ -163,7 +163,7 @@ const AdminSettingsPage = () => {
     }
   };
 
-  const sanitizeStorageFileName = (name: string) => name.replace(/[^\w.\-]+/g, "_");
+  const sanitizeStorageFileName = (name: string) => name.replace(/[^\w.-]+/g, "_");
 
   const clearCertPdf = async () => {
     try {

@@ -267,8 +267,12 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
         product_name: item.product_name.trim(),
         product_image: item.product_image || "",
         quantity: Math.max(1, Math.trunc(Number(item.quantity || 1))),
-        price: Number(item.price || 0),
+        price: toDisplay(Number(item.price || 0)),
       }));
+      const nativeSubtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+      const nativeDeliveryFee = toDisplay(deliveryFee);
+      const nativeDiscountAmount = Math.min(nativeSubtotal + nativeDeliveryFee, toDisplay(discountAmount));
+      const nativeTotal = Math.max(0, nativeSubtotal + nativeDeliveryFee - nativeDiscountAmount);
 
       const payload = {
         order_number: orderNumber,
@@ -280,11 +284,11 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
         customer_region: customerRegion.trim() || null,
         country: SINGLE_COUNTRY,
         items: orderItems,
-        subtotal,
-        delivery_fee: deliveryFee,
-        discount_amount: discountAmount,
+        subtotal: nativeSubtotal,
+        delivery_fee: nativeDeliveryFee,
+        discount_amount: nativeDiscountAmount,
         coupon_code: couponCode.trim() || null,
-        total,
+        total: nativeTotal,
         total_base: total,
         delivery_company_id: deliveryCompanyId === "none" ? null : deliveryCompanyId,
         payment_method: paymentMethod,
@@ -313,7 +317,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
         subtotal: Number((data as any).subtotal || 0),
         delivery_fee: Number((data as any).delivery_fee || 0),
         discount_amount: Number((data as any).discount_amount || 0),
-        total: Number((data as any).total || 0),
+        total: Number((data as any).total || nativeTotal),
         exchange_rate_snapshot: Number((data as any).exchange_rate_snapshot || currencyRate),
         total_base: Number((data as any).total_base || total),
       } as CreatedOrder;

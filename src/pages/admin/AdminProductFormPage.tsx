@@ -270,7 +270,7 @@ const AdminProductFormPage = () => {
     setIsLoading(true);
     const { data, error } = await supabase
       .from('products')
-      .select('*')
+      .select('id,name,name_ar,slug,price,original_price,discount,description,description_ar,images,category,brand,in_stock,countries,is_featured,is_best_seller,is_active,created_at,updated_at,section_ids,has_sizes,sizes,accessories,features,sort_order,color_variants,stock_quantity,return_policy,specs,has_quality_variants,quality_variants,category_id,brand_id,home_collections,audience,size_price_rule_id')
       .eq('id', id)
       .single();
 

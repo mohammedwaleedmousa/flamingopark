@@ -63,6 +63,8 @@ interface Order {
   discount_amount?: number | null;
   currency_code?: string | null;
   currency_mode?: string | null;
+  exchange_rate_snapshot?: number | null;
+  total_base?: number | null;
   invoice_review_status: InvoiceReviewStatus;
   invoice_reviewed_at?: string | null;
   invoice_reviewed_by?: string | null;
@@ -114,7 +116,7 @@ const AdminInvoicesPage = () => {
   const { data: orders = [], isLoading: isLoadingOrders, isFetching: isFetchingOrders } = useQuery({
     queryKey: ["admin-invoice-orders"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("orders").select("id,order_number,customer_name,customer_phone,customer_address,customer_notes,items,subtotal,delivery_fee,total,payment_method,country,created_at,status,invoice_url,coupon_code,discount_amount,currency_code,currency_mode,invoice_review_status,invoice_reviewed_at,invoice_reviewed_by,invoice_review_note,delivery_companies(name)").order("created_at", { ascending: false });
+      const { data, error } = await supabase.from("orders").select("id,order_number,customer_name,customer_phone,customer_address,customer_notes,items,subtotal,delivery_fee,total,total_base,payment_method,country,created_at,status,invoice_url,coupon_code,discount_amount,currency_code,currency_mode,exchange_rate_snapshot,invoice_review_status,invoice_reviewed_at,invoice_reviewed_by,invoice_review_note,delivery_companies(name)").order("created_at", { ascending: false });
       if (error) throw error;
       return (data || []).map((order: any) => ({
         ...order,
@@ -298,7 +300,7 @@ const AdminInvoicesPage = () => {
       if (!printWindow) throw new Error("المتصفح منع فتح نافذة الطباعة.");
       const signedUrl = await createInvoiceSignedUrl(fileName);
       printWindow.location.href = signedUrl;
-      printWindow.addEventListener("load", () => { try { printWindow.print(); } catch {} });
+      printWindow.addEventListener("load", () => { try { printWindow.print(); } catch { /* Printing is optional if the browser blocks it. */ } });
     } catch (error: any) {
       printWindow?.close();
       toast({ title: "تعذر فتح الطباعة", description: error?.message || "حدث خطأ أثناء تجهيز الفاتورة.", variant: "destructive" });

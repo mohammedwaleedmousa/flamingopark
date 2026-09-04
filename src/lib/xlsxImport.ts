@@ -17,7 +17,8 @@ const findEndOfCentralDirectory = (bytes: Uint8Array) => {
 const inflateRaw = async (bytes: Uint8Array) => {
   const StreamCtor = (globalThis as any).DecompressionStream as undefined | (new (format: string) => TransformStream<Uint8Array, Uint8Array>);
   if (!StreamCtor) throw new Error("المتصفح لا يدعم فك ضغط ملفات Excel");
-  const stream = new Blob([bytes]).stream().pipeThrough(new StreamCtor("deflate-raw") as any);
+  const compressed = bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength) as ArrayBuffer;
+  const stream = new Blob([compressed]).stream().pipeThrough(new StreamCtor("deflate-raw") as any);
   return new Uint8Array(await new Response(stream).arrayBuffer());
 };
 

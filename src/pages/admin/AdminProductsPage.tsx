@@ -137,7 +137,7 @@ const AdminProductsPage = () => {
         }
 
         const categoryIds = categoryScope.map((category) => category.id);
-        const categoryValues = categoryScope.flatMap((category) => [category.slug, category.name, category.name_ar]).filter(Boolean).map((value) => `"${value.replaceAll('"', '\\"')}"`);
+        const categoryValues = categoryScope.flatMap((category) => [category.slug, category.name, category.name_ar]).filter(Boolean).map((value) => `"${value.split('"').join('\\"')}"`);
 
         query = query.or(`category_id.in.(${categoryIds.join(",")}),category.in.(${categoryValues.join(",")})`);
       }
@@ -192,7 +192,7 @@ const AdminProductsPage = () => {
       query = query.is("category_id", null);
     } else if (categoryFilter !== "all") {
       const categoryIds = categoryScope.map((category) => category.id);
-      const categoryValues = categoryScope.flatMap((category) => [category.slug, category.name, category.name_ar]).filter(Boolean).map((value) => `"${value.replaceAll('"', '\\"')}"`);
+      const categoryValues = categoryScope.flatMap((category) => [category.slug, category.name, category.name_ar]).filter(Boolean).map((value) => `"${value.split('"').join('\\"')}"`);
 
       query = query.or(`category_id.in.(${categoryIds.join(",")}),category.in.(${categoryValues.join(",")})`);
     }

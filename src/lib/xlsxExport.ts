@@ -215,7 +215,8 @@ const makeZip = (files: Array<{ name: string; content: string }>) => {
   writeU16(ev, 20, 0);
   chunks.push(end);
 
-  return new Blob(chunks, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+  const blobParts = chunks.map((chunk) => chunk.buffer.slice(chunk.byteOffset, chunk.byteOffset + chunk.byteLength) as ArrayBuffer);
+  return new Blob(blobParts, { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
 };
 
 export const exportXlsx = ({ filename, sheetName, columns, rows }: ExportXlsxOptions) => {

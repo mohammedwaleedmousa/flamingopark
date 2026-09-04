@@ -39,6 +39,14 @@ function createCurrencyAccumulator<T>(factory: () => T): Record<CurrencyMode, T>
 }
 
 function toSarAmount(amount: number, row: any) {
+  if (row?.total_base !== null && row?.total_base !== undefined) {
+    const base = Number(row.total_base);
+    if (Number.isFinite(base)) return base;
+  }
+
+  const snapshot = Number(row?.exchange_rate_snapshot || 0);
+  if (snapshot > 0) return Number(amount || 0) / snapshot;
+
   const mode = inferCurrencyModeFromOrder(row);
   const rate = SAR_RATE_BY_MODE[mode] ?? 1;
   return Number(amount || 0) * rate;
@@ -257,7 +265,7 @@ export async function getCustomerIntelligenceData(range: DateRange): Promise<Adm
   const normalized = normalizeRange(range);
   const { data, error } = await supabase
     .from("orders")
-    .select("customer_name,customer_phone,customer_address,total,created_at,status")
+    .select("customer_name,customer_phone,customer_address,total,total_base,exchange_rate_snapshot,created_at,status,country,currency_mode")
     .neq("status", "cancelled")
     .gte("created_at", normalized.start)
     .lte("created_at", normalized.end)
@@ -272,7 +280,7 @@ export async function getCustomerIntelligenceData(range: DateRange): Promise<Adm
   (data ?? []).forEach((o) => {
     const key = (o.customer_phone?.trim() || o.customer_name?.trim() || `unknown-${Math.random()}`);
     const region = (o.customer_address || "").split(/[,،]/)[0]?.trim() || "غير محدد";
-    const total = Number(o.total ?? 0);
+    const total = toSarAmount(Number(o.total ?? 0), o);
     const existing = byPhone.get(key);
 
     if (existing) {
@@ -315,7 +323,7 @@ export async function getCustomerOrders(search: AdminCustomerDetailSearch, range
   const normalized = normalizeRange(range);
   let query = supabase
     .from("orders")
-    .select("id,order_number,customer_name,customer_phone,customer_address,total,created_at,status,items")
+    .select("id,order_number,customer_name,customer_phone,customer_address,total,total_base,exchange_rate_snapshot,currency_code,currency_mode,created_at,status,items")
     .neq("status", "cancelled")
     .order("created_at", { ascending: false })
     .limit(2000);
@@ -364,7 +372,7 @@ export async function getRevenueSummary(startDate: string, endDate: string) {
   const normalized = normalizeRange({ start: startDate, end: endDate });
   let { data, error } = await supabase
     .from("orders")
-    .select("total, status, created_at, country, currency_mode")
+    .select("total, total_base, exchange_rate_snapshot, status, created_at, country, currency_mode")
     .gte("created_at", normalized.start)
     .lte("created_at", normalized.end);
 
@@ -404,7 +412,7 @@ export async function getOrdersSummary(startDate: string, endDate: string) {
   const normalized = normalizeRange({ start: startDate, end: endDate });
   let { data, error } = await supabase
     .from("orders")
-    .select("id, total, status, created_at, country, currency_mode")
+    .select("id, total, total_base, exchange_rate_snapshot, status, created_at, country, currency_mode")
     .gte("created_at", normalized.start)
     .lte("created_at", normalized.end);
 
@@ -454,7 +462,7 @@ export async function getRevenueTimeseries(startDate: string, endDate: string) {
   const normalized = normalizeRange({ start: startDate, end: endDate });
   const { data, error } = await supabase
     .from("orders")
-    .select("total, status, created_at, country, currency_mode")
+    .select("total, total_base, exchange_rate_snapshot, status, created_at, country, currency_mode")
     .gte("created_at", normalized.start)
     .lte("created_at", normalized.end)
     .order("created_at", { ascending: true });
@@ -476,7 +484,7 @@ export async function getProfitSummary(startDate: string, endDate: string) {
   const normalized = normalizeRange({ start: startDate, end: endDate });
   let { data: orders, error: ordersError } = await supabase
     .from("orders")
-    .select("id, total, items, status, created_at, country, currency_mode")
+    .select("id, total, total_base, exchange_rate_snapshot, items, status, created_at, country, currency_mode")
     .gte("created_at", normalized.start)
     .lte("created_at", normalized.end);
 
@@ -518,12 +526,12 @@ export async function getProfitSummary(startDate: string, endDate: string) {
   const productsMap: Record<string, number> = {};
   if (prodIds.size > 0) {
     const ids = Array.from(prodIds);
-    const { data: products } = await supabase
-      .from("products")
-      .select("id, cost_price")
-      .in("id", ids as string[]);
-    for (const p of products ?? []) {
-      productsMap[p.id] = Number(p.cost_price ?? 0);
+    const { data: costs } = await supabase
+      .from("product_costs")
+      .select("product_id, cost_price")
+      .in("product_id", ids as string[]);
+    for (const row of costs ?? []) {
+      productsMap[row.product_id] = Number(row.cost_price ?? 0);
     }
   }
 
@@ -554,7 +562,7 @@ export async function getRecentOrders(startDate: string, endDate: string, limit 
   const normalized = normalizeRange({ start: startDate, end: endDate });
   let { data, error } = await supabase
     .from("orders")
-    .select("id,order_number,customer_name,total,status,created_at,country,currency_mode")
+    .select("id,order_number,customer_name,total,total_base,exchange_rate_snapshot,status,created_at,country,currency_mode")
     .gte("created_at", normalized.start)
     .lte("created_at", normalized.end)
     .order("created_at", { ascending: false })
@@ -590,7 +598,7 @@ export async function getFinanceOverview(range: DateRange): Promise<AdminFinance
   const [ordersRes, expensesRes, refundsRes, txRes] = await Promise.all([
     supabase
       .from("orders")
-      .select("total,created_at,status")
+      .select("total,total_base,exchange_rate_snapshot,created_at,status,country,currency_mode")
       .gte("created_at", normalized.start)
       .lte("created_at", normalized.end)
       .neq("status", "cancelled"),
@@ -617,7 +625,7 @@ export async function getFinanceOverview(range: DateRange): Promise<AdminFinance
   if (txRes.error) throw txRes.error;
 
   return {
-    orders: (ordersRes.data ?? []) as any,
+    orders: (ordersRes.data ?? []).map((order: any) => ({ ...order, total: toSarAmount(Number(order.total || 0), order) })) as any,
     expenses: (expensesRes.data ?? []) as any,
     refunds: (refundsRes.data ?? []) as any,
     transactions: (txRes.data ?? []) as any,
@@ -907,7 +915,7 @@ export async function getCategoryPerformance(startDate: string, endDate: string)
 export async function getCustomerLifetimeValue(startDate: string, endDate: string) {
   const { data, error } = await supabase
     .from("orders")
-    .select("customer_phone, total, created_at")
+    .select("customer_phone, total, total_base, exchange_rate_snapshot, currency_mode, country, created_at")
     .gte("created_at", startDate)
     .lte("created_at", endDate)
     .neq("status", "cancelled");
@@ -921,12 +929,12 @@ export async function getCustomerLifetimeValue(startDate: string, endDate: strin
     const existing = customerLTV.get(phone);
     if (existing) {
       existing.orders += 1;
-      existing.total += Number(order.total || 0);
+      existing.total += toSarAmount(Number(order.total || 0), order);
       existing.lastOrder = order.created_at;
     } else {
       customerLTV.set(phone, {
         orders: 1,
-        total: Number(order.total || 0),
+        total: toSarAmount(Number(order.total || 0), order),
         lastOrder: order.created_at,
       });
     }
@@ -945,7 +953,7 @@ export async function getCustomerLifetimeValue(startDate: string, endDate: strin
 export async function getChurnRiskAnalysis(startDate: string, endDate: string) {
   const { data, error } = await supabase
     .from("orders")
-    .select("customer_phone, customer_name, created_at, total")
+    .select("customer_phone, customer_name, created_at, total, total_base, exchange_rate_snapshot, currency_mode, country")
     .gte("created_at", startDate)
     .lte("created_at", endDate)
     .neq("status", "cancelled");
@@ -963,7 +971,7 @@ export async function getChurnRiskAnalysis(startDate: string, endDate: string) {
     const existing = customerActivity.get(phone);
     if (existing) {
       existing.orderCount += 1;
-      existing.totalSpent += Number(order.total || 0);
+      existing.totalSpent += toSarAmount(Number(order.total || 0), order);
       if (new Date(order.created_at) > existing.lastOrder) {
         existing.lastOrder = new Date(order.created_at);
       }
@@ -971,7 +979,7 @@ export async function getChurnRiskAnalysis(startDate: string, endDate: string) {
       customerActivity.set(phone, {
         name: order.customer_name || "عميل",
         lastOrder: new Date(order.created_at),
-        totalSpent: Number(order.total || 0),
+        totalSpent: toSarAmount(Number(order.total || 0), order),
         orderCount: 1,
       });
     }
@@ -999,7 +1007,7 @@ export async function getChurnRiskAnalysis(startDate: string, endDate: string) {
 export async function getRFMAnalysis(startDate: string, endDate: string) {
   const { data, error } = await supabase
     .from("orders")
-    .select("customer_phone, customer_name, created_at, total")
+    .select("customer_phone, customer_name, created_at, total, total_base, exchange_rate_snapshot, currency_mode, country")
     .gte("created_at", startDate)
     .lte("created_at", endDate)
     .neq("status", "cancelled");
@@ -1020,14 +1028,14 @@ export async function getRFMAnalysis(startDate: string, endDate: string) {
 
     if (existing) {
       existing.frequency += 1;
-      existing.monetary += Number(order.total || 0);
+      existing.monetary += toSarAmount(Number(order.total || 0), order);
       existing.recency = Math.min(existing.recency, daysAgo);
     } else {
       rfmMap.set(phone, {
         name: order.customer_name || "عميل",
         recency: daysAgo,
         frequency: 1,
-        monetary: Number(order.total || 0),
+        monetary: toSarAmount(Number(order.total || 0), order),
       });
     }
   }
@@ -1061,7 +1069,7 @@ export async function getRFMAnalysis(startDate: string, endDate: string) {
 export async function getCohortAnalysis(startDate: string, endDate: string) {
   const { data, error } = await supabase
     .from("orders")
-    .select("customer_phone, customer_name, created_at, total")
+    .select("customer_phone, customer_name, created_at, total, total_base, exchange_rate_snapshot, currency_mode, country")
     .gte("created_at", startDate)
     .lte("created_at", endDate);
 
@@ -1080,7 +1088,7 @@ export async function getCohortAnalysis(startDate: string, endDate: string) {
     const cohortData = cohortMap.get(cohortMonth)!;
     const current = cohortData.get(cohortMonth) || { orders: 0, revenue: 0 };
     current.orders += 1;
-    current.revenue += Number(order.total || 0);
+    current.revenue += toSarAmount(Number(order.total || 0), order);
     cohortData.set(cohortMonth, current);
   }
 
@@ -1227,7 +1235,7 @@ export async function getVIPRiskAlerts(startDate: string, endDate: string) {
 export async function getUpsellOpportunities(startDate: string, endDate: string) {
   const { data, error } = await supabase
     .from("orders")
-    .select("customer_phone, customer_name, total, items")
+    .select("customer_phone, customer_name, total, total_base, exchange_rate_snapshot, currency_mode, country, items")
     .gte("created_at", startDate)
     .lte("created_at", endDate)
     .neq("status", "cancelled");
@@ -1242,7 +1250,7 @@ export async function getUpsellOpportunities(startDate: string, endDate: string)
   for (const order of data ?? []) {
     const phone = order.customer_phone || "unknown";
     const existing = customerStats.get(phone);
-    const total = Number(order.total || 0);
+    const total = toSarAmount(Number(order.total || 0), order);
 
     if (existing) {
       existing.orders += 1;
@@ -1283,12 +1291,12 @@ export async function getYearOverYearComparison(startDate: string, endDate: stri
   const [currentData, prevData] = await Promise.all([
     supabase
       .from("orders")
-      .select("total, created_at, status")
+      .select("total, total_base, exchange_rate_snapshot, currency_mode, country, created_at, status")
       .gte("created_at", startDate)
       .lte("created_at", endDate),
     supabase
       .from("orders")
-      .select("total, created_at, status")
+      .select("total, total_base, exchange_rate_snapshot, currency_mode, country, created_at, status")
       .gte("created_at", prevStart.toISOString())
       .lte("created_at", prevYear.toISOString()),
   ]);
@@ -1296,14 +1304,14 @@ export async function getYearOverYearComparison(startDate: string, endDate: stri
   const current = {
     revenue: (currentData.data ?? [])
       .filter((o: any) => o.status !== "cancelled")
-      .reduce((sum, o: any) => sum + Number(o.total || 0), 0),
+      .reduce((sum, o: any) => sum + toSarAmount(Number(o.total || 0), o), 0),
     orders: (currentData.data ?? []).filter((o: any) => o.status !== "cancelled").length,
   };
 
   const prev = {
     revenue: (prevData.data ?? [])
       .filter((o: any) => o.status !== "cancelled")
-      .reduce((sum, o: any) => sum + Number(o.total || 0), 0),
+      .reduce((sum, o: any) => sum + toSarAmount(Number(o.total || 0), o), 0),
     orders: (prevData.data ?? []).filter((o: any) => o.status !== "cancelled").length,
   };
 
@@ -1319,7 +1327,7 @@ export async function getYearOverYearComparison(startDate: string, endDate: stri
 export async function getSalesForecast(startDate: string, endDate: string) {
   const { data, error } = await supabase
     .from("orders")
-    .select("total, created_at")
+    .select("total, total_base, exchange_rate_snapshot, currency_mode, country, created_at")
     .gte("created_at", startDate)
     .lte("created_at", endDate)
     .neq("status", "cancelled")
@@ -1330,7 +1338,7 @@ export async function getSalesForecast(startDate: string, endDate: string) {
   const dailyRevenue = new Map<string, number>();
   for (const order of data ?? []) {
     const date = order.created_at.slice(0, 10);
-    dailyRevenue.set(date, (dailyRevenue.get(date) || 0) + Number(order.total || 0));
+    dailyRevenue.set(date, (dailyRevenue.get(date) || 0) + toSarAmount(Number(order.total || 0), order));
   }
 
   const revenues = Array.from(dailyRevenue.values());

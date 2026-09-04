@@ -1,4 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
+
+const asJson = (value: Record<string, unknown> | null): Json => value as Json;
 
 export type AdminPreferenceState = {
   favoriteRoutes: string[];
@@ -85,8 +88,8 @@ export const saveAdminPreferences = async (state: Partial<AdminPreferenceState>)
     user_id: userId,
     favorite_routes: state.favoriteRoutes ?? current.favoriteRoutes,
     quick_actions: state.quickActions ?? current.quickActions,
-    dashboard_layout: state.dashboardLayout ?? current.dashboardLayout,
-    preferences: state.preferences ?? current.preferences,
+    dashboard_layout: asJson(state.dashboardLayout ?? current.dashboardLayout),
+    preferences: asJson(state.preferences ?? current.preferences),
     updated_at: new Date().toISOString(),
   };
 
@@ -106,7 +109,7 @@ export const listWhatsAppTemplates = async () => {
 export const renderWhatsAppTemplate = (body: string, variables: Record<string, string | number | null | undefined>) =>
   Object.entries(variables).reduce((result, [key, value]) => {
     const replacement = value == null ? "" : String(value);
-    return result.replaceAll(`{${key}}`, replacement);
+    return result.split(`{${key}}`).join(replacement);
   }, body);
 
 export const listCustomerInternalNotes = async (customerId: string) => {
@@ -170,9 +173,9 @@ export const recordAdminRevision = async (input: {
     entity_type: input.entityType,
     entity_id: input.entityId,
     action: input.action,
-    before_data: input.beforeData ?? null,
-    after_data: input.afterData ?? null,
-    metadata: input.metadata ?? {},
+    before_data: asJson(input.beforeData ?? null),
+    after_data: asJson(input.afterData ?? null),
+    metadata: asJson(input.metadata ?? {}),
     created_by: userId,
   });
   if (error) throw error;
@@ -203,7 +206,7 @@ export const createApprovalRequest = async (input: {
       request_type: input.requestType,
       entity_type: input.entityType ?? null,
       entity_id: input.entityId ?? null,
-      payload: input.payload ?? {},
+      payload: asJson(input.payload ?? {}),
       requested_by: userId,
     })
     .select("*")

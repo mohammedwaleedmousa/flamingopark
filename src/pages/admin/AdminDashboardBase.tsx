@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState, type LucideIcon } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ar } from "date-fns/locale";
@@ -24,6 +24,7 @@ import {
   Users,
   Wallet,
   BarChart3,
+  type LucideIcon,
 } from "lucide-react";
 
 import { supabase } from "@/integrations/supabase/client";
@@ -167,6 +168,14 @@ const modeOf = (row: any): CurrencyMode => {
 };
 
 const toSar = (amount: number, row: any) => {
+  if (row?.total_base !== null && row?.total_base !== undefined) {
+    const base = Number(row.total_base);
+    if (Number.isFinite(base)) return base;
+  }
+
+  const snapshot = Number(row?.exchange_rate_snapshot || 0);
+  if (snapshot > 0) return Number(amount || 0) / snapshot;
+
   const mode = modeOf(row);
   return Number(amount || 0) * (SAR_RATE_BY_MODE[mode] ?? 1);
 };
@@ -628,8 +637,8 @@ const AdminDashboard = () => {
         const yesterdayEnd = toDayEnd(yesterday).toISOString();
 
         const [todayOrdersResult, yesterdayOrdersResult, todayEventsResult, yesterdayEventsResult] = await Promise.all([
-          supabase.from("orders").select("total,status,country,currency_mode").gte("created_at", todayStart).lte("created_at", todayEnd),
-          supabase.from("orders").select("total,status,country,currency_mode").gte("created_at", yesterdayStart).lte("created_at", yesterdayEnd),
+          supabase.from("orders").select("total,total_base,exchange_rate_snapshot,status,country,currency_mode").gte("created_at", todayStart).lte("created_at", todayEnd),
+          supabase.from("orders").select("total,total_base,exchange_rate_snapshot,status,country,currency_mode").gte("created_at", yesterdayStart).lte("created_at", yesterdayEnd),
           supabase.from("analytics_events").select("session_id,event_type").gte("created_at", todayStart).lte("created_at", todayEnd),
           supabase.from("analytics_events").select("session_id,event_type").gte("created_at", yesterdayStart).lte("created_at", yesterdayEnd),
         ]);
@@ -717,7 +726,7 @@ const AdminDashboard = () => {
         const [eventsResult, previousEventsResult, ordersResult] = await Promise.all([
           supabase.from("analytics_events").select("session_id,event_type,created_at").gte("created_at", currentFrom).lte("created_at", currentTo),
           supabase.from("analytics_events").select("session_id,event_type,created_at").gte("created_at", previousFrom).lte("created_at", previousTo),
-          supabase.from("orders").select("id,total,status,country,currency_mode,created_at").gte("created_at", currentFrom).lte("created_at", currentTo),
+          supabase.from("orders").select("id,total,total_base,exchange_rate_snapshot,status,country,currency_mode,created_at").gte("created_at", currentFrom).lte("created_at", currentTo),
         ]);
 
         if (!active) return;

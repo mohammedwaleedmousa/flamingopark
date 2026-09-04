@@ -53,6 +53,8 @@ interface OrderData {
   selectedRegion?: string | null;
   country: string;
   currencyMode?: string;
+  totalBase?: number;
+  amountsAreNative?: boolean;
   createdAt: string;
 }
 
@@ -71,7 +73,8 @@ const OrderConfirmationPage = () => {
 
   const fmt = (amount: number) => {
     try {
-      return convertPrice(amount, currencyMode as any).toLocaleString("en-US", { maximumFractionDigits: 2 });
+      const displayAmount = orderData?.amountsAreNative ? Number(amount || 0) : convertPrice(amount, currencyMode as any);
+      return displayAmount.toLocaleString("en-US", { maximumFractionDigits: 2 });
     } catch {
       return Number(amount || 0).toLocaleString("en-US", { maximumFractionDigits: 2 });
     }
@@ -93,7 +96,7 @@ const OrderConfirmationPage = () => {
 
     track({
       event_type: "purchase",
-      value: Number(incomingOrder.total) || 0,
+      value: Number(incomingOrder.totalBase ?? incomingOrder.total) || 0,
       metadata: {
         order_number: incomingOrder.orderNumber,
         items_count: incomingOrder.items?.length ?? 0,

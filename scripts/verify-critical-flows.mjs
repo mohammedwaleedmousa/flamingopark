@@ -48,8 +48,35 @@ const checks = [
   {
     file: "src/main.tsx",
     needles: ["createRoot", "startRuntimeMonitoring", "CustomerCartSync"],
-    forbidden: ["./pages/ProductDetailPage"],
-    message: "The entrypoint must keep product detail lazy while mounting the invisible cart persistence service.",
+    forbidden: [
+      "./pages/ProductDetailPage",
+      "accountInvoiceEnhancements",
+      "accountInvoiceRenderer",
+      "myOrdersInvoiceBridge",
+      "adminDashboardDomCompat",
+      "adminDashboardDrilldowns",
+      "adminDrilldownRestore",
+      "adminProductsMobileEnhancements",
+      "adminUiEnhancements",
+    ],
+    message: "The entrypoint must keep route-only customer/admin features lazy while mounting the invisible cart persistence service.",
+  },
+  {
+    file: "vite.config.ts",
+    needles: ["react", "motion", "commerce"],
+    forbidden: ["recharts", "jspdf", "html2canvas"],
+    message: "Admin-only chart and PDF libraries must not be manually preloaded for every storefront visitor.",
+  },
+  {
+    file: "index.html",
+    needles: ["rel=\"dns-prefetch\"", "rel=\"preconnect\"", "hcomhdkmtqttzghjxjcb.supabase.co"],
+    message: "The first storefront request must start the Supabase image/API connection early.",
+  },
+  {
+    file: "src/components/HeroSlider.tsx",
+    needles: ["staleTime: 5 * 60 * 1000", "refetchOnMount: false", "const slides = managedSlides", "fetchPriority={index === 0 ? \"high\" : \"auto\"}"],
+    forbidden: ["isFetching ? [] : managedSlides"],
+    message: "Cached hero images must stay visible during refreshes and the first slide must retain high fetch priority.",
   },
   {
     file: "src/components/AnalyticsTracker.tsx",
@@ -75,7 +102,7 @@ const checks = [
   },
   {
     file: "src/pages/ProductsPage.tsx",
-    needles: ["catalog-live-filter-facets", "draftBrandFilter", "audienceScopedFacetMetadata", "نوع الأحذية", "audience.eq.women", "setDraftBrand", "setDraftAudience"],
+    needles: ["catalog-live-filter-facets", "draftBrandFilter", "audienceScopedFacetMetadata", "نوع الأحذية", "audience.eq.women", "setDraftBrand", "setDraftAudience", "product={product} index={index}"],
     message: "Catalog filters must keep shoe audiences separate and scope live color/size facets to the selected brand and audience.",
   },
 ];

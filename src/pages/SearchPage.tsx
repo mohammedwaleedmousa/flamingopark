@@ -481,7 +481,7 @@ const SearchPage = () => {
                       exit={{ opacity: 0, scale: 0.8 }}
                       transition={{ delay: index * 0.05 }}
                     >
-                      <ProductCard product={product} />
+                      <ProductCard product={product} index={index} />
                     </motion.div>
                   ))}
                 </AnimatePresence>

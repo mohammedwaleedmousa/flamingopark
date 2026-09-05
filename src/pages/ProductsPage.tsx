@@ -1790,7 +1790,7 @@ const ProductsPage = () => {
             <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 sm:gap-y-6 md:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4 xl:grid-cols-5">
               {products.map((product, index) => (
                 <motion.div key={product.id} custom={index} initial={isMobileViewport ? false : "hidden"} animate={isMobileViewport ? false : "show"} variants={shimmerVariants} className="min-w-0">
-                  <ProductCard product={product} onQuickView={(selectedProduct) => setQuickViewProd(selectedProduct)} />
+                  <ProductCard product={product} index={index} onQuickView={(selectedProduct) => setQuickViewProd(selectedProduct)} />
                 </motion.div>
               ))}
             </div>

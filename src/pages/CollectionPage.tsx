@@ -89,7 +89,7 @@ const CollectionPage = ({ collection, eyebrow, title, description, badge }: Coll
             <p className="text-center text-muted-foreground py-20">لا توجد منتجات في هذه المجموعة حالياً</p>
           ) : (
             <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-8 animate-fade-in">
-              {visibleProducts.map((p) => <ProductCard key={p.id} product={p} badge={badge} />)}
+              {visibleProducts.map((p, index) => <ProductCard key={p.id} product={p} index={index} badge={badge} />)}
             </div>
           )}
         </section>

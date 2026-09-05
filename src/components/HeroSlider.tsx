@@ -28,7 +28,7 @@ const HeroSlider = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [loadedSlides, setLoadedSlides] = useState<Set<number>>(() => new Set([0]));
 
-  const { data: managedSlides = [], isFetching } = useQuery({
+  const { data: managedSlides = [], isLoading } = useQuery({
     queryKey: ["home-hero-banners", "admin-only-v5-scheduled"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
@@ -55,12 +55,12 @@ const HeroSlider = () => {
           imagePositionY: Number(slide.image_position_y ?? 50),
         })) as HeroSlide[];
     },
-    staleTime: 0,
-    refetchOnMount: "always",
+    staleTime: 5 * 60 * 1000,
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
   });
 
-  const slides = isFetching ? [] : managedSlides;
+  const slides = managedSlides;
   const heroImageWidth = typeof window !== "undefined" && window.innerWidth < 768 ? 900 : 1600;
 
   return (
@@ -141,7 +141,7 @@ const HeroSlider = () => {
             <div className="h-[230px] w-full bg-muted/30 sm:h-[285px] md:h-[390px] lg:h-[450px]" />
           )}
 
-          {!isFetching && slides.length > 1 && (
+          {!isLoading && slides.length > 1 && (
             <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 md:bottom-4">
               {slides.map((_, index) => (
                 <button key={index} type="button" aria-label={`الانتقال إلى العرض ${index + 1}`} onClick={() => swiperRef.current?.slideToLoop(index)} className={`h-[3px] rounded-full transition-all duration-300 ${activeIndex === index ? "w-7 bg-[#B86168]" : "w-2.5 bg-white/65"}`} />

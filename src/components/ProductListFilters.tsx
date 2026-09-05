@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Search, SlidersHorizontal, X } from "lucide-react";
 
 export type ProductListFilterValues = {
@@ -37,6 +37,16 @@ const ProductListFilters = ({ values, brands, resultCount, onChange }: ProductLi
   const [filterOpen, setFilterOpen] = useState(false);
   const [searchValue, setSearchValue] = useState(values.query);
   const [draft, setDraft] = useState<ProductListFilterValues>(values);
+  const latestValuesRef = useRef(values);
+  const onChangeRef = useRef(onChange);
+
+  useEffect(() => {
+    latestValuesRef.current = values;
+  }, [values]);
+
+  useEffect(() => {
+    onChangeRef.current = onChange;
+  }, [onChange]);
 
   useEffect(() => {
     setSearchValue(values.query);
@@ -44,10 +54,12 @@ const ProductListFilters = ({ values, brands, resultCount, onChange }: ProductLi
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      if (searchValue === values.query) return;
+      const latestValues = latestValuesRef.current;
 
-      onChange({
-        ...values,
+      if (searchValue === latestValues.query) return;
+
+      onChangeRef.current({
+        ...latestValues,
         query: searchValue,
       });
     }, 350);
@@ -58,12 +70,22 @@ const ProductListFilters = ({ values, brands, resultCount, onChange }: ProductLi
   useEffect(() => {
     if (!filterOpen) return;
 
+    const root = document.documentElement;
     const previousOverflow = document.body.style.overflow;
+    const previousRootOverflow = root.style.overflow;
+    const previousRootOverscroll = root.style.overscrollBehavior;
+    const previousBodyOverscroll = document.body.style.overscrollBehavior;
 
+    root.style.overflow = "hidden";
+    root.style.overscrollBehavior = "none";
     document.body.style.overflow = "hidden";
+    document.body.style.overscrollBehavior = "none";
 
     return () => {
+      root.style.overflow = previousRootOverflow;
+      root.style.overscrollBehavior = previousRootOverscroll;
       document.body.style.overflow = previousOverflow;
+      document.body.style.overscrollBehavior = previousBodyOverscroll;
     };
   }, [filterOpen]);
 
@@ -256,9 +278,9 @@ const ProductListFilters = ({ values, brands, resultCount, onChange }: ProductLi
       ========================================================= */}
       {filterOpen && (
         <div className="fixed inset-0 z-[100] flex items-end bg-black/25 md:items-stretch" onClick={closeFilters}>
-          <div onClick={(event) => event.stopPropagation()} className="relative mr-auto flex max-h-[90vh] w-full flex-col rounded-t-[26px] bg-[#FFFDFC] md:h-full md:max-h-none md:w-[410px] md:rounded-none">
+          <div onClick={(event) => event.stopPropagation()} className="relative mr-auto flex h-[92dvh] max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[26px] bg-[#FFFDFC] md:h-full md:max-h-none md:w-[410px] md:rounded-none">
             {/* HEADER */}
-            <div className="shrink-0 px-4 pt-3 md:px-5 md:pt-5">
+            <div className="sticky top-0 z-10 shrink-0 bg-[#FFFDFC] px-4 pt-3 md:px-5 md:pt-5">
               <div className="mx-auto mb-4 h-1 w-9 rounded-full bg-[#DED2CE] md:hidden" />
 
               <div className="flex items-start justify-between border-b border-[#EEE4E0] pb-4">
@@ -273,14 +295,14 @@ const ProductListFilters = ({ values, brands, resultCount, onChange }: ProductLi
                   <p className="mt-1 text-[8px] text-[#9E908A]">{resultCount} منتج</p>
                 </div>
 
-                <button type="button" onClick={closeFilters} className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E8DEDA] bg-white text-[#6C5E59]">
+                <button type="button" aria-label="إغلاق الفلترة" onClick={closeFilters} className="flex h-8 w-8 items-center justify-center rounded-full border border-[#E8DEDA] bg-white text-[#6C5E59]">
                   <X className="h-3.5 w-3.5" />
                 </button>
               </div>
             </div>
 
             {/* CONTENT */}
-            <div className="flex-1 overflow-y-auto px-4 pb-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:px-5">
+            <div className="flex-1 overscroll-contain overflow-y-auto px-4 pb-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden md:px-5">
               {/* SORT */}
               <div className="border-b border-[#F0E7E3] py-5">
                 <div className="mb-3 flex items-center justify-between">

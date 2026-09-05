@@ -69,22 +69,23 @@ const BrandProductsPage = () => {
 
     const scrollY = window.scrollY;
     const body = document.body;
+    const root = document.documentElement;
 
-    const previousPosition = body.style.position;
-    const previousTop = body.style.top;
-    const previousWidth = body.style.width;
+    const previousRootOverflow = root.style.overflow;
+    const previousRootOverscroll = root.style.overscrollBehavior;
     const previousOverflow = body.style.overflow;
+    const previousBodyOverscroll = body.style.overscrollBehavior;
 
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.width = "100%";
+    root.style.overflow = "hidden";
+    root.style.overscrollBehavior = "none";
     body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
 
     return () => {
-      body.style.position = previousPosition;
-      body.style.top = previousTop;
-      body.style.width = previousWidth;
+      root.style.overflow = previousRootOverflow;
+      root.style.overscrollBehavior = previousRootOverscroll;
       body.style.overflow = previousOverflow;
+      body.style.overscrollBehavior = previousBodyOverscroll;
 
       window.scrollTo({
         top: scrollY,

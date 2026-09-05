@@ -41,6 +41,7 @@ type ColorSwatch = {
 
 type ProductAudience = "men" | "women" | "kids" | "unisex";
 type AudienceFilter = ProductAudience | "all";
+type CatalogSort = "new" | "best" | "featured" | "price-asc" | "price-desc";
 
 type CatalogProduct = Product & {
   color_variants?: ColorVariant[] | string;
@@ -50,12 +51,14 @@ type CatalogMetaProduct = {
   id: string;
   price: number;
   discount: number | null;
+  brand: string | null;
   color_variants: ColorVariant[] | string | null;
   sizes: string[] | null;
   audience: ProductAudience | null;
   created_at: string | null;
   is_best_seller: boolean | null;
   is_featured: boolean | null;
+  home_collections: string[] | null;
 };
 
 interface Category {
@@ -77,6 +80,20 @@ const AUDIENCE_OPTIONS: Array<{ value: ProductAudience; label: string }> = [
   { value: "kids", label: "أطفال" },
   { value: "unisex", label: "للجنسين" },
 ];
+
+const CATALOG_SORT_VALUES: CatalogSort[] = ["new", "best", "featured", "price-asc", "price-desc"];
+
+const parseCatalogSort = (value: string | null): CatalogSort => {
+  return CATALOG_SORT_VALUES.includes(value as CatalogSort) ? value as CatalogSort : "new";
+};
+
+const isBestSellerProduct = (product: CatalogMetaProduct) => {
+  return Boolean(product.is_best_seller || product.home_collections?.includes("best_sellers"));
+};
+
+const isFeaturedProduct = (product: CatalogMetaProduct) => {
+  return Boolean(product.is_featured || product.home_collections?.includes("curated"));
+};
 
 const NAMED_COLOR_HEX: Record<string, string> = {
   أسود: "#111111",
@@ -419,7 +436,7 @@ const ProductsPage = () => {
   const categorySlug = searchParams.get("category") || "";
   const searchQuery = searchParams.get("search") || "";
   const brandFilter = searchParams.get("brand") || "all";
-  const sortBy = searchParams.get("sort") || "new";
+  const sortBy = parseCatalogSort(searchParams.get("sort"));
   const colorFilter = searchParams.get("color") || "all";
   const sizeFilter = searchParams.get("size") || "all";
   const audienceFilter = parseAudienceFilter(searchParams.get("audience"));
@@ -695,13 +712,13 @@ const ProductsPage = () => {
      CATALOG METADATA
 
      هذه البيانات خفيفة ولا تحتوي صور المنتج.
-     نحتاجها للألوان والمقاسات والسعر النهائي.
+     نحتاجها للألوان والمقاسات والسعر النهائي والترتيب المخصص.
   ========================================================= */
 
-  const needsClientFiltering = colorFilter !== "all" || sizeFilter !== "all" || minPriceParam > 0 || maxPriceParam > 0;
+  const needsClientFiltering = colorFilter !== "all" || sizeFilter !== "all" || minPriceParam > 0 || maxPriceParam > 0 || sortBy === "best" || sortBy === "featured";
 
-  // Applied metadata powers the actual result set only when a client-side
-  // color, size, or price filter is active. Drawer facets use their own scope.
+  // Applied metadata powers the actual result set when a client-side filter
+  // or collection-based ranking is active. Drawer facets use their own scope.
   const shouldLoadMetadata = needsClientFiltering;
 
   const { data: catalogMetadata = [], isLoading: catalogMetadataLoading } = useQuery({
@@ -723,7 +740,7 @@ const ProductsPage = () => {
       let from = 0;
 
       while (true) {
-        let query = supabase.from("products").select("id,price,discount,color_variants,sizes,audience,created_at,is_best_seller,is_featured").eq("is_active", true);
+        let query = supabase.from("products").select("id,price,discount,brand,color_variants,sizes,audience,created_at,is_best_seller,is_featured,home_collections").eq("is_active", true);
 
         if (leafCategoryIds?.length) {
           query = query.in("category_id", leafCategoryIds);
@@ -791,7 +808,6 @@ const ProductsPage = () => {
       "catalog-live-filter-facets",
       draftLeafCategoryIds?.join(",") || "all",
       searchQuery,
-      draftBrandFilter,
       draftSaleOnly,
       draftInStockOnly,
     ],
@@ -803,7 +819,7 @@ const ProductsPage = () => {
       let from = 0;
 
       while (true) {
-        let query = supabase.from("products").select("id,price,discount,color_variants,sizes,audience,created_at,is_best_seller,is_featured").eq("is_active", true);
+        let query = supabase.from("products").select("id,price,discount,brand,color_variants,sizes,audience,created_at,is_best_seller,is_featured,home_collections").eq("is_active", true);
 
         if (draftLeafCategoryIds?.length) {
           query = query.in("category_id", draftLeafCategoryIds);
@@ -813,10 +829,6 @@ const ProductsPage = () => {
           const term = searchQuery.trim();
 
           query = query.or(`name_ar.ilike.%${term}%,name.ilike.%${term}%,description_ar.ilike.%${term}%`);
-        }
-
-        if (draftBrandFilter !== "all") {
-          query = query.eq("brand", draftBrandFilter);
         }
 
         if (draftSaleOnly) {
@@ -849,9 +861,15 @@ const ProductsPage = () => {
     refetchOnReconnect: false,
   });
 
+  const brandScopedFacetMetadata = useMemo(() => {
+    if (draftBrandFilter === "all") return facetMetadata;
+
+    return facetMetadata.filter((product) => product.brand === draftBrandFilter);
+  }, [facetMetadata, draftBrandFilter]);
+
   const audienceScopedFacetMetadata = useMemo(() => {
-    return facetMetadata.filter((product) => matchesAudienceFilter(product.audience, draftAudienceFilter));
-  }, [facetMetadata, draftAudienceFilter]);
+    return brandScopedFacetMetadata.filter((product) => matchesAudienceFilter(product.audience, draftAudienceFilter));
+  }, [brandScopedFacetMetadata, draftAudienceFilter]);
 
   const filterMetadataLoading = filtersOpen && (facetMetadataLoading || facetMetadataFetching);
 
@@ -901,9 +919,9 @@ const ProductsPage = () => {
 
   const availableAudienceOptions = useMemo(() => {
     return AUDIENCE_OPTIONS.filter((option) => {
-      return facetMetadata.some((product) => matchesAudienceFilter(product.audience, option.value));
+      return brandScopedFacetMetadata.some((product) => matchesAudienceFilter(product.audience, option.value));
     });
-  }, [facetMetadata]);
+  }, [brandScopedFacetMetadata]);
 
   /* =========================================================
      PRICE BOUNDS
@@ -983,7 +1001,7 @@ const ProductsPage = () => {
   /* =========================================================
      MATCHING METADATA
 
-     فقط عند Color / Size / Price.
+     عند Color / Size / Price أو الترتيب حسب مجموعة مخصصة.
   ========================================================= */
 
   const matchingMetadata = useMemo(() => {
@@ -1024,8 +1042,8 @@ const ProductsPage = () => {
     } else if (sortBy === "best") {
       result = [...result].sort((a, b) => {
         const bestDifference =
-          Number(!!b.is_best_seller) -
-          Number(!!a.is_best_seller);
+          Number(isBestSellerProduct(b)) -
+          Number(isBestSellerProduct(a));
 
         if (bestDifference !== 0) {
           return bestDifference;
@@ -1039,8 +1057,8 @@ const ProductsPage = () => {
     } else if (sortBy === "featured") {
       result = [...result].sort((a, b) => {
         const featuredDifference =
-          Number(!!b.is_featured) -
-          Number(!!a.is_featured);
+          Number(isFeaturedProduct(b)) -
+          Number(isFeaturedProduct(a));
 
         if (featuredDifference !== 0) {
           return featuredDifference;
@@ -1157,22 +1175,6 @@ const ProductsPage = () => {
               query = query.order("price", {
                 ascending: false,
               });
-            } else if (sortBy === "best") {
-              query = query
-                .order("is_best_seller", {
-                  ascending: false,
-                })
-                .order("created_at", {
-                  ascending: false,
-                });
-            } else if (sortBy === "featured") {
-              query = query
-                .order("is_featured", {
-                  ascending: false,
-                })
-                .order("created_at", {
-                  ascending: false,
-                });
             } else {
               query = query.order("created_at", {
                 ascending: false,
@@ -1206,7 +1208,7 @@ const ProductsPage = () => {
   /* =========================================================
      CLIENT FILTERED PAGES
 
-     يستخدم فقط عند Color / Size / Price.
+     يستخدم عند Color / Size / Price أو الترتيب حسب مجموعة مخصصة.
   ========================================================= */
 
   const filteredPageIdGroups = useMemo(() => {
@@ -1334,7 +1336,7 @@ const ProductsPage = () => {
      BRANDS
   ========================================================= */
 
-  const { data: brandsAvailable = [] } = useQuery({
+  const { data: activeBrandNames = [] } = useQuery({
     queryKey: ["product-filter-brands"],
 
     queryFn: async () => {
@@ -1360,6 +1362,18 @@ const ProductsPage = () => {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+
+  const brandsAvailable = useMemo(() => {
+    if (filterMetadataLoading) return activeBrandNames;
+
+    const brandsInScope = new Set(
+      facetMetadata
+        .map((product) => product.brand?.trim())
+        .filter((brand): brand is string => Boolean(brand))
+    );
+
+    return activeBrandNames.filter((brand) => brandsInScope.has(brand) || brand === draftBrandFilter);
+  }, [activeBrandNames, draftBrandFilter, facetMetadata, filterMetadataLoading]);
 
   /* =========================================================
      RESET LOAD MORE ON REAL FILTER CHANGE
@@ -1411,34 +1425,36 @@ const ProductsPage = () => {
 
     setLoadedPage(1);
 
-    const next =
-      new URLSearchParams(searchParams);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
 
-    if (
-      value === null ||
-      value === "" ||
-      value === "all"
-    ) {
-      next.delete(key);
-    } else {
-      next.set(key, value);
-    }
-
-    if (key === "category") {
-      next.delete("color");
-      next.delete("size");
-
-      if (!isShoeCategoryScope(value || "", categories)) {
-        next.delete("audience");
+      if (
+        value === null ||
+        value === "" ||
+        value === "all" ||
+        (key === "sort" && value === "new")
+      ) {
+        next.delete(key);
+      } else {
+        next.set(key, value);
       }
-    }
 
-    /*
-     * page لم يعد جزءاً من Load More.
-     */
-    next.delete("page");
+      if (key === "category") {
+        next.delete("color");
+        next.delete("size");
 
-    setSearchParams(next, {
+        if (!isShoeCategoryScope(value || "", categories)) {
+          next.delete("audience");
+        }
+      }
+
+      /*
+       * page لم يعد جزءاً من Load More.
+       */
+      next.delete("page");
+
+      return next;
+    }, {
       replace: true,
     });
   };
@@ -1599,43 +1615,25 @@ const ProductsPage = () => {
 
     next.delete("page");
 
-    /*
-     * أغلق Drawer أولاً.
-     */
-    setFiltersOpen(false);
+    setSearchParams(next, {
+      replace: true,
+    });
 
-    /*
-     * ثم غيّر المنتجات بعد انتهاء حركة الإغلاق.
-     * بهذا لن تراها تتبدل بالخلفية.
-     */
-    window.setTimeout(() => {
-      setSearchParams(next, {
-        replace: true,
-      });
-    }, 170);
+    setFiltersOpen(false);
   };
 
   /* =========================================================
      SORT
   ========================================================= */
 
-  const handleSortSelect = (value: string) => {
+  const handleSortSelect = (value: CatalogSort) => {
     if (value === sortBy) {
       setSortOpen(false);
       return;
     }
 
-    /*
-     * أغلق Sort أولاً.
-     */
+    setParam("sort", value);
     setSortOpen(false);
-
-    /*
-     * ثم غيّر البيانات بعد الإغلاق.
-     */
-    window.setTimeout(() => {
-      setParam("sort", value);
-    }, 170);
   };
 
   /* =========================================================
@@ -1902,7 +1900,7 @@ const ProductsPage = () => {
                     { value: "price-asc", label: "السعر: الأقل أولًا", desc: "من الأقل إلى الأعلى" },
                     { value: "price-desc", label: "السعر: الأعلى أولًا", desc: "من الأعلى إلى الأقل" },
                   ].map((option) => (
-                    <button key={option.value} onClick={() => handleSortSelect(option.value)} className="flex min-h-[57px] w-full items-center justify-between border-b border-[#F0E9E6] px-3.5 text-right last:border-0">
+                    <button key={option.value} type="button" aria-pressed={sortBy === option.value} onClick={() => handleSortSelect(option.value as CatalogSort)} className="flex min-h-[57px] w-full touch-manipulation items-center justify-between border-b border-[#F0E9E6] px-3.5 text-right last:border-0">
                       <div>
                         <span className={`block text-[11px] ${sortBy === option.value ? "font-semibold text-[#B95F66]" : "font-medium text-[#4B403B]"}`}>{option.label}</span>
                         <span className="mt-1 block text-[8px] text-[#A0958F]">{option.desc}</span>

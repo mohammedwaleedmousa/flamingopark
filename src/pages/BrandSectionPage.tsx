@@ -169,16 +169,32 @@ const BrandSectionPage = () => {
   });
 
   const { data: products = [], isLoading: productsLoading } = useQuery({
-    queryKey: ["brand-section-products", section?.id, brand?.id],
+    queryKey: ["brand-section-products-v2", section?.id, brand?.id],
     enabled: Boolean(section?.id && brand?.id),
     queryFn: async () => {
-      const { data, error } = await (supabase as any).from("brand_section_products").select("product_id,products(*)").eq("section_id", section!.id);
-      if (error) throw error;
+      const { data: relations, error: relationError } = await (supabase as any)
+        .from("brand_section_products")
+        .select("product_id")
+        .eq("section_id", section!.id);
 
-      const productRows = (data || []).map((item: any) => item.products).filter(Boolean).filter((product: any) => product.is_active && product.brand_id === brand!.id);
-      return productRows.map(mapProduct);
+      if (relationError) throw relationError;
+
+      const productIds = Array.from(new Set((relations || []).map((item: any) => item.product_id).filter(Boolean))) as string[];
+      if (!productIds.length) return [];
+
+      const { data: productRows, error: productsError } = await (supabase as any)
+        .from("products")
+        .select("*")
+        .in("id", productIds)
+        .eq("is_active", true)
+        .eq("brand_id", brand!.id);
+
+      if (productsError) throw productsError;
+
+      return (productRows || []).map(mapProduct);
     },
-    staleTime: 1000 * 60 * 5,
+    staleTime: 1000 * 30,
+    refetchOnMount: "always",
     refetchOnWindowFocus: false,
   });
 

@@ -1493,13 +1493,6 @@ const ProductsPage = () => {
   const resetDraftFilters = () => {
     const next = new URLSearchParams();
 
-    if (categorySlug) {
-      next.set(
-        "category",
-        categorySlug
-      );
-    }
-
     setDraftFilters(next);
 
     setPriceRange([
@@ -1623,15 +1616,7 @@ const ProductsPage = () => {
 
     setLoadedPage(1);
 
-    const next =
-      new URLSearchParams();
-
-    if (categorySlug) {
-      next.set(
-        "category",
-        categorySlug
-      );
-    }
+    const next = new URLSearchParams();
 
     setSearchParams(next, {
       replace: true,

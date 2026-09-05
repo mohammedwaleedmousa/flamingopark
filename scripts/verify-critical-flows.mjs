@@ -103,7 +103,8 @@ const checks = [
   {
     file: "src/pages/ProductsPage.tsx",
     needles: ["catalog-live-filter-facets", "draftBrandFilter", "audienceScopedFacetMetadata", "نوع الأحذية", "audience.eq.women", "setDraftBrand", "setDraftAudience", "product={product} index={index}"],
-    message: "Catalog filters must keep shoe audiences separate and scope live color/size facets to the selected brand and audience.",
+    forbidden: ["if (categorySlug)"],
+    message: "Catalog filters must keep shoe audiences separate, scope live facets correctly, and let reset actions clear the category too.",
   },
 ];
 

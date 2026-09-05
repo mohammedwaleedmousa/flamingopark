@@ -73,6 +73,11 @@ const checks = [
     needles: ["customer_carts", "onConflict: \"user_id\"", "status: itemCount > 0 ? \"active\" : \"cleared\"", "getConfirmedOrderId", "status: \"converted\"", "converted_order_id", "hadItems", "lastPayload"],
     message: "Authenticated carts must remain debounced, distinguish manual clearing from checkout conversion, and never overwrite a previous recovery state on an empty app start.",
   },
+  {
+    file: "src/pages/ProductsPage.tsx",
+    needles: ["catalog-live-filter-facets", "draftBrandFilter", "audienceScopedFacetMetadata", "نوع الأحذية", "audience.eq.women", "setDraftBrand", "setDraftAudience"],
+    message: "Catalog filters must keep shoe audiences separate and scope live color/size facets to the selected brand and audience.",
+  },
 ];
 
 let failures = 0;

@@ -48,7 +48,7 @@ const BrandPage = () => {
   const { slug } = useParams<{ slug: string }>();
 
   const { data: brand, isLoading: brandLoading, error: brandError } = useQuery({
-    queryKey: ["brand-page-shell", slug],
+    queryKey: ["brand-page-shell-v2", slug],
     enabled: Boolean(slug),
     queryFn: async () => {
       const { data, error } = await (supabase as any)
@@ -70,7 +70,8 @@ const BrandPage = () => {
       if (error) throw error;
       return data as BrandRow | null;
     },
-    staleTime: 1000 * 60 * 15,
+    staleTime: 1000 * 30,
+    refetchOnMount: "always",
     refetchOnWindowFocus: false,
   });
 
@@ -80,8 +81,8 @@ const BrandPage = () => {
       .sort((a, b) => (a.sort_order || 0) - (b.sort_order || 0));
   }, [brand?.brand_sections]);
 
-  const { data: sectionProducts = [] } = useQuery({
-    queryKey: ["brand-section-counts", brand?.id, sections.map((section) => section.id).join(",")],
+  const { data: sectionProducts = [], isLoading: sectionCountsLoading } = useQuery({
+    queryKey: ["brand-section-counts-v2", brand?.id, sections.map((section) => section.id).join(",")],
     enabled: Boolean(brand?.id && sections.length),
     queryFn: async () => {
       const { data, error } = await (supabase as any)
@@ -94,7 +95,8 @@ const BrandPage = () => {
       if (error) throw error;
       return (data || []) as SectionProductRow[];
     },
-    staleTime: 1000 * 60 * 15,
+    staleTime: 1000 * 30,
+    refetchOnMount: "always",
     refetchOnWindowFocus: false,
   });
 
@@ -105,10 +107,12 @@ const BrandPage = () => {
       counts.set(relation.section_id, (counts.get(relation.section_id) || 0) + 1);
     });
 
-    return sections.map((section) => ({
-      ...section,
-      count: counts.get(section.id) || 0,
-    }));
+    return sections
+      .map((section) => ({
+        ...section,
+        count: counts.get(section.id) || 0,
+      }))
+      .filter((section) => section.count > 0);
   }, [sections, sectionProducts]);
 
   if (!slug) return <Navigate to="/home" replace />;
@@ -191,11 +195,17 @@ const BrandPage = () => {
               </div>
             </div>
 
-            {sectionsWithCount.length === 0 ? (
+            {sectionCountsLoading ? (
+              <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-3 md:gap-4 lg:grid-cols-4">
+                {Array.from({ length: Math.min(Math.max(sections.length, 2), 8) }).map((_, index) => (
+                  <div key={index} className="aspect-[4/4.6] animate-pulse rounded-[15px] bg-muted md:rounded-[18px]" />
+                ))}
+              </div>
+            ) : sectionsWithCount.length === 0 ? (
               <div className="flex min-h-[180px] items-center justify-center rounded-[15px] border border-border/60 bg-background text-center">
                 <div>
-                  <p className="text-[12px] font-semibold text-foreground">لا توجد أقسام متاحة حاليًا</p>
-                  <p className="mt-1.5 text-[10px] text-muted-foreground">سيتم عرض الأقسام هنا عند إضافتها للماركة.</p>
+                  <p className="text-[12px] font-semibold text-foreground">لا توجد أقسام بها منتجات حاليًا</p>
+                  <p className="mt-1.5 text-[10px] text-muted-foreground">ستظهر الأقسام تلقائيًا عند توفر منتجات فعالة فيها.</p>
                 </div>
               </div>
             ) : (

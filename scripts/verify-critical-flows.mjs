@@ -102,8 +102,8 @@ const checks = [
   },
   {
     file: "src/pages/ProductsPage.tsx",
-    needles: ["catalog-live-filter-facets", "draftBrandFilter", "audienceScopedFacetMetadata", "نوع الأحذية", "audience.eq.women", "setDraftBrand", "setDraftAudience", "getCategoryDescendantIds", "currentCategoryBranchLevels", "draftCategoryBranchLevels", "أقسام {parent.name_ar}", "hierarchy-v2", "h-[92dvh]", "aria-label=\"إغلاق الفلترة\"", "product={product} index={index}"],
-    forbidden: ["if (categorySlug)"],
+    needles: ["catalog-live-filter-facets", "draftBrandFilter", "audienceScopedFacetMetadata", "نوع الأحذية", "audience.eq.women", "setDraftBrand", "setDraftAudience", "getCategoryDescendantIds", "currentCategoryBranchLevels", "draftCategoryBranchLevels", "أقسام {parent.name_ar}", "hierarchy-v2", "h-[92dvh]", "aria-label=\"إغلاق الفلترة\"", "document.documentElement", "root.style.overflow = \"hidden\"", "product={product} index={index}"],
+    forbidden: ["if (categorySlug)", "body.style.position = \"fixed\""],
     message: "Catalog filters must load complete category hierarchy data, show every branch dynamically, stay fully visible on mobile, scope products and live facets to the full category branch, and let reset actions clear the category too.",
   },
   {

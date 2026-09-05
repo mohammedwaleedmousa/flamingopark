@@ -523,32 +523,32 @@ const ProductsPage = () => {
     if (!overlayOpen) return;
 
     const body = document.body;
+    const root = document.documentElement;
 
     overlayScrollRef.current = window.scrollY;
 
-    const previousPosition = body.style.position;
-    const previousTop = body.style.top;
-    const previousLeft = body.style.left;
-    const previousRight = body.style.right;
-    const previousWidth = body.style.width;
+    const previousRootOverflow = root.style.overflow;
+    const previousRootOverscrollBehavior = root.style.overscrollBehavior;
     const previousOverflow = body.style.overflow;
+    const previousOverscrollBehavior = body.style.overscrollBehavior;
 
-    body.style.position = "fixed";
-    body.style.top = `-${overlayScrollRef.current}px`;
-    body.style.left = "0";
-    body.style.right = "0";
-    body.style.width = "100%";
+    /*
+     * تحريك body بقيمة top سالبة يزيح الـ fixed overlays في Safari.
+     * إيقاف التمرير على الجذر يحفظ موضع الصفحة ويُبقي الـ Drawer داخل
+     * الـ visual viewport، بينما يظل محتواه الداخلي قابلاً للتمرير.
+     */
+    root.style.overflow = "hidden";
+    root.style.overscrollBehavior = "none";
     body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
 
     return () => {
       const scrollY = overlayScrollRef.current;
 
-      body.style.position = previousPosition;
-      body.style.top = previousTop;
-      body.style.left = previousLeft;
-      body.style.right = previousRight;
-      body.style.width = previousWidth;
+      root.style.overflow = previousRootOverflow;
+      root.style.overscrollBehavior = previousRootOverscrollBehavior;
       body.style.overflow = previousOverflow;
+      body.style.overscrollBehavior = previousOverscrollBehavior;
 
       window.scrollTo({
         top: scrollY,

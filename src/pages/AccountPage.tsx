@@ -1,4 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import "@/lib/accountInvoiceEnhancements";
+import "@/lib/accountInvoiceRenderer";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "framer-motion";
 import {

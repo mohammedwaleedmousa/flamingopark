@@ -93,7 +93,7 @@ const CategoriesPage = () => {
   ========================================================= */
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ["categories-all-active"],
+    queryKey: ["categories-all-active", "hierarchy-v2"],
     queryFn: async () => {
       const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order", { ascending: true });
 
@@ -418,21 +418,23 @@ const CategoriesPage = () => {
   ========================================================= */
 
   const setStepParams = (nextValues: Record<string, string | null>) => {
-    const params = new URLSearchParams(searchParams);
-
-    Object.entries(nextValues).forEach(([key, value]) => {
-      if (!value) {
-        params.delete(key);
-      } else {
-        params.set(key, value);
-      }
-    });
-
-    params.delete("page");
-
     setLoadedPage(1);
 
-    setSearchParams(params, { replace: true });
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current);
+
+      Object.entries(nextValues).forEach(([key, value]) => {
+        if (!value) {
+          params.delete(key);
+        } else {
+          params.set(key, value);
+        }
+      });
+
+      params.delete("page");
+
+      return params;
+    }, { replace: true });
 
     requestAnimationFrame(() => {
       window.scrollTo({

@@ -48,8 +48,35 @@ const checks = [
   {
     file: "src/main.tsx",
     needles: ["createRoot", "startRuntimeMonitoring", "CustomerCartSync"],
-    forbidden: ["./pages/ProductDetailPage"],
-    message: "The entrypoint must keep product detail lazy while mounting the invisible cart persistence service.",
+    forbidden: [
+      "./pages/ProductDetailPage",
+      "accountInvoiceEnhancements",
+      "accountInvoiceRenderer",
+      "myOrdersInvoiceBridge",
+      "adminDashboardDomCompat",
+      "adminDashboardDrilldowns",
+      "adminDrilldownRestore",
+      "adminProductsMobileEnhancements",
+      "adminUiEnhancements",
+    ],
+    message: "The entrypoint must keep route-only customer/admin features lazy while mounting the invisible cart persistence service.",
+  },
+  {
+    file: "vite.config.ts",
+    needles: ["react", "motion", "commerce"],
+    forbidden: ["recharts", "jspdf", "html2canvas"],
+    message: "Admin-only chart and PDF libraries must not be manually preloaded for every storefront visitor.",
+  },
+  {
+    file: "index.html",
+    needles: ["rel=\"dns-prefetch\"", "rel=\"preconnect\"", "hcomhdkmtqttzghjxjcb.supabase.co"],
+    message: "The first storefront request must start the Supabase image/API connection early.",
+  },
+  {
+    file: "src/components/HeroSlider.tsx",
+    needles: ["staleTime: 5 * 60 * 1000", "refetchOnMount: false", "const slides = managedSlides", "fetchPriority={index === 0 ? \"high\" : \"auto\"}"],
+    forbidden: ["isFetching ? [] : managedSlides"],
+    message: "Cached hero images must stay visible during refreshes and the first slide must retain high fetch priority.",
   },
   {
     file: "src/components/AnalyticsTracker.tsx",
@@ -75,8 +102,32 @@ const checks = [
   },
   {
     file: "src/pages/ProductsPage.tsx",
-    needles: ["catalog-live-filter-facets", "draftBrandFilter", "audienceScopedFacetMetadata", "نوع الأحذية", "audience.eq.women", "setDraftBrand", "setDraftAudience"],
-    message: "Catalog filters must keep shoe audiences separate and scope live color/size facets to the selected brand and audience.",
+    needles: ["catalog-live-filter-facets", "draftBrandFilter", "brandScopedFacetMetadata", "audienceScopedFacetMetadata", "نوع الأحذية", "audience.eq.women", "setDraftBrand", "setDraftAudience", "getCategoryDescendantIds", "currentCategoryBranchLevels", "draftCategoryBranchLevels", "أقسام {parent.name_ar}", "hierarchy-v2", "home_collections", "isBestSellerProduct", "isFeaturedProduct", "setParam(\"sort\", value)", "h-[92dvh]", "aria-label=\"إغلاق الفلترة\"", "document.documentElement", "root.style.overflow = \"hidden\"", "product={product} index={index}"],
+    forbidden: ["if (categorySlug)", "body.style.position = \"fixed\"", "window.setTimeout(() => {\n      setParam(\"sort\""],
+    message: "Catalog filters must apply immediately, rank assigned collections correctly, expose only relevant facets, load the complete category hierarchy, and stay fully visible on mobile.",
+  },
+  {
+    file: "src/components/ProductListFilters.tsx",
+    needles: ["latestValuesRef", "onChangeRef", "h-[92dvh]", "aria-label=\"إغلاق الفلترة\"", "root.style.overflow = \"hidden\""],
+    forbidden: ["body.style.position = \"fixed\""],
+    message: "Shared category and collection filters must not let delayed search updates overwrite newer filter choices and must remain usable on mobile.",
+  },
+  {
+    file: "src/pages/CategoriesPage.tsx",
+    needles: ["categories-all-active", "hierarchy-v2", "parent_id", "setSearchParams((current)"],
+    message: "The categories page must share the complete hierarchy cache and update filters from the latest URL state.",
+  },
+  {
+    file: "src/pages/BrandSectionPage.tsx",
+    needles: ["new Date(b._createdAt || 0)", "document.documentElement", "root.style.overflow = \"hidden\""],
+    forbidden: ["body.style.position = \"fixed\""],
+    message: "Brand section sorting must implement newest order and its filter sheets must stay in the mobile viewport.",
+  },
+  {
+    file: "src/pages/SearchPage.tsx",
+    needles: ["categories-all-active", "search-labels-v1"],
+    forbidden: ["queryKey: ['categories-all-active']"],
+    message: "Search category labels must not overwrite the complete catalog hierarchy cache.",
   },
 ];
 

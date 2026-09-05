@@ -111,22 +111,23 @@ const BrandSectionPage = () => {
 
     const scrollY = window.scrollY;
     const body = document.body;
+    const root = document.documentElement;
 
-    const previousPosition = body.style.position;
-    const previousTop = body.style.top;
-    const previousWidth = body.style.width;
+    const previousRootOverflow = root.style.overflow;
+    const previousRootOverscroll = root.style.overscrollBehavior;
     const previousOverflow = body.style.overflow;
+    const previousBodyOverscroll = body.style.overscrollBehavior;
 
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.width = "100%";
+    root.style.overflow = "hidden";
+    root.style.overscrollBehavior = "none";
     body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
 
     return () => {
-      body.style.position = previousPosition;
-      body.style.top = previousTop;
-      body.style.width = previousWidth;
+      root.style.overflow = previousRootOverflow;
+      root.style.overscrollBehavior = previousRootOverscroll;
       body.style.overflow = previousOverflow;
+      body.style.overscrollBehavior = previousBodyOverscroll;
 
       window.scrollTo({ top: scrollY, behavior: "auto" });
     };
@@ -209,9 +210,15 @@ const BrandSectionPage = () => {
 
   const visibleProducts = useMemo(() => {
     const list = filterProducts(products, activeFilters, minPrice, maxPrice, inStockOnly);
-    if (priceSort === "asc") list.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
-    if (priceSort === "desc") list.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
-    if (priceSort === "name") list.sort((a, b) => String(a.nameAr || a.name || "").localeCompare(String(b.nameAr || b.name || ""), "ar"));
+    if (priceSort === "asc") {
+      list.sort((a, b) => Number(a.price || 0) - Number(b.price || 0));
+    } else if (priceSort === "desc") {
+      list.sort((a, b) => Number(b.price || 0) - Number(a.price || 0));
+    } else if (priceSort === "name") {
+      list.sort((a, b) => String(a.nameAr || a.name || "").localeCompare(String(b.nameAr || b.name || ""), "ar"));
+    } else {
+      list.sort((a, b) => new Date(b._createdAt || 0).getTime() - new Date(a._createdAt || 0).getTime());
+    }
     return list;
   }, [products, activeFilters, minPrice, maxPrice, inStockOnly, priceSort]);
 

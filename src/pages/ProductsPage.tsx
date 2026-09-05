@@ -41,6 +41,7 @@ type ColorSwatch = {
 
 type ProductAudience = "men" | "women" | "kids" | "unisex";
 type AudienceFilter = ProductAudience | "all";
+type CatalogSort = "new" | "best" | "featured" | "price-asc" | "price-desc";
 
 type CatalogProduct = Product & {
   color_variants?: ColorVariant[] | string;
@@ -50,12 +51,14 @@ type CatalogMetaProduct = {
   id: string;
   price: number;
   discount: number | null;
+  brand: string | null;
   color_variants: ColorVariant[] | string | null;
   sizes: string[] | null;
   audience: ProductAudience | null;
   created_at: string | null;
   is_best_seller: boolean | null;
   is_featured: boolean | null;
+  home_collections: string[] | null;
 };
 
 interface Category {
@@ -77,6 +80,20 @@ const AUDIENCE_OPTIONS: Array<{ value: ProductAudience; label: string }> = [
   { value: "kids", label: "أطفال" },
   { value: "unisex", label: "للجنسين" },
 ];
+
+const CATALOG_SORT_VALUES: CatalogSort[] = ["new", "best", "featured", "price-asc", "price-desc"];
+
+const parseCatalogSort = (value: string | null): CatalogSort => {
+  return CATALOG_SORT_VALUES.includes(value as CatalogSort) ? value as CatalogSort : "new";
+};
+
+const isBestSellerProduct = (product: CatalogMetaProduct) => {
+  return Boolean(product.is_best_seller || product.home_collections?.includes("best_sellers"));
+};
+
+const isFeaturedProduct = (product: CatalogMetaProduct) => {
+  return Boolean(product.is_featured || product.home_collections?.includes("curated"));
+};
 
 const NAMED_COLOR_HEX: Record<string, string> = {
   أسود: "#111111",
@@ -176,6 +193,58 @@ const matchesAudienceFilter = (audience: ProductAudience | null, filter: Audienc
   if (filter === "women") return audience === "women" || audience === "unisex" || audience === null;
   if (filter === "men") return audience === "men" || audience === "unisex";
   return audience === filter;
+};
+
+const getCategoryPath = (category: Category | null, categories: Category[]) => {
+  if (!category) return [];
+
+  const categoriesById = new Map(categories.map((item) => [item.id, item]));
+  const path: Category[] = [];
+  const visited = new Set<string>();
+  let current: Category | null = category;
+
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    path.unshift(current);
+    current = current.parent_id ? categoriesById.get(current.parent_id) || null : null;
+  }
+
+  return path;
+};
+
+const getCategoryBranchLevels = (category: Category | null, categories: Category[]) => {
+  return getCategoryPath(category, categories)
+    .map((parent) => ({
+      parent,
+      children: categories.filter((item) => item.parent_id === parent.id),
+    }))
+    .filter((level) => level.children.length > 0);
+};
+
+const getCategoryDescendantIds = (categoryId: string, categories: Category[]) => {
+  const childrenByParent = new Map<string, Category[]>();
+
+  categories.forEach((category) => {
+    if (!category.parent_id) return;
+    const siblings = childrenByParent.get(category.parent_id) || [];
+    siblings.push(category);
+    childrenByParent.set(category.parent_id, siblings);
+  });
+
+  const ids: string[] = [];
+  const queue = [categoryId];
+  const visited = new Set<string>();
+
+  while (queue.length) {
+    const id = queue.shift();
+    if (!id || visited.has(id)) continue;
+
+    visited.add(id);
+    ids.push(id);
+    (childrenByParent.get(id) || []).forEach((child) => queue.push(child.id));
+  }
+
+  return ids;
 };
 
 const isShoeCategoryScope = (slug: string, categories: Category[]) => {
@@ -367,7 +436,7 @@ const ProductsPage = () => {
   const categorySlug = searchParams.get("category") || "";
   const searchQuery = searchParams.get("search") || "";
   const brandFilter = searchParams.get("brand") || "all";
-  const sortBy = searchParams.get("sort") || "new";
+  const sortBy = parseCatalogSort(searchParams.get("sort"));
   const colorFilter = searchParams.get("color") || "all";
   const sizeFilter = searchParams.get("size") || "all";
   const audienceFilter = parseAudienceFilter(searchParams.get("audience"));
@@ -471,32 +540,32 @@ const ProductsPage = () => {
     if (!overlayOpen) return;
 
     const body = document.body;
+    const root = document.documentElement;
 
     overlayScrollRef.current = window.scrollY;
 
-    const previousPosition = body.style.position;
-    const previousTop = body.style.top;
-    const previousLeft = body.style.left;
-    const previousRight = body.style.right;
-    const previousWidth = body.style.width;
+    const previousRootOverflow = root.style.overflow;
+    const previousRootOverscrollBehavior = root.style.overscrollBehavior;
     const previousOverflow = body.style.overflow;
+    const previousOverscrollBehavior = body.style.overscrollBehavior;
 
-    body.style.position = "fixed";
-    body.style.top = `-${overlayScrollRef.current}px`;
-    body.style.left = "0";
-    body.style.right = "0";
-    body.style.width = "100%";
+    /*
+     * تحريك body بقيمة top سالبة يزيح الـ fixed overlays في Safari.
+     * إيقاف التمرير على الجذر يحفظ موضع الصفحة ويُبقي الـ Drawer داخل
+     * الـ visual viewport، بينما يظل محتواه الداخلي قابلاً للتمرير.
+     */
+    root.style.overflow = "hidden";
+    root.style.overscrollBehavior = "none";
     body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
 
     return () => {
       const scrollY = overlayScrollRef.current;
 
-      body.style.position = previousPosition;
-      body.style.top = previousTop;
-      body.style.left = previousLeft;
-      body.style.right = previousRight;
-      body.style.width = previousWidth;
+      root.style.overflow = previousRootOverflow;
+      root.style.overscrollBehavior = previousRootOverscrollBehavior;
       body.style.overflow = previousOverflow;
+      body.style.overscrollBehavior = previousOverscrollBehavior;
 
       window.scrollTo({
         top: scrollY,
@@ -511,7 +580,7 @@ const ProductsPage = () => {
   ========================================================= */
 
   const { data: categories = [] } = useQuery({
-    queryKey: ["categories-all-active"],
+    queryKey: ["categories-all-active", "hierarchy-v2"],
     queryFn: async () => {
       const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order", { ascending: true });
 
@@ -529,43 +598,45 @@ const ProductsPage = () => {
     return categories.find((category) => category.slug === categorySlug) || null;
   }, [categories, categorySlug]);
 
-  const subCategories = useMemo(() => {
-    if (!currentCategory) return [];
+  const rootCategories = useMemo(() => {
+    return categories.filter((category) => !category.parent_id);
+  }, [categories]);
 
-    return categories.filter((category) => category.parent_id === currentCategory.id);
+  const currentCategoryPath = useMemo(() => {
+    return getCategoryPath(currentCategory, categories);
+  }, [categories, currentCategory]);
+
+  const currentRootCategory = currentCategoryPath[0] || null;
+
+  const currentCategoryBranchLevels = useMemo(() => {
+    return getCategoryBranchLevels(currentCategory, categories);
   }, [categories, currentCategory]);
 
   const leafCategoryIds = useMemo(() => {
     if (!currentCategory) return null;
 
-    if (subCategories.length) {
-      return [
-        currentCategory.id,
-        ...subCategories.map((category) => category.id),
-      ];
-    }
-
-    return [currentCategory.id];
-  }, [currentCategory, subCategories]);
+    return getCategoryDescendantIds(currentCategory.id, categories);
+  }, [categories, currentCategory]);
 
   const draftCurrentCategory = useMemo(() => {
     return categories.find((category) => category.slug === draftCategorySlug) || null;
   }, [categories, draftCategorySlug]);
 
-  const draftSubCategories = useMemo(() => {
-    if (!draftCurrentCategory) return [];
+  const draftCategoryPath = useMemo(() => {
+    return getCategoryPath(draftCurrentCategory, categories);
+  }, [categories, draftCurrentCategory]);
 
-    return categories.filter((category) => category.parent_id === draftCurrentCategory.id);
+  const draftRootCategory = draftCategoryPath[0] || null;
+
+  const draftCategoryBranchLevels = useMemo(() => {
+    return getCategoryBranchLevels(draftCurrentCategory, categories);
   }, [categories, draftCurrentCategory]);
 
   const draftLeafCategoryIds = useMemo(() => {
     if (!draftCurrentCategory) return null;
 
-    return [
-      draftCurrentCategory.id,
-      ...draftSubCategories.map((category) => category.id),
-    ];
-  }, [draftCurrentCategory, draftSubCategories]);
+    return getCategoryDescendantIds(draftCurrentCategory.id, categories);
+  }, [categories, draftCurrentCategory]);
 
   const isDraftShoeCategory = useMemo(() => {
     return isShoeCategoryScope(draftCategorySlug, categories);
@@ -641,13 +712,13 @@ const ProductsPage = () => {
      CATALOG METADATA
 
      هذه البيانات خفيفة ولا تحتوي صور المنتج.
-     نحتاجها للألوان والمقاسات والسعر النهائي.
+     نحتاجها للألوان والمقاسات والسعر النهائي والترتيب المخصص.
   ========================================================= */
 
-  const needsClientFiltering = colorFilter !== "all" || sizeFilter !== "all" || minPriceParam > 0 || maxPriceParam > 0;
+  const needsClientFiltering = colorFilter !== "all" || sizeFilter !== "all" || minPriceParam > 0 || maxPriceParam > 0 || sortBy === "best" || sortBy === "featured";
 
-  // Applied metadata powers the actual result set only when a client-side
-  // color, size, or price filter is active. Drawer facets use their own scope.
+  // Applied metadata powers the actual result set when a client-side filter
+  // or collection-based ranking is active. Drawer facets use their own scope.
   const shouldLoadMetadata = needsClientFiltering;
 
   const { data: catalogMetadata = [], isLoading: catalogMetadataLoading } = useQuery({
@@ -669,7 +740,7 @@ const ProductsPage = () => {
       let from = 0;
 
       while (true) {
-        let query = supabase.from("products").select("id,price,discount,color_variants,sizes,audience,created_at,is_best_seller,is_featured").eq("is_active", true);
+        let query = supabase.from("products").select("id,price,discount,brand,color_variants,sizes,audience,created_at,is_best_seller,is_featured,home_collections").eq("is_active", true);
 
         if (leafCategoryIds?.length) {
           query = query.in("category_id", leafCategoryIds);
@@ -737,7 +808,6 @@ const ProductsPage = () => {
       "catalog-live-filter-facets",
       draftLeafCategoryIds?.join(",") || "all",
       searchQuery,
-      draftBrandFilter,
       draftSaleOnly,
       draftInStockOnly,
     ],
@@ -749,7 +819,7 @@ const ProductsPage = () => {
       let from = 0;
 
       while (true) {
-        let query = supabase.from("products").select("id,price,discount,color_variants,sizes,audience,created_at,is_best_seller,is_featured").eq("is_active", true);
+        let query = supabase.from("products").select("id,price,discount,brand,color_variants,sizes,audience,created_at,is_best_seller,is_featured,home_collections").eq("is_active", true);
 
         if (draftLeafCategoryIds?.length) {
           query = query.in("category_id", draftLeafCategoryIds);
@@ -759,10 +829,6 @@ const ProductsPage = () => {
           const term = searchQuery.trim();
 
           query = query.or(`name_ar.ilike.%${term}%,name.ilike.%${term}%,description_ar.ilike.%${term}%`);
-        }
-
-        if (draftBrandFilter !== "all") {
-          query = query.eq("brand", draftBrandFilter);
         }
 
         if (draftSaleOnly) {
@@ -795,9 +861,15 @@ const ProductsPage = () => {
     refetchOnReconnect: false,
   });
 
+  const brandScopedFacetMetadata = useMemo(() => {
+    if (draftBrandFilter === "all") return facetMetadata;
+
+    return facetMetadata.filter((product) => product.brand === draftBrandFilter);
+  }, [facetMetadata, draftBrandFilter]);
+
   const audienceScopedFacetMetadata = useMemo(() => {
-    return facetMetadata.filter((product) => matchesAudienceFilter(product.audience, draftAudienceFilter));
-  }, [facetMetadata, draftAudienceFilter]);
+    return brandScopedFacetMetadata.filter((product) => matchesAudienceFilter(product.audience, draftAudienceFilter));
+  }, [brandScopedFacetMetadata, draftAudienceFilter]);
 
   const filterMetadataLoading = filtersOpen && (facetMetadataLoading || facetMetadataFetching);
 
@@ -847,9 +919,9 @@ const ProductsPage = () => {
 
   const availableAudienceOptions = useMemo(() => {
     return AUDIENCE_OPTIONS.filter((option) => {
-      return facetMetadata.some((product) => matchesAudienceFilter(product.audience, option.value));
+      return brandScopedFacetMetadata.some((product) => matchesAudienceFilter(product.audience, option.value));
     });
-  }, [facetMetadata]);
+  }, [brandScopedFacetMetadata]);
 
   /* =========================================================
      PRICE BOUNDS
@@ -929,7 +1001,7 @@ const ProductsPage = () => {
   /* =========================================================
      MATCHING METADATA
 
-     فقط عند Color / Size / Price.
+     عند Color / Size / Price أو الترتيب حسب مجموعة مخصصة.
   ========================================================= */
 
   const matchingMetadata = useMemo(() => {
@@ -970,8 +1042,8 @@ const ProductsPage = () => {
     } else if (sortBy === "best") {
       result = [...result].sort((a, b) => {
         const bestDifference =
-          Number(!!b.is_best_seller) -
-          Number(!!a.is_best_seller);
+          Number(isBestSellerProduct(b)) -
+          Number(isBestSellerProduct(a));
 
         if (bestDifference !== 0) {
           return bestDifference;
@@ -985,8 +1057,8 @@ const ProductsPage = () => {
     } else if (sortBy === "featured") {
       result = [...result].sort((a, b) => {
         const featuredDifference =
-          Number(!!b.is_featured) -
-          Number(!!a.is_featured);
+          Number(isFeaturedProduct(b)) -
+          Number(isFeaturedProduct(a));
 
         if (featuredDifference !== 0) {
           return featuredDifference;
@@ -1103,22 +1175,6 @@ const ProductsPage = () => {
               query = query.order("price", {
                 ascending: false,
               });
-            } else if (sortBy === "best") {
-              query = query
-                .order("is_best_seller", {
-                  ascending: false,
-                })
-                .order("created_at", {
-                  ascending: false,
-                });
-            } else if (sortBy === "featured") {
-              query = query
-                .order("is_featured", {
-                  ascending: false,
-                })
-                .order("created_at", {
-                  ascending: false,
-                });
             } else {
               query = query.order("created_at", {
                 ascending: false,
@@ -1152,7 +1208,7 @@ const ProductsPage = () => {
   /* =========================================================
      CLIENT FILTERED PAGES
 
-     يستخدم فقط عند Color / Size / Price.
+     يستخدم عند Color / Size / Price أو الترتيب حسب مجموعة مخصصة.
   ========================================================= */
 
   const filteredPageIdGroups = useMemo(() => {
@@ -1280,7 +1336,7 @@ const ProductsPage = () => {
      BRANDS
   ========================================================= */
 
-  const { data: brandsAvailable = [] } = useQuery({
+  const { data: activeBrandNames = [] } = useQuery({
     queryKey: ["product-filter-brands"],
 
     queryFn: async () => {
@@ -1306,6 +1362,18 @@ const ProductsPage = () => {
     refetchOnWindowFocus: false,
     refetchOnReconnect: false,
   });
+
+  const brandsAvailable = useMemo(() => {
+    if (filterMetadataLoading) return activeBrandNames;
+
+    const brandsInScope = new Set(
+      facetMetadata
+        .map((product) => product.brand?.trim())
+        .filter((brand): brand is string => Boolean(brand))
+    );
+
+    return activeBrandNames.filter((brand) => brandsInScope.has(brand) || brand === draftBrandFilter);
+  }, [activeBrandNames, draftBrandFilter, facetMetadata, filterMetadataLoading]);
 
   /* =========================================================
      RESET LOAD MORE ON REAL FILTER CHANGE
@@ -1357,34 +1425,36 @@ const ProductsPage = () => {
 
     setLoadedPage(1);
 
-    const next =
-      new URLSearchParams(searchParams);
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
 
-    if (
-      value === null ||
-      value === "" ||
-      value === "all"
-    ) {
-      next.delete(key);
-    } else {
-      next.set(key, value);
-    }
-
-    if (key === "category") {
-      next.delete("color");
-      next.delete("size");
-
-      if (!isShoeCategoryScope(value || "", categories)) {
-        next.delete("audience");
+      if (
+        value === null ||
+        value === "" ||
+        value === "all" ||
+        (key === "sort" && value === "new")
+      ) {
+        next.delete(key);
+      } else {
+        next.set(key, value);
       }
-    }
 
-    /*
-     * page لم يعد جزءاً من Load More.
-     */
-    next.delete("page");
+      if (key === "category") {
+        next.delete("color");
+        next.delete("size");
 
-    setSearchParams(next, {
+        if (!isShoeCategoryScope(value || "", categories)) {
+          next.delete("audience");
+        }
+      }
+
+      /*
+       * page لم يعد جزءاً من Load More.
+       */
+      next.delete("page");
+
+      return next;
+    }, {
       replace: true,
     });
   };
@@ -1493,13 +1563,6 @@ const ProductsPage = () => {
   const resetDraftFilters = () => {
     const next = new URLSearchParams();
 
-    if (categorySlug) {
-      next.set(
-        "category",
-        categorySlug
-      );
-    }
-
     setDraftFilters(next);
 
     setPriceRange([
@@ -1552,43 +1615,25 @@ const ProductsPage = () => {
 
     next.delete("page");
 
-    /*
-     * أغلق Drawer أولاً.
-     */
-    setFiltersOpen(false);
+    setSearchParams(next, {
+      replace: true,
+    });
 
-    /*
-     * ثم غيّر المنتجات بعد انتهاء حركة الإغلاق.
-     * بهذا لن تراها تتبدل بالخلفية.
-     */
-    window.setTimeout(() => {
-      setSearchParams(next, {
-        replace: true,
-      });
-    }, 170);
+    setFiltersOpen(false);
   };
 
   /* =========================================================
      SORT
   ========================================================= */
 
-  const handleSortSelect = (value: string) => {
+  const handleSortSelect = (value: CatalogSort) => {
     if (value === sortBy) {
       setSortOpen(false);
       return;
     }
 
-    /*
-     * أغلق Sort أولاً.
-     */
+    setParam("sort", value);
     setSortOpen(false);
-
-    /*
-     * ثم غيّر البيانات بعد الإغلاق.
-     */
-    window.setTimeout(() => {
-      setParam("sort", value);
-    }, 170);
   };
 
   /* =========================================================
@@ -1623,15 +1668,7 @@ const ProductsPage = () => {
 
     setLoadedPage(1);
 
-    const next =
-      new URLSearchParams();
-
-    if (categorySlug) {
-      next.set(
-        "category",
-        categorySlug
-      );
-    }
+    const next = new URLSearchParams();
 
     setSearchParams(next, {
       replace: true,
@@ -1696,10 +1733,24 @@ const ProductsPage = () => {
             <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <button onClick={() => setParam("category", null)} className={`shrink-0 rounded-full px-4 py-[7px] text-[10px] font-medium transition-all md:text-[11px] ${!categorySlug ? "bg-[#D4777D] text-white shadow-[0_5px_16px_rgba(212,119,125,.19)]" : "border border-[#E9DFDB] bg-white text-[#6D625D]"}`}>الكل</button>
 
-              {categories.filter((category) => !category.parent_id).map((category) => (
-                <button key={category.id} onClick={() => setParam("category", category.slug)} className={`shrink-0 rounded-full px-4 py-[7px] text-[10px] font-medium transition-all md:text-[11px] ${categorySlug === category.slug ? "bg-[#D4777D] text-white shadow-[0_5px_16px_rgba(212,119,125,.19)]" : "border border-[#E9DFDB] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
+              {rootCategories.map((category) => (
+                <button key={category.id} onClick={() => setParam("category", category.slug)} className={`shrink-0 rounded-full px-4 py-[7px] text-[10px] font-medium transition-all md:text-[11px] ${currentRootCategory?.id === category.id ? "bg-[#D4777D] text-white shadow-[0_5px_16px_rgba(212,119,125,.19)]" : "border border-[#E9DFDB] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
               ))}
             </div>
+
+            {currentCategoryBranchLevels.map(({ parent, children }) => (
+              <div key={parent.id} className="mt-2 flex items-center gap-2 overflow-x-auto border-t border-[#F3ECE9] pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <span className="shrink-0 text-[8px] font-medium text-[#A1948E]">أقسام {parent.name_ar}</span>
+
+                {children.map((category) => {
+                  const active = currentCategoryPath.some((item) => item.id === category.id);
+
+                  return (
+                    <button key={category.id} onClick={() => setParam("category", category.slug)} className={`shrink-0 rounded-full px-3.5 py-[6px] text-[9px] font-medium transition-all md:text-[10px] ${active ? "bg-[#F8E7E6] text-[#B95F66] ring-1 ring-[#D4777D]/35" : "border border-[#EDE3DF] bg-[#FCF9F7] text-[#71655F]"}`}>{category.name_ar}</button>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </section>
 
@@ -1790,7 +1841,7 @@ const ProductsPage = () => {
             <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 sm:gap-y-6 md:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4 xl:grid-cols-5">
               {products.map((product, index) => (
                 <motion.div key={product.id} custom={index} initial={isMobileViewport ? false : "hidden"} animate={isMobileViewport ? false : "show"} variants={shimmerVariants} className="min-w-0">
-                  <ProductCard product={product} onQuickView={(selectedProduct) => setQuickViewProd(selectedProduct)} />
+                  <ProductCard product={product} index={index} onQuickView={(selectedProduct) => setQuickViewProd(selectedProduct)} />
                 </motion.div>
               ))}
             </div>
@@ -1849,7 +1900,7 @@ const ProductsPage = () => {
                     { value: "price-asc", label: "السعر: الأقل أولًا", desc: "من الأقل إلى الأعلى" },
                     { value: "price-desc", label: "السعر: الأعلى أولًا", desc: "من الأعلى إلى الأقل" },
                   ].map((option) => (
-                    <button key={option.value} onClick={() => handleSortSelect(option.value)} className="flex min-h-[57px] w-full items-center justify-between border-b border-[#F0E9E6] px-3.5 text-right last:border-0">
+                    <button key={option.value} type="button" aria-pressed={sortBy === option.value} onClick={() => handleSortSelect(option.value as CatalogSort)} className="flex min-h-[57px] w-full touch-manipulation items-center justify-between border-b border-[#F0E9E6] px-3.5 text-right last:border-0">
                       <div>
                         <span className={`block text-[11px] ${sortBy === option.value ? "font-semibold text-[#B95F66]" : "font-medium text-[#4B403B]"}`}>{option.label}</span>
                         <span className="mt-1 block text-[8px] text-[#A0958F]">{option.desc}</span>
@@ -1874,9 +1925,9 @@ const ProductsPage = () => {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="fixed inset-0 z-[80] flex items-end bg-[#211B19]/35 backdrop-blur-[2px] md:items-stretch">
               <div className="absolute inset-0" onClick={() => setFiltersOpen(false)} />
 
-              <motion.aside initial={isMobileViewport ? { y: "100%" } : { x: "100%" }} animate={isMobileViewport ? { y: 0 } : { x: 0 }} exit={isMobileViewport ? { y: "100%" } : { x: "100%" }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }} className="relative mr-auto flex max-h-[92vh] w-full flex-col rounded-t-[28px] bg-[#FFFDFC] shadow-[0_-20px_60px_rgba(55,37,31,.14)] md:h-full md:max-h-none md:w-[430px] md:rounded-none">
+              <motion.aside initial={isMobileViewport ? { y: "100%" } : { x: "100%" }} animate={isMobileViewport ? { y: 0 } : { x: 0 }} exit={isMobileViewport ? { y: "100%" } : { x: "100%" }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }} className="relative mr-auto flex h-[92dvh] max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[28px] bg-[#FFFDFC] shadow-[0_-20px_60px_rgba(55,37,31,.14)] md:h-full md:max-h-none md:w-[430px] md:rounded-none">
                 {/* HEADER */}
-                <div className="shrink-0 px-4 pt-3 md:px-6 md:pt-6">
+                <div className="sticky top-0 z-10 shrink-0 bg-[#FFFDFC] px-4 pt-3 md:px-6 md:pt-6">
                   <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-[#DDD1CD] md:hidden" />
 
                   <div className="flex items-center justify-between border-b border-[#EEE6E2] pb-4">
@@ -1886,7 +1937,7 @@ const ProductsPage = () => {
                       <p className="mt-1 text-[9px] text-[#9A8F89]">{filterMetadataLoading ? "جاري تجهيز الخيارات..." : `${draftResultCount} منتج مطابق لاختياراتك`}</p>
                     </div>
 
-                    <button onClick={() => setFiltersOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E9DEDA] bg-white text-[#554944]">
+                    <button type="button" aria-label="إغلاق الفلترة" onClick={() => setFiltersOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E9DEDA] bg-white text-[#554944]">
                       <X className="h-4 w-4" />
                     </button>
                   </div>
@@ -1908,10 +1959,26 @@ const ProductsPage = () => {
                     <div className="flex flex-wrap gap-2">
                       <button onClick={() => setDraftCategory(null)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${!draftCategorySlug ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>الكل</button>
 
-                      {categories.filter((category) => !category.parent_id).map((category) => (
-                        <button key={category.id} onClick={() => setDraftCategory(category.slug)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${draftCategorySlug === category.slug ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
+                      {rootCategories.map((category) => (
+                        <button key={category.id} onClick={() => setDraftCategory(category.slug)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${draftRootCategory?.id === category.id ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
                       ))}
                     </div>
+
+                    {draftCategoryBranchLevels.map(({ parent, children }) => (
+                      <div key={parent.id} className="mt-4 rounded-[14px] border border-[#EEE4E0] bg-[#FCF9F7] p-3">
+                        <p className="mb-2.5 text-[9px] font-semibold text-[#766963]">أقسام {parent.name_ar}</p>
+
+                        <div className="flex flex-wrap gap-2">
+                          {children.map((category) => {
+                            const active = draftCategoryPath.some((item) => item.id === category.id);
+
+                            return (
+                              <button key={category.id} onClick={() => setDraftCategory(category.slug)} className={`rounded-full px-3.5 py-2 text-[9px] font-medium transition-all ${active ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E6DCD8] bg-white text-[#6C615C]"}`}>{category.name_ar}</button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
                   {/* SHOE AUDIENCE */}

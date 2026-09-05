@@ -1,4 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
+import "@/lib/adminDashboardDomCompat";
+import "@/lib/adminDashboardDrilldowns";
+import "@/lib/adminDrilldownRestore";
+import "@/lib/adminProductsMobileEnhancements";
+import "@/lib/adminUiEnhancements";
 import { Link, useLocation } from "react-router-dom";
 import { Loader2, LockKeyhole } from "lucide-react";
 import AdminLayoutBase from "@/components/admin/AdminLayoutBase";

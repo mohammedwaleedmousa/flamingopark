@@ -18,8 +18,6 @@ export default defineConfig(({ mode }) => ({
       output: {
         manualChunks: {
           react: ["react", "react-dom", "react-router-dom"],
-          charts: ["recharts"],
-          pdf: ["jspdf", "html2canvas"],
           motion: ["framer-motion"],
           commerce: ["@tanstack/react-query", "@supabase/supabase-js", "zustand"],
         },

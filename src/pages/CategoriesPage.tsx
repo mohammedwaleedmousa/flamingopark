@@ -93,7 +93,7 @@ const CategoriesPage = () => {
   ========================================================= */
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ["categories-all-active"],
+    queryKey: ["categories-all-active", "hierarchy-v2"],
     queryFn: async () => {
       const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order", { ascending: true });
 

@@ -76,7 +76,7 @@ const SearchPage = () => {
   });
 
   const { data: categories = [] } = useQuery({
-    queryKey: ['categories-all-active'],
+    queryKey: ['categories-all-active', 'search-labels-v1'],
     queryFn: async () => {
       const { data, error } = await supabase.from('categories').select('id,name,name_ar').eq('is_active', true);
       if (error) throw error;

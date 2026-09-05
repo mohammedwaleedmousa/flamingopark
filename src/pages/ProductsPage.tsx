@@ -563,7 +563,7 @@ const ProductsPage = () => {
   ========================================================= */
 
   const { data: categories = [] } = useQuery({
-    queryKey: ["categories-all-active"],
+    queryKey: ["categories-all-active", "hierarchy-v2"],
     queryFn: async () => {
       const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order", { ascending: true });
 
@@ -1927,9 +1927,9 @@ const ProductsPage = () => {
             <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 0.12 }} className="fixed inset-0 z-[80] flex items-end bg-[#211B19]/35 backdrop-blur-[2px] md:items-stretch">
               <div className="absolute inset-0" onClick={() => setFiltersOpen(false)} />
 
-              <motion.aside initial={isMobileViewport ? { y: "100%" } : { x: "100%" }} animate={isMobileViewport ? { y: 0 } : { x: 0 }} exit={isMobileViewport ? { y: "100%" } : { x: "100%" }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }} className="relative mr-auto flex max-h-[92vh] w-full flex-col rounded-t-[28px] bg-[#FFFDFC] shadow-[0_-20px_60px_rgba(55,37,31,.14)] md:h-full md:max-h-none md:w-[430px] md:rounded-none">
+              <motion.aside initial={isMobileViewport ? { y: "100%" } : { x: "100%" }} animate={isMobileViewport ? { y: 0 } : { x: 0 }} exit={isMobileViewport ? { y: "100%" } : { x: "100%" }} transition={{ duration: 0.2, ease: [0.22, 1, 0.36, 1] }} className="relative mr-auto flex h-[92dvh] max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-[28px] bg-[#FFFDFC] shadow-[0_-20px_60px_rgba(55,37,31,.14)] md:h-full md:max-h-none md:w-[430px] md:rounded-none">
                 {/* HEADER */}
-                <div className="shrink-0 px-4 pt-3 md:px-6 md:pt-6">
+                <div className="sticky top-0 z-10 shrink-0 bg-[#FFFDFC] px-4 pt-3 md:px-6 md:pt-6">
                   <div className="mx-auto mb-3 h-1 w-9 rounded-full bg-[#DDD1CD] md:hidden" />
 
                   <div className="flex items-center justify-between border-b border-[#EEE6E2] pb-4">
@@ -1939,7 +1939,7 @@ const ProductsPage = () => {
                       <p className="mt-1 text-[9px] text-[#9A8F89]">{filterMetadataLoading ? "جاري تجهيز الخيارات..." : `${draftResultCount} منتج مطابق لاختياراتك`}</p>
                     </div>
 
-                    <button onClick={() => setFiltersOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E9DEDA] bg-white text-[#554944]">
+                    <button type="button" aria-label="إغلاق الفلترة" onClick={() => setFiltersOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E9DEDA] bg-white text-[#554944]">
                       <X className="h-4 w-4" />
                     </button>
                   </div>

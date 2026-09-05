@@ -102,9 +102,20 @@ const checks = [
   },
   {
     file: "src/pages/ProductsPage.tsx",
-    needles: ["catalog-live-filter-facets", "draftBrandFilter", "audienceScopedFacetMetadata", "نوع الأحذية", "audience.eq.women", "setDraftBrand", "setDraftAudience", "getCategoryDescendantIds", "currentCategoryBranchLevels", "draftCategoryBranchLevels", "أقسام {parent.name_ar}", "product={product} index={index}"],
+    needles: ["catalog-live-filter-facets", "draftBrandFilter", "audienceScopedFacetMetadata", "نوع الأحذية", "audience.eq.women", "setDraftBrand", "setDraftAudience", "getCategoryDescendantIds", "currentCategoryBranchLevels", "draftCategoryBranchLevels", "أقسام {parent.name_ar}", "hierarchy-v2", "h-[92dvh]", "aria-label=\"إغلاق الفلترة\"", "product={product} index={index}"],
     forbidden: ["if (categorySlug)"],
-    message: "Catalog filters must show dynamic subcategories, scope products and live facets to the full category branch, and let reset actions clear the category too.",
+    message: "Catalog filters must load complete category hierarchy data, show every branch dynamically, stay fully visible on mobile, scope products and live facets to the full category branch, and let reset actions clear the category too.",
+  },
+  {
+    file: "src/pages/CategoriesPage.tsx",
+    needles: ["categories-all-active", "hierarchy-v2", "parent_id"],
+    message: "The categories page must share the complete hierarchy cache instead of a partial category shape.",
+  },
+  {
+    file: "src/pages/SearchPage.tsx",
+    needles: ["categories-all-active", "search-labels-v1"],
+    forbidden: ["queryKey: ['categories-all-active']"],
+    message: "Search category labels must not overwrite the complete catalog hierarchy cache.",
   },
 ];
 

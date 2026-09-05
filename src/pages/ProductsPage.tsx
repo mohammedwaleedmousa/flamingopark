@@ -39,6 +39,9 @@ type ColorSwatch = {
   hex2?: string;
 };
 
+type ProductAudience = "men" | "women" | "kids" | "unisex";
+type AudienceFilter = ProductAudience | "all";
+
 type CatalogProduct = Product & {
   color_variants?: ColorVariant[] | string;
 };
@@ -48,6 +51,8 @@ type CatalogMetaProduct = {
   price: number;
   discount: number | null;
   color_variants: ColorVariant[] | string | null;
+  sizes: string[] | null;
+  audience: ProductAudience | null;
   created_at: string | null;
   is_best_seller: boolean | null;
   is_featured: boolean | null;
@@ -65,6 +70,13 @@ interface Category {
 
 const PAGE_SIZE = 12;
 const META_BATCH_SIZE = 500;
+
+const AUDIENCE_OPTIONS: Array<{ value: ProductAudience; label: string }> = [
+  { value: "women", label: "نسائي" },
+  { value: "men", label: "رجالي" },
+  { value: "kids", label: "أطفال" },
+  { value: "unisex", label: "للجنسين" },
+];
 
 const NAMED_COLOR_HEX: Record<string, string> = {
   أسود: "#111111",
@@ -135,14 +147,58 @@ const getProductColors = (product: { color_variants?: ColorVariant[] | string | 
   return Array.from(new Set(parseVariants(product.color_variants).map(getVariantColorName).filter(Boolean)));
 };
 
-const getProductSizes = (product: { color_variants?: ColorVariant[] | string | null }): string[] => {
+const getProductSizes = (product: { color_variants?: ColorVariant[] | string | null; sizes?: string[] | null }): string[] => {
   return Array.from(
     new Set(
-      parseVariants(product.color_variants)
-        .flatMap((variant) => (variant.sizes || []).map((size) => size?.size?.trim() || ""))
+      [
+        ...(product.sizes || []),
+        ...parseVariants(product.color_variants)
+          .flatMap((variant) => (variant.sizes || []).map((size) => size?.size || "")),
+      ]
+        .map((size) => typeof size === "string" ? size.trim() : "")
         .filter(Boolean)
     )
   );
+};
+
+const parseAudienceFilter = (value: string | null): AudienceFilter => {
+  return AUDIENCE_OPTIONS.some((option) => option.value === value)
+    ? value as ProductAudience
+    : "all";
+};
+
+const getAudienceLabel = (value: AudienceFilter) => {
+  return AUDIENCE_OPTIONS.find((option) => option.value === value)?.label || "الكل";
+};
+
+const matchesAudienceFilter = (audience: ProductAudience | null, filter: AudienceFilter) => {
+  if (filter === "all") return true;
+  if (filter === "women") return audience === "women" || audience === "unisex" || audience === null;
+  if (filter === "men") return audience === "men" || audience === "unisex";
+  return audience === filter;
+};
+
+const isShoeCategoryScope = (slug: string, categories: Category[]) => {
+  if (!slug) return false;
+
+  const categoriesById = new Map(categories.map((category) => [category.id, category]));
+  let category = categories.find((item) => item.slug === slug) || null;
+  const visited = new Set<string>();
+
+  while (category && !visited.has(category.id)) {
+    visited.add(category.id);
+
+    const normalizedSlug = category.slug.toLowerCase().replace("shose", "shoes");
+    const normalizedName = category.name_ar.replace(/[أإآ]/g, "ا");
+
+    if (normalizedSlug.includes("shoe") || normalizedName.includes("حذ") || normalizedName.includes("جزم")) {
+      return true;
+    }
+
+    category = category.parent_id ? categoriesById.get(category.parent_id) || null : null;
+  }
+
+  return false;
 };
 
 const getFinalPrice = (product: { price: number; discount?: number | null }) => {
@@ -314,6 +370,7 @@ const ProductsPage = () => {
   const sortBy = searchParams.get("sort") || "new";
   const colorFilter = searchParams.get("color") || "all";
   const sizeFilter = searchParams.get("size") || "all";
+  const audienceFilter = parseAudienceFilter(searchParams.get("audience"));
   const saleOnly = searchParams.get("sale") === "1";
   const inStockOnly = searchParams.get("stock") === "1";
   const minPriceParam = Number(searchParams.get("min") || 0);
@@ -348,8 +405,11 @@ const ProductsPage = () => {
   const draftBrandFilter = draftFilters.get("brand") || "all";
   const draftColorFilter = draftFilters.get("color") || "all";
   const draftSizeFilter = draftFilters.get("size") || "all";
+  const draftAudienceFilter = parseAudienceFilter(draftFilters.get("audience"));
   const draftSaleOnly = draftFilters.get("sale") === "1";
   const draftInStockOnly = draftFilters.get("stock") === "1";
+  const draftMinPriceParam = Number(draftFilters.get("min") || 0);
+  const draftMaxPriceParam = Number(draftFilters.get("max") || 0);
 
   const catalogScrollKey = useMemo(() => {
     const params = new URLSearchParams(location.search);
@@ -488,6 +548,29 @@ const ProductsPage = () => {
     return [currentCategory.id];
   }, [currentCategory, subCategories]);
 
+  const draftCurrentCategory = useMemo(() => {
+    return categories.find((category) => category.slug === draftCategorySlug) || null;
+  }, [categories, draftCategorySlug]);
+
+  const draftSubCategories = useMemo(() => {
+    if (!draftCurrentCategory) return [];
+
+    return categories.filter((category) => category.parent_id === draftCurrentCategory.id);
+  }, [categories, draftCurrentCategory]);
+
+  const draftLeafCategoryIds = useMemo(() => {
+    if (!draftCurrentCategory) return null;
+
+    return [
+      draftCurrentCategory.id,
+      ...draftSubCategories.map((category) => category.id),
+    ];
+  }, [draftCurrentCategory, draftSubCategories]);
+
+  const isDraftShoeCategory = useMemo(() => {
+    return isShoeCategoryScope(draftCategorySlug, categories);
+  }, [draftCategorySlug, categories]);
+
   /* =========================================================
      EXACT SERVER COUNT
 
@@ -500,6 +583,7 @@ const ProductsPage = () => {
       leafCategoryIds?.join(",") || "all",
       searchQuery,
       brandFilter,
+      audienceFilter,
       saleOnly,
       inStockOnly,
     ],
@@ -522,6 +606,14 @@ const ProductsPage = () => {
 
       if (brandFilter !== "all") {
         query = query.eq("brand", brandFilter);
+      }
+
+      if (audienceFilter === "women") {
+        query = query.or("audience.eq.women,audience.eq.unisex,audience.is.null");
+      } else if (audienceFilter === "men") {
+        query = query.in("audience", ["men", "unisex"]);
+      } else if (audienceFilter === "kids" || audienceFilter === "unisex") {
+        query = query.eq("audience", audienceFilter);
       }
 
       if (saleOnly) {
@@ -554,16 +646,17 @@ const ProductsPage = () => {
 
   const needsClientFiltering = colorFilter !== "all" || sizeFilter !== "all" || minPriceParam > 0 || maxPriceParam > 0;
 
-  // Do not download metadata for the entire catalog during normal browsing.
-  // It is only needed when the filter UI is opened or a client-side filter is active.
-  const shouldLoadMetadata = filtersOpen || needsClientFiltering;
+  // Applied metadata powers the actual result set only when a client-side
+  // color, size, or price filter is active. Drawer facets use their own scope.
+  const shouldLoadMetadata = needsClientFiltering;
 
-  const { data: catalogMetadata = [], isLoading: metadataLoading } = useQuery({
+  const { data: catalogMetadata = [], isLoading: catalogMetadataLoading } = useQuery({
     queryKey: [
       "catalog-filter-metadata",
       leafCategoryIds?.join(",") || "all",
       searchQuery,
       brandFilter,
+      audienceFilter,
       saleOnly,
       inStockOnly,
     ],
@@ -576,7 +669,7 @@ const ProductsPage = () => {
       let from = 0;
 
       while (true) {
-        let query = supabase.from("products").select("id,price,discount,color_variants,created_at,is_best_seller,is_featured").eq("is_active", true);
+        let query = supabase.from("products").select("id,price,discount,color_variants,sizes,audience,created_at,is_best_seller,is_featured").eq("is_active", true);
 
         if (leafCategoryIds?.length) {
           query = query.in("category_id", leafCategoryIds);
@@ -590,6 +683,14 @@ const ProductsPage = () => {
 
         if (brandFilter !== "all") {
           query = query.eq("brand", brandFilter);
+        }
+
+        if (audienceFilter === "women") {
+          query = query.or("audience.eq.women,audience.eq.unisex,audience.is.null");
+        } else if (audienceFilter === "men") {
+          query = query.in("audience", ["men", "unisex"]);
+        } else if (audienceFilter === "kids" || audienceFilter === "unisex") {
+          query = query.eq("audience", audienceFilter);
         }
 
         if (saleOnly) {
@@ -625,13 +726,89 @@ const ProductsPage = () => {
   });
 
   /* =========================================================
+     LIVE FILTER FACETS
+
+     Category, brand, audience, sale, and stock choices update
+     the available colors and sizes before the drawer is applied.
+  ========================================================= */
+
+  const { data: facetMetadata = [], isLoading: facetMetadataLoading, isFetching: facetMetadataFetching } = useQuery({
+    queryKey: [
+      "catalog-live-filter-facets",
+      draftLeafCategoryIds?.join(",") || "all",
+      searchQuery,
+      draftBrandFilter,
+      draftSaleOnly,
+      draftInStockOnly,
+    ],
+
+    enabled: filtersOpen,
+
+    queryFn: async () => {
+      const rows: CatalogMetaProduct[] = [];
+      let from = 0;
+
+      while (true) {
+        let query = supabase.from("products").select("id,price,discount,color_variants,sizes,audience,created_at,is_best_seller,is_featured").eq("is_active", true);
+
+        if (draftLeafCategoryIds?.length) {
+          query = query.in("category_id", draftLeafCategoryIds);
+        }
+
+        if (searchQuery.trim()) {
+          const term = searchQuery.trim();
+
+          query = query.or(`name_ar.ilike.%${term}%,name.ilike.%${term}%,description_ar.ilike.%${term}%`);
+        }
+
+        if (draftBrandFilter !== "all") {
+          query = query.eq("brand", draftBrandFilter);
+        }
+
+        if (draftSaleOnly) {
+          query = query.gt("discount", 0);
+        }
+
+        if (draftInStockOnly) {
+          query = query.eq("in_stock", true);
+        }
+
+        const { data, error } = await query.order("id", { ascending: true }).range(from, from + META_BATCH_SIZE - 1);
+
+        if (error) throw error;
+
+        const batch = (data || []) as CatalogMetaProduct[];
+
+        rows.push(...batch);
+
+        if (batch.length < META_BATCH_SIZE) break;
+
+        from += META_BATCH_SIZE;
+      }
+
+      return rows;
+    },
+
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  const audienceScopedFacetMetadata = useMemo(() => {
+    return facetMetadata.filter((product) => matchesAudienceFilter(product.audience, draftAudienceFilter));
+  }, [facetMetadata, draftAudienceFilter]);
+
+  const filterMetadataLoading = filtersOpen && (facetMetadataLoading || facetMetadataFetching);
+
+  /* =========================================================
      COLORS
   ========================================================= */
 
   const colorsAvailable = useMemo<ColorSwatch[]>(() => {
     const map = new Map<string, ColorSwatch>();
 
-    catalogMetadata.forEach((product) => {
+    audienceScopedFacetMetadata.forEach((product) => {
       parseVariants(product.color_variants).forEach((variant) => {
         const name = getVariantColorName(variant);
 
@@ -650,7 +827,7 @@ const ProductsPage = () => {
     });
 
     return Array.from(map.values()).sort((a, b) => a.name.localeCompare(b.name, "ar"));
-  }, [catalogMetadata]);
+  }, [audienceScopedFacetMetadata]);
 
   /* =========================================================
      SIZES
@@ -659,20 +836,26 @@ const ProductsPage = () => {
   const sizesAvailable = useMemo(() => {
     const sizes = new Set<string>();
 
-    catalogMetadata.forEach((product) => {
+    audienceScopedFacetMetadata.forEach((product) => {
       getProductSizes(product).forEach((size) => {
         sizes.add(size);
       });
     });
 
-    return Array.from(sizes);
-  }, [catalogMetadata]);
+    return Array.from(sizes).sort((a, b) => a.localeCompare(b, "ar", { numeric: true, sensitivity: "base" }));
+  }, [audienceScopedFacetMetadata]);
+
+  const availableAudienceOptions = useMemo(() => {
+    return AUDIENCE_OPTIONS.filter((option) => {
+      return facetMetadata.some((product) => matchesAudienceFilter(product.audience, option.value));
+    });
+  }, [facetMetadata]);
 
   /* =========================================================
      PRICE BOUNDS
   ========================================================= */
 
-  const priceBounds = useMemo(() => {
+  const catalogPriceBounds = useMemo(() => {
     if (!catalogMetadata.length) {
       return {
         min: 0,
@@ -688,8 +871,24 @@ const ProductsPage = () => {
     };
   }, [catalogMetadata]);
 
-  const effectiveMin = minPriceParam || priceBounds.min;
-  const effectiveMax = maxPriceParam || priceBounds.max;
+  const filterPriceBounds = useMemo(() => {
+    if (!audienceScopedFacetMetadata.length) {
+      return {
+        min: 0,
+        max: 1000,
+      };
+    }
+
+    const prices = audienceScopedFacetMetadata.map(getFinalPrice);
+
+    return {
+      min: Math.floor(Math.min(...prices)),
+      max: Math.ceil(Math.max(...prices)),
+    };
+  }, [audienceScopedFacetMetadata]);
+
+  const effectiveMin = minPriceParam || catalogPriceBounds.min;
+  const effectiveMax = maxPriceParam || catalogPriceBounds.max;
 
   const [priceRange, setPriceRange] = useState<[number, number]>([
     0,
@@ -697,11 +896,35 @@ const ProductsPage = () => {
   ]);
 
   useEffect(() => {
+    if (!filtersOpen || filterMetadataLoading) return;
+
     setPriceRange([
-      effectiveMin,
-      effectiveMax,
+      draftMinPriceParam || filterPriceBounds.min,
+      draftMaxPriceParam || filterPriceBounds.max,
     ]);
-  }, [effectiveMin, effectiveMax]);
+  }, [filtersOpen, filterMetadataLoading, draftMinPriceParam, draftMaxPriceParam, filterPriceBounds]);
+
+  const draftResultCount = useMemo(() => {
+    const min = draftMinPriceParam || filterPriceBounds.min;
+    const max = draftMaxPriceParam || filterPriceBounds.max;
+
+    return audienceScopedFacetMetadata.filter((product) => {
+      const colorMatch =
+        draftColorFilter === "all" ||
+        getProductColors(product).some((color) => color.toLowerCase() === draftColorFilter.toLowerCase());
+      const sizeMatch = draftSizeFilter === "all" || getProductSizes(product).includes(draftSizeFilter);
+      const price = getFinalPrice(product);
+
+      return colorMatch && sizeMatch && price >= min && price <= max;
+    }).length;
+  }, [
+    audienceScopedFacetMetadata,
+    draftColorFilter,
+    draftSizeFilter,
+    draftMinPriceParam,
+    draftMaxPriceParam,
+    filterPriceBounds,
+  ]);
 
   /* =========================================================
      MATCHING METADATA
@@ -821,6 +1044,7 @@ const ProductsPage = () => {
             leafCategoryIds?.join(",") || "all",
             searchQuery,
             brandFilter,
+            audienceFilter,
             sortBy,
             saleOnly,
             inStockOnly,
@@ -853,6 +1077,14 @@ const ProductsPage = () => {
                 "brand",
                 brandFilter
               );
+            }
+
+            if (audienceFilter === "women") {
+              query = query.or("audience.eq.women,audience.eq.unisex,audience.is.null");
+            } else if (audienceFilter === "men") {
+              query = query.in("audience", ["men", "unisex"]);
+            } else if (audienceFilter === "kids" || audienceFilter === "unisex") {
+              query = query.eq("audience", audienceFilter);
             }
 
             if (saleOnly) {
@@ -1029,7 +1261,7 @@ const ProductsPage = () => {
   ]);
 
   const isLoadingProducts = needsClientFiltering
-    ? metadataLoading ||
+    ? catalogMetadataLoading ||
       filteredProductQueries.some(
         (query) =>
           query.isLoading ||
@@ -1085,6 +1317,7 @@ const ProductsPage = () => {
     categorySlug,
     searchQuery,
     brandFilter,
+    audienceFilter,
     colorFilter,
     sizeFilter,
     saleOnly,
@@ -1135,6 +1368,15 @@ const ProductsPage = () => {
       next.delete(key);
     } else {
       next.set(key, value);
+    }
+
+    if (key === "category") {
+      next.delete("color");
+      next.delete("size");
+
+      if (!isShoeCategoryScope(value || "", categories)) {
+        next.delete("audience");
+      }
     }
 
     /*
@@ -1192,6 +1434,62 @@ const ProductsPage = () => {
     });
   };
 
+  const setDraftCategory = (value: string | null) => {
+    setDraftFilters((current) => {
+      const next = new URLSearchParams(current);
+
+      if (!value) {
+        next.delete("category");
+      } else {
+        next.set("category", value);
+      }
+
+      next.delete("color");
+      next.delete("size");
+
+      if (!isShoeCategoryScope(value || "", categories)) {
+        next.delete("audience");
+      }
+
+      next.delete("page");
+      return next;
+    });
+  };
+
+  const setDraftBrand = (value: string | null) => {
+    setDraftFilters((current) => {
+      const next = new URLSearchParams(current);
+
+      if (!value || value === "all") {
+        next.delete("brand");
+      } else {
+        next.set("brand", value);
+      }
+
+      next.delete("color");
+      next.delete("size");
+      next.delete("page");
+      return next;
+    });
+  };
+
+  const setDraftAudience = (value: ProductAudience | null) => {
+    setDraftFilters((current) => {
+      const next = new URLSearchParams(current);
+
+      if (!value) {
+        next.delete("audience");
+      } else {
+        next.set("audience", value);
+      }
+
+      next.delete("color");
+      next.delete("size");
+      next.delete("page");
+      return next;
+    });
+  };
+
   const resetDraftFilters = () => {
     const next = new URLSearchParams();
 
@@ -1205,8 +1503,8 @@ const ProductsPage = () => {
     setDraftFilters(next);
 
     setPriceRange([
-      priceBounds.min,
-      priceBounds.max,
+      filterPriceBounds.min,
+      filterPriceBounds.max,
     ]);
   };
 
@@ -1218,7 +1516,7 @@ const ProductsPage = () => {
       const next =
         new URLSearchParams(current);
 
-      if (min <= priceBounds.min) {
+      if (min <= filterPriceBounds.min) {
         next.delete("min");
       } else {
         next.set(
@@ -1227,7 +1525,7 @@ const ProductsPage = () => {
         );
       }
 
-      if (max >= priceBounds.max) {
+      if (max >= filterPriceBounds.max) {
         next.delete("max");
       } else {
         next.set(
@@ -1347,6 +1645,7 @@ const ProductsPage = () => {
   const activeFilterCount =
     (categorySlug ? 1 : 0) +
     (brandFilter !== "all" ? 1 : 0) +
+    (audienceFilter !== "all" ? 1 : 0) +
     (colorFilter !== "all" ? 1 : 0) +
     (sizeFilter !== "all" ? 1 : 0) +
     (saleOnly ? 1 : 0) +
@@ -1430,7 +1729,7 @@ const ProductsPage = () => {
               </button>
 
               <div className="flex h-full w-[72px] shrink-0 flex-col items-center justify-center bg-[#FDF9F7] sm:w-[82px]">
-                {metadataLoading && needsClientFiltering ? <span className="h-3 w-6 animate-pulse rounded bg-[#EDE4E0]" /> : <span className="text-[12px] font-semibold leading-none text-[#B86168]">{totalProductsCount}</span>}
+                {catalogMetadataLoading && needsClientFiltering ? <span className="h-3 w-6 animate-pulse rounded bg-[#EDE4E0]" /> : <span className="text-[12px] font-semibold leading-none text-[#B86168]">{totalProductsCount}</span>}
                 <span className="mt-1 text-[8px] leading-none text-[#9D918B]">منتج</span>
               </div>
             </div>
@@ -1444,6 +1743,8 @@ const ProductsPage = () => {
           <section className="mx-auto w-full max-w-[1600px] px-3 pt-1 md:px-6">
             <div className="flex items-center gap-1.5 overflow-x-auto pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               {brandFilter !== "all" && <button onClick={() => setParam("brand", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">{brandFilter}<X className="h-2.5 w-2.5" /></button>}
+
+              {audienceFilter !== "all" && <button onClick={() => setParam("audience", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">{getAudienceLabel(audienceFilter)}<X className="h-2.5 w-2.5" /></button>}
 
               {colorFilter !== "all" && <button onClick={() => setParam("color", null)} className="flex shrink-0 items-center gap-1.5 rounded-full bg-[#F9EFED] px-2.5 py-1.5 text-[9px] font-medium text-[#956268]">{colorFilter}<X className="h-2.5 w-2.5" /></button>}
 
@@ -1582,7 +1883,7 @@ const ProductsPage = () => {
                     <div>
                       <p className="text-[8px] tracking-[0.18em] text-[#B86A70]">FLAMINGO FILTER</p>
                       <h3 className="mt-1 text-[18px] font-semibold tracking-[-0.02em] text-[#302724]">فلترة المنتجات</h3>
-                      <p className="mt-1 text-[9px] text-[#9A8F89]">{metadataLoading ? "جاري تجهيز الخيارات..." : `${totalProductsCount} منتج مطابق لاختياراتك`}</p>
+                      <p className="mt-1 text-[9px] text-[#9A8F89]">{filterMetadataLoading ? "جاري تجهيز الخيارات..." : `${draftResultCount} منتج مطابق لاختياراتك`}</p>
                     </div>
 
                     <button onClick={() => setFiltersOpen(false)} className="flex h-9 w-9 items-center justify-center rounded-full border border-[#E9DEDA] bg-white text-[#554944]">
@@ -1601,17 +1902,39 @@ const ProductsPage = () => {
                         <p className="mt-0.5 text-[8px] text-[#AAA09A]">اختر القسم المناسب</p>
                       </div>
 
-                      {draftCategorySlug && <button onClick={() => setDraftParam("category", null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
+                      {draftCategorySlug && <button onClick={() => setDraftCategory(null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
                     </div>
 
                     <div className="flex flex-wrap gap-2">
-                      <button onClick={() => setDraftParam("category", null)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${!draftCategorySlug ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>الكل</button>
+                      <button onClick={() => setDraftCategory(null)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${!draftCategorySlug ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>الكل</button>
 
                       {categories.filter((category) => !category.parent_id).map((category) => (
-                        <button key={category.id} onClick={() => setDraftParam("category", category.slug)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${draftCategorySlug === category.slug ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
+                        <button key={category.id} onClick={() => setDraftCategory(category.slug)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${draftCategorySlug === category.slug ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
                       ))}
                     </div>
                   </div>
+
+                  {/* SHOE AUDIENCE */}
+                  {isDraftShoeCategory && (
+                    <div className="border-b border-[#F0E8E5] py-5">
+                      <div className="mb-3 flex items-center justify-between">
+                        <div>
+                          <p className="text-[12px] font-semibold text-[#403632]">نوع الأحذية</p>
+                          <p className="mt-0.5 text-[8px] text-[#AAA09A]">اختر رجالي أو نسائي</p>
+                        </div>
+
+                        {draftAudienceFilter !== "all" && <button onClick={() => setDraftAudience(null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <button onClick={() => setDraftAudience(null)} className={`min-h-[40px] rounded-xl border px-3 text-[9px] font-medium transition-all ${draftAudienceFilter === "all" ? "border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border-[#E4DAD6] bg-white text-[#655A55]"}`}>كل الأحذية</button>
+
+                        {(filterMetadataLoading ? AUDIENCE_OPTIONS : availableAudienceOptions).map((option) => (
+                          <button key={option.value} onClick={() => setDraftAudience(option.value)} className={`min-h-[40px] rounded-xl border px-3 text-[9px] font-medium transition-all ${draftAudienceFilter === option.value ? "border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border-[#E4DAD6] bg-white text-[#655A55]"}`}>{option.label}</button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
 
                   {/* BRANDS */}
                   <div className="border-b border-[#F0E8E5] py-5">
@@ -1621,15 +1944,15 @@ const ProductsPage = () => {
                         <p className="mt-0.5 text-[8px] text-[#AAA09A]">{brandsAvailable.length} ماركة متاحة</p>
                       </div>
 
-                      {draftBrandFilter !== "all" && <button onClick={() => setDraftParam("brand", null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
+                      {draftBrandFilter !== "all" && <button onClick={() => setDraftBrand(null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
                     </div>
 
                     <div className="max-h-[126px] overflow-y-auto overscroll-contain pr-[1px] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                       <div className="flex flex-wrap gap-2">
-                        <button onClick={() => setDraftParam("brand", null)} className={`rounded-full px-3.5 py-2 text-[9px] font-medium transition-all ${draftBrandFilter === "all" ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E6DCD8] bg-white text-[#6C615C]"}`}>جميع الماركات</button>
+                        <button onClick={() => setDraftBrand(null)} className={`rounded-full px-3.5 py-2 text-[9px] font-medium transition-all ${draftBrandFilter === "all" ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E6DCD8] bg-white text-[#6C615C]"}`}>جميع الماركات</button>
 
                         {brandsAvailable.map((brand) => (
-                          <button key={brand} onClick={() => setDraftParam("brand", brand)} className={`rounded-full px-3.5 py-2 text-[9px] font-medium transition-all ${draftBrandFilter === brand ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E6DCD8] bg-white text-[#6C615C]"}`}>{brand}</button>
+                          <button key={brand} onClick={() => setDraftBrand(brand)} className={`rounded-full px-3.5 py-2 text-[9px] font-medium transition-all ${draftBrandFilter === brand ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E6DCD8] bg-white text-[#6C615C]"}`}>{brand}</button>
                         ))}
                       </div>
                     </div>
@@ -1640,7 +1963,7 @@ const ProductsPage = () => {
                     <div className="mb-4 flex items-center justify-between">
                       <div>
                         <p className="text-[12px] font-semibold text-[#403632]">اللون</p>
-                        <p className="mt-0.5 text-[8px] text-[#AAA09A]">{metadataLoading ? "جاري تحميل الألوان" : `${colorsAvailable.length} لون متاح`}</p>
+                        <p className="mt-0.5 text-[8px] text-[#AAA09A]">{filterMetadataLoading ? "جاري تحميل الألوان" : `${colorsAvailable.length} لون متاح`}</p>
                       </div>
 
                       {draftColorFilter !== "all" && <button onClick={() => setDraftParam("color", null)} className="text-[8px] font-medium text-[#B76269]">مسح</button>}
@@ -1723,11 +2046,11 @@ const ProductsPage = () => {
                     </div>
 
                     <div className="rounded-[18px] border border-[#EAE0DC] bg-white px-4 py-5 shadow-[0_5px_18px_rgba(60,42,36,.025)]">
-                      <Slider value={[priceRange[0], priceRange[1]]} min={priceBounds.min} max={priceBounds.max} step={1} onValueChange={(values) => { if (values.length === 2) setPriceRange([values[0], values[1]]); }} onValueCommit={(values) => { if (values.length === 2) commitDraftPriceRange([values[0], values[1]]); }} />
+                      <Slider value={[priceRange[0], priceRange[1]]} min={filterPriceBounds.min} max={filterPriceBounds.max} step={1} onValueChange={(values) => { if (values.length === 2) setPriceRange([values[0], values[1]]); }} onValueCommit={(values) => { if (values.length === 2) commitDraftPriceRange([values[0], values[1]]); }} />
 
                       <div className="mt-4 flex items-center justify-between text-[8px] text-[#A19792]">
-                        <span>{priceBounds.min}</span>
-                        <span>{priceBounds.max}</span>
+                        <span>{filterPriceBounds.min}</span>
+                        <span>{filterPriceBounds.max}</span>
                       </div>
                     </div>
                   </div>
@@ -1766,7 +2089,7 @@ const ProductsPage = () => {
                     </button>
 
                     <button onClick={applyDraftFilters} className="h-[47px] rounded-[14px] bg-[#D4777D] text-[11px] font-semibold text-white shadow-[0_7px_22px_rgba(212,119,125,.23)]">
-                      {metadataLoading ? "تطبيق الفلاتر" : `عرض ${totalProductsCount} منتج`}
+                      {filterMetadataLoading ? "جاري التجهيز..." : `عرض ${draftResultCount} منتج`}
                     </button>
                   </div>
                 </div>

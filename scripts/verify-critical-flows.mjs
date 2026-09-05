@@ -102,9 +102,9 @@ const checks = [
   },
   {
     file: "src/pages/ProductsPage.tsx",
-    needles: ["catalog-live-filter-facets", "draftBrandFilter", "audienceScopedFacetMetadata", "نوع الأحذية", "audience.eq.women", "setDraftBrand", "setDraftAudience", "product={product} index={index}"],
+    needles: ["catalog-live-filter-facets", "draftBrandFilter", "audienceScopedFacetMetadata", "نوع الأحذية", "audience.eq.women", "setDraftBrand", "setDraftAudience", "getCategoryDescendantIds", "currentCategoryBranchLevels", "draftCategoryBranchLevels", "أقسام {parent.name_ar}", "product={product} index={index}"],
     forbidden: ["if (categorySlug)"],
-    message: "Catalog filters must keep shoe audiences separate, scope live facets correctly, and let reset actions clear the category too.",
+    message: "Catalog filters must show dynamic subcategories, scope products and live facets to the full category branch, and let reset actions clear the category too.",
   },
 ];
 

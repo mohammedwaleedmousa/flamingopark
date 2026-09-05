@@ -178,6 +178,58 @@ const matchesAudienceFilter = (audience: ProductAudience | null, filter: Audienc
   return audience === filter;
 };
 
+const getCategoryPath = (category: Category | null, categories: Category[]) => {
+  if (!category) return [];
+
+  const categoriesById = new Map(categories.map((item) => [item.id, item]));
+  const path: Category[] = [];
+  const visited = new Set<string>();
+  let current: Category | null = category;
+
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    path.unshift(current);
+    current = current.parent_id ? categoriesById.get(current.parent_id) || null : null;
+  }
+
+  return path;
+};
+
+const getCategoryBranchLevels = (category: Category | null, categories: Category[]) => {
+  return getCategoryPath(category, categories)
+    .map((parent) => ({
+      parent,
+      children: categories.filter((item) => item.parent_id === parent.id),
+    }))
+    .filter((level) => level.children.length > 0);
+};
+
+const getCategoryDescendantIds = (categoryId: string, categories: Category[]) => {
+  const childrenByParent = new Map<string, Category[]>();
+
+  categories.forEach((category) => {
+    if (!category.parent_id) return;
+    const siblings = childrenByParent.get(category.parent_id) || [];
+    siblings.push(category);
+    childrenByParent.set(category.parent_id, siblings);
+  });
+
+  const ids: string[] = [];
+  const queue = [categoryId];
+  const visited = new Set<string>();
+
+  while (queue.length) {
+    const id = queue.shift();
+    if (!id || visited.has(id)) continue;
+
+    visited.add(id);
+    ids.push(id);
+    (childrenByParent.get(id) || []).forEach((child) => queue.push(child.id));
+  }
+
+  return ids;
+};
+
 const isShoeCategoryScope = (slug: string, categories: Category[]) => {
   if (!slug) return false;
 
@@ -529,43 +581,45 @@ const ProductsPage = () => {
     return categories.find((category) => category.slug === categorySlug) || null;
   }, [categories, categorySlug]);
 
-  const subCategories = useMemo(() => {
-    if (!currentCategory) return [];
+  const rootCategories = useMemo(() => {
+    return categories.filter((category) => !category.parent_id);
+  }, [categories]);
 
-    return categories.filter((category) => category.parent_id === currentCategory.id);
+  const currentCategoryPath = useMemo(() => {
+    return getCategoryPath(currentCategory, categories);
+  }, [categories, currentCategory]);
+
+  const currentRootCategory = currentCategoryPath[0] || null;
+
+  const currentCategoryBranchLevels = useMemo(() => {
+    return getCategoryBranchLevels(currentCategory, categories);
   }, [categories, currentCategory]);
 
   const leafCategoryIds = useMemo(() => {
     if (!currentCategory) return null;
 
-    if (subCategories.length) {
-      return [
-        currentCategory.id,
-        ...subCategories.map((category) => category.id),
-      ];
-    }
-
-    return [currentCategory.id];
-  }, [currentCategory, subCategories]);
+    return getCategoryDescendantIds(currentCategory.id, categories);
+  }, [categories, currentCategory]);
 
   const draftCurrentCategory = useMemo(() => {
     return categories.find((category) => category.slug === draftCategorySlug) || null;
   }, [categories, draftCategorySlug]);
 
-  const draftSubCategories = useMemo(() => {
-    if (!draftCurrentCategory) return [];
+  const draftCategoryPath = useMemo(() => {
+    return getCategoryPath(draftCurrentCategory, categories);
+  }, [categories, draftCurrentCategory]);
 
-    return categories.filter((category) => category.parent_id === draftCurrentCategory.id);
+  const draftRootCategory = draftCategoryPath[0] || null;
+
+  const draftCategoryBranchLevels = useMemo(() => {
+    return getCategoryBranchLevels(draftCurrentCategory, categories);
   }, [categories, draftCurrentCategory]);
 
   const draftLeafCategoryIds = useMemo(() => {
     if (!draftCurrentCategory) return null;
 
-    return [
-      draftCurrentCategory.id,
-      ...draftSubCategories.map((category) => category.id),
-    ];
-  }, [draftCurrentCategory, draftSubCategories]);
+    return getCategoryDescendantIds(draftCurrentCategory.id, categories);
+  }, [categories, draftCurrentCategory]);
 
   const isDraftShoeCategory = useMemo(() => {
     return isShoeCategoryScope(draftCategorySlug, categories);
@@ -1681,10 +1735,24 @@ const ProductsPage = () => {
             <div className="flex items-center gap-2 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
               <button onClick={() => setParam("category", null)} className={`shrink-0 rounded-full px-4 py-[7px] text-[10px] font-medium transition-all md:text-[11px] ${!categorySlug ? "bg-[#D4777D] text-white shadow-[0_5px_16px_rgba(212,119,125,.19)]" : "border border-[#E9DFDB] bg-white text-[#6D625D]"}`}>الكل</button>
 
-              {categories.filter((category) => !category.parent_id).map((category) => (
-                <button key={category.id} onClick={() => setParam("category", category.slug)} className={`shrink-0 rounded-full px-4 py-[7px] text-[10px] font-medium transition-all md:text-[11px] ${categorySlug === category.slug ? "bg-[#D4777D] text-white shadow-[0_5px_16px_rgba(212,119,125,.19)]" : "border border-[#E9DFDB] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
+              {rootCategories.map((category) => (
+                <button key={category.id} onClick={() => setParam("category", category.slug)} className={`shrink-0 rounded-full px-4 py-[7px] text-[10px] font-medium transition-all md:text-[11px] ${currentRootCategory?.id === category.id ? "bg-[#D4777D] text-white shadow-[0_5px_16px_rgba(212,119,125,.19)]" : "border border-[#E9DFDB] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
               ))}
             </div>
+
+            {currentCategoryBranchLevels.map(({ parent, children }) => (
+              <div key={parent.id} className="mt-2 flex items-center gap-2 overflow-x-auto border-t border-[#F3ECE9] pt-2 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                <span className="shrink-0 text-[8px] font-medium text-[#A1948E]">أقسام {parent.name_ar}</span>
+
+                {children.map((category) => {
+                  const active = currentCategoryPath.some((item) => item.id === category.id);
+
+                  return (
+                    <button key={category.id} onClick={() => setParam("category", category.slug)} className={`shrink-0 rounded-full px-3.5 py-[6px] text-[9px] font-medium transition-all md:text-[10px] ${active ? "bg-[#F8E7E6] text-[#B95F66] ring-1 ring-[#D4777D]/35" : "border border-[#EDE3DF] bg-[#FCF9F7] text-[#71655F]"}`}>{category.name_ar}</button>
+                  );
+                })}
+              </div>
+            ))}
           </div>
         </section>
 
@@ -1893,10 +1961,26 @@ const ProductsPage = () => {
                     <div className="flex flex-wrap gap-2">
                       <button onClick={() => setDraftCategory(null)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${!draftCategorySlug ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>الكل</button>
 
-                      {categories.filter((category) => !category.parent_id).map((category) => (
-                        <button key={category.id} onClick={() => setDraftCategory(category.slug)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${draftCategorySlug === category.slug ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
+                      {rootCategories.map((category) => (
+                        <button key={category.id} onClick={() => setDraftCategory(category.slug)} className={`rounded-full px-3.5 py-2 text-[10px] font-medium transition-all ${draftRootCategory?.id === category.id ? "bg-[#D4777D] text-white shadow-[0_5px_14px_rgba(212,119,125,.17)]" : "border border-[#E6DCD8] bg-white text-[#6D625D]"}`}>{category.name_ar}</button>
                       ))}
                     </div>
+
+                    {draftCategoryBranchLevels.map(({ parent, children }) => (
+                      <div key={parent.id} className="mt-4 rounded-[14px] border border-[#EEE4E0] bg-[#FCF9F7] p-3">
+                        <p className="mb-2.5 text-[9px] font-semibold text-[#766963]">أقسام {parent.name_ar}</p>
+
+                        <div className="flex flex-wrap gap-2">
+                          {children.map((category) => {
+                            const active = draftCategoryPath.some((item) => item.id === category.id);
+
+                            return (
+                              <button key={category.id} onClick={() => setDraftCategory(category.slug)} className={`rounded-full px-3.5 py-2 text-[9px] font-medium transition-all ${active ? "border border-[#D4777D] bg-[#FAEDEC] text-[#B95F66]" : "border border-[#E6DCD8] bg-white text-[#6C615C]"}`}>{category.name_ar}</button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    ))}
                   </div>
 
                   {/* SHOE AUDIENCE */}

@@ -213,7 +213,7 @@ const AdminBannersPage = () => {
     setIsUploading(true);
 
     try {
-      const imageUrl = await uploadOptimizedImage(file, "banners", { maxSizeMB: 0.8, maxWidthOrHeight: 1600 });
+      const imageUrl = await uploadOptimizedImage(file, "banners", { maxSizeMB: 0.55, maxWidthOrHeight: 1600 });
 
       setFormData((current) => ({
         ...current,

@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -26,6 +26,7 @@ type HeroSlide = {
 const HeroSlider = () => {
   const swiperRef = useRef<SwiperInstance | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
+  const [loadedSlides, setLoadedSlides] = useState<Set<number>>(() => new Set([0]));
 
   const { data: managedSlides = [], isLoading } = useQuery({
     queryKey: ["home-hero-banners", "admin-only-v6-editorial-safe"],
@@ -65,6 +66,29 @@ const HeroSlider = () => {
   const slides = managedSlides;
   const heroImageWidth = typeof window !== "undefined" && window.innerWidth < 768 ? 640 : 1280;
 
+  useEffect(() => {
+    if (slides.length < 2) return;
+
+    const connection = (navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    }).connection;
+
+    if (connection?.saveData || /(^|-)2g$/i.test(String(connection?.effectiveType || ""))) {
+      return;
+    }
+
+    const timer = window.setTimeout(() => {
+      setLoadedSlides((current) => {
+        if (current.has(1)) return current;
+        const next = new Set(current);
+        next.add(1);
+        return next;
+      });
+    }, 2400);
+
+    return () => window.clearTimeout(timer);
+  }, [slides.length]);
+
   return (
     <section dir="rtl" className="w-full bg-background px-3 pt-3 md:px-6 md:pt-5">
       <div className="mx-auto w-full max-w-[1400px]">
@@ -73,7 +97,16 @@ const HeroSlider = () => {
             <Swiper
               modules={[Autoplay]}
               onSwiper={(swiper) => { swiperRef.current = swiper; }}
-              onSlideChange={(swiper) => { setActiveIndex(swiper.realIndex); }}
+              onSlideChange={(swiper) => {
+                const currentIndex = swiper.realIndex;
+                setActiveIndex(currentIndex);
+                setLoadedSlides((current) => {
+                  const next = new Set(current);
+                  next.add(currentIndex);
+                  if (slides.length > 1) next.add((currentIndex + 1) % slides.length);
+                  return next;
+                });
+              }}
               autoplay={{ delay: 5200, disableOnInteraction: false, pauseOnMouseEnter: true, waitForTransition: true }}
               speed={550}
               loop={slides.length > 1}
@@ -87,21 +120,23 @@ const HeroSlider = () => {
               {slides.map((slide, index) => (
                 <SwiperSlide key={`${slide.image}-${index}`}>
                   <div className="relative h-[230px] w-full overflow-hidden bg-muted/30 sm:h-[285px] md:h-[390px] lg:h-[450px]">
-                    <img
-                      src={optimizeImage(slide.image, heroImageWidth, index === 0 ? 68 : 64)}
-                      alt={slide.title || "Flamingo Park"}
-                      loading={index === 0 ? "eager" : "lazy"}
-                      decoding="async"
-                      fetchPriority={index === 0 ? "high" : "low"}
-                      width={heroImageWidth}
-                      height={900}
-                      onError={handleImageError}
-                      className="absolute inset-0 h-full w-full object-cover object-center"
-                      style={{
-                        objectPosition: `${slide.imagePositionX}% ${slide.imagePositionY}%`,
-                        transform: `scale(${slide.imageZoom})`,
-                      }}
-                    />
+                    {loadedSlides.has(index) && (
+                      <img
+                        src={optimizeImage(slide.image, heroImageWidth, index === 0 ? 68 : 64)}
+                        alt={slide.title || "Flamingo Park"}
+                        loading={index === 0 ? "eager" : "lazy"}
+                        decoding="async"
+                        fetchPriority={index === 0 ? "high" : "low"}
+                        width={heroImageWidth}
+                        height={900}
+                        onError={handleImageError}
+                        className="absolute inset-0 h-full w-full object-cover object-center"
+                        style={{
+                          objectPosition: `${slide.imagePositionX}% ${slide.imagePositionY}%`,
+                          transform: `scale(${slide.imageZoom})`,
+                        }}
+                      />
+                    )}
 
                     <div className="absolute inset-0 bg-gradient-to-l from-background/95 via-background/65 to-transparent sm:from-background/92 sm:via-background/52 md:via-background/42" />
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/[0.05] to-transparent" />

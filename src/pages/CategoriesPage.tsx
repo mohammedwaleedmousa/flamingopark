@@ -35,6 +35,24 @@ const FALLBACK: Record<string, string> = {
   beauty: "https://images.unsplash.com/photo-1522335789203-aaa2a87b6ed8?w=640&q=65",
 };
 
+const WOMEN_CATEGORY_SLUGS = [
+  "women-clothes",
+  "dresses",
+  "womens-sets",
+  "high",
+  "flat",
+  "other-watches",
+  "handbags",
+  "shoulderhandbag",
+  "shulderhandbag",
+  "necklaces",
+  "earring",
+  "bracelets",
+  "glasses",
+  "bucket",
+  "women-cloth",
+] as const;
+
 const normalizeCategorySlug = (value: string) => {
   const normalized = value.toLowerCase().trim().replace(/^(mens?|womens?|kids?)-/, "");
   if (normalized === "shose") return "shoes";
@@ -93,7 +111,7 @@ const CategoriesPage = () => {
   ========================================================= */
 
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ["categories-all-active"],
+    queryKey: ["categories-all-active-v2"],
     queryFn: async () => {
       const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order", { ascending: true });
 
@@ -113,6 +131,14 @@ const CategoriesPage = () => {
 
   const subCategories = useMemo(() => {
     if (!selectedParent) return [];
+
+    if (selectedParent.slug === "women") {
+      const order = new Map<string, number>(WOMEN_CATEGORY_SLUGS.map((slug, index) => [slug, index]));
+
+      return categories
+        .filter((category) => order.has(category.slug))
+        .sort((a, b) => (order.get(a.slug) ?? 999) - (order.get(b.slug) ?? 999));
+    }
 
     return categories.filter((category) => category.parent_id === selectedParent.id);
   }, [categories, selectedParent]);

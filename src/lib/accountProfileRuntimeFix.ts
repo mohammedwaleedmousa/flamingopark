@@ -29,9 +29,9 @@ const openCropper = (file: File, input: HTMLInputElement) => {
   const overlay = document.createElement("div");
   cropOverlay = overlay;
   overlay.dir = "rtl";
-  overlay.style.cssText = "position:fixed;inset:0;z-index:10000;background:rgba(30,24,22,.55);display:flex;align-items:flex-end;justify-content:center;padding:0;overscroll-behavior:contain;";
+  overlay.style.cssText = "position:fixed;inset:0;z-index:10000;background:rgba(30,24,22,.55);display:flex;align-items:flex-end;justify-content:center;padding:0;overscroll-behavior:none;touch-action:none;";
   overlay.innerHTML = `
-    <div style="width:100%;max-width:460px;background:#fffdfc;border-radius:24px 24px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 18px);box-shadow:0 -12px 40px rgba(50,35,30,.16)">
+    <div style="width:100%;max-width:460px;background:#fffdfc;border-radius:24px 24px 0 0;padding:16px 16px calc(env(safe-area-inset-bottom) + 18px);box-shadow:0 -12px 40px rgba(50,35,30,.16);touch-action:auto">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">
         <div><div style="font-size:15px;font-weight:700;color:#403230">ضبط الصورة</div><div style="font-size:10px;color:#9c8e89;margin-top:3px">حرّك الصورة وكبّرها ثم اضغط اعتماد</div></div>
         <button data-close type="button" style="width:32px;height:32px;border:1px solid #e8deda;border-radius:50%;background:white;font-size:18px">×</button>
@@ -39,7 +39,7 @@ const openCropper = (file: File, input: HTMLInputElement) => {
       <div data-stage style="position:relative;margin:0 auto;width:240px;height:240px;border-radius:50%;overflow:hidden;background:#eee5e2;border:3px solid white;box-shadow:inset 0 0 0 1px #e4ceca;touch-action:none">
         <img data-img draggable="false" src="${sourceUrl}" style="position:absolute;left:50%;top:50%;max-width:none;user-select:none;pointer-events:none;transform-origin:center center" />
       </div>
-      <div style="display:flex;align-items:center;gap:10px;margin-top:14px"><span>−</span><input data-zoom type="range" min="1" max="3" step="0.01" value="1" style="flex:1;accent-color:#d4777d"><span>+</span></div>
+      <div style="display:flex;align-items:center;gap:10px;margin-top:14px"><span>−</span><input data-zoom type="range" min="1" max="3" step="0.01" value="1" style="flex:1;accent-color:#d4777d;touch-action:pan-x"><span>+</span></div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:14px"><button data-reset type="button" style="height:42px;border:1px solid #e1d5d1;border-radius:12px;background:white;color:#756661;font-weight:600">إعادة ضبط</button><button data-confirm type="button" style="height:42px;border:0;border-radius:12px;background:#d4777d;color:white;font-weight:700">اعتماد الصورة</button></div>
     </div>`;
   document.body.appendChild(overlay);
@@ -81,19 +81,22 @@ const openCropper = (file: File, input: HTMLInputElement) => {
   const close = () => { URL.revokeObjectURL(sourceUrl); closeCropper(); };
   overlay.querySelector("[data-close]")?.addEventListener("click", close);
   overlay.addEventListener("click", (e) => { if (e.target === overlay) close(); });
+  overlay.addEventListener("touchmove", (e) => { if (e.target === overlay) e.preventDefault(); }, { passive: false });
   overlay.querySelector("[data-confirm]")?.addEventListener("click", async () => {
     const canvas = document.createElement("canvas");
-    canvas.width = 512; canvas.height = 512;
+    canvas.width = 256;
+    canvas.height = 256;
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
-    ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, 512, 512);
-    const factor = 512 / 240;
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, 256, 256);
+    const factor = 256 / 240;
     const drawW = img.naturalWidth * baseScale * zoom * factor;
     const drawH = img.naturalHeight * baseScale * zoom * factor;
-    const cx = 256 + offsetX * factor;
-    const cy = 256 + offsetY * factor;
+    const cx = 128 + offsetX * factor;
+    const cy = 128 + offsetY * factor;
     ctx.drawImage(img, cx - drawW / 2, cy - drawH / 2, drawW, drawH);
-    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", .88));
+    const blob = await new Promise<Blob | null>((resolve) => canvas.toBlob(resolve, "image/jpeg", 0.76));
     if (!blob) return;
     pendingAvatar = new File([blob], "avatar.jpg", { type: "image/jpeg", lastModified: Date.now() });
     if (previewUrl) URL.revokeObjectURL(previewUrl);
@@ -107,36 +110,9 @@ const openCropper = (file: File, input: HTMLInputElement) => {
   });
 };
 
-const normalizeAccountBody = () => {
-  if (!isAccount()) return;
-  // Avoid Safari viewport jumps caused by the legacy body-fixed/overflow lock.
-  if (document.body.dataset.accountScrollLocked === "true" || document.body.style.position === "fixed") {
-    const savedTop = Math.abs(parseInt(document.body.style.top || "0", 10)) || window.scrollY;
-    document.body.style.position = "";
-    document.body.style.top = "";
-    document.body.style.left = "";
-    document.body.style.right = "";
-    document.body.style.width = "";
-    document.body.style.touchAction = "";
-    delete document.body.dataset.accountScrollLocked;
-    window.requestAnimationFrame(() => window.scrollTo(0, savedTop));
-  }
-  if (document.body.style.overflow === "hidden") document.body.style.overflow = "";
-};
-
 export const installAccountProfileRuntimeFix = () => {
   if (installed || typeof window === "undefined") return;
   installed = true;
-
-  normalizeAccountBody();
-  let normalizing = false;
-  const observer = new MutationObserver(() => {
-    if (normalizing || !isAccount()) return;
-    normalizing = true;
-    normalizeAccountBody();
-    window.requestAnimationFrame(() => { normalizing = false; });
-  });
-  observer.observe(document.body, { attributes: true, attributeFilter: ["style", "data-account-scroll-locked"] });
 
   document.addEventListener("change", (event) => {
     const input = event.target as HTMLInputElement;
@@ -161,10 +137,11 @@ export const installAccountProfileRuntimeFix = () => {
     const oldText = submit?.textContent || "حفظ التغييرات";
     if (submit) { submit.disabled = true; submit.textContent = "جاري حفظ الصورة..."; }
     try {
-      const { data: authData, error: authError } = await supabase.auth.getUser();
-      if (authError || !authData.user) throw new Error("انتهت جلسة الدخول، سجّل الدخول مجددًا");
+      const { data: sessionData } = await supabase.auth.getSession();
+      const authUser = sessionData.session?.user;
+      if (!authUser) throw new Error("انتهت جلسة الدخول، سجّل الدخول مجددًا");
       const stored = JSON.parse(localStorage.getItem("customer") || "{}") as any;
-      const path = `avatars/${authData.user.id}/avatar-${Date.now()}.jpg`;
+      const path = `avatars/${authUser.id}/avatar-${Date.now()}.jpg`;
       const { error: uploadError } = await supabase.storage.from("uploads").upload(path, pendingAvatar, { upsert: false, cacheControl: "31536000", contentType: "image/jpeg" });
       if (uploadError) throw uploadError;
       const { data: publicData } = supabase.storage.from("uploads").getPublicUrl(path);
@@ -176,9 +153,10 @@ export const installAccountProfileRuntimeFix = () => {
       if (error) throw error;
       const fresh = Array.isArray(data) && data[0] ? data[0] : { ...stored, name, region, avatar_url: avatarUrl };
       localStorage.setItem("customer", JSON.stringify(fresh));
+      document.querySelectorAll<HTMLImageElement>("img[alt='معاينة الصورة'], img[alt='الصورة الشخصية']").forEach((image) => { image.src = avatarUrl; });
       addMessage(form, "تم حفظ الصورة بنجاح", true);
       pendingAvatar = null;
-      window.setTimeout(() => window.location.reload(), 250);
+      window.setTimeout(() => window.location.reload(), 180);
     } catch (error: any) {
       console.error("avatar upload failed", error);
       addMessage(form, `فشل رفع الصورة: ${error?.message || "حاول مرة أخرى"}`);

@@ -8,7 +8,7 @@ import { ArrowLeft } from "phosphor-react";
 
 import { supabase } from "@/integrations/supabase/client";
 import { isBannerCurrentlyVisible } from "@/lib/bannerSchedule";
-import { optimizeImage } from "@/lib/imageUrl";
+import { handleImageError, optimizeImage } from "@/lib/imageUrl";
 
 import "swiper/css";
 
@@ -63,9 +63,6 @@ const HeroSlider = () => {
     refetchOnReconnect: false,
   });
 
-  // Keep cached banners visible while React Query refreshes in the background.
-  // Previously the slider was deliberately emptied whenever isFetching=true,
-  // which caused the large blank hero area seen on mobile navigation/reloads.
   const slides = managedSlides;
   const heroImageWidth = typeof window !== "undefined" && window.innerWidth < 768 ? 760 : 1600;
 
@@ -96,13 +93,14 @@ const HeroSlider = () => {
                   <div className="relative h-[230px] w-full overflow-hidden bg-muted/30 sm:h-[285px] md:h-[390px] lg:h-[450px]">
                     {loadedSlides.has(index) && (
                       <img
-                        src={optimizeImage(slide.image, heroImageWidth, index === 0 ? 70 : 68)}
+                        src={index === 0 ? slide.image : optimizeImage(slide.image, heroImageWidth, 68)}
                         alt={slide.title || "Flamingo Park"}
                         loading={index === 0 ? "eager" : "lazy"}
                         decoding="async"
                         fetchPriority={index === 0 ? "high" : "auto"}
                         width={heroImageWidth}
                         height={900}
+                        onError={handleImageError}
                         className="absolute inset-0 h-full w-full object-cover object-center"
                         style={{
                           objectPosition: `${slide.imagePositionX}% ${slide.imagePositionY}%`,

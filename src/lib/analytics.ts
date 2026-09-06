@@ -90,6 +90,12 @@ type TrackPayload = {
 };
 
 export async function track(payload: TrackPayload): Promise<boolean> {
+  // Purchases must only be recorded through recordPurchaseAnalytics(), which verifies
+  // the order + tracking token server-side and is deduplicated by AnalyticsTracker.
+  // Keeping generic purchase events here would both fail storefront RLS persistence
+  // and can double-fire the GA purchase event from OrderConfirmationPage.
+  if (payload.event_type === "purchase") return false;
+
   let persisted = false;
 
   try {

@@ -1,3 +1,6 @@
+const SUPABASE_IMAGE_TRANSFORMATIONS_ENABLED =
+  String(import.meta.env.VITE_SUPABASE_IMAGE_TRANSFORMATIONS || "").toLowerCase() === "true";
+
 const getViewportAwareWidth = (requestedWidth: number) => {
   if (typeof window === "undefined") return requestedWidth;
 
@@ -16,7 +19,31 @@ const getViewportAwareWidth = (requestedWidth: number) => {
   return requestedWidth;
 };
 
-const buildOptimizedImageUrl = (url: string | null | undefined, width: number, quality: number, viewportAware: boolean): string => {
+const isSupabasePublicStorageUrl = (url: URL) =>
+  url.hostname.endsWith("supabase.co") && url.pathname.includes("/storage/v1/object/public/");
+
+const canTransformImage = (rawUrl: string | null | undefined) => {
+  if (!rawUrl?.trim()) return false;
+
+  try {
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://flamingoparkaden.com";
+    const url = new URL(rawUrl, baseUrl);
+
+    if (url.hostname.endsWith("unsplash.com")) return true;
+    if (isSupabasePublicStorageUrl(url)) return SUPABASE_IMAGE_TRANSFORMATIONS_ENABLED;
+
+    return false;
+  } catch {
+    return false;
+  }
+};
+
+const buildOptimizedImageUrl = (
+  url: string | null | undefined,
+  width: number,
+  quality: number,
+  viewportAware: boolean,
+): string => {
   if (!url || !url.trim()) return "/placeholder.svg";
 
   try {
@@ -33,25 +60,28 @@ const buildOptimizedImageUrl = (url: string | null | undefined, width: number, q
       return u.toString();
     }
 
-    if (u.hostname.endsWith("supabase.co") && u.pathname.includes("/storage/v1/object/public/")) {
+    if (isSupabasePublicStorageUrl(u)) {
+      // Flamingo currently runs on the Supabase Free plan, where Storage Image
+      // Transformations are unavailable. Going straight to the original object
+      // avoids a failed render/image request before the browser falls back.
+      if (!SUPABASE_IMAGE_TRANSFORMATIONS_ENABLED) return url;
+
       const colorVariantImage = u.pathname.includes("/uploads/color-variants/");
 
-      // ProductDetailPage asks for 1400px, while ProductCard already loads 640px.
-      // Reuse the exact 640/82 transformed URL so clicking a product can use the
-      // browser cache immediately instead of starting another large image request.
       if (viewportAware && colorVariantImage && width >= 1200) {
         optimizedWidth = 640;
         optimizedQuality = 82;
       }
 
-      // ProductDetailPage also preloads color images at 900px. Keep those light so
-      // they cannot compete with the primary image on slower mobile connections.
       if (viewportAware && colorVariantImage && width >= 700 && width < 1200) {
         optimizedWidth = Math.min(optimizedWidth, 360);
         optimizedQuality = Math.min(optimizedQuality, 76);
       }
 
-      u.pathname = u.pathname.replace("/storage/v1/object/public/", "/storage/v1/render/image/public/");
+      u.pathname = u.pathname.replace(
+        "/storage/v1/object/public/",
+        "/storage/v1/render/image/public/",
+      );
       u.searchParams.set("width", String(optimizedWidth));
       u.searchParams.set("quality", String(optimizedQuality));
       u.searchParams.set("resize", "contain");
@@ -64,20 +94,25 @@ const buildOptimizedImageUrl = (url: string | null | undefined, width: number, q
   }
 };
 
-export const optimizeImage = (url?: string | null, width = 800, quality = 82): string => buildOptimizedImageUrl(url, width, quality, true);
+export const optimizeImage = (url?: string | null, width = 800, quality = 82): string =>
+  buildOptimizedImageUrl(url, width, quality, true);
 
 export const createImageSrcSet = (
   url: string | null | undefined,
   widths: number[],
   quality = 82,
 ): string | undefined => {
-  if (!url?.trim()) return undefined;
+  if (!url?.trim() || !canTransformImage(url)) return undefined;
 
-  const candidates = Array.from(new Set(widths.filter((width) => Number.isFinite(width) && width > 0)))
-    .sort((a, b) => a - b);
+  const candidates = Array.from(
+    new Set(widths.filter((width) => Number.isFinite(width) && width > 0)),
+  ).sort((a, b) => a - b);
 
   if (candidates.length === 0) return undefined;
-  return candidates.map((width) => `${buildOptimizedImageUrl(url, width, quality, false)} ${width}w`).join(", ");
+
+  return candidates
+    .map((width) => `${buildOptimizedImageUrl(url, width, quality, false)} ${width}w`)
+    .join(", ");
 };
 
 export const handleImageError = (event: { currentTarget: HTMLImageElement }) => {
@@ -85,10 +120,15 @@ export const handleImageError = (event: { currentTarget: HTMLImageElement }) => 
 
   if (image.dataset.fallbackApplied === "1") return;
 
-  if (image.src.includes("/storage/v1/render/image/public/") && image.dataset.originalTried !== "1") {
+  if (
+    image.src.includes("/storage/v1/render/image/public/") &&
+    image.dataset.originalTried !== "1"
+  ) {
     image.dataset.originalTried = "1";
     image.removeAttribute("srcset");
-    image.src = image.src.replace("/storage/v1/render/image/public/", "/storage/v1/object/public/").split("?")[0];
+    image.src = image.src
+      .replace("/storage/v1/render/image/public/", "/storage/v1/object/public/")
+      .split("?")[0];
     return;
   }
 

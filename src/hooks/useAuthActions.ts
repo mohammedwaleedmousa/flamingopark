@@ -4,6 +4,7 @@ import { toast } from "@/hooks/use-toast";
 import { clearCustomerSession } from "@/lib/customerSession";
 import { useStore } from "@/store/useStore";
 import { useFavorites } from "@/hooks/useFavorites";
+import "@/lib/avatarUploadEnhancer";
 
 interface LogoutOptions { redirectTo?: string; successTitle?: string; onSuccess?: () => void }
 

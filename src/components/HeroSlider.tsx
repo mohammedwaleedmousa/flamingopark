@@ -28,7 +28,7 @@ const HeroSlider = () => {
   const [activeIndex, setActiveIndex] = useState(0);
   const [loadedSlides, setLoadedSlides] = useState<Set<number>>(() => new Set([0]));
 
-  const { data: managedSlides = [], isFetching } = useQuery({
+  const { data: managedSlides = [], isLoading } = useQuery({
     queryKey: ["home-hero-banners", "admin-only-v6-editorial-safe"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
@@ -56,13 +56,18 @@ const HeroSlider = () => {
           imagePositionY: Number(slide.image_position_y ?? 50),
         })) as HeroSlide[];
     },
-    staleTime: 0,
-    refetchOnMount: "always",
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
-  const slides = isFetching ? [] : managedSlides;
-  const heroImageWidth = typeof window !== "undefined" && window.innerWidth < 768 ? 900 : 1600;
+  // Keep cached banners visible while React Query refreshes in the background.
+  // Previously the slider was deliberately emptied whenever isFetching=true,
+  // which caused the large blank hero area seen on mobile navigation/reloads.
+  const slides = managedSlides;
+  const heroImageWidth = typeof window !== "undefined" && window.innerWidth < 768 ? 760 : 1600;
 
   return (
     <section dir="rtl" className="w-full bg-background px-3 pt-3 md:px-6 md:pt-5">
@@ -91,7 +96,7 @@ const HeroSlider = () => {
                   <div className="relative h-[230px] w-full overflow-hidden bg-muted/30 sm:h-[285px] md:h-[390px] lg:h-[450px]">
                     {loadedSlides.has(index) && (
                       <img
-                        src={optimizeImage(slide.image, heroImageWidth, 74)}
+                        src={optimizeImage(slide.image, heroImageWidth, index === 0 ? 70 : 68)}
                         alt={slide.title || "Flamingo Park"}
                         loading={index === 0 ? "eager" : "lazy"}
                         decoding="async"
@@ -139,10 +144,10 @@ const HeroSlider = () => {
               ))}
             </Swiper>
           ) : (
-            <div className="h-[230px] w-full bg-muted/30 sm:h-[285px] md:h-[390px] lg:h-[450px]" />
+            <div className="h-[230px] w-full bg-muted/30 sm:h-[285px] md:h-[390px] lg:h-[450px]" aria-busy={isLoading} />
           )}
 
-          {!isFetching && slides.length > 1 && (
+          {!isLoading && slides.length > 1 && (
             <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 md:bottom-4">
               {slides.map((_, index) => (
                 <button key={index} type="button" aria-label={`الانتقال إلى العرض ${index + 1}`} onClick={() => swiperRef.current?.slideToLoop(index)} className={`h-[3px] rounded-full transition-all duration-300 ${activeIndex === index ? "w-7 bg-[#B86168]" : "w-2.5 bg-white/65"}`} />

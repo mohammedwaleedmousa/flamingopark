@@ -56,7 +56,6 @@ const CategoryCarousel = ({ items, loading = false }: { items: FeaturedCategoryI
             </div>
             <h2 className="text-[16px] font-semibold tracking-[-0.02em] text-foreground md:text-[20px]">تسوق حسب القسم</h2>
           </div>
-
           <Link to="/categories" className="flex shrink-0 items-center gap-1 border-b border-border pb-0.5 text-[7px] font-medium text-[#A95B61] transition-opacity active:opacity-60 md:text-[8px]">
             عرض الكل
             <ArrowLeft className="h-3 w-3" strokeWidth={1.5} />
@@ -73,10 +72,10 @@ const CategoryCarousel = ({ items, loading = false }: { items: FeaturedCategoryI
                     <div className="mx-auto mt-1 h-1.5 w-7 animate-pulse rounded-full bg-muted/70" />
                   </div>
                 ))
-              : items.map((item) => (
+              : items.map((item, index) => (
                   <Link key={`${item.title}-${item.link}`} to={item.link} className="group block w-[78px] shrink-0 select-none [-webkit-tap-highlight-color:transparent] sm:w-[90px] md:w-[102px]">
                     <div className="aspect-square w-full overflow-hidden rounded-[15px] border border-border/60 bg-muted/40 md:rounded-[18px]">
-                      <img src={optimizeImage(item.image, 320, 82)} alt={item.title} loading="lazy" decoding="async" width={320} height={320} className="h-full w-full object-cover object-center" />
+                      <img src={optimizeImage(item.image, 240, 76)} alt={item.title} loading={index < 5 ? "eager" : "lazy"} decoding="async" fetchPriority={index < 2 ? "high" : "auto"} width={240} height={240} className="h-full w-full object-cover object-center" />
                     </div>
                     <div className="mt-1.5 text-center">
                       <p className="truncate text-[8px] font-semibold text-foreground md:text-[9px]">{item.title}</p>
@@ -102,41 +101,20 @@ const EditorialSection = ({ banner }: { banner: EditorialBanner | null }) => {
     <section className={`relative overflow-hidden ${hasImage ? "min-h-[360px] md:min-h-[470px]" : "bg-background px-4 py-11 md:py-20"}`}>
       {hasImage && (
         <>
-          <img
-            src={optimizeImage(banner!.image_url, 1600, 82)}
-            alt=""
-            loading="lazy"
-            decoding="async"
-            width={1600}
-            height={900}
-            className="absolute inset-0 h-full w-full object-cover"
-            style={{
-              objectPosition: `${Number(banner?.image_position_x ?? 50)}% ${Number(banner?.image_position_y ?? 50)}%`,
-              transform: `scale(${Number(banner?.image_zoom ?? 1)})`,
-            }}
-          />
+          <img src={optimizeImage(banner!.image_url, 1200, 78)} alt="" loading="lazy" decoding="async" width={1200} height={900} className="absolute inset-0 h-full w-full object-cover" style={{ objectPosition: `${Number(banner?.image_position_x ?? 50)}% ${Number(banner?.image_position_y ?? 50)}%`, transform: `scale(${Number(banner?.image_zoom ?? 1)})` }} />
           <div className="absolute inset-0 bg-black/35" />
           <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/10" />
         </>
       )}
-
       <div className={`relative z-10 mx-auto flex max-w-[850px] flex-col items-center justify-center px-4 text-center ${hasImage ? "min-h-[360px] py-12 md:min-h-[470px] md:py-16" : ""}`}>
         <div className="mx-auto mb-4 flex items-center justify-center gap-2">
           <span className={`h-px w-6 ${hasImage ? "bg-white/55" : "bg-border"}`} />
           <span className={`font-serif text-[6px] uppercase tracking-[0.24em] ${hasImage ? "text-white/85" : "text-[#B86168]"}`}>FLAMINGO EDIT</span>
           <span className={`h-px w-6 ${hasImage ? "bg-white/55" : "bg-border"}`} />
         </div>
-
-        <h2 className={`mx-auto max-w-[700px] whitespace-pre-line text-[21px] font-light leading-[1.8] tracking-[-0.025em] md:text-[36px] md:leading-[1.7] ${hasImage ? "text-white drop-shadow-sm" : "text-foreground"}`}>
-          {title}
-        </h2>
-
+        <h2 className={`mx-auto max-w-[700px] whitespace-pre-line text-[21px] font-light leading-[1.8] tracking-[-0.025em] md:text-[36px] md:leading-[1.7] ${hasImage ? "text-white drop-shadow-sm" : "text-foreground"}`}>{title}</h2>
         <p className={`mx-auto mt-4 max-w-[450px] text-[8px] leading-6 md:text-[10px] md:leading-7 ${hasImage ? "text-white/85" : "text-muted-foreground"}`}>{subtitle}</p>
-
-        <Link to={ctaLink} className={`mx-auto mt-5 inline-flex items-center gap-1.5 border-b pb-1 text-[7px] font-semibold md:text-[8px] ${hasImage ? "border-white/50 text-white" : "border-border text-[#A95B61]"}`}>
-          {ctaText}
-          <ArrowLeft className="h-3 w-3" strokeWidth={1.5} />
-        </Link>
+        <Link to={ctaLink} className={`mx-auto mt-5 inline-flex items-center gap-1.5 border-b pb-1 text-[7px] font-semibold md:text-[8px] ${hasImage ? "border-white/50 text-white" : "border-border text-[#A95B61]"}`}>{ctaText}<ArrowLeft className="h-3 w-3" strokeWidth={1.5} /></Link>
       </div>
     </section>
   );
@@ -146,38 +124,39 @@ const HomePage = () => {
   const { data: customerExperience } = useCustomerExperience();
   const showHomeSection = (section: string) => customerExperience?.homeSections[section] !== false;
 
+  // Intentionally use the exact same query key/data shape as CategoriesPage.
+  // The full category tree is small, so opening any category can reuse this cache instantly.
   const { data: categories = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ["categories-home-active-parents"],
+    queryKey: ["categories-all-active-v4"],
     queryFn: async () => {
-      const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).is("parent_id", null).order("sort_order", { ascending: true });
+      const { data, error } = await supabase.from("categories").select("id,slug,name,name_ar,parent_id,image_url,sort_order").eq("is_active", true).order("sort_order", { ascending: true });
       if (error) throw error;
       return data || [];
     },
-    staleTime: 1000 * 60 * 10,
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const { data: editorialBanner = null } = useQuery({
     queryKey: ["home-editorial-banner-v1"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("banners")
-        .select("image_url,title_ar,subtitle_ar,cta_text_ar,cta_link,image_zoom,image_position_x,image_position_y")
-        .eq("page_slug", "home-editorial")
-        .eq("is_active", true)
-        .maybeSingle();
-
+      const { data, error } = await (supabase as any).from("banners").select("image_url,title_ar,subtitle_ar,cta_text_ar,cta_link,image_zoom,image_position_x,image_position_y").eq("page_slug", "home-editorial").eq("is_active", true).maybeSingle();
       if (error) throw error;
       return (data || null) as EditorialBanner | null;
     },
-    staleTime: 0,
-    refetchOnMount: "always",
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   const featuredCategories = useMemo<FeaturedCategoryItem[]>(() => {
     return categories
-      .filter((category: any) => !isLingerieCategory(category))
+      .filter((category: any) => !category.parent_id && !isLingerieCategory(category))
       .map((category: any) => ({
         title: category.name_ar || category.name || category.slug,
         subtitle: category.name || category.name_ar || category.slug,
@@ -187,34 +166,20 @@ const HomePage = () => {
   }, [categories]);
 
   const brandsViewport = useNearViewport<HTMLDivElement>("120px");
-
-  const imageBanner = showHomeSection("services") ? (
-    <div className="bg-background">
-      <FlamingoServices />
-    </div>
-  ) : null;
-
+  const imageBanner = showHomeSection("services") ? <div className="bg-background"><FlamingoServices /></div> : null;
   const textBanner = showHomeSection("editorial") ? <EditorialSection banner={editorialBanner} /> : null;
 
   return (
     <div className="relative min-h-screen bg-background" dir="rtl">
-      <Navbar />
-      <CartDrawer />
-
+      <Navbar /><CartDrawer />
       <main className="overflow-hidden bg-background">
         {showHomeSection("hero") && <HeroSlider />}
-
         {showHomeSection("categories") && <CategoryCarousel items={featuredCategories} loading={categoriesLoading} />}
-
         {showHomeSection("brands") && (
-          <div ref={brandsViewport.ref} className="bg-background" style={{ minHeight: 92 }}>
-            <BrandsStrip enabled={brandsViewport.isNearViewport} />
-          </div>
+          <div ref={brandsViewport.ref} className="bg-background" style={{ minHeight: 92 }}><BrandsStrip enabled={brandsViewport.isNearViewport} /></div>
         )}
-
         <HomeManagedSections betweenSections={imageBanner} afterSections={textBanner} />
       </main>
-
       <Footer />
     </div>
   );

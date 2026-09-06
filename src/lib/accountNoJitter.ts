@@ -8,56 +8,51 @@ const hasEditSheet = () => {
 
 const installStyle = () => {
   if (document.getElementById("flamingo-account-no-jitter")) return;
+
   const style = document.createElement("style");
   style.id = "flamingo-account-no-jitter";
   style.textContent = `
-    html[data-flamingo-account="true"] body {
-      overflow: visible !important;
-      width: auto !important;
-      position: static !important;
-      top: auto !important;
-      left: auto !important;
-      right: auto !important;
-    }
-
-    html[data-flamingo-account="true"] body[data-account-scroll-locked="true"] {
-      overflow: visible !important;
-      position: static !important;
-      top: auto !important;
-      left: auto !important;
-      right: auto !important;
-      width: auto !important;
+    body {
+      scrollbar-gutter: stable;
     }
 
     @media (max-width: 767px) {
-      html[data-flamingo-account="true"] [data-account-edit-sheet] {
+      /* AccountPage applies overflow:hidden inline while its sheets are open.
+         Keep the document geometry unchanged on iOS Safari. */
+      body {
+        overflow: visible !important;
+        position: static !important;
+        top: auto !important;
+        left: auto !important;
+        right: auto !important;
+        width: auto !important;
+      }
+
+      /* Match the profile sheet from its permanent Tailwind classes. This CSS
+         already exists before React mounts the sheet, so Framer Motion never
+         gets a visible y:100% first frame on phones. */
+      div[class*="z-[90]"][class*="rounded-t-[26px]"][class*="bottom-0"] {
+        transform: none !important;
+        transition: none !important;
+        animation: none !important;
+      }
+
+      /* Same rule for the nested region picker. */
+      div[class*="z-[120]"][class*="rounded-t-[26px]"][class*="bottom-0"] {
         transform: none !important;
         transition: none !important;
         animation: none !important;
       }
     }
   `;
+
   document.head.appendChild(style);
-};
-
-const markAccount = () => {
-  if (isAccount()) document.documentElement.dataset.flamingoAccount = "true";
-  else delete document.documentElement.dataset.flamingoAccount;
-};
-
-const markEditSheet = () => {
-  if (!isAccount()) return;
-  document.querySelectorAll<HTMLElement>("form").forEach((form) => {
-    if (!form.textContent?.includes("حفظ التغييرات")) return;
-    const sheet = form.parentElement;
-    if (sheet) sheet.dataset.accountEditSheet = "1";
-  });
 };
 
 const preventBackgroundGesture = (event: TouchEvent) => {
   if (!hasEditSheet()) return;
   const target = event.target as HTMLElement | null;
-  if (target?.closest("[data-stage], input[type='range']")) return;
+  if (target?.closest("[data-stage], input[type='range'], input, textarea, button, [data-avatar-actions-menu]")) return;
   event.preventDefault();
 };
 
@@ -66,18 +61,7 @@ export const installAccountNoJitter = () => {
   installed = true;
 
   installStyle();
-  markAccount();
-  markEditSheet();
-
-  const observer = new MutationObserver(() => {
-    markAccount();
-    markEditSheet();
-  });
-  observer.observe(document.documentElement, { childList: true, subtree: true });
-
   document.addEventListener("touchmove", preventBackgroundGesture, { capture: true, passive: false });
-  window.addEventListener("popstate", markAccount);
-  window.addEventListener("pageshow", markAccount);
 };
 
 installAccountNoJitter();

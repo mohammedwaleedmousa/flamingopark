@@ -59,7 +59,6 @@ const MEN_CATEGORY_SLUGS = [
   "mens-watches",
   "handbags",
   "sandals",
-  "sports",
 ] as const;
 
 const normalizeCategorySlug = (value: string) => {

@@ -34,6 +34,14 @@ type EditorialBanner = {
   image_position_y: number | null;
 };
 
+const isLingerieCategory = (category: { slug?: string | null; name?: string | null; name_ar?: string | null }) => {
+  const value = `${category.slug || ""} ${category.name || ""} ${category.name_ar || ""}`
+    .toLowerCase()
+    .replace(/[أإآ]/g, "ا")
+    .replace(/\s+/g, " ");
+  return /lingerie|لانجري|لانجيري|لانجيرى|ملابس داخليه|ملابس داخلية/.test(value);
+};
+
 const CategoryCarousel = ({ items, loading = false }: { items: FeaturedCategoryItem[]; loading?: boolean }) => {
   if (!loading && items.length === 0) return null;
 
@@ -168,12 +176,14 @@ const HomePage = () => {
   });
 
   const featuredCategories = useMemo<FeaturedCategoryItem[]>(() => {
-    return categories.map((category: any) => ({
-      title: category.name_ar || category.name || category.slug,
-      subtitle: category.name || category.name_ar || category.slug,
-      image: category.image_url || "/placeholder.svg",
-      link: `/categories?parent=${category.slug}`,
-    }));
+    return categories
+      .filter((category: any) => !isLingerieCategory(category))
+      .map((category: any) => ({
+        title: category.name_ar || category.name || category.slug,
+        subtitle: category.name || category.name_ar || category.slug,
+        image: category.image_url || "/placeholder.svg",
+        link: `/categories?parent=${category.slug}`,
+      }));
   }, [categories]);
 
   const brandsViewport = useNearViewport<HTMLDivElement>("120px");

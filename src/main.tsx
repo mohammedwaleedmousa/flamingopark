@@ -4,6 +4,7 @@ import "./lib/accountInvoiceEnhancements";
 import "./lib/accountInvoiceRenderer";
 import "./lib/accountProfileRuntimeFix";
 import "./lib/accountAvatarActions";
+import "./lib/accountNoJitter";
 import "./lib/myOrdersInvoiceBridge";
 import "./lib/adminDashboardDomCompat";
 import "./lib/adminDashboardDrilldowns";

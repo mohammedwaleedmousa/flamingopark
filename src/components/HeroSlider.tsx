@@ -29,7 +29,7 @@ const HeroSlider = () => {
   const [loadedSlides, setLoadedSlides] = useState<Set<number>>(() => new Set([0]));
 
   const { data: managedSlides = [], isFetching } = useQuery({
-    queryKey: ["home-hero-banners", "admin-only-v5-scheduled"],
+    queryKey: ["home-hero-banners", "admin-only-v6-editorial-safe"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("banners")
@@ -42,6 +42,7 @@ const HeroSlider = () => {
       if (error) throw error;
 
       return (data || [])
+        .filter((slide: any) => String(slide.page_slug || "") !== "home-editorial")
         .filter((slide: any) => Boolean(String(slide.image_url || "").trim()) && isBannerCurrentlyVisible(slide))
         .slice(0, 3)
         .map((slide: any) => ({

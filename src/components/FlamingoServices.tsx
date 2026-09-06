@@ -8,12 +8,13 @@ import { optimizeImage } from "@/lib/imageUrl";
 
 const FlamingoServices = () => {
   const { data: banner } = useQuery({
-    queryKey: ["between-products-banner", "scheduled-v1"],
+    queryKey: ["between-products-banner", "scheduled-v2"],
     queryFn: async () => {
       const { data, error } = await (supabase as any)
         .from("banners")
         .select("title_ar,subtitle_ar,image_url,cta_text_ar,cta_link,image_zoom,image_position_x,image_position_y,starts_at,ends_at")
         .eq("title", "Between products banner")
+        .is("page_slug", null)
         .eq("is_active", true)
         .maybeSingle();
 

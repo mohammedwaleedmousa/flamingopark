@@ -146,8 +146,8 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
         }
 
         const url = await uploadOptimizedImage(file, 'color-variants', {
-          maxSizeMB: 1.1,
-          maxWidthOrHeight: 2000,
+          maxSizeMB: 0.65,
+          maxWidthOrHeight: 1800,
         });
 
         uploadedSlots[fileIdx] = url;

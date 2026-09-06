@@ -26,6 +26,7 @@ const syncAvatarImages = (url = "") => {
 const closeMenu = () => {
   actionMenu?.remove();
   actionMenu = null;
+
   if (outsideHandler) {
     document.removeEventListener("pointerdown", outsideHandler, true);
     outsideHandler = null;
@@ -39,8 +40,8 @@ const showAvatarActions = (form: HTMLFormElement, fileInput: HTMLInputElement, a
   const host = anchor.parentElement as HTMLElement | null;
   if (!host) return;
 
-  const previousPosition = host.style.position;
-  if (!previousPosition || previousPosition === "static") host.style.position = "relative";
+  // position:relative does not change layout; it only anchors the absolute menu.
+  if (getComputedStyle(host).position === "static") host.style.position = "relative";
 
   const menu = document.createElement("div");
   actionMenu = menu;
@@ -123,50 +124,49 @@ const showAvatarActions = (form: HTMLFormElement, fileInput: HTMLInputElement, a
   }, 0);
 };
 
-const enhanceEditSheet = () => {
-  if (!isAccount()) return;
+const findAvatarContext = (target: HTMLElement) => {
+  if (!isAccount()) return null;
 
-  document.querySelectorAll<HTMLFormElement>("form").forEach((form) => {
-    if (!form.textContent?.includes("حفظ التغييرات")) return;
+  const form = target.closest("form") as HTMLFormElement | null;
+  if (!form?.textContent?.includes("حفظ التغييرات")) return null;
 
-    form.style.maxHeight = "none";
-    form.style.overflow = "hidden";
-    form.style.overscrollBehavior = "none";
-    form.style.touchAction = "manipulation";
-    (form.style as any).webkitOverflowScrolling = "auto";
-    form.style.paddingBottom = "max(24px, env(safe-area-inset-bottom))";
+  const input = form.querySelector<HTMLInputElement>("input[type='file']");
+  if (!input) return null;
 
-    const input = form.querySelector<HTMLInputElement>("input[type='file']");
-    if (!input) return;
+  const image = form.querySelector<HTMLImageElement>("img[alt='معاينة الصورة']");
+  const holder = image?.parentElement || form.querySelector<HTMLElement>(".h-\\[82px\\].w-\\[82px\\]");
+  if (!holder || !(target === holder || holder.contains(target))) return null;
 
-    const avatar = form.querySelector<HTMLImageElement>("img[alt='معاينة الصورة']");
-    const holder = avatar?.parentElement || form.querySelector<HTMLElement>(".h-\\[82px\\].w-\\[82px\\]");
-    if (!holder || holder.dataset.avatarActionsReady === "1") return;
+  return { form, input, holder };
+};
 
-    holder.dataset.avatarActionsReady = "1";
-    holder.style.cursor = "pointer";
-    holder.setAttribute("role", "button");
-    holder.setAttribute("aria-label", "خيارات الصورة الشخصية");
+export const installAccountAvatarActions = () => {
+  if (installed || typeof window === "undefined" || typeof document === "undefined") return;
+  installed = true;
 
-    holder.addEventListener("click", (event) => {
+  // Event delegation avoids MutationObserver-driven style changes after the
+  // edit sheet paints, which were causing a second iOS Safari layout pass.
+  document.addEventListener(
+    "click",
+    (event) => {
+      const target = event.target as HTMLElement | null;
+      if (!target || target.closest("[data-avatar-actions-menu]")) return;
+
+      const context = findAvatarContext(target);
+      if (!context) return;
+
       event.preventDefault();
       event.stopPropagation();
+
       if (actionMenu) {
         closeMenu();
         return;
       }
-      showAvatarActions(form, input, holder);
-    });
-  });
-};
 
-export const installAccountAvatarActions = () => {
-  if (installed || typeof window === "undefined") return;
-  installed = true;
-
-  enhanceEditSheet();
-  const observer = new MutationObserver(enhanceEditSheet);
-  observer.observe(document.documentElement, { childList: true, subtree: true });
+      showAvatarActions(context.form, context.input, context.holder);
+    },
+    true,
+  );
 };
 
 installAccountAvatarActions();

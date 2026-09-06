@@ -1,7 +1,9 @@
 import { supabase } from "@/integrations/supabase/client";
 
 let installed = false;
-let actionSheet: HTMLDivElement | null = null;
+let actionMenu: HTMLDivElement | null = null;
+let outsideHandler: ((event: Event) => void) | null = null;
+
 const isAccount = () => window.location.pathname === "/account";
 
 const storedCustomer = () => {
@@ -21,64 +23,73 @@ const syncAvatarImages = (url = "") => {
     });
 };
 
-const closeSheet = () => {
-  actionSheet?.remove();
-  actionSheet = null;
+const closeMenu = () => {
+  actionMenu?.remove();
+  actionMenu = null;
+  if (outsideHandler) {
+    document.removeEventListener("pointerdown", outsideHandler, true);
+    outsideHandler = null;
+  }
 };
 
 const showAvatarActions = (form: HTMLFormElement, fileInput: HTMLInputElement, anchor: HTMLElement) => {
-  closeSheet();
+  closeMenu();
 
   const hasAvatar = Boolean(storedCustomer()?.avatar_url || form.querySelector("img[alt='معاينة الصورة']"));
-  const rect = anchor.getBoundingClientRect();
-  const viewportWidth = document.documentElement.clientWidth;
-  const viewportHeight = window.visualViewport?.height || document.documentElement.clientHeight;
-  const panelWidth = Math.min(270, Math.max(230, viewportWidth - 32));
-  const panelHeight = hasAvatar ? 142 : 93;
-  const desiredLeft = rect.left + rect.width / 2 - panelWidth / 2;
-  const left = Math.max(16, Math.min(viewportWidth - panelWidth - 16, desiredLeft));
-  const belowTop = rect.bottom + 8;
-  const aboveTop = rect.top - panelHeight - 8;
-  const top = belowTop + panelHeight <= viewportHeight - 12 ? belowTop : Math.max(12, aboveTop);
+  const host = anchor.parentElement as HTMLElement | null;
+  if (!host) return;
 
-  const sheet = document.createElement("div");
-  actionSheet = sheet;
-  sheet.dir = "rtl";
-  sheet.dataset.avatarActionsOverlay = "1";
-  sheet.style.cssText =
-    "position:fixed;inset:0;z-index:10050;background:rgba(28,23,21,.14);touch-action:none;overscroll-behavior:none;";
-  sheet.innerHTML = `
-    <div data-panel style="position:fixed;left:${left}px;top:${top}px;width:${panelWidth}px;overflow:hidden;border:1px solid #eee2de;border-radius:16px;background:#fff;box-shadow:0 12px 34px rgba(49,35,31,.18);touch-action:manipulation">
-      <button data-change type="button" style="display:block;width:100%;height:48px;border:0;background:#fff;color:#403230;font:600 14px inherit">تغيير الصورة</button>
-      ${hasAvatar ? '<div style="height:1px;background:#eee5e2"></div><button data-delete type="button" style="display:block;width:100%;height:48px;border:0;background:#fff;color:#c64f58;font:700 14px inherit">حذف الصورة الشخصية</button>' : ""}
-      <div style="height:1px;background:#eee5e2"></div>
-      <button data-cancel type="button" style="display:block;width:100%;height:44px;border:0;background:#fff;color:#7a6d68;font:600 13px inherit">إلغاء</button>
-    </div>`;
+  const previousPosition = host.style.position;
+  if (!previousPosition || previousPosition === "static") host.style.position = "relative";
 
-  document.body.appendChild(sheet);
+  const menu = document.createElement("div");
+  actionMenu = menu;
+  menu.dir = "rtl";
+  menu.dataset.avatarActionsMenu = "1";
+  menu.style.cssText = [
+    "position:absolute",
+    "z-index:10060",
+    "top:calc(100% + 8px)",
+    "left:50%",
+    "width:min(250px,calc(100vw - 40px))",
+    "transform:translateX(-50%)",
+    "overflow:hidden",
+    "border:1px solid #eee2de",
+    "border-radius:16px",
+    "background:#fff",
+    "box-shadow:0 12px 30px rgba(49,35,31,.16)",
+    "touch-action:manipulation",
+    "contain:layout paint style",
+  ].join(";");
 
-  sheet.addEventListener(
-    "touchmove",
-    (event) => {
-      if (event.target === sheet) event.preventDefault();
-    },
-    { passive: false },
-  );
+  menu.innerHTML = `
+    <button data-change type="button" style="display:block;width:100%;height:48px;border:0;background:#fff;color:#403230;font:600 14px inherit">تغيير الصورة</button>
+    ${hasAvatar ? '<div style="height:1px;background:#eee5e2"></div><button data-delete type="button" style="display:block;width:100%;height:48px;border:0;background:#fff;color:#c64f58;font:700 14px inherit">حذف الصورة الشخصية</button>' : ""}
+    <div style="height:1px;background:#eee5e2"></div>
+    <button data-cancel type="button" style="display:block;width:100%;height:44px;border:0;background:#fff;color:#7a6d68;font:600 13px inherit">إلغاء</button>
+  `;
 
-  sheet.querySelector("[data-cancel]")?.addEventListener("click", closeSheet);
-  sheet.addEventListener("click", (event) => {
-    if (event.target === sheet) closeSheet();
+  host.appendChild(menu);
+
+  menu.querySelector("[data-cancel]")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeMenu();
   });
 
-  sheet.querySelector("[data-change]")?.addEventListener("click", () => {
-    closeSheet();
+  menu.querySelector("[data-change]")?.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    closeMenu();
     fileInput.click();
   });
 
-  sheet.querySelector("[data-delete]")?.addEventListener("click", async () => {
+  menu.querySelector("[data-delete]")?.addEventListener("click", async (event) => {
+    event.preventDefault();
+    event.stopPropagation();
     if (!window.confirm("هل تريد حذف الصورة الشخصية؟")) return;
 
-    const button = sheet.querySelector<HTMLButtonElement>("[data-delete]");
+    const button = menu.querySelector<HTMLButtonElement>("[data-delete]");
     if (button) {
       button.disabled = true;
       button.textContent = "جاري الحذف...";
@@ -97,9 +108,19 @@ const showAvatarActions = (form: HTMLFormElement, fileInput: HTMLInputElement, a
     const fresh = Array.isArray(data) && data[0] ? data[0] : { ...current, avatar_url: null };
     localStorage.setItem("customer", JSON.stringify(fresh));
     syncAvatarImages("");
-    closeSheet();
+    closeMenu();
     window.location.reload();
   });
+
+  outsideHandler = (event: Event) => {
+    const target = event.target as Node | null;
+    if (!target || menu.contains(target) || anchor.contains(target)) return;
+    closeMenu();
+  };
+
+  window.setTimeout(() => {
+    if (outsideHandler) document.addEventListener("pointerdown", outsideHandler, true);
+  }, 0);
 };
 
 const enhanceEditSheet = () => {
@@ -124,13 +145,16 @@ const enhanceEditSheet = () => {
 
     holder.dataset.avatarActionsReady = "1";
     holder.style.cursor = "pointer";
-    holder.style.touchAction = "manipulation";
     holder.setAttribute("role", "button");
     holder.setAttribute("aria-label", "خيارات الصورة الشخصية");
 
     holder.addEventListener("click", (event) => {
       event.preventDefault();
       event.stopPropagation();
+      if (actionMenu) {
+        closeMenu();
+        return;
+      }
       showAvatarActions(form, input, holder);
     });
   });

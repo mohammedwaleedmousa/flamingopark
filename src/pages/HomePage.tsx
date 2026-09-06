@@ -23,6 +23,17 @@ type FeaturedCategoryItem = {
   link: string;
 };
 
+type EditorialBanner = {
+  image_url: string;
+  title_ar: string | null;
+  subtitle_ar: string | null;
+  cta_text_ar: string | null;
+  cta_link: string | null;
+  image_zoom: number | null;
+  image_position_x: number | null;
+  image_position_y: number | null;
+};
+
 const CategoryCarousel = ({ items, loading = false }: { items: FeaturedCategoryItem[]; loading?: boolean }) => {
   if (!loading && items.length === 0) return null;
 
@@ -72,26 +83,50 @@ const CategoryCarousel = ({ items, loading = false }: { items: FeaturedCategoryI
   );
 };
 
-const EditorialSection = () => {
+const EditorialSection = ({ banner }: { banner: EditorialBanner | null }) => {
+  const title = banner?.title_ar?.trim() || "الأناقة ليست ما ترتديه، بل ما يبقى في الذاكرة.";
+  const subtitle = banner?.subtitle_ar?.trim() || "مختارات منتقاة لمن يقدّر التفاصيل والجودة والتصميم الذي لا يحتاج إلى المبالغة.";
+  const ctaText = banner?.cta_text_ar?.trim() || "اكتشف المجموعة";
+  const ctaLink = banner?.cta_link?.trim() || "/products";
+  const hasImage = Boolean(banner?.image_url?.trim());
+
   return (
-    <section className="bg-background px-4 py-11 md:py-20">
-      <div className="mx-auto max-w-[850px] text-center">
+    <section className={`relative overflow-hidden ${hasImage ? "min-h-[360px] md:min-h-[470px]" : "bg-background px-4 py-11 md:py-20"}`}>
+      {hasImage && (
+        <>
+          <img
+            src={optimizeImage(banner!.image_url, 1600, 82)}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            width={1600}
+            height={900}
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{
+              objectPosition: `${Number(banner?.image_position_x ?? 50)}% ${Number(banner?.image_position_y ?? 50)}%`,
+              transform: `scale(${Number(banner?.image_zoom ?? 1)})`,
+            }}
+          />
+          <div className="absolute inset-0 bg-black/35" />
+          <div className="absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-black/10" />
+        </>
+      )}
+
+      <div className={`relative z-10 mx-auto flex max-w-[850px] flex-col items-center justify-center px-4 text-center ${hasImage ? "min-h-[360px] py-12 md:min-h-[470px] md:py-16" : ""}`}>
         <div className="mx-auto mb-4 flex items-center justify-center gap-2">
-          <span className="h-px w-6 bg-border" />
-          <span className="font-serif text-[6px] uppercase tracking-[0.24em] text-[#B86168]">FLAMINGO EDIT</span>
-          <span className="h-px w-6 bg-border" />
+          <span className={`h-px w-6 ${hasImage ? "bg-white/55" : "bg-border"}`} />
+          <span className={`font-serif text-[6px] uppercase tracking-[0.24em] ${hasImage ? "text-white/85" : "text-[#B86168]"}`}>FLAMINGO EDIT</span>
+          <span className={`h-px w-6 ${hasImage ? "bg-white/55" : "bg-border"}`} />
         </div>
 
-        <h2 className="mx-auto max-w-[700px] text-[21px] font-light leading-[1.8] tracking-[-0.025em] text-foreground md:text-[36px] md:leading-[1.7]">
-          الأناقة ليست ما ترتديه،
-          <br />
-          بل ما يبقى في الذاكرة.
+        <h2 className={`mx-auto max-w-[700px] whitespace-pre-line text-[21px] font-light leading-[1.8] tracking-[-0.025em] md:text-[36px] md:leading-[1.7] ${hasImage ? "text-white drop-shadow-sm" : "text-foreground"}`}>
+          {title}
         </h2>
 
-        <p className="mx-auto mt-4 max-w-[450px] text-[8px] leading-6 text-muted-foreground md:text-[10px] md:leading-7">مختارات منتقاة لمن يقدّر التفاصيل والجودة والتصميم الذي لا يحتاج إلى المبالغة.</p>
+        <p className={`mx-auto mt-4 max-w-[450px] text-[8px] leading-6 md:text-[10px] md:leading-7 ${hasImage ? "text-white/85" : "text-muted-foreground"}`}>{subtitle}</p>
 
-        <Link to="/products" className="mx-auto mt-5 inline-flex items-center gap-1.5 border-b border-border pb-1 text-[7px] font-semibold text-[#A95B61] md:text-[8px]">
-          اكتشف المجموعة
+        <Link to={ctaLink} className={`mx-auto mt-5 inline-flex items-center gap-1.5 border-b pb-1 text-[7px] font-semibold md:text-[8px] ${hasImage ? "border-white/50 text-white" : "border-border text-[#A95B61]"}`}>
+          {ctaText}
           <ArrowLeft className="h-3 w-3" strokeWidth={1.5} />
         </Link>
       </div>
@@ -114,6 +149,24 @@ const HomePage = () => {
     refetchOnWindowFocus: false,
   });
 
+  const { data: editorialBanner = null } = useQuery({
+    queryKey: ["home-editorial-banner-v1"],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("banners")
+        .select("image_url,title_ar,subtitle_ar,cta_text_ar,cta_link,image_zoom,image_position_x,image_position_y")
+        .eq("page_slug", "home-editorial")
+        .eq("is_active", true)
+        .maybeSingle();
+
+      if (error) throw error;
+      return (data || null) as EditorialBanner | null;
+    },
+    staleTime: 0,
+    refetchOnMount: "always",
+    refetchOnWindowFocus: false,
+  });
+
   const featuredCategories = useMemo<FeaturedCategoryItem[]>(() => {
     return categories.map((category: any) => ({
       title: category.name_ar || category.name || category.slug,
@@ -131,7 +184,7 @@ const HomePage = () => {
     </div>
   ) : null;
 
-  const textBanner = showHomeSection("editorial") ? <EditorialSection /> : null;
+  const textBanner = showHomeSection("editorial") ? <EditorialSection banner={editorialBanner} /> : null;
 
   return (
     <div className="relative min-h-screen bg-background" dir="rtl">

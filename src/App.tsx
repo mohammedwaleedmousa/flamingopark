@@ -14,6 +14,7 @@ import { ADMIN_BASE_PATH, ADMIN_ROUTE_UNLOCK_KEY, adminPath, legacyAdminPathToCu
 import { MotionConfig } from "framer-motion";
 import CustomerAssistantEntry from "@/components/CustomerAssistantEntry";
 import CustomerSessionSync from "@/components/CustomerSessionSync";
+import StorefrontRealtimeSync from "@/components/StorefrontRealtimeSync";
 import { ThemeProvider } from "next-themes";
 
 const isLazyImportError = (error: unknown) => {
@@ -235,6 +236,7 @@ const App = () => {
       <CustomerSessionSync />
       <DateRangeProvider>
         <BrowserRouter>
+          <StorefrontRealtimeSync />
           <ScrollToTop />
           <AnalyticsTracker />
           {SHOW_CUSTOMER_ASSISTANT && <CustomerAssistantEntry />}

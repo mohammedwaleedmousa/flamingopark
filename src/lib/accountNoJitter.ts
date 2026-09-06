@@ -12,14 +12,11 @@ const installStyle = () => {
   const style = document.createElement("style");
   style.id = "flamingo-account-no-jitter";
   style.textContent = `
-    body {
-      scrollbar-gutter: stable;
-    }
-
     @media (max-width: 767px) {
-      /* AccountPage applies overflow:hidden inline while its sheets are open.
-         Keep the document geometry unchanged on iOS Safari. */
-      body {
+      /* AccountPage writes overflow:hidden inline when this exact sheet exists.
+         :has() keeps the override scoped to the account sheet and is evaluated
+         by the browser in the same style pass, before any visible jump. */
+      body:has(div[class*="z-[90]"][class*="rounded-t-[26px]"][class*="bottom-0"]) {
         overflow: visible !important;
         position: static !important;
         top: auto !important;
@@ -28,16 +25,14 @@ const installStyle = () => {
         width: auto !important;
       }
 
-      /* Match the profile sheet from its permanent Tailwind classes. This CSS
-         already exists before React mounts the sheet, so Framer Motion never
-         gets a visible y:100% first frame on phones. */
+      /* Disable the mobile y:100% Framer Motion frame before first paint. */
       div[class*="z-[90]"][class*="rounded-t-[26px]"][class*="bottom-0"] {
         transform: none !important;
         transition: none !important;
         animation: none !important;
       }
 
-      /* Same rule for the nested region picker. */
+      /* Nested region picker uses the same bottom-sheet animation. */
       div[class*="z-[120]"][class*="rounded-t-[26px]"][class*="bottom-0"] {
         transform: none !important;
         transition: none !important;

@@ -63,7 +63,7 @@ const HeroSlider = () => {
   });
 
   const slides = managedSlides;
-  const heroImageWidth = typeof window !== "undefined" && window.innerWidth < 768 ? 720 : 1440;
+  const heroImageWidth = typeof window !== "undefined" && window.innerWidth < 768 ? 640 : 1280;
 
   return (
     <section dir="rtl" className="w-full bg-background px-3 pt-3 md:px-6 md:pt-5">
@@ -88,11 +88,11 @@ const HeroSlider = () => {
                 <SwiperSlide key={`${slide.image}-${index}`}>
                   <div className="relative h-[230px] w-full overflow-hidden bg-muted/30 sm:h-[285px] md:h-[390px] lg:h-[450px]">
                     <img
-                      src={optimizeImage(slide.image, heroImageWidth, index === 0 ? 70 : 66)}
+                      src={optimizeImage(slide.image, heroImageWidth, index === 0 ? 68 : 64)}
                       alt={slide.title || "Flamingo Park"}
-                      loading="eager"
+                      loading={index === 0 ? "eager" : "lazy"}
                       decoding="async"
-                      fetchPriority={index === 0 ? "high" : "auto"}
+                      fetchPriority={index === 0 ? "high" : "low"}
                       width={heroImageWidth}
                       height={900}
                       onError={handleImageError}

@@ -26,7 +26,6 @@ type HeroSlide = {
 const HeroSlider = () => {
   const swiperRef = useRef<SwiperInstance | null>(null);
   const [activeIndex, setActiveIndex] = useState(0);
-  const [loadedSlides, setLoadedSlides] = useState<Set<number>>(() => new Set([0]));
 
   const { data: managedSlides = [], isLoading } = useQuery({
     queryKey: ["home-hero-banners", "admin-only-v6-editorial-safe"],
@@ -64,7 +63,7 @@ const HeroSlider = () => {
   });
 
   const slides = managedSlides;
-  const heroImageWidth = typeof window !== "undefined" && window.innerWidth < 768 ? 760 : 1600;
+  const heroImageWidth = typeof window !== "undefined" && window.innerWidth < 768 ? 720 : 1440;
 
   return (
     <section dir="rtl" className="w-full bg-background px-3 pt-3 md:px-6 md:pt-5">
@@ -74,10 +73,7 @@ const HeroSlider = () => {
             <Swiper
               modules={[Autoplay]}
               onSwiper={(swiper) => { swiperRef.current = swiper; }}
-              onSlideChange={(swiper) => {
-                setActiveIndex(swiper.realIndex);
-                setLoadedSlides((current) => new Set(current).add(swiper.realIndex));
-              }}
+              onSlideChange={(swiper) => { setActiveIndex(swiper.realIndex); }}
               autoplay={{ delay: 5200, disableOnInteraction: false, pauseOnMouseEnter: true, waitForTransition: true }}
               speed={550}
               loop={slides.length > 1}
@@ -91,23 +87,21 @@ const HeroSlider = () => {
               {slides.map((slide, index) => (
                 <SwiperSlide key={`${slide.image}-${index}`}>
                   <div className="relative h-[230px] w-full overflow-hidden bg-muted/30 sm:h-[285px] md:h-[390px] lg:h-[450px]">
-                    {loadedSlides.has(index) && (
-                      <img
-                        src={index === 0 ? slide.image : optimizeImage(slide.image, heroImageWidth, 68)}
-                        alt={slide.title || "Flamingo Park"}
-                        loading={index === 0 ? "eager" : "lazy"}
-                        decoding="async"
-                        fetchPriority={index === 0 ? "high" : "auto"}
-                        width={heroImageWidth}
-                        height={900}
-                        onError={handleImageError}
-                        className="absolute inset-0 h-full w-full object-cover object-center"
-                        style={{
-                          objectPosition: `${slide.imagePositionX}% ${slide.imagePositionY}%`,
-                          transform: `scale(${slide.imageZoom})`,
-                        }}
-                      />
-                    )}
+                    <img
+                      src={optimizeImage(slide.image, heroImageWidth, index === 0 ? 70 : 66)}
+                      alt={slide.title || "Flamingo Park"}
+                      loading="eager"
+                      decoding="async"
+                      fetchPriority={index === 0 ? "high" : "auto"}
+                      width={heroImageWidth}
+                      height={900}
+                      onError={handleImageError}
+                      className="absolute inset-0 h-full w-full object-cover object-center"
+                      style={{
+                        objectPosition: `${slide.imagePositionX}% ${slide.imagePositionY}%`,
+                        transform: `scale(${slide.imageZoom})`,
+                      }}
+                    />
 
                     <div className="absolute inset-0 bg-gradient-to-l from-background/95 via-background/65 to-transparent sm:from-background/92 sm:via-background/52 md:via-background/42" />
                     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/[0.05] to-transparent" />

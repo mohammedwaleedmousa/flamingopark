@@ -2,7 +2,6 @@ import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, Minus, Plus, ShoppingBag, Tag, Trash2 } from "lucide-react";
 
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import CartDrawer from "@/components/CartDrawer";
 
 import { useStore } from "@/store/useStore";
@@ -14,7 +13,7 @@ const CartPage = () => {
   const navigate = useNavigate();
   const { data: content } = useSiteContent("cart_");
 
-  const { format: formatCurrency, symbol: currency } = useCurrency();
+  const { format: formatCurrency } = useCurrency();
   const total = getCartTotal();
 
   const totalQuantity = cart.reduce((sum, item) => sum + item.quantity, 0);
@@ -43,8 +42,7 @@ const CartPage = () => {
 
             {cart.length > 0 && (
               <div className="shrink-0 text-left">
-                <span className="block text-[18px] font-semibold leading-none text-[#B85F66] md:text-[22px]">{total.toFixed(0)}</span>
-                <span className="mt-1 block text-[6px] text-[#A99A94] md:text-[7px]">{currency}</span>
+                <span className="block text-[18px] font-semibold leading-none text-[#B85F66] md:text-[22px]">{formatCurrency(total)}</span>
               </div>
             )}
           </div>

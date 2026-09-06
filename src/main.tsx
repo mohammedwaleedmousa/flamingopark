@@ -2,7 +2,7 @@ import "./lib/cryptoCompat";
 import "./lib/customerAuthCompat";
 import "./lib/accountInvoiceEnhancements";
 import "./lib/accountInvoiceRenderer";
-import "./lib/accountStableScroll";
+import "./lib/accountProfileRuntimeFix";
 import "./lib/myOrdersInvoiceBridge";
 import "./lib/adminDashboardDomCompat";
 import "./lib/adminDashboardDrilldowns";

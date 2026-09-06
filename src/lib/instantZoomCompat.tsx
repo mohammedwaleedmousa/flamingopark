@@ -1,4 +1,4 @@
-import { createContext, useContext, useMemo, useRef, useState, type ReactNode, type TouchEvent, type WheelEvent } from "react";
+import { createContext, useContext, useRef, useState, type ReactNode, type TouchEvent, type WheelEvent } from "react";
 
 type TransformWrapperProps = {
   children: ReactNode | ((controls: Record<string, never>) => ReactNode);
@@ -23,10 +23,15 @@ type ZoomContextValue = {
   setPosition: (value: { x: number; y: number }) => void;
 };
 
+type TouchCollection = {
+  length: number;
+  [index: number]: { clientX: number; clientY: number };
+};
+
 const ZoomContext = createContext<ZoomContextValue | null>(null);
 
 const clamp = (value: number, min: number, max: number) => Math.min(max, Math.max(min, value));
-const distance = (touches: TouchList) => {
+const distance = (touches: TouchCollection) => {
   if (touches.length < 2) return 0;
   const dx = touches[0].clientX - touches[1].clientX;
   const dy = touches[0].clientY - touches[1].clientY;
@@ -45,7 +50,7 @@ export const TransformWrapper = ({ children, minScale = 1, maxScale = 4 }: Trans
     if (next <= safeMin + 0.001) setPosition({ x: 0, y: 0 });
   };
 
-  const context = useMemo<ZoomContextValue>(() => ({ minScale: safeMin, maxScale: safeMax, scale, setScale, position, setPosition }), [safeMin, safeMax, scale, position]);
+  const context: ZoomContextValue = { minScale: safeMin, maxScale: safeMax, scale, setScale, position, setPosition };
 
   return <ZoomContext.Provider value={context}>{typeof children === "function" ? children({}) : children}</ZoomContext.Provider>;
 };
@@ -124,9 +129,7 @@ export const TransformComponent = ({ children, wrapperClass = "", contentClass =
   };
 
   const onTouchEnd = () => {
-    if (scale <= minScale + 0.01) {
-      setScale(minScale);
-    }
+    if (scale <= minScale + 0.01) setScale(minScale);
     pinchStartDistance.current = 0;
     panStart.current = null;
   };

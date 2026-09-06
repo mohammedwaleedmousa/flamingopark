@@ -83,10 +83,18 @@ const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSect
     }));
   };
 
-  const collapse = (sectionId: string) => {
-    setVisibleCounts((current) => ({ ...current, [sectionId]: INITIAL_VISIBLE }));
+  const collapse = (sectionId: string, visibleCount: number) => {
+    const nextCount = Math.max(INITIAL_VISIBLE, visibleCount - LOAD_MORE_STEP);
+
+    setVisibleCounts((current) => ({ ...current, [sectionId]: nextCount }));
+
     window.requestAnimationFrame(() => {
-      document.getElementById(`home-section-${sectionId}`)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.requestAnimationFrame(() => {
+        document.getElementById(`home-section-${sectionId}-product-${nextCount - 1}`)?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+        });
+      });
     });
   };
 
@@ -116,7 +124,9 @@ const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSect
 
                 <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 md:grid-cols-4 md:gap-x-5 md:gap-y-7">
                   {visibleProducts.map((product, productIndex) => (
-                    <ProductCard key={product.id} product={product} index={sectionIndex * INITIAL_VISIBLE + productIndex} />
+                    <div key={product.id} id={`home-section-${section.id}-product-${productIndex}`}>
+                      <ProductCard product={product} index={sectionIndex * INITIAL_VISIBLE + productIndex} />
+                    </div>
                   ))}
                 </div>
 
@@ -130,7 +140,7 @@ const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSect
                     )}
 
                     {canCollapse && (
-                      <button type="button" onClick={() => collapse(section.id)} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-[#E7DDD9] bg-[#FFFDFC] px-5 text-[8px] font-semibold text-[#786863] transition-colors hover:bg-[#FFF7F5] md:h-11 md:px-7 md:text-[9px]">
+                      <button type="button" onClick={() => collapse(section.id, visibleCount)} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-[#E7DDD9] bg-[#FFFDFC] px-5 text-[8px] font-semibold text-[#786863] transition-colors hover:bg-[#FFF7F5] md:h-11 md:px-7 md:text-[9px]">
                         تقليص
                         <ChevronUp className="h-3.5 w-3.5" strokeWidth={1.5} />
                       </button>

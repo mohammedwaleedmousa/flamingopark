@@ -240,21 +240,60 @@ const ProductDetailPage = () => {
   }, [product, selectedColorIdx]);
 
   /* =========================================================
-     PRELOAD
+     LIGHTWEIGHT IDLE PRELOAD
   ========================================================= */
 
   useEffect(() => {
-    if (!product?.colorVariants?.length) return;
+    if (!product?.colorVariants?.length || product.colorVariants.length < 2) return;
 
-    product.colorVariants.slice(0, 5).forEach((color) => {
-      const firstImage = color.images?.[0];
+    const connection = (navigator as Navigator & {
+      connection?: { saveData?: boolean; effectiveType?: string };
+    }).connection;
 
-      if (!firstImage) return;
+    if (connection?.saveData || /(^|-)2g$/i.test(String(connection?.effectiveType || ""))) {
+      return;
+    }
 
+    const alternateImage = product.colorVariants
+      .slice(1)
+      .map((color) => color.images?.[0])
+      .find((image): image is string => Boolean(image));
+
+    if (!alternateImage) return;
+
+    let cancelled = false;
+    let timeoutId: number | null = null;
+    let idleId: number | null = null;
+
+    const preload = () => {
+      if (cancelled) return;
       const image = new Image();
-      image.src = optimizeImage(firstImage, 900, 84);
-    });
-  }, [product]);
+      image.decoding = "async";
+      image.src = optimizeImage(alternateImage, 640, 76);
+    };
+
+    const requestIdle = (window as Window & {
+      requestIdleCallback?: (callback: () => void, options?: { timeout: number }) => number;
+      cancelIdleCallback?: (id: number) => void;
+    }).requestIdleCallback;
+
+    if (requestIdle) {
+      idleId = requestIdle(preload, { timeout: 2500 });
+    } else {
+      timeoutId = window.setTimeout(preload, 1800);
+    }
+
+    return () => {
+      cancelled = true;
+
+      if (timeoutId !== null) window.clearTimeout(timeoutId);
+
+      if (idleId !== null) {
+        (window as Window & { cancelIdleCallback?: (id: number) => void })
+          .cancelIdleCallback?.(idleId);
+      }
+    };
+  }, [product?.id]);
 
   /* =========================================================
      RECENTLY VIEWED

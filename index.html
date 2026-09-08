@@ -86,6 +86,54 @@
       }
     </script>
 
+    <script id="refresh-scroll-restoration">
+      (() => {
+        const storageKey = () => `flamingo-scroll:${window.location.pathname}${window.location.search}`;
+        let saveFrame = 0;
+
+        const saveScrollPosition = () => {
+          const top = window.scrollY || document.documentElement.scrollTop || 0;
+          window.sessionStorage.setItem(storageKey(), String(top));
+        };
+
+        const scheduleSave = () => {
+          window.cancelAnimationFrame(saveFrame);
+          saveFrame = window.requestAnimationFrame(saveScrollPosition);
+        };
+
+        window.addEventListener("scroll", scheduleSave, { passive: true });
+        window.addEventListener("pagehide", saveScrollPosition);
+        window.addEventListener("beforeunload", saveScrollPosition);
+
+        const navigationEntry = window.performance.getEntriesByType("navigation")[0];
+        if (!navigationEntry || navigationEntry.type !== "reload") return;
+
+        const savedTop = Number(window.sessionStorage.getItem(storageKey()));
+        if (!Number.isFinite(savedTop) || savedTop <= 0) return;
+
+        if ("scrollRestoration" in window.history) {
+          window.history.scrollRestoration = "manual";
+        }
+
+        let attempts = 0;
+        const restoreScrollPosition = () => {
+          const maxTop = Math.max(0, document.documentElement.scrollHeight - window.innerHeight);
+          window.scrollTo({ top: Math.min(savedTop, maxTop), left: 0, behavior: "auto" });
+          attempts += 1;
+
+          if (attempts < 50 && Math.abs(window.scrollY - savedTop) > 4) {
+            window.setTimeout(restoreScrollPosition, 100);
+          }
+        };
+
+        window.addEventListener(
+          "load",
+          () => window.requestAnimationFrame(() => window.requestAnimationFrame(restoreScrollPosition)),
+          { once: true },
+        );
+      })();
+    </script>
+
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500&display=swap" rel="stylesheet" />

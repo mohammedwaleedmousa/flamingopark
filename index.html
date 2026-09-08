@@ -54,6 +54,35 @@
       }
     </style>
 
+    <script id="mobile-sheet-navigation-fallback">
+      (() => {
+        const routeFromSheet = (event) => {
+          const target = event.target;
+          if (!(target instanceof Element)) return;
+
+          const anchor = target.closest('a[href^="/"]');
+          if (!(anchor instanceof HTMLAnchorElement)) return;
+          if (!anchor.closest('[role="dialog"]')) return;
+
+          const url = new URL(anchor.href, window.location.href);
+          if (url.origin !== window.location.origin) return;
+
+          event.preventDefault();
+          event.stopPropagation();
+
+          if (`${url.pathname}${url.search}${url.hash}` === `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+            const closeButton = anchor.closest('[role="dialog"]')?.querySelector('button[aria-label*="إغلاق"], button[data-radix-dialog-close]');
+            if (closeButton instanceof HTMLElement) closeButton.click();
+            return;
+          }
+
+          window.location.assign(`${url.pathname}${url.search}${url.hash}`);
+        };
+
+        document.addEventListener('click', routeFromSheet, true);
+      })();
+    </script>
+
     <style id="product-detail-image-fit">
       img.h-full.w-full.select-none.object-cover.object-bottom {
         object-fit: contain !important;

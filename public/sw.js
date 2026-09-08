@@ -1,5 +1,5 @@
-const CACHE_NAME = "flamingopark-shell-v1";
-const APP_SHELL = ["/index.html", "/manifest.json", "/icons/flamingo.jpeg"];
+const CACHE_NAME = "flamingopark-shell-v2";
+const APP_SHELL = ["/index.html", "/manifest.json", "/icons/app-icon-1024.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.addAll(APP_SHELL)));

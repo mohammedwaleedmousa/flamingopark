@@ -42,8 +42,6 @@ const isHeicImage = (url: string) => {
 const ProductCard = ({ product, index = 2, badge, onQuickView }: ProductCardProps) => {
   const location = useLocation();
 
-  // Subscribe each card only to the tiny pieces of state it actually needs.
-  // This prevents every product card from re-rendering when the cart/favorites change.
   const isLiked = useFavorites((state) => state.favorites.some((favorite) => favorite.id === product.id));
   const toggleFavorite = useFavorites((state) => state.toggleFavorite);
   const addToCart = useStore((state) => state.addToCart);
@@ -155,6 +153,8 @@ const ProductCard = ({ product, index = 2, badge, onQuickView }: ProductCardProp
 
   const discount = Number(product.discount || 0);
   const cardBadge = badge || (discount > 0 ? `-${discount}%` : undefined);
+  const shouldEagerLoad = index < 8;
+  const shouldPrioritize = index < 4;
 
   return (
     <Link to={`/product/${product.slug}`} dir="rtl" data-catalog-product-id={product.id} onPointerEnter={() => void prefetchProductDetailPage()} onPointerDown={() => void prefetchProductDetailPage()} onFocus={() => void prefetchProductDetailPage()} onClick={() => saveCatalogScroll(`${location.pathname}${location.search}`, product.id)} className="block w-full min-w-0">
@@ -163,7 +163,7 @@ const ProductCard = ({ product, index = 2, badge, onQuickView }: ProductCardProp
           {!allImagesFailed && optimizedMainImage ? (
             <>
               {!imageLoaded && <div className="absolute inset-0 z-[2] animate-pulse bg-[#ECEAE8]" />}
-              <img key={`${product.id}-${imageIndex}-${mainImage}`} src={optimizedMainImage} srcSet={optimizedMainImageSrcSet} alt={product.nameAr || product.name || "منتج فلامنجو"} loading={index < 2 ? "eager" : "lazy"} decoding="async" fetchPriority={index === 0 ? "high" : "auto"} onLoad={handleMainImageLoad} onError={handleMainImageError} width={640} height={800} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className={`absolute inset-0 h-full w-full select-none transition-opacity duration-150 ${imageLoaded ? "opacity-100" : "opacity-0"} ${imageFit === "cover" ? "object-cover object-center" : "scale-[1.035] object-contain object-center"}`} />
+              <img key={`${product.id}-${imageIndex}-${mainImage}`} src={optimizedMainImage} srcSet={optimizedMainImageSrcSet} alt={product.nameAr || product.name || "منتج فلامنجو"} loading={shouldEagerLoad ? "eager" : "lazy"} decoding={shouldEagerLoad ? "sync" : "async"} fetchPriority={shouldPrioritize ? "high" : "auto"} onLoad={handleMainImageLoad} onError={handleMainImageError} width={640} height={800} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className={`absolute inset-0 h-full w-full select-none transition-opacity duration-150 ${imageLoaded ? "opacity-100" : "opacity-0"} ${imageFit === "cover" ? "object-cover object-center" : "scale-[1.035] object-contain object-center"}`} />
             </>
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#F1F0EE]">

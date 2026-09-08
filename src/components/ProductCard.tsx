@@ -8,7 +8,7 @@ import { toast } from "@/hooks/use-toast";
 import { useCurrency } from "@/lib/currency";
 import { useFavorites } from "@/hooks/useFavorites";
 import { saveCatalogScroll } from "@/lib/catalogScroll";
-import { createImageSrcSet, optimizeImage } from "@/lib/imageUrl";
+import { createImageSrcSet, optimizeCatalogImage } from "@/lib/imageUrl";
 import { prefetchProductDetailPage } from "@/lib/prefetchRoutes";
 
 type ColorVariant = {
@@ -38,6 +38,8 @@ const isHeicImage = (url: string) => {
   const cleanUrl = url.split("?")[0].toLowerCase();
   return cleanUrl.endsWith(".heic") || cleanUrl.endsWith(".heif");
 };
+
+const isCloudflareCatalogTransform = (url: string) => url.includes("/cdn-cgi/image/");
 
 const ProductCard = ({ product, index = 2, badge, onQuickView }: ProductCardProps) => {
   const location = useLocation();
@@ -70,10 +72,10 @@ const ProductCard = ({ product, index = 2, badge, onQuickView }: ProductCardProp
   const firstColorName = primaryColor?.name;
   const mainImage = imageCandidates[imageIndex];
 
-  const optimizedMainImage = useMemo(() => (mainImage ? optimizeImage(mainImage, 640, 82) : ""), [mainImage]);
+  const optimizedMainImage = useMemo(() => (mainImage ? optimizeCatalogImage(mainImage, 480, 78) : ""), [mainImage]);
   const optimizedMainImageSrcSet = useMemo(
-    () => createImageSrcSet(mainImage, [240, 360, 520, 640], 82),
-    [mainImage],
+    () => (mainImage && !optimizedMainImage.includes("/cdn-cgi/image/") ? createImageSrcSet(mainImage, [240, 360, 480], 78) : undefined),
+    [mainImage, optimizedMainImage],
   );
 
   useEffect(() => {
@@ -104,7 +106,16 @@ const ProductCard = ({ product, index = 2, badge, onQuickView }: ProductCardProp
     setImageLoaded(true);
   };
 
-  const handleMainImageError = (_event: SyntheticEvent<HTMLImageElement>) => {
+  const handleMainImageError = (event: SyntheticEvent<HTMLImageElement>) => {
+    const image = event.currentTarget;
+
+    if (mainImage && isCloudflareCatalogTransform(image.currentSrc || image.src) && image.dataset.originalTried !== "1") {
+      image.dataset.originalTried = "1";
+      image.removeAttribute("srcset");
+      image.src = mainImage;
+      return;
+    }
+
     if (imageIndex < imageCandidates.length - 1) {
       setImageIndex((current) => current + 1);
       return;
@@ -163,7 +174,7 @@ const ProductCard = ({ product, index = 2, badge, onQuickView }: ProductCardProp
           {!allImagesFailed && optimizedMainImage ? (
             <>
               {!imageLoaded && <div className="absolute inset-0 z-[2] animate-pulse bg-[#ECEAE8]" />}
-              <img key={`${product.id}-${imageIndex}-${mainImage}`} src={optimizedMainImage} srcSet={optimizedMainImageSrcSet} alt={product.nameAr || product.name || "منتج فلامنجو"} loading={shouldEagerLoad ? "eager" : "lazy"} decoding={shouldEagerLoad ? "sync" : "async"} fetchPriority={shouldPrioritize ? "high" : "auto"} onLoad={handleMainImageLoad} onError={handleMainImageError} width={640} height={800} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className={`absolute inset-0 h-full w-full select-none transition-opacity duration-150 ${imageLoaded ? "opacity-100" : "opacity-0"} ${imageFit === "cover" ? "object-cover object-center" : "scale-[1.035] object-contain object-center"}`} />
+              <img key={`${product.id}-${imageIndex}-${mainImage}`} src={optimizedMainImage} srcSet={optimizedMainImageSrcSet} alt={product.nameAr || product.name || "منتج فلامنجو"} loading={shouldEagerLoad ? "eager" : "lazy"} decoding="async" fetchPriority={shouldPrioritize ? "high" : "auto"} onLoad={handleMainImageLoad} onError={handleMainImageError} width={480} height={600} sizes="(max-width: 640px) 50vw, (max-width: 1024px) 33vw, 25vw" className={`absolute inset-0 h-full w-full select-none transition-opacity duration-150 ${imageLoaded ? "opacity-100" : "opacity-0"} ${imageFit === "cover" ? "object-cover object-center" : "scale-[1.035] object-contain object-center"}`} />
             </>
           ) : (
             <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#F1F0EE]">

@@ -2,7 +2,7 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Flamingo Park | فلامنجو بارك</title>
     <meta name="description" content="Flamingo Park - متجر إلكتروني فاخر للأزياء والإكسسوارات." />
     <meta property="og:title" content="Flamingo Park | فلامنجو بارك" />
@@ -26,49 +26,32 @@
     <link rel="icon" type="image/jpeg" href="/icons/flamingo.jpeg" />
     <link rel="stylesheet" href="/mobile-safe-area-fixes.css" />
 
-    <style id="app-like-touch-behavior">
-      html, body, #root { touch-action: pan-x pan-y; }
-      input, textarea, select { font-size: 16px !important; }
-    </style>
-
     <script id="disable-page-zoom">
       (() => {
         const prevent = (event) => event.preventDefault();
-        const opts = { passive: false, capture: true };
 
-        for (const type of ["gesturestart", "gesturechange", "gestureend"]) {
-          window.addEventListener(type, prevent, opts);
-          document.addEventListener(type, prevent, opts);
-        }
+        document.addEventListener("gesturestart", prevent, { passive: false });
+        document.addEventListener("gesturechange", prevent, { passive: false });
+        document.addEventListener("gestureend", prevent, { passive: false });
 
-        const stopMultiTouch = (event) => {
-          if (event.touches && event.touches.length > 1) event.preventDefault();
-        };
-        document.addEventListener("touchstart", stopMultiTouch, opts);
-        document.addEventListener("touchmove", stopMultiTouch, opts);
+        document.addEventListener(
+          "touchmove",
+          (event) => {
+            if (event.touches && event.touches.length > 1) event.preventDefault();
+          },
+          { passive: false },
+        );
 
         let lastTouchEnd = 0;
-        document.addEventListener("touchend", (event) => {
-          const now = Date.now();
-          if (now - lastTouchEnd < 350) event.preventDefault();
-          lastTouchEnd = now;
-        }, opts);
-
-        const lockViewport = () => {
-          const viewport = document.querySelector('meta[name="viewport"]');
-          if (viewport) viewport.setAttribute("content", "width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover");
-        };
-
-        lockViewport();
-        window.addEventListener("pageshow", lockViewport);
-        window.addEventListener("orientationchange", () => setTimeout(lockViewport, 50));
-        document.addEventListener("visibilitychange", () => {
-          if (!document.hidden) lockViewport();
-        });
-
-        const observer = new MutationObserver(lockViewport);
-        const viewport = document.querySelector('meta[name="viewport"]');
-        if (viewport) observer.observe(viewport, { attributes: true, attributeFilter: ["content"] });
+        document.addEventListener(
+          "touchend",
+          (event) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) event.preventDefault();
+            lastTouchEnd = now;
+          },
+          { passive: false },
+        );
       })();
     </script>
 

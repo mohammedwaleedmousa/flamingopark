@@ -38,7 +38,6 @@ const HeroSlider = () => {
         .neq("title", "Between products banner")
         .order("sort_order", { ascending: true })
         .limit(20);
-
       if (error) throw error;
 
       return (data || [])
@@ -64,18 +63,12 @@ const HeroSlider = () => {
   });
 
   const slides = managedSlides;
-  const heroImageWidth = typeof window !== "undefined" && window.innerWidth < 768 ? 640 : 1280;
+  const heroImageWidth = typeof window !== "undefined" && window.innerWidth < 768 ? 640 : 1600;
 
   useEffect(() => {
     if (slides.length < 2) return;
-
-    const connection = (navigator as Navigator & {
-      connection?: { saveData?: boolean; effectiveType?: string };
-    }).connection;
-
-    if (connection?.saveData || /(^|-)2g$/i.test(String(connection?.effectiveType || ""))) {
-      return;
-    }
+    const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    if (connection?.saveData || /(^|-)2g$/i.test(String(connection?.effectiveType || ""))) return;
 
     const timer = window.setTimeout(() => {
       setLoadedSlides((current) => {
@@ -85,14 +78,13 @@ const HeroSlider = () => {
         return next;
       });
     }, 2400);
-
     return () => window.clearTimeout(timer);
   }, [slides.length]);
 
   return (
-    <section dir="rtl" className="w-full bg-background px-3 pt-3 md:px-6 md:pt-5">
-      <div className="mx-auto w-full max-w-[1400px]">
-        <div className="relative overflow-hidden rounded-[18px] border border-border/60 bg-muted/30 md:rounded-[22px]">
+    <section dir="rtl" className="w-full bg-background px-3 pt-3 md:px-6 md:pt-6 lg:px-8">
+      <div className="mx-auto w-full max-w-[1500px]">
+        <div className="relative overflow-hidden rounded-[18px] border border-border/60 bg-muted/30 md:rounded-[28px] md:shadow-[0_24px_70px_rgba(74,48,43,0.08)]">
           {slides.length > 0 ? (
             <Swiper
               modules={[Autoplay]}
@@ -108,7 +100,7 @@ const HeroSlider = () => {
                 });
               }}
               autoplay={{ delay: 5200, disableOnInteraction: false, pauseOnMouseEnter: true, waitForTransition: true }}
-              speed={550}
+              speed={650}
               loop={slides.length > 1}
               loopPreventsSliding
               grabCursor
@@ -119,51 +111,47 @@ const HeroSlider = () => {
             >
               {slides.map((slide, index) => (
                 <SwiperSlide key={`${slide.image}-${index}`}>
-                  <div className="relative h-[230px] w-full overflow-hidden bg-muted/30 sm:h-[285px] md:h-[390px] lg:h-[450px]">
+                  <div className="relative h-[230px] w-full overflow-hidden bg-muted/30 sm:h-[285px] md:h-[430px] lg:h-[520px] xl:h-[560px]">
                     {loadedSlides.has(index) && (
                       <img
-                        src={optimizeImage(slide.image, heroImageWidth, index === 0 ? 68 : 64)}
+                        src={optimizeImage(slide.image, heroImageWidth, index === 0 ? 72 : 68)}
                         alt={slide.title || "Flamingo Park"}
                         loading={index === 0 ? "eager" : "lazy"}
                         decoding="async"
                         fetchPriority={index === 0 ? "high" : "low"}
                         width={heroImageWidth}
-                        height={900}
+                        height={980}
                         onError={handleImageError}
                         className="absolute inset-0 h-full w-full object-cover object-center"
-                        style={{
-                          objectPosition: `${slide.imagePositionX}% ${slide.imagePositionY}%`,
-                          transform: `scale(${slide.imageZoom})`,
-                        }}
+                        style={{ objectPosition: `${slide.imagePositionX}% ${slide.imagePositionY}%`, transform: `scale(${slide.imageZoom})` }}
                       />
                     )}
 
-                    <div className="absolute inset-0 bg-gradient-to-l from-background/95 via-background/65 to-transparent sm:from-background/92 sm:via-background/52 md:via-background/42" />
-                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-20 bg-gradient-to-t from-black/[0.05] to-transparent" />
+                    <div className="absolute inset-0 bg-gradient-to-l from-background/95 via-background/65 to-transparent sm:from-background/92 sm:via-background/52 md:from-[#FFFDFC]/96 md:via-[#FFFDFC]/60 md:to-transparent" />
+                    <div className="pointer-events-none absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/[0.06] to-transparent" />
 
                     <div className="absolute inset-0 flex items-center">
-                      <div className="w-[70%] px-5 sm:w-[60%] sm:px-8 md:w-[54%] md:px-12 lg:w-[50%] lg:px-16">
-                        <div className="mb-2 flex items-center gap-2 md:mb-3">
-                          <span className="h-[2px] w-5 rounded-full bg-[#D4777D]" />
-                          <span className="font-serif text-[6px] uppercase tracking-[0.22em] text-[#B86168] sm:text-[7px] md:text-[8px]">FLAMINGO EDIT</span>
+                      <div className="w-[70%] px-5 sm:w-[60%] sm:px-8 md:w-[48%] md:px-12 lg:w-[44%] lg:px-16 xl:px-20">
+                        <div className="mb-2 flex items-center gap-2 md:mb-4">
+                          <span className="h-[2px] w-5 rounded-full bg-[#D4777D] md:w-7" />
+                          <span className="font-serif text-[6px] uppercase tracking-[0.22em] text-[#B86168] sm:text-[7px] md:text-[9px]">FLAMINGO EDIT</span>
                         </div>
 
-                        <h1 className="line-clamp-2 max-w-[520px] text-[22px] font-semibold leading-[1.45] tracking-[-0.025em] text-foreground sm:text-[29px] md:text-[40px] lg:text-[48px]">{slide.title}</h1>
+                        <h1 className="line-clamp-2 max-w-[560px] text-[22px] font-semibold leading-[1.45] tracking-[-0.025em] text-foreground sm:text-[29px] md:text-[42px] lg:text-[52px] lg:leading-[1.35] xl:text-[58px]">{slide.title}</h1>
+                        {slide.desc && <p className="mt-2 line-clamp-2 max-w-[400px] text-[8px] leading-5 text-muted-foreground sm:text-[10px] sm:leading-6 md:mt-4 md:text-[12px] md:leading-7 lg:text-[13px] lg:leading-8">{slide.desc}</p>}
 
-                        {slide.desc && <p className="mt-2 line-clamp-2 max-w-[350px] text-[8px] leading-5 text-muted-foreground sm:text-[10px] sm:leading-6 md:mt-3 md:text-[12px] md:leading-7">{slide.desc}</p>}
-
-                        <Link to={slide.link} className="mt-4 inline-flex h-[36px] items-center justify-center gap-1.5 rounded-[9px] bg-[#D4777D] px-4 text-[8px] font-semibold text-white transition-colors hover:bg-[#C96B72] active:bg-[#B86168] sm:h-[40px] sm:px-5 sm:text-[9px] md:mt-5 md:h-[43px] md:px-6 md:text-[10px]">
-                          {slide.cta}
-                          <ArrowLeft size={13} weight="bold" />
-                        </Link>
+                        <div className="mt-4 flex items-center gap-3 md:mt-7">
+                          <Link to={slide.link} className="inline-flex h-[36px] items-center justify-center gap-1.5 rounded-[9px] bg-[#D4777D] px-4 text-[8px] font-semibold text-white transition-all hover:-translate-y-0.5 hover:bg-[#C96B72] hover:shadow-[0_10px_24px_rgba(201,107,114,0.24)] active:bg-[#B86168] sm:h-[40px] sm:px-5 sm:text-[9px] md:h-[46px] md:rounded-[12px] md:px-7 md:text-[10px]">
+                            {slide.cta}<ArrowLeft size={13} weight="bold" />
+                          </Link>
+                          <Link to="/products" className="hidden h-[46px] items-center border-b border-[#D9C6C1] px-1 text-[10px] font-medium text-[#6F5D58] transition-colors hover:text-[#B86168] md:inline-flex">تصفح المتجر</Link>
+                        </div>
                       </div>
                     </div>
 
                     {slides.length > 1 && (
-                      <div className="absolute bottom-4 left-4 z-20 hidden items-center gap-1.5 text-[7px] font-medium text-white/90 sm:flex md:bottom-5 md:left-6">
-                        <span>{String(activeIndex + 1).padStart(2, "0")}</span>
-                        <span className="h-px w-6 bg-white/60" />
-                        <span className="text-white/60">{String(slides.length).padStart(2, "0")}</span>
+                      <div className="absolute bottom-4 left-4 z-20 hidden items-center gap-1.5 text-[7px] font-medium text-white/90 sm:flex md:bottom-6 md:left-7 md:text-[8px]">
+                        <span>{String(activeIndex + 1).padStart(2, "0")}</span><span className="h-px w-8 bg-white/60" /><span className="text-white/60">{String(slides.length).padStart(2, "0")}</span>
                       </div>
                     )}
                   </div>
@@ -171,13 +159,13 @@ const HeroSlider = () => {
               ))}
             </Swiper>
           ) : (
-            <div className="h-[230px] w-full bg-muted/30 sm:h-[285px] md:h-[390px] lg:h-[450px]" aria-busy={isLoading} />
+            <div className="h-[230px] w-full bg-muted/30 sm:h-[285px] md:h-[430px] lg:h-[520px] xl:h-[560px]" aria-busy={isLoading} />
           )}
 
           {!isLoading && slides.length > 1 && (
-            <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 md:bottom-4">
+            <div className="absolute bottom-3 left-1/2 z-30 flex -translate-x-1/2 items-center gap-1.5 md:bottom-5">
               {slides.map((_, index) => (
-                <button key={index} type="button" aria-label={`الانتقال إلى العرض ${index + 1}`} onClick={() => swiperRef.current?.slideToLoop(index)} className={`h-[3px] rounded-full transition-all duration-300 ${activeIndex === index ? "w-7 bg-[#B86168]" : "w-2.5 bg-white/65"}`} />
+                <button key={index} type="button" aria-label={`الانتقال إلى العرض ${index + 1}`} onClick={() => swiperRef.current?.slideToLoop(index)} className={`h-[3px] rounded-full transition-all duration-300 ${activeIndex === index ? "w-7 bg-[#B86168] md:w-9" : "w-2.5 bg-white/65 md:w-3.5"}`} />
               ))}
             </div>
           )}

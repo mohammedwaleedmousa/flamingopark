@@ -116,14 +116,23 @@ const HomeManagedSections = ({ betweenSections, afterSections }: HomeManagedSect
       const hasMore = visibleCount < products.length;
       const canCollapse = visibleCount > INITIAL_VISIBLE;
       return <div key={section.id}>
-        <section id={`home-section-${section.id}`} className="scroll-mt-20 bg-background py-7 md:py-12">
-          <div className="mx-auto w-full max-w-[1400px] px-3 md:px-6">
-            <div className="mb-4 md:mb-7"><div className="min-w-0"><div className="mb-1 flex items-center gap-2"><span className="h-[2px] w-4 shrink-0 rounded-full bg-[#D4777D]" /><span className="truncate font-serif text-[6px] uppercase tracking-[0.2em] text-[#B86168] md:text-[7px]">{section.title || "FLAMINGO EDIT"}</span></div><h2 className="text-[17px] font-semibold tracking-[-0.025em] text-foreground md:text-[26px]">{section.title_ar}</h2></div></div>
-            <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 md:grid-cols-4 md:gap-x-5 md:gap-y-7">
-              {visibleProducts.map((product, productIndex) => <div key={product.id} id={`home-section-${section.id}-product-${productIndex}`}><ProductCard product={product} index={sectionIndex * INITIAL_VISIBLE + productIndex} /></div>)}
+        <section id={`home-section-${section.id}`} className={`scroll-mt-20 py-7 md:py-14 ${sectionIndex % 2 === 0 ? "bg-background" : "bg-[#FFF9F7]"}`}>
+          <div className="mx-auto w-full max-w-[1500px] px-3 md:px-6 lg:px-8">
+            <div className="mb-4 flex items-end justify-between gap-4 md:mb-8">
+              <div className="min-w-0">
+                <div className="mb-1 flex items-center gap-2 md:mb-2"><span className="h-[2px] w-4 shrink-0 rounded-full bg-[#D4777D] md:w-6" /><span className="truncate font-serif text-[6px] uppercase tracking-[0.2em] text-[#B86168] md:text-[8px]">{section.title || "FLAMINGO EDIT"}</span></div>
+                <h2 className="text-[17px] font-semibold tracking-[-0.025em] text-foreground md:text-[29px]">{section.title_ar}</h2>
+                <p className="mt-2 hidden text-[10px] text-[#9A8B86] md:block">مختارات منتقاة بعناية لتسهّل عليك اكتشاف الأفضل.</p>
+              </div>
+              {section.view_all_link && <a href={section.view_all_link} className="hidden items-center gap-2 border-b border-[#DFC9C4] pb-1 text-[10px] font-medium text-[#A95B61] md:flex">عرض المجموعة كاملة</a>}
             </div>
-            {(hasMore || canCollapse) && section.show_view_all !== false && <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5 md:mt-9">
-              {hasMore && <button type="button" onClick={() => loadMore(section.id, products.length)} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-[#D8B5B2] bg-white px-6 text-[8px] font-semibold text-[#A95B61] transition-colors hover:bg-[#FFF7F5] md:h-11 md:px-8 md:text-[9px]">عرض المزيد<ChevronDown className="h-3.5 w-3.5" strokeWidth={1.5} /></button>}
+
+            <div className="grid grid-cols-2 gap-x-2.5 gap-y-5 sm:gap-x-3 md:grid-cols-4 md:gap-x-5 md:gap-y-8 xl:gap-x-6 xl:gap-y-10">
+              {visibleProducts.map((product, productIndex) => <div key={product.id} id={`home-section-${section.id}-product-${productIndex}`} className="min-w-0"><ProductCard product={product} index={sectionIndex * INITIAL_VISIBLE + productIndex} /></div>)}
+            </div>
+
+            {(hasMore || canCollapse) && section.show_view_all !== false && <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5 md:mt-10">
+              {hasMore && <button type="button" onClick={() => loadMore(section.id, products.length)} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-[#D8B5B2] bg-white px-6 text-[8px] font-semibold text-[#A95B61] transition-all hover:-translate-y-0.5 hover:bg-[#FFF7F5] hover:shadow-[0_10px_24px_rgba(83,56,49,0.07)] md:h-11 md:px-8 md:text-[9px]">عرض المزيد<ChevronDown className="h-3.5 w-3.5" strokeWidth={1.5} /></button>}
               {canCollapse && <button type="button" onClick={() => collapse(section.id, visibleCount)} className="inline-flex h-10 items-center justify-center gap-1.5 rounded-full border border-[#E7DDD9] bg-[#FFFDFC] px-5 text-[8px] font-semibold text-[#786863] transition-colors hover:bg-[#FFF7F5] md:h-11 md:px-7 md:text-[9px]">تقليص<ChevronUp className="h-3.5 w-3.5" strokeWidth={1.5} /></button>}
               <span className="w-full text-center text-[7px] text-[#A0938E] md:text-[8px]">يظهر {visibleCount} من {products.length} منتج</span>
             </div>}

@@ -41,19 +41,18 @@
           },
           { passive: false },
         );
-
-        let lastTouchEnd = 0;
-        document.addEventListener(
-          "touchend",
-          (event) => {
-            const now = Date.now();
-            if (now - lastTouchEnd <= 300) event.preventDefault();
-            lastTouchEnd = now;
-          },
-          { passive: false },
-        );
       })();
     </script>
+
+    <style id="mobile-touch-navigation">
+      html,
+      body,
+      #root,
+      a,
+      button {
+        touch-action: manipulation;
+      }
+    </style>
 
     <style id="product-detail-image-fit">
       img.h-full.w-full.select-none.object-cover.object-bottom {

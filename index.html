@@ -26,6 +26,35 @@
     <link rel="icon" type="image/jpeg" href="/icons/flamingo.jpeg" />
     <link rel="stylesheet" href="/mobile-safe-area-fixes.css" />
 
+    <script id="disable-page-zoom">
+      (() => {
+        const prevent = (event) => event.preventDefault();
+
+        document.addEventListener("gesturestart", prevent, { passive: false });
+        document.addEventListener("gesturechange", prevent, { passive: false });
+        document.addEventListener("gestureend", prevent, { passive: false });
+
+        document.addEventListener(
+          "touchmove",
+          (event) => {
+            if (event.touches && event.touches.length > 1) event.preventDefault();
+          },
+          { passive: false },
+        );
+
+        let lastTouchEnd = 0;
+        document.addEventListener(
+          "touchend",
+          (event) => {
+            const now = Date.now();
+            if (now - lastTouchEnd <= 300) event.preventDefault();
+            lastTouchEnd = now;
+          },
+          { passive: false },
+        );
+      })();
+    </script>
+
     <style id="product-detail-image-fit">
       img.h-full.w-full.select-none.object-cover.object-bottom {
         object-fit: contain !important;

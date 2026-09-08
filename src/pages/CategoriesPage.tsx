@@ -144,7 +144,7 @@ const CategoriesPage = () => {
 
   const subCategories = useMemo(() => {
     if (!selectedParent) return [];
-    const audienceSlugs = selectedParent.slug === "women" ? WOMEN_CATEGORY_SLUGS : selectedParent.slug === "men" ? MEN_CATEGORY_SLUGS : null;
+    const audienceSlugs: readonly string[] | null = selectedParent.slug === "women" ? WOMEN_CATEGORY_SLUGS : selectedParent.slug === "men" ? MEN_CATEGORY_SLUGS : null;
     if (audienceSlugs) {
       const order = new Map<string, number>(audienceSlugs.map((slug, index) => [slug, index]));
       const matches = categories.filter((category) => order.has(category.slug));

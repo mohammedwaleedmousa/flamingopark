@@ -1,8 +1,10 @@
 {
   "name": "فلامنجو بارك | ماركات عالمية",
   "short_name": "Flamingo",
+  "id": "/home",
   "description": "اكتشف أرقى الماركات العالمية والقطع المختارة من فلامنجو بارك",
   "start_url": "/home",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#FFFDFC",
   "theme_color": "#D4777D",

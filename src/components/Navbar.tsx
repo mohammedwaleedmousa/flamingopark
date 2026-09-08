@@ -143,6 +143,8 @@ const Navbar = () => {
     { label: "العروض", to: "/seasonal-offers" },
     { label: "وصل حديثاً", to: "/new-arrivals" },
     { label: "الأكثر مبيعاً", to: "/best-sellers" },
+    { label: "معلومات المتجر", to: "/store-info" },
+    { label: "باركود المتجر", to: "/qr-code" },
   ];
 
   useEffect(() => {

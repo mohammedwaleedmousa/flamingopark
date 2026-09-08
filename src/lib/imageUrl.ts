@@ -1,6 +1,8 @@
 const SUPABASE_IMAGE_TRANSFORMATIONS_ENABLED =
   String(import.meta.env.VITE_SUPABASE_IMAGE_TRANSFORMATIONS || "").toLowerCase() === "true";
 
+const FLAMINGO_IMAGE_ZONE = "https://flamingoparkaden.com";
+
 const getViewportAwareWidth = (requestedWidth: number) => {
   if (typeof window === "undefined") return requestedWidth;
 
@@ -26,7 +28,7 @@ const canTransformImage = (rawUrl: string | null | undefined) => {
   if (!rawUrl?.trim()) return false;
 
   try {
-    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://flamingoparkaden.com";
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : FLAMINGO_IMAGE_ZONE;
     const url = new URL(rawUrl, baseUrl);
 
     if (url.hostname.endsWith("unsplash.com")) return true;
@@ -47,7 +49,7 @@ const buildOptimizedImageUrl = (
   if (!url || !url.trim()) return "/placeholder.svg";
 
   try {
-    const baseUrl = typeof window !== "undefined" ? window.location.origin : "https://flamingoparkaden.com";
+    const baseUrl = typeof window !== "undefined" ? window.location.origin : FLAMINGO_IMAGE_ZONE;
     const u = new URL(url, baseUrl);
     let optimizedWidth = viewportAware ? getViewportAwareWidth(width) : width;
     let optimizedQuality = quality;
@@ -61,9 +63,6 @@ const buildOptimizedImageUrl = (
     }
 
     if (isSupabasePublicStorageUrl(u)) {
-      // Flamingo currently runs on the Supabase Free plan, where Storage Image
-      // Transformations are unavailable. Going straight to the original object
-      // avoids a failed render/image request before the browser falls back.
       if (!SUPABASE_IMAGE_TRANSFORMATIONS_ENABLED) return url;
 
       const colorVariantImage = u.pathname.includes("/uploads/color-variants/");
@@ -89,6 +88,26 @@ const buildOptimizedImageUrl = (
     }
 
     return url;
+  } catch {
+    return url;
+  }
+};
+
+export const optimizeCatalogImage = (
+  url?: string | null,
+  width = 480,
+  quality = 78,
+): string => {
+  if (!url?.trim()) return "/placeholder.svg";
+
+  try {
+    const parsed = new URL(url, FLAMINGO_IMAGE_ZONE);
+    if (!isSupabasePublicStorageUrl(parsed)) return optimizeImage(url, width, quality);
+
+    const safeWidth = Math.max(240, Math.min(640, Math.round(width)));
+    const safeQuality = Math.max(60, Math.min(85, Math.round(quality)));
+    const options = `width=${safeWidth},quality=${safeQuality},format=auto,fit=scale-down,metadata=none`;
+    return `${FLAMINGO_IMAGE_ZONE}/cdn-cgi/image/${options}/${parsed.toString()}`;
   } catch {
     return url;
   }

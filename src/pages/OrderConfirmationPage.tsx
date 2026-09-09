@@ -46,6 +46,9 @@ interface OrderData {
   deliveryFee: number;
   discountAmount?: number;
   couponCode?: string | null;
+  referralCode?: string | null;
+  referralExpiresAt?: string | null;
+  discountSource?: string | null;
   total: number;
   paymentMethod: string;
   paymentMethodName?: string;
@@ -137,7 +140,7 @@ const OrderConfirmationPage = () => {
     const absoluteTrackingUrl = typeof window !== "undefined" ? `${window.location.origin}${trackingUrl}` : trackingUrl;
     const region = orderData.selectedRegion ? `\nمنطقة الاستلام: ${orderData.selectedRegion}` : "";
 
-    return `فاتورة Flamingo Park\nرقم الطلب: ${orderData.orderNumber}\nالعميل: ${orderData.customerName}\nالهاتف: ${orderData.customerPhone}\n\nالمنتجات:\n${items}${remaining}\n\nشركة التوصيل: ${orderData.deliveryCompany}\nطريقة الدفع: ${paymentLabel}${region}\nرسوم التوصيل: ${fmt(orderData.deliveryFee)} ${currency}\nالإجمالي: ${fmt(orderData.total)} ${currency}\n\nتتبع الطلب:\n${absoluteTrackingUrl}`;
+    const referralLine = orderData.referralCode ? `\n\nكود هديتك: ${orderData.referralCode}\nخصم 10% لشخص تعرفه - صالح لمدة 48 ساعة` : "";\n\n    return `فاتورة Flamingo Park\nرقم الطلب: ${orderData.orderNumber}\nالعميل: ${orderData.customerName}\nالهاتف: ${orderData.customerPhone}\n\nالمنتجات:\n${items}${remaining}\n\nشركة التوصيل: ${orderData.deliveryCompany}\nطريقة الدفع: ${paymentLabel}${region}\nرسوم التوصيل: ${fmt(orderData.deliveryFee)} ${currency}\nالإجمالي: ${fmt(orderData.total)} ${currency}${referralLine}\n\nتتبع الطلب:\n${absoluteTrackingUrl}`;
   };
 
   const openWhatsApp = () => {
@@ -321,6 +324,21 @@ const OrderConfirmationPage = () => {
                   </div>
                 )}
               </div>
+
+              {orderData.referralCode && (
+                <div className="mt-4 rounded-[10px] border border-[#F0D8D5] bg-[#FFF7F6] px-3 py-3 print:border-[#E7D4D1]">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="text-[7px] font-semibold text-[#6A5651]">كود خصم هدية 10%</p>
+                      <p className="mt-1 text-[5px] leading-4 text-[#9A8580]">أرسله لشخص تعرفه. صالح لمدة 48 ساعة فقط، ويُستخدم مرة واحدة لكل عميل.</p>
+                    </div>
+                    <button type="button" onClick={() => navigator.clipboard.writeText(orderData.referralCode || "")} className="rounded-[7px] border border-[#E7C9C5] bg-white px-2.5 py-1.5 font-mono text-[7px] font-semibold text-[#B86168] print:border-0 print:bg-transparent">
+                      {orderData.referralCode}
+                    </button>
+                  </div>
+                  {orderData.referralExpiresAt && <p className="mt-1.5 text-[5px] text-[#A6908B]">ينتهي: {new Date(orderData.referralExpiresAt).toLocaleString("ar")}</p>}
+                </div>
+              )}
 
               <div className="mt-4 flex items-end justify-between border-t border-[#E8DFDB] pt-4">
                 <div><p className="text-[8px] font-semibold text-[#514540]">الإجمالي</p><p className="mt-0.5 text-[5px] text-[#A99C97]">الإجمالي النهائي للطلب</p></div>

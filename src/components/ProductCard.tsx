@@ -164,8 +164,10 @@ const ProductCard = ({ product, index = 2, badge, onQuickView }: ProductCardProp
 
   const discount = Number(product.discount || 0);
   const cardBadge = badge || (discount > 0 ? `-${discount}%` : undefined);
-  const shouldEagerLoad = index < 8;
-  const shouldPrioritize = index < 4;
+  const isMobileViewport = typeof window !== "undefined" && window.innerWidth <= 767;
+  const eagerImageLimit = isMobileViewport ? 2 : 4;
+  const shouldEagerLoad = index < eagerImageLimit;
+  const shouldPrioritize = index < 2;
 
   return (
     <Link to={`/product/${product.slug}`} dir="rtl" data-catalog-product-id={product.id} onPointerEnter={() => void prefetchProductDetailPage()} onPointerDown={() => void prefetchProductDetailPage()} onFocus={() => void prefetchProductDetailPage()} onClick={() => saveCatalogScroll(`${location.pathname}${location.search}`, product.id)} className="block w-full min-w-0">

@@ -33,8 +33,31 @@ const HeroSlider = () => {
     if (slides.length < 2) return;
     const connection = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
     if (connection?.saveData || /(^|-)2g$/i.test(String(connection?.effectiveType || ""))) return;
-    const timer = window.setTimeout(() => setLoadedSlides((current) => { if (current.has(1)) return current; const next = new Set(current); next.add(1); return next; }), 2400);
-    return () => window.clearTimeout(timer);
+
+    // Warm the next banner shortly after the first paint so swiping/autoplay never lands on a blank slide.
+    const nextTimer = window.setTimeout(() => {
+      setLoadedSlides((current) => {
+        if (current.has(1)) return current;
+        const next = new Set(current);
+        next.add(1);
+        return next;
+      });
+    }, 350);
+
+    // Prepare the third banner after the critical first/second images have had a head start.
+    const thirdTimer = slides.length > 2 ? window.setTimeout(() => {
+      setLoadedSlides((current) => {
+        if (current.has(2)) return current;
+        const next = new Set(current);
+        next.add(2);
+        return next;
+      });
+    }, 1400) : undefined;
+
+    return () => {
+      window.clearTimeout(nextTimer);
+      if (thirdTimer !== undefined) window.clearTimeout(thirdTimer);
+    };
   }, [slides.length]);
 
   return (
@@ -46,7 +69,7 @@ const HeroSlider = () => {
               {slides.map((slide, index) => (
                 <SwiperSlide key={`${slide.image}-${index}`}>
                   <div className="relative h-[230px] w-full overflow-hidden bg-muted/30 sm:h-[285px] md:h-[500px] lg:h-[560px] xl:h-[620px] 2xl:h-[660px]">
-                    {loadedSlides.has(index) && <img src={optimizeImage(slide.image, heroImageWidth, index === 0 ? 78 : 72)} alt={slide.title || "Flamingo Park"} loading={index === 0 ? "eager" : "lazy"} decoding="async" fetchPriority={index === 0 ? "high" : "low"} width={heroImageWidth} height={1000} onError={handleImageError} className="absolute inset-0 h-full w-full object-cover object-center" style={{ objectPosition: `${slide.imagePositionX}% ${slide.imagePositionY}%`, transform: `scale(${slide.imageZoom})` }} />}
+                    {loadedSlides.has(index) && <img src={optimizeImage(slide.image, heroImageWidth, index === 0 ? 78 : 72)} alt={slide.title || "Flamingo Park"} loading={index < 2 ? "eager" : "lazy"} decoding="async" fetchPriority={index === 0 ? "high" : index === 1 ? "auto" : "low"} width={heroImageWidth} height={1000} onError={handleImageError} className="absolute inset-0 h-full w-full object-cover object-center" style={{ objectPosition: `${slide.imagePositionX}% ${slide.imagePositionY}%`, transform: `scale(${slide.imageZoom})` }} />}
                     <div className="absolute inset-0 bg-gradient-to-l from-background/95 via-background/65 to-transparent sm:from-background/92 sm:via-background/52 md:bg-[linear-gradient(90deg,rgba(20,15,14,.08)_0%,rgba(20,15,14,.04)_38%,rgba(255,253,252,.15)_52%,rgba(255,253,252,.88)_76%,rgba(255,253,252,.98)_100%)]" />
                     <div className="absolute inset-x-0 bottom-0 h-28 bg-gradient-to-t from-black/[0.08] to-transparent md:h-40" />
                     <div className="absolute inset-0 flex items-center">

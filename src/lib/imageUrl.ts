@@ -104,11 +104,10 @@ export const optimizeCatalogImage = (
     const parsed = new URL(url, FLAMINGO_IMAGE_ZONE);
     if (!isSupabasePublicStorageUrl(parsed)) return optimizeImage(url, width, quality);
 
-    // Use the original public Supabase image unless Supabase transformations are explicitly enabled.
-    // This avoids storefront-wide failures when Cloudflare Image Resizing is unavailable for the zone.
-    if (!SUPABASE_IMAGE_TRANSFORMATIONS_ENABLED) return url;
-
-    return optimizeImage(url, Math.max(240, Math.min(640, Math.round(width))), Math.max(60, Math.min(85, Math.round(quality))));
+    const safeWidth = Math.max(240, Math.min(640, Math.round(width)));
+    const safeQuality = Math.max(60, Math.min(85, Math.round(quality)));
+    const options = `width=${safeWidth},quality=${safeQuality},format=auto,fit=scale-down,metadata=none`;
+    return `${FLAMINGO_IMAGE_ZONE}/cdn-cgi/image/${options}/${parsed.toString()}`;
   } catch {
     return url;
   }

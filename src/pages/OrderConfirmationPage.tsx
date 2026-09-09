@@ -140,7 +140,9 @@ const OrderConfirmationPage = () => {
     const absoluteTrackingUrl = typeof window !== "undefined" ? `${window.location.origin}${trackingUrl}` : trackingUrl;
     const region = orderData.selectedRegion ? `\nمنطقة الاستلام: ${orderData.selectedRegion}` : "";
 
-    const referralLine = orderData.referralCode ? `\n\nكود هديتك: ${orderData.referralCode}\nخصم 10% لشخص تعرفه - صالح لمدة 48 ساعة` : "";\n\n    return `فاتورة Flamingo Park\nرقم الطلب: ${orderData.orderNumber}\nالعميل: ${orderData.customerName}\nالهاتف: ${orderData.customerPhone}\n\nالمنتجات:\n${items}${remaining}\n\nشركة التوصيل: ${orderData.deliveryCompany}\nطريقة الدفع: ${paymentLabel}${region}\nرسوم التوصيل: ${fmt(orderData.deliveryFee)} ${currency}\nالإجمالي: ${fmt(orderData.total)} ${currency}${referralLine}\n\nتتبع الطلب:\n${absoluteTrackingUrl}`;
+    const referralLine = orderData.referralCode ? `\n\nكود هديتك: ${orderData.referralCode}\nخصم 10% لشخص تعرفه - صالح لمدة 48 ساعة` : "";
+
+    return `فاتورة Flamingo Park\nرقم الطلب: ${orderData.orderNumber}\nالعميل: ${orderData.customerName}\nالهاتف: ${orderData.customerPhone}\n\nالمنتجات:\n${items}${remaining}\n\nشركة التوصيل: ${orderData.deliveryCompany}\nطريقة الدفع: ${paymentLabel}${region}\nرسوم التوصيل: ${fmt(orderData.deliveryFee)} ${currency}\nالإجمالي: ${fmt(orderData.total)} ${currency}${referralLine}\n\nتتبع الطلب:\n${absoluteTrackingUrl}`;
   };
 
   const openWhatsApp = () => {

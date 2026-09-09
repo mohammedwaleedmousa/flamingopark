@@ -27,6 +27,14 @@
     backdrop-filter: none !important;
   }
 
+  /* Keep the mobile homepage visually continuous instead of alternating section tones. */
+  main.overflow-hidden.bg-background,
+  main.overflow-hidden.bg-background > section,
+  main.overflow-hidden.bg-background > div,
+  main.overflow-hidden.bg-background > div > section {
+    background-color: #ffffff !important;
+  }
+
   /*
    * ProductDetailPage uses react-zoom-pan-pinch around the hero image.
    * Keep the wrapper sized to the product gallery on phones, but do not

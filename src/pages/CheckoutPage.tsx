@@ -325,7 +325,7 @@ const CheckoutPage = () => {
     const normalized = couponCode.trim().toUpperCase();
     if (!normalized) { toast({ title: "أدخل كود الخصم", variant: "destructive" }); return; }
     try {
-      const { data, error } = await (supabase as any).rpc("validate_customer_coupon", { p_code: normalized });
+      const { data, error } = await (supabase as any).rpc("validate_checkout_coupon", { p_code: normalized, p_customer_phone: normalizeCheckoutPhone(String(customer?.phone || formData.phone || "").trim()) });
       if (error) throw error;
       if (!data?.valid) { setDiscountAmount(0); setAppliedCoupon(null); toast({ title: "الكود غير صالح", description: "كود الخصم غير موجود أو غير فعال.", variant: "destructive" }); return; }
       const value = Number(data.value) || 0;
@@ -359,7 +359,7 @@ const CheckoutPage = () => {
   const createSecureOrder = async (items: unknown[]) => {
     const normalizedCustomerPhone = normalizeCheckoutPhone(String(customer?.phone || formData.phone || "").trim());
     const orderCountry = orderCountryFromPhone(normalizedCustomerPhone);
-    const { data, error } = await (supabase as any).rpc("create_secure_order_v2", {
+    const { data, error } = await (supabase as any).rpc("create_secure_order_v3", {
       p_customer_name: String(customer?.name || formData.name || "").trim(),
       p_customer_phone: normalizedCustomerPhone,
       p_customer_address: formData.address.trim(),
@@ -424,7 +424,7 @@ const CheckoutPage = () => {
       const createdOrder = await createSecureOrder(validation.data);
       const regionData = codRegions.find((region) => region.id === selectedRegion || region.region_name === selectedRegion || region.region_name_ar === selectedRegion);
       const amountsAreNative = createdOrder.total_base !== null && createdOrder.total_base !== undefined && Number(createdOrder.exchange_rate_snapshot) > 0;
-      const orderData = { orderId: createdOrder.order_id, orderNumber: createdOrder.order_number, trackingToken: createdOrder.tracking_token, customerName: customerName || "عميل", customerPhone, customerAddress: formData.address || "-", customerCity: composeOrderCity(selectedRegion, formData.city), customerNotes: formData.notes || "", items: Array.isArray(createdOrder.items) ? createdOrder.items : validation.data, subtotal: Number(createdOrder.subtotal), deliveryFee: Number(createdOrder.delivery_fee), discountAmount: Number(createdOrder.discount_amount), couponCode: Number(createdOrder.discount_amount) > 0 ? appliedCoupon : null, total: Number(createdOrder.total), totalBase: Number(createdOrder.total_base ?? createdOrder.total), amountsAreNative, paymentMethod, paymentMethodName: selectedPaymentMethod?.name_ar || selectedPaymentMethod?.name || paymentMethod, deliveryCompany: createdOrder.delivery_company || selectedCompany?.name || "", selectedRegion: regionData?.region_name_ar || selectedRegion || null, country: orderCountryFromPhone(customerPhone), currencyMode: createdOrder.currency_mode || currencyMode, createdAt: createdOrder.created_at || new Date().toISOString() };
+      const orderData = { orderId: createdOrder.order_id, orderNumber: createdOrder.order_number, trackingToken: createdOrder.tracking_token, customerName: customerName || "عميل", customerPhone, customerAddress: formData.address || "-", customerCity: composeOrderCity(selectedRegion, formData.city), customerNotes: formData.notes || "", items: Array.isArray(createdOrder.items) ? createdOrder.items : validation.data, subtotal: Number(createdOrder.subtotal), deliveryFee: Number(createdOrder.delivery_fee), discountAmount: Number(createdOrder.discount_amount), couponCode: Number(createdOrder.discount_amount) > 0 ? (appliedCoupon || null) : null, referralCode: createdOrder.referral_code || null, referralExpiresAt: createdOrder.referral_expires_at || null, discountSource: createdOrder.discount_source || null, total: Number(createdOrder.total), totalBase: Number(createdOrder.total_base ?? createdOrder.total), amountsAreNative, paymentMethod, paymentMethodName: selectedPaymentMethod?.name_ar || selectedPaymentMethod?.name || paymentMethod, deliveryCompany: createdOrder.delivery_company || selectedCompany?.name || "", selectedRegion: regionData?.region_name_ar || selectedRegion || null, country: orderCountryFromPhone(customerPhone), currencyMode: createdOrder.currency_mode || currencyMode, createdAt: createdOrder.created_at || new Date().toISOString() };
       clearCart();
       navigate("/order-confirmation", { state: { orderData } });
     } catch (error) {

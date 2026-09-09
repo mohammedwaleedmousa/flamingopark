@@ -16,6 +16,8 @@ export const useAuthActions = () => {
   const logout = async (options: LogoutOptions = {}) => {
     const { redirectTo, successTitle = "تم تسجيل الخروج", onSuccess } = options;
     try {
+      // Record the explicit logout before the auth session disappears.
+      await (supabase as any).rpc("customer_presence_logout").catch(() => undefined);
       // تسجيل الخروج من هذا الجهاز فقط حتى تبقى جلسات الأجهزة الأخرى فعالة.
       await supabase.auth.signOut({ scope: "local" });
       clearCustomerSession();

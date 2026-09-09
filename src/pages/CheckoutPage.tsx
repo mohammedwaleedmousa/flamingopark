@@ -360,7 +360,8 @@ const CheckoutPage = () => {
       setDiscountAmount(discount); setAppliedCoupon(normalized);
       toast({ title: "تم تطبيق الكوبون", description: `خصم ${formatCurrency(discount)}` });
     } catch {
-      setDiscountAmount(0); setAppliedCoupon(null);
+      setAppliedCoupon(null);
+      setDiscountAmount(launchDiscountEligible ? Math.min(subtotal, subtotal * 0.10) : 0);
       toast({ title: "تعذر التحقق من الكوبون", description: "حاول مرة أخرى.", variant: "destructive" });
     }
   };
@@ -455,7 +456,7 @@ const CheckoutPage = () => {
       navigate("/order-confirmation", { state: { orderData } });
     } catch (error) {
       const rawMessage = error instanceof Error ? error.message : "فشل إرسال الطلب";
-      const message = rawMessage.includes("invalid_checkout_phone") || rawMessage.includes("invalid_yemen_phone") ? "أدخل رقم هاتف صحيح. لليمن استخدم 9 أرقام تبدأ بـ7، وللدول الأخرى استخدم رمز الدولة." : rawMessage.includes("order_rate_limit") ? "تم إرسال عدة طلبات خلال فترة قصيرة. حاول مرة أخرى بعد قليل." : rawMessage.includes("guest_order_capacity_limit") ? "إنشاء الطلبات غير متاح مؤقتاً بسبب عدد كبير من المحاولات. حاول بعد قليل." : rawMessage.includes("insufficient_stock") ? "تغير مخزون أحد المنتجات في السلة. راجع الكمية وحاول مرة أخرى." : rawMessage.includes("variant_selection_required") ? "تحقق من اختيار المقاس أو اللون لجميع المنتجات." : rawMessage.includes("invalid_coupon") ? "كود الخصم لم يعد صالحاً. أزله أو جرّب كوداً آخر." : rawMessage.includes("invalid_payment_method") ? "طريقة الدفع المختارة غير متاحة حالياً. اختر طريقة دفع أخرى." : rawMessage.includes("invalid_cod_region") ? "الدفع عند الاستلام متاح حاليًا داخل عدن فقط. اختر التحويل البنكي لهذه المحافظة." : rawMessage.includes("invalid_delivery_scope") ? "شركة التوصيل لا تغطي المحافظة المختارة. اختر شركة أخرى." : rawMessage.includes("invalid_delivery_company") || rawMessage.includes("delivery_company_required") ? "شركة التوصيل المختارة غير متاحة حالياً. اختر شركة توصيل أخرى." : rawMessage;
+      const message = rawMessage.includes("invalid_checkout_phone") || rawMessage.includes("invalid_yemen_phone") ? "أدخل رقم هاتف صحيح. لليمن استخدم 9 أرقام تبدأ بـ7، وللدول الأخرى استخدم رمز الدولة." : rawMessage.includes("order_rate_limit") ? "تم إرسال عدة طلبات خلال فترة قصيرة. حاول مرة أخرى بعد قليل." : rawMessage.includes("guest_order_capacity_limit") ? "إنشاء الطلبات غير متاح مؤقتاً بسبب عدد كبير من المحاولات. حاول بعد قليل." : rawMessage.includes("insufficient_stock") ? "تغير مخزون أحد المنتجات في السلة. راجع الكمية وحاول مرة أخرى." : rawMessage.includes("variant_selection_required") ? "تحقق من اختيار المقاس أو اللون لجميع المنتجات." : rawMessage.includes("referral_code_expired") ? "انتهت صلاحية كود الإحالة (48 ساعة). استخدم كوداً آخر." : rawMessage.includes("referral_discount_already_used") ? "سبق لك الاستفادة من خصم الإحالة، لذلك لا يمكن استخدامه مرة أخرى." : rawMessage.includes("self_referral_not_allowed") ? "لا يمكنك استخدام كود الإحالة الخاص بك." : rawMessage.includes("invalid_coupon") ? "كود الخصم لم يعد صالحاً. أزله أو جرّب كوداً آخر." : rawMessage.includes("invalid_payment_method") ? "طريقة الدفع المختارة غير متاحة حالياً. اختر طريقة دفع أخرى." : rawMessage.includes("invalid_cod_region") ? "الدفع عند الاستلام متاح حاليًا داخل عدن فقط. اختر التحويل البنكي لهذه المحافظة." : rawMessage.includes("invalid_delivery_scope") ? "شركة التوصيل لا تغطي المحافظة المختارة. اختر شركة أخرى." : rawMessage.includes("invalid_delivery_company") || rawMessage.includes("delivery_company_required") ? "شركة التوصيل المختارة غير متاحة حالياً. اختر شركة توصيل أخرى." : rawMessage;
       toast({ title: "تعذر إنشاء الطلب", description: message, variant: "destructive" });
       setIsSubmitting(false);
     }

@@ -20,6 +20,13 @@
     -webkit-overflow-scrolling: touch;
   }
 
+  /* Keep the mobile navbar on the exact same pure white as the logo artwork. */
+  header.fixed.inset-x-0.top-0.z-50 {
+    background-color: #ffffff !important;
+    -webkit-backdrop-filter: none !important;
+    backdrop-filter: none !important;
+  }
+
   /*
    * ProductDetailPage uses react-zoom-pan-pinch around the hero image.
    * Keep the wrapper sized to the product gallery on phones, but do not

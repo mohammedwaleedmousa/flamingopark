@@ -122,6 +122,17 @@ const OrderConfirmationPage = () => {
     }
   };
 
+  const handleCopyReferralCode = async () => {
+    if (!orderData?.referralCode) return;
+
+    try {
+      await navigator.clipboard.writeText(orderData.referralCode);
+      toast({ title: "تم نسخ كود الخصم" });
+    } catch {
+      toast({ title: "تعذر نسخ كود الخصم", variant: "destructive" });
+    }
+  };
+
   const trackingUrl = orderData ? `/order-tracking?order=${encodeURIComponent(orderData.orderNumber)}&token=${encodeURIComponent(orderData.trackingToken)}` : "/order-tracking";
 
   const paymentLabel = orderData?.paymentMethodName || (orderData?.paymentMethod === "cod" ? "الدفع عند الاستلام" : orderData?.paymentMethod === "bank" ? "تحويل بنكي أو عبر صراف" : orderData?.paymentMethod || "—");
@@ -334,9 +345,14 @@ const OrderConfirmationPage = () => {
                       <p className="text-[7px] font-semibold text-[#6A5651]">كود خصم هدية 10%</p>
                       <p className="mt-1 text-[5px] leading-4 text-[#9A8580]">أرسله لشخص تعرفه. صالح لمدة 48 ساعة فقط، ويُستخدم مرة واحدة لكل عميل.</p>
                     </div>
-                    <button type="button" onClick={() => navigator.clipboard.writeText(orderData.referralCode || "")} className="rounded-[7px] border border-[#E7C9C5] bg-white px-2.5 py-1.5 font-mono text-[7px] font-semibold text-[#B86168] print:border-0 print:bg-transparent">
-                      {orderData.referralCode}
-                    </button>
+                    <div className="flex shrink-0 items-center gap-1">
+                      <span dir="ltr" className="rounded-[5px] border border-[#EED8D5] bg-white px-1.5 py-1 font-mono text-[5.5px] font-semibold tracking-[0.04em] text-[#A95B61]">
+                        {orderData.referralCode}
+                      </span>
+                      <button type="button" onClick={handleCopyReferralCode} aria-label="نسخ كود الخصم" title="نسخ الكود" className="flex h-6 w-6 items-center justify-center rounded-[6px] border border-[#E7C9C5] bg-white text-[#B86168] active:bg-[#FFF0EE] print:hidden">
+                        <Copy className="h-3 w-3" strokeWidth={1.6} />
+                      </button>
+                    </div>
                   </div>
                   {orderData.referralExpiresAt && <p className="mt-1.5 text-[5px] text-[#A6908B]">ينتهي: {new Date(orderData.referralExpiresAt).toLocaleString("ar")}</p>}
                 </div>

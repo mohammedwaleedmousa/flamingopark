@@ -97,6 +97,22 @@
       }
     </style>
 
+    <style id="order-confirmation-product-image-fit">
+      #invoice img:not([alt="Flamingo Park"]) {
+        width: 100% !important;
+        height: 100% !important;
+        display: block;
+        object-fit: cover !important;
+        object-position: center !important;
+        background: transparent !important;
+      }
+
+      #invoice div:has(> img:not([alt="Flamingo Park"])) {
+        padding: 0 !important;
+        background: #fff !important;
+      }
+    </style>
+
     <style id="products-page-rtl-heading">
       main:has(#products-grid) > section:first-of-type > div:first-child {
         direction: rtl;

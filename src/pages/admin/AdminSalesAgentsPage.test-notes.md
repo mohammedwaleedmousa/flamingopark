@@ -1,0 +1,4 @@
+- FP-101 resolves to عبدالرحمن
+- FP-102 resolves to غادة
+- FP-103 resolves to حمد
+- Eligible customers retain the launch discount when using an employee code

@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { BarChart3, CheckCircle2, Copy, Loader2, Pencil, Plus, Search, ShoppingBag, TrendingUp, UserRoundCheck, WalletCards } from "lucide-react";
+import { BarChart3, CheckCircle2, Copy, Loader2, Pencil, Plus, Search, ShoppingBag, Trash2, TrendingUp, UserRoundCheck, WalletCards } from "lucide-react";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -21,10 +21,7 @@ type SalesAgent = {
   updated_at: string;
 };
 
-type OrderItem = {
-  product_id?: string | null;
-  quantity?: number | string | null;
-};
+type OrderItem = { product_id?: string | null; quantity?: number | string | null };
 
 type SalesOrder = {
   id: string;
@@ -85,10 +82,7 @@ export default function AdminSalesAgentsPage() {
   const agentsQuery = useQuery({
     queryKey: ["electronic-sales-agents"],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
-        .from("sales_agents")
-        .select("id,name,code,platform,is_active,created_at,updated_at")
-        .order("created_at", { ascending: true });
+      const { data, error } = await (supabase as any).from("sales_agents").select("id,name,code,platform,is_active,created_at,updated_at").order("created_at", { ascending: true });
       if (error) throw error;
       return (data || []) as SalesAgent[];
     },
@@ -111,11 +105,7 @@ export default function AdminSalesAgentsPage() {
         .order("created_at", { ascending: false })
         .limit(5000);
       if (error) throw error;
-      return (data || []).map((row: any) => ({
-        ...row,
-        total: Number(row.total || 0),
-        total_base: row.total_base == null ? null : Number(row.total_base),
-      })) as SalesOrder[];
+      return (data || []).map((row: any) => ({ ...row, total: Number(row.total || 0), total_base: row.total_base == null ? null : Number(row.total_base) })) as SalesOrder[];
     },
     staleTime: 15_000,
   });
@@ -148,19 +138,15 @@ export default function AdminSalesAgentsPage() {
       if (!agentId) return;
       const current = map.get(agentId) || blank();
       const status = String(order.status || "").toLowerCase();
-
       if (!current.lastOrderAt || new Date(order.created_at).getTime() > new Date(current.lastOrderAt).getTime()) current.lastOrderAt = order.created_at;
-
       if (CANCELLED.has(status)) {
         current.cancelled += 1;
         map.set(agentId, current);
         return;
       }
-
       current.orders += 1;
       if (DELIVERED.has(status)) current.delivered += 1;
       current.sales += orderBase(order);
-
       const items = Array.isArray(order.items) ? order.items : [];
       items.forEach((item: OrderItem) => {
         const productId = String(item?.product_id || "");
@@ -172,22 +158,15 @@ export default function AdminSalesAgentsPage() {
           current.cogs += (costMap.get(productId) || 0) * qty;
         }
       });
-
       current.profit = current.sales - current.cogs;
       map.set(agentId, current);
     });
-
     return map;
   }, [orders, costMap]);
 
   const rows = useMemo(() => agents.map((agent) => {
     const stats = statsMap.get(agent.id) || { orders: 0, delivered: 0, cancelled: 0, sales: 0, cogs: 0, profit: 0, costLines: 0, coveredCostLines: 0, lastOrderAt: null };
-    return {
-      agent,
-      stats,
-      margin: stats.sales > 0 ? (stats.profit / stats.sales) * 100 : 0,
-      costCoverage: stats.costLines > 0 ? (stats.coveredCostLines / stats.costLines) * 100 : 100,
-    };
+    return { agent, stats, margin: stats.sales > 0 ? (stats.profit / stats.sales) * 100 : 0, costCoverage: stats.costLines > 0 ? (stats.coveredCostLines / stats.costLines) * 100 : 100 };
   }).sort((a, b) => b.stats.sales - a.stats.sales), [agents, statsMap]);
 
   const filteredRows = useMemo(() => {
@@ -196,27 +175,11 @@ export default function AdminSalesAgentsPage() {
     return rows.filter(({ agent }) => `${agent.name} ${agent.code} ${agent.platform || ""}`.toLowerCase().includes(q));
   }, [rows, search]);
 
-  const totals = useMemo(() => {
-    return rows.reduce((acc, row) => ({
-      sales: acc.sales + row.stats.sales,
-      profit: acc.profit + row.stats.profit,
-      orders: acc.orders + row.stats.orders,
-    }), { sales: 0, profit: 0, orders: 0 });
-  }, [rows]);
-
+  const totals = useMemo(() => rows.reduce((acc, row) => ({ sales: acc.sales + row.stats.sales, profit: acc.profit + row.stats.profit, orders: acc.orders + row.stats.orders }), { sales: 0, profit: 0, orders: 0 }), [rows]);
   const topAgents = rows.filter((row) => row.stats.orders > 0).slice(0, 3);
 
-  const openCreate = () => {
-    setEditing(null);
-    setForm(emptyForm());
-    setDialogOpen(true);
-  };
-
-  const openEdit = (agent: SalesAgent) => {
-    setEditing(agent);
-    setForm({ name: agent.name, code: agent.code, platform: agent.platform || "", is_active: agent.is_active });
-    setDialogOpen(true);
-  };
+  const openCreate = () => { setEditing(null); setForm(emptyForm()); setDialogOpen(true); };
+  const openEdit = (agent: SalesAgent) => { setEditing(agent); setForm({ name: agent.name, code: agent.code, platform: agent.platform || "", is_active: agent.is_active }); setDialogOpen(true); };
 
   const saveMutation = useMutation({
     mutationFn: async () => {
@@ -225,7 +188,6 @@ export default function AdminSalesAgentsPage() {
       if (name.length < 2) throw new Error("اسم الموظف مطلوب.");
       if (!/^[A-Z0-9_-]{2,40}$/.test(code)) throw new Error("الكود يجب أن يحتوي أحرفًا إنجليزية أو أرقامًا أو - و _ فقط.");
       const payload = { name, code, platform: form.platform.trim() || null, is_active: form.is_active, updated_at: new Date().toISOString() };
-
       if (editing) {
         const { error } = await (supabase as any).from("sales_agents").update(payload).eq("id", editing.id);
         if (error) throw error;
@@ -258,40 +220,50 @@ export default function AdminSalesAgentsPage() {
     onError: (error: any) => toast({ title: "تعذر تغيير حالة الموظف", description: String(error?.message || error), variant: "destructive" }),
   });
 
+  const deleteMutation = useMutation({
+    mutationFn: async (agent: SalesAgent) => {
+      const { count, error: countError } = await (supabase as any).from("orders").select("id", { count: "exact", head: true }).eq("sales_agent_id", agent.id);
+      if (countError) throw countError;
+      const totalOrders = Number(count || 0);
+      const warning = totalOrders > 0
+        ? `الموظف ${agent.name} لديه ${totalOrders} طلبات مرتبطة به. عند الحذف سيختفي من قائمة الموظفين، وستبقى نسخة الاسم والكود محفوظة داخل الطلبات القديمة. هل تريد المتابعة؟`
+        : `هل تريد حذف الموظف ${agent.name} نهائيًا؟`;
+      if (!window.confirm(warning)) throw new Error("__cancelled__");
+      const { error } = await (supabase as any).from("sales_agents").delete().eq("id", agent.id);
+      if (error) throw error;
+    },
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ["electronic-sales-agents"] }),
+        queryClient.invalidateQueries({ queryKey: ["electronic-sales-orders"] }),
+      ]);
+      toast({ title: "تم حذف الموظف" });
+    },
+    onError: (error: any) => {
+      const message = String(error?.message || error || "");
+      if (message === "__cancelled__") return;
+      toast({ title: "تعذر حذف الموظف", description: message, variant: "destructive" });
+    },
+  });
+
   const copyCode = async (code: string) => {
-    try {
-      await navigator.clipboard.writeText(code);
-      toast({ title: "تم نسخ الكود" });
-    } catch {
-      toast({ title: "تعذر نسخ الكود", variant: "destructive" });
-    }
+    try { await navigator.clipboard.writeText(code); toast({ title: "تم نسخ الكود" }); }
+    catch { toast({ title: "تعذر نسخ الكود", variant: "destructive" }); }
   };
 
   const isLoading = agentsQuery.isLoading || ordersQuery.isLoading || productsQuery.isLoading;
   const isFetching = agentsQuery.isFetching || ordersQuery.isFetching || productsQuery.isFetching;
+  const refresh = async () => { await Promise.all([agentsQuery.refetch(), ordersQuery.refetch(), productsQuery.refetch()]); };
 
-  const refresh = async () => {
-    await Promise.all([agentsQuery.refetch(), ordersQuery.refetch(), productsQuery.refetch()]);
-  };
-
-  if (isLoading) {
-    return <div className="flex min-h-[480px] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-[#675CBA]" /></div>;
-  }
+  if (isLoading) return <div className="flex min-h-[480px] items-center justify-center"><Loader2 className="h-6 w-6 animate-spin text-[#675CBA]" /></div>;
 
   return (
     <div className="w-full space-y-4" dir="rtl">
-      <AdminPageHeader
-        category="المبيعات"
-        title="المبيعات الإلكترونية"
-        description="متابعة مبيعات موظفي السوشال ميديا وأكوادهم وأرباح الطلبات المنسوبة لكل موظف"
-        actions={[{ label: "موظف جديد", icon: Plus, onClick: openCreate, variant: "primary" }]}
-      />
+      <AdminPageHeader category="المبيعات" title="المبيعات الإلكترونية" description="متابعة مبيعات موظفي السوشال ميديا وأكوادهم وأرباح الطلبات المنسوبة لكل موظف" actions={[{ label: "موظف جديد", icon: Plus, onClick: openCreate, variant: "primary" }]} />
 
       <section className="flex flex-col gap-2 rounded-[14px] border border-[#E5E9EF] bg-white p-[10px] sm:flex-row sm:items-center sm:justify-between">
         <div className="[&_button]:!h-[38px] [&_button]:!rounded-[10px] [&_button]:!border-[#E2E6EB] [&_button]:!bg-white [&_button]:!px-3 [&_button]:!text-[9px] [&_button]:!font-medium [&_button]:!text-[#59616C] [&_button]:!shadow-none"><DateRangePicker /></div>
-        <Button type="button" variant="outline" onClick={() => void refresh()} disabled={isFetching} className="h-[38px] rounded-[10px] border-[#E2E6EB] bg-white px-3 text-[9px] font-semibold text-[#5F6772] shadow-none">
-          {isFetching && <Loader2 className="ml-2 h-3 w-3 animate-spin" />}تحديث البيانات
-        </Button>
+        <Button type="button" variant="outline" onClick={() => void refresh()} disabled={isFetching} className="h-[38px] rounded-[10px] border-[#E2E6EB] bg-white px-3 text-[9px] font-semibold text-[#5F6772] shadow-none">{isFetching && <Loader2 className="ml-2 h-3 w-3 animate-spin" />}تحديث البيانات</Button>
       </section>
 
       <section className="grid grid-cols-2 gap-[9px] xl:grid-cols-4">
@@ -303,38 +275,23 @@ export default function AdminSalesAgentsPage() {
 
       <section className="grid gap-3 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="overflow-hidden rounded-[16px] border border-[#E5E9EF] bg-white">
-          <div className="flex items-center justify-between border-b border-[#EDF0F3] px-[14px] py-[12px]">
-            <div><h2 className="text-[12px] font-semibold text-[#303640]">أداء الموظفين</h2><p className="mt-1 text-[8.5px] text-[#969DA6]">مرتّب حسب قيمة المبيعات في الفترة المحددة</p></div>
-            <TrendingUp className="h-4 w-4 text-[#675CBA]" />
-          </div>
+          <div className="flex items-center justify-between border-b border-[#EDF0F3] px-[14px] py-[12px]"><div><h2 className="text-[12px] font-semibold text-[#303640]">أداء الموظفين</h2><p className="mt-1 text-[8.5px] text-[#969DA6]">مرتّب حسب قيمة المبيعات في الفترة المحددة</p></div><TrendingUp className="h-4 w-4 text-[#675CBA]" /></div>
           <div className="grid grid-cols-1 gap-2 p-3 md:grid-cols-3">
             {topAgents.length ? topAgents.map(({ agent, stats }, index) => (
-              <div key={agent.id} className="rounded-[13px] border border-[#E8EBF0] bg-[#FAFBFC] p-3">
-                <div className="flex items-center justify-between"><span className="flex h-7 w-7 items-center justify-center rounded-[9px] bg-[#EEEBFF] text-[10px] font-bold text-[#675CBA]">#{index + 1}</span><span className="text-[8px] text-[#979EA7]">{stats.orders} طلب</span></div>
-                <p className="mt-3 text-[12px] font-semibold text-[#333943]">{agent.name}</p>
-                <p dir="ltr" className="mt-1 text-right font-mono text-[9px] text-[#8178B0]">{agent.code}</p>
-                <div className="mt-3 border-t border-[#E8EBF0] pt-2"><p className="text-[8px] text-[#969DA6]">المبيعات</p><p className="mt-1 text-[15px] font-semibold text-[#303640]">{money(stats.sales)}</p><p className="mt-1 text-[8px] text-[#57906A]">ربح {money(stats.profit)}</p></div>
-              </div>
+              <div key={agent.id} className="rounded-[13px] border border-[#E8EBF0] bg-[#FAFBFC] p-3"><div className="flex items-center justify-between"><span className="flex h-7 w-7 items-center justify-center rounded-[9px] bg-[#EEEBFF] text-[10px] font-bold text-[#675CBA]">#{index + 1}</span><span className="text-[8px] text-[#979EA7]">{stats.orders} طلب</span></div><p className="mt-3 text-[12px] font-semibold text-[#333943]">{agent.name}</p><p dir="ltr" className="mt-1 text-right font-mono text-[9px] text-[#8178B0]">{agent.code}</p><div className="mt-3 border-t border-[#E8EBF0] pt-2"><p className="text-[8px] text-[#969DA6]">المبيعات</p><p className="mt-1 text-[15px] font-semibold text-[#303640]">{money(stats.sales)}</p><p className="mt-1 text-[8px] text-[#57906A]">ربح {money(stats.profit)}</p></div></div>
             )) : <div className="col-span-3 py-10 text-center text-[10px] text-[#969DA6]">لا توجد مبيعات منسوبة للموظفين في الفترة المحددة.</div>}
           </div>
         </div>
 
-        <div className="rounded-[16px] border border-[#E5E9EF] bg-white p-[14px]">
-          <h2 className="text-[12px] font-semibold text-[#303640]">ملاحظة الأرباح</h2>
-          <p className="mt-2 text-[9px] leading-6 text-[#7F8792]">الربح هنا هو الربح الإجمالي للطلبات المنسوبة للموظف: قيمة المبيعات ناقص تكلفة المنتجات المسجلة في النظام. الطلبات الملغاة لا تدخل في المبيعات أو الأرباح.</p>
-          <div className="mt-3 rounded-[11px] bg-[#F8F6FF] p-3 text-[8.5px] leading-5 text-[#756DA2]">إذا كانت تكلفة منتج غير مسجلة، قد يظهر الربح أعلى من الحقيقي. صفحة المالية تستخدم نفس مصدر تكلفة المنتجات.</div>
-        </div>
+        <div className="rounded-[16px] border border-[#E5E9EF] bg-white p-[14px]"><h2 className="text-[12px] font-semibold text-[#303640]">ملاحظة الأرباح</h2><p className="mt-2 text-[9px] leading-6 text-[#7F8792]">الربح هنا هو الربح الإجمالي للطلبات المنسوبة للموظف: قيمة المبيعات ناقص تكلفة المنتجات المسجلة في النظام. الطلبات الملغاة لا تدخل في المبيعات أو الأرباح.</p><div className="mt-3 rounded-[11px] bg-[#F8F6FF] p-3 text-[8.5px] leading-5 text-[#756DA2]">إذا كانت تكلفة منتج غير مسجلة، قد يظهر الربح أعلى من الحقيقي. صفحة المالية تستخدم نفس مصدر تكلفة المنتجات.</div></div>
       </section>
 
       <section className="overflow-hidden rounded-[16px] border border-[#E5E9EF] bg-white">
-        <div className="flex flex-col gap-3 border-b border-[#EDF0F3] p-3 sm:flex-row sm:items-center sm:justify-between">
-          <div><h2 className="text-[12px] font-semibold text-[#303640]">الموظفون والمبيعات</h2><p className="mt-1 text-[8.5px] text-[#969DA6]">يمكنك تعديل كود أي موظف من زر التعديل دون فقد المبيعات السابقة.</p></div>
-          <div className="relative w-full sm:w-[330px]"><Search className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#9AA1AA]" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث باسم الموظف أو الكود" className="h-[38px] rounded-[10px] border-[#E3E7EC] pr-9 text-[10px] shadow-none" /></div>
-        </div>
+        <div className="flex flex-col gap-3 border-b border-[#EDF0F3] p-3 sm:flex-row sm:items-center sm:justify-between"><div><h2 className="text-[12px] font-semibold text-[#303640]">الموظفون والمبيعات</h2><p className="mt-1 text-[8.5px] text-[#969DA6]">يمكنك تعديل أو حذف أي موظف من عمود الإجراءات.</p></div><div className="relative w-full sm:w-[330px]"><Search className="pointer-events-none absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-[#9AA1AA]" /><Input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="ابحث باسم الموظف أو الكود" className="h-[38px] rounded-[10px] border-[#E3E7EC] pr-9 text-[10px] shadow-none" /></div></div>
 
         <div className="overflow-x-auto">
-          <table className="w-full min-w-[1080px] text-right text-[10px]">
-            <thead className="bg-[#FAFBFC] text-[#7C838D]"><tr><th className="px-4 py-3">الموظف</th><th className="px-4 py-3">الكود الحالي</th><th className="px-4 py-3">القناة</th><th className="px-4 py-3">الطلبات</th><th className="px-4 py-3">المبيعات</th><th className="px-4 py-3">الأرباح</th><th className="px-4 py-3">الهامش</th><th className="px-4 py-3">آخر طلب</th><th className="px-4 py-3">الحالة</th><th className="px-4 py-3">إجراء</th></tr></thead>
+          <table className="w-full min-w-[1120px] text-right text-[10px]">
+            <thead className="bg-[#FAFBFC] text-[#7C838D]"><tr><th className="px-4 py-3">الموظف</th><th className="px-4 py-3">الكود الحالي</th><th className="px-4 py-3">القناة</th><th className="px-4 py-3">الطلبات</th><th className="px-4 py-3">المبيعات</th><th className="px-4 py-3">الأرباح</th><th className="px-4 py-3">الهامش</th><th className="px-4 py-3">آخر طلب</th><th className="px-4 py-3">الحالة</th><th className="px-4 py-3">الإجراءات</th></tr></thead>
             <tbody>
               {filteredRows.map(({ agent, stats, margin, costCoverage }) => (
                 <tr key={agent.id} className="border-t border-[#EEF1F4] text-[#515864] hover:bg-[#FCFCFD]">
@@ -347,7 +304,7 @@ export default function AdminSalesAgentsPage() {
                   <td className="px-4 py-3">{margin.toFixed(1)}%</td>
                   <td className="px-4 py-3 text-[#7D848D]">{displayDate(stats.lastOrderAt)}</td>
                   <td className="px-4 py-3"><div className="flex items-center gap-2"><Switch checked={agent.is_active} onCheckedChange={(checked) => toggleMutation.mutate({ id: agent.id, checked })} /><span className={agent.is_active ? "text-[#57906A]" : "text-[#969DA6]"}>{agent.is_active ? "نشط" : "متوقف"}</span></div></td>
-                  <td className="px-4 py-3"><Button type="button" variant="outline" size="sm" onClick={() => openEdit(agent)} className="h-8 gap-1.5 rounded-[8px] border-[#E2E6EB] px-2.5 text-[9px] shadow-none"><Pencil className="h-3 w-3" />تعديل</Button></td>
+                  <td className="px-4 py-3"><div className="flex items-center gap-1.5"><Button type="button" variant="outline" size="sm" onClick={() => openEdit(agent)} className="h-8 gap-1.5 rounded-[8px] border-[#E2E6EB] px-2.5 text-[9px] shadow-none"><Pencil className="h-3 w-3" />تعديل</Button><Button type="button" variant="outline" size="sm" disabled={deleteMutation.isPending} onClick={() => deleteMutation.mutate(agent)} className="h-8 gap-1.5 rounded-[8px] border-[#F0D9D9] px-2.5 text-[9px] text-[#C76161] shadow-none hover:bg-[#FFF5F5] hover:text-[#B85050]"><Trash2 className="h-3 w-3" />حذف</Button></div></td>
                 </tr>
               ))}
               {filteredRows.length === 0 && <tr><td colSpan={10} className="px-4 py-12 text-center text-[#969DA6]">لا توجد نتائج مطابقة.</td></tr>}
@@ -358,10 +315,7 @@ export default function AdminSalesAgentsPage() {
 
       <Dialog open={dialogOpen} onOpenChange={(open) => !saveMutation.isPending && setDialogOpen(open)}>
         <DialogContent dir="rtl" className="sm:max-w-[470px]">
-          <DialogHeader>
-            <DialogTitle>{editing ? "تعديل بيانات الموظف" : "إضافة موظف للمبيعات الإلكترونية"}</DialogTitle>
-            <DialogDescription>{editing ? "يمكنك تغيير الكود في أي وقت. سجل المبيعات السابق سيبقى مرتبطًا بالموظف نفسه." : "أنشئ كودًا فريدًا ليستخدمه عملاء هذا الموظف عند الطلب."}</DialogDescription>
-          </DialogHeader>
+          <DialogHeader><DialogTitle>{editing ? "تعديل بيانات الموظف" : "إضافة موظف للمبيعات الإلكترونية"}</DialogTitle><DialogDescription>{editing ? "يمكنك تعديل الاسم والكود والقناة والحالة. سجل المبيعات السابق سيبقى مرتبطًا بالموظف نفسه." : "أنشئ كودًا فريدًا ليستخدمه عملاء هذا الموظف عند الطلب."}</DialogDescription></DialogHeader>
           <div className="space-y-4 pt-2">
             <div className="space-y-2"><Label>اسم الموظف</Label><Input value={form.name} onChange={(event) => setForm((current) => ({ ...current, name: event.target.value }))} placeholder="مثال: عبدالرحمن" /></div>
             <div className="space-y-2"><Label>الكود الخاص بالموظف</Label><div className="flex gap-2"><Input dir="ltr" value={form.code} onChange={(event) => setForm((current) => ({ ...current, code: event.target.value.toUpperCase() }))} placeholder="FP-104" className="font-mono" />{editing && <Button type="button" variant="outline" size="icon" onClick={() => void copyCode(form.code)}><Copy className="h-4 w-4" /></Button>}</div>{editing && editing.code !== form.code.trim().toUpperCase() && <p className="rounded-[8px] bg-[#FFF8E8] px-2.5 py-2 text-[8.5px] leading-5 text-[#9A7130]">بعد الحفظ سيتوقف الكود القديم ويعمل الكود الجديد، بينما تبقى جميع المبيعات السابقة محسوبة لهذا الموظف.</p>}</div>
@@ -377,11 +331,5 @@ export default function AdminSalesAgentsPage() {
 
 function MetricCard({ title, value, helper, icon: Icon, tone }: { title: string; value: string; helper: string; icon: typeof BarChart3; tone: Tone }) {
   const palette = tones[tone];
-  return (
-    <article className="relative min-h-[126px] overflow-hidden rounded-[16px] border border-[#E5E9EF] bg-white p-[14px] transition-colors hover:border-[#DCE1E8]">
-      <span className="absolute inset-x-0 top-0 h-[3px]" style={{ backgroundColor: palette.line }} />
-      <div className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] ${palette.icon}`}><Icon className="h-[15px] w-[15px]" strokeWidth={1.7} /></div>
-      <div className="mt-4"><p className="text-[9.5px] font-medium text-[#7F8792]">{title}</p><p dir="ltr" className="mt-[6px] text-right text-[22px] font-semibold leading-none tracking-[-0.035em] text-[#252A33]">{value}</p><p className="mt-[7px] text-[8px] text-[#9AA1AA]">{helper}</p></div>
-    </article>
-  );
+  return <article className="relative min-h-[126px] overflow-hidden rounded-[16px] border border-[#E5E9EF] bg-white p-[14px] transition-colors hover:border-[#DCE1E8]"><span className="absolute inset-x-0 top-0 h-[3px]" style={{ backgroundColor: palette.line }} /><div className={`flex h-[34px] w-[34px] items-center justify-center rounded-[10px] ${palette.icon}`}><Icon className="h-[15px] w-[15px]" strokeWidth={1.7} /></div><div className="mt-4"><p className="text-[9.5px] font-medium text-[#7F8792]">{title}</p><p dir="ltr" className="mt-[6px] text-right text-[22px] font-semibold leading-none tracking-[-0.035em] text-[#252A33]">{value}</p><p className="mt-[7px] text-[8px] text-[#9AA1AA]">{helper}</p></div></article>;
 }

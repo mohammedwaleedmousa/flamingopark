@@ -41,15 +41,28 @@ const CustomerSessionSync = () => {
       const target = safePostAuthPath(window.sessionStorage.getItem(POST_AUTH_REDIRECT_KEY));
       if (!target) return;
 
+      const root = document.documentElement;
+      const previousVisibility = root.style.visibility;
+      root.style.visibility = "hidden";
+
       for (let attempt = 0; attempt < 12 && active; attempt += 1) {
         const hydrated = await hydrateCustomer(userId);
         if (hydrated) {
           window.sessionStorage.removeItem(POST_AUTH_REDIRECT_KEY);
+          const currentPath = `${window.location.pathname}${window.location.search}${window.location.hash}`;
+
+          if (currentPath === target) {
+            root.style.visibility = previousVisibility;
+            return;
+          }
+
           window.location.replace(target);
           return;
         }
         await new Promise((resolve) => window.setTimeout(resolve, 250));
       }
+
+      root.style.visibility = previousVisibility;
     };
 
     const restoreSession = async () => {
@@ -60,9 +73,15 @@ const CustomerSessionSync = () => {
         return;
       }
 
-      const hydrated = await hydrateCustomer(data.session.user.id);
+      const userId = data.session.user.id;
+      const pendingTarget = safePostAuthPath(window.sessionStorage.getItem(POST_AUTH_REDIRECT_KEY));
+      if (pendingTarget) {
+        void continuePendingCheckout(userId);
+        return;
+      }
+
+      const hydrated = await hydrateCustomer(userId);
       if (!hydrated && active) clearLocalCustomer();
-      if (active) void continuePendingCheckout(data.session.user.id);
     };
 
     void restoreSession();
@@ -73,11 +92,16 @@ const CustomerSessionSync = () => {
         clearLocalCustomer();
         return;
       }
+
       const userId = session.user.id;
       window.setTimeout(() => {
         if (!active) return;
+        const pendingTarget = safePostAuthPath(window.sessionStorage.getItem(POST_AUTH_REDIRECT_KEY));
+        if (pendingTarget) {
+          void continuePendingCheckout(userId);
+          return;
+        }
         void hydrateCustomer(userId);
-        void continuePendingCheckout(userId);
       }, 0);
     });
 

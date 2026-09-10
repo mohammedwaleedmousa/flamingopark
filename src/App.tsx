@@ -108,6 +108,7 @@ const AdminInvoicesPage = lazy(() => import("./pages/admin/AdminInvoicesPage"));
 const AdminCODRegionsPage = lazy(() => import("./pages/admin/AdminCODRegionsPage"));
 const AdminOffersPage = lazy(() => import("./pages/admin/AdminOffersPage"));
 const AdminCouponsPage = lazy(() => import("./pages/admin/AdminCouponsPage"));
+const AdminSalesAgentsPage = lazy(() => import("./pages/admin/AdminSalesAgentsPage"));
 const AdminAuditLogPage = lazy(() => import("./pages/admin/AdminAuditLogPage"));
 const AdminLedgerPage = lazy(() => import("./pages/admin/AdminLedgerPage"));
 const AdminRefundsPage = lazy(() => import("./pages/admin/AdminRefundsPage"));
@@ -317,6 +318,7 @@ const App = () => {
               <Route path="customer-intelligence" element={<Navigate to={adminPath("reports/customers")} replace />} />
               <Route path="offers" element={<AdminOffersPage />} />
               <Route path="coupons" element={<AdminCouponsPage />} />
+              <Route path="sales-agents" element={<AdminSalesAgentsPage />} />
               <Route path="audit-log" element={<AdminAuditLogPage />} />
               <Route path="ledger" element={<AdminLedgerPage />} />
               <Route path="refunds" element={<AdminRefundsPage />} />

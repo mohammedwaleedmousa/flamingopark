@@ -229,13 +229,14 @@ const sections: NavSection[] = [
   {
     id: "marketing",
     title: "التسويق",
-    subtitle: "الحملات والعروض",
+    subtitle: "الحملات والعروض والمبيعات",
     icon: Megaphone,
     tone: "violet",
     items: [
       { title: "الحملات", url: "/admin/campaigns", icon: Megaphone, tone: "violet" },
       { title: "العروض", url: "/admin/offers", icon: BadgePercent, tone: "violet" },
       { title: "القسائم", url: "/admin/coupons", icon: TicketPercent, tone: "violet" },
+      { title: "المبيعات الإلكترونية", url: "/admin/sales-agents", icon: Users, tone: "violet" },
       { title: "إشعارات العملاء", url: "/admin/customer-notifications", icon: Bell, tone: "violet" },
       { title: "سجل إرسال الإشعارات", url: "/admin/notification-deliveries", icon: Send, tone: "violet" },
     ],

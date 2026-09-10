@@ -58,6 +58,7 @@ const permissionForLocation = (pathname: string, search: string): RoutePermissio
     pathname.startsWith("/admin/campaigns") ||
     pathname.startsWith("/admin/offers") ||
     pathname.startsWith("/admin/coupons") ||
+    pathname.startsWith("/admin/sales-agents") ||
     pathname.startsWith("/admin/customer-notifications") ||
     pathname.startsWith("/admin/notification-deliveries")
   ) return "marketing.manage";
@@ -180,218 +181,80 @@ const adminInteractiveColorOverrides = `
     color: #443B8C !important;
   }
 
-  .admin-workspace .btn-unified[data-variant="ghost"] {
-    background: transparent !important;
-    border-color: transparent !important;
-    color: #626A75 !important;
-  }
-
-  .admin-workspace .btn-unified[data-variant="ghost"]:hover {
-    background: #F2F4F7 !important;
-    border-color: #E3E7EC !important;
-    color: #4D5560 !important;
-  }
-
   .admin-workspace .btn-unified[data-variant="destructive"] {
-    background: #C95F5F !important;
-    border-color: #B95353 !important;
+    background: #C85E5E !important;
+    border-color: #C85E5E !important;
     color: #FFFFFF !important;
   }
 
   .admin-workspace .btn-unified[data-variant="destructive"]:hover {
-    background: #B95353 !important;
-    border-color: #A94A4A !important;
+    background: #B55252 !important;
+    border-color: #B55252 !important;
     color: #FFFFFF !important;
   }
 
-  .admin-workspace button[class*="bg-[#C66A7F]"],
-  .admin-workspace a[class*="bg-[#C66A7F]"],
-  .admin-workspace [role="button"][class*="bg-[#C66A7F]"] {
-    background-color: #675CBA !important;
-    color: #FFFFFF !important;
-  }
-
-  .admin-workspace button[class*="bg-[#FFF0F1]"],
-  .admin-workspace button [class*="bg-[#FFF0F1]"],
-  .admin-workspace a[class*="bg-[#FFF0F1]"],
-  .admin-workspace a [class*="bg-[#FFF0F1]"],
-  .admin-workspace [role="button"][class*="bg-[#FFF0F1]"],
-  .admin-workspace [role="button"] [class*="bg-[#FFF0F1]"],
-  .admin-workspace button[class*="bg-[#FFF0F4]"],
-  .admin-workspace button [class*="bg-[#FFF0F4]"],
-  .admin-workspace button[class*="bg-[#FBDDE6]"],
-  .admin-workspace button [class*="bg-[#FBDDE6]"],
-  .admin-workspace button[class*="bg-[#FFF3F6]"],
-  .admin-workspace button [class*="bg-[#FFF3F6]"],
-  .admin-workspace button[class*="bg-[#FBE1E8]"],
-  .admin-workspace button [class*="bg-[#FBE1E8]"],
-  .admin-workspace button[class*="bg-[#FFF7F9]"],
-  .admin-workspace button [class*="bg-[#FFF7F9]"],
-  .admin-workspace a[class*="bg-[#FFF0F4]"],
-  .admin-workspace a [class*="bg-[#FFF0F4]"],
-  .admin-workspace a[class*="bg-[#FBDDE6]"],
-  .admin-workspace a [class*="bg-[#FBDDE6]"],
-  .admin-workspace [role="button"] [class*="bg-[#FFF0F4]"],
-  .admin-workspace [role="button"] [class*="bg-[#FBDDE6]"] {
-    background-color: #F1EFFF !important;
-  }
-
-  .admin-workspace button[class*="text-[#B96670]"],
-  .admin-workspace button [class*="text-[#B96670]"],
-  .admin-workspace a[class*="text-[#B96670]"],
-  .admin-workspace a [class*="text-[#B96670]"],
-  .admin-workspace [role="button"][class*="text-[#B96670]"],
-  .admin-workspace [role="button"] [class*="text-[#B96670]"],
-  .admin-workspace button[class*="text-[#C66E82]"],
-  .admin-workspace button [class*="text-[#C66E82]"],
-  .admin-workspace button[class*="text-[#B85D72]"],
-  .admin-workspace button [class*="text-[#B85D72]"],
-  .admin-workspace button[class*="text-[#C66A7F]"],
-  .admin-workspace button [class*="text-[#C66A7F]"],
-  .admin-workspace button[class*="text-[#B15B70]"],
-  .admin-workspace button [class*="text-[#B15B70]"],
-  .admin-workspace button[class*="text-[#BC6377]"],
-  .admin-workspace button [class*="text-[#BC6377]"],
-  .admin-workspace a[class*="text-[#C66E82]"],
-  .admin-workspace a [class*="text-[#C66E82]"],
-  .admin-workspace a[class*="text-[#B85D72]"],
-  .admin-workspace a [class*="text-[#B85D72]"] {
-    color: #675CBA !important;
-  }
-
-  .admin-workspace button[class*="border-[#EFD7DF]"],
-  .admin-workspace a[class*="border-[#EFD7DF]"],
-  .admin-workspace [role="button"][class*="border-[#EFD7DF]"] {
-    border-color: #E4E0F8 !important;
-  }
-
-  .admin-workspace button[role="combobox"] {
-    border-color: #DDE2E8 !important;
-    background: #F8FAFC !important;
-    color: #59634D !important;
-    box-shadow: none !important;
-  }
-
-  .admin-workspace button[role="combobox"]:hover {
-    border-color: #CBD3DC !important;
-    background: #F3F5F8 !important;
-  }
-
-  .admin-workspace button[role="combobox"][data-state="open"] {
-    border-color: #8D86C9 !important;
-    background: #FFFFFF !important;
-    box-shadow: 0 0 0 3px rgba(103, 92, 186, 0.10) !important;
-  }
-
-  [role="listbox"] {
-    border: 1px solid #DDE2E8 !important;
-    border-radius: 10px !important;
-    background: #FFFFFF !important;
-    padding: 4px !important;
-    color: #4F5864 !important;
-    box-shadow: 0 14px 30px rgba(52, 61, 75, 0.14) !important;
-  }
-
-  [role="option"] {
-    min-height: 34px;
-    border-radius: 8px !important;
-    background: transparent !important;
-    color: #535D68 !important;
-    transition: background-color 120ms ease, color 120ms ease !important;
-  }
-
-  [role="option"][data-highlighted] {
-    background: #F3F1FC !important;
-    color: #51489A !important;
-  }
-
-  [role="option"][data-state="checked"] {
-    background: #ECE9FB !important;
-    color: #51489A !important;
-    font-weight: 600 !important;
-  }
-
-  [role="option"][data-state="checked"][data-highlighted] {
-    background: #E5E1F8 !important;
-    color: #443B8C !important;
-  }
-
-  [role="option"] svg {
-    color: #675CBA !important;
+  .admin-workspace [role="switch"][data-state="checked"] {
+    background: #675CBA !important;
   }
 `;
 
 const AdminLayout = () => {
   const location = useLocation();
-  const requiredPermission = useMemo(() => permissionForLocation(location.pathname, location.search), [location.pathname, location.search]);
-  const cachedPermission = requiredPermission ? getCachedPermission(requiredPermission) : true;
-  const [checking, setChecking] = useState(Boolean(requiredPermission) && cachedPermission === undefined);
-  const [allowed, setAllowed] = useState(cachedPermission ?? true);
+  const permission = useMemo(() => permissionForLocation(location.pathname, location.search), [location.pathname, location.search]);
+  const cachedPermission = permission ? getCachedPermission(permission) : true;
+  const [accessState, setAccessState] = useState<"loading" | "allowed" | "denied">(() => cachedPermission === false ? "denied" : cachedPermission === true ? "allowed" : permission ? "loading" : "allowed");
 
   useEffect(() => {
-    const warmTimer = window.setTimeout(() => {
-      void loadPermissionSnapshot().catch((error) => console.error("Admin permission warmup failed:", error));
-      prefetchPrimaryAdminRoutes();
-    }, 250);
-
-    const { data: authListener } = supabase.auth.onAuthStateChange((event) => {
-      if (event === "SIGNED_IN" || event === "SIGNED_OUT" || event === "USER_UPDATED") {
-        permissionSnapshot = null;
-        permissionSnapshotPromise = null;
-      }
-    });
-
-    return () => {
-      window.clearTimeout(warmTimer);
-      authListener.subscription.unsubscribe();
-    };
+    prefetchPrimaryAdminRoutes();
   }, []);
 
   useEffect(() => {
+    if (!permission) {
+      setAccessState("allowed");
+      return;
+    }
+
+    const cached = getCachedPermission(permission);
+    if (cached !== undefined) {
+      setAccessState(cached ? "allowed" : "denied");
+      return;
+    }
+
     let active = true;
+    setAccessState("loading");
 
-    const check = async () => {
-      if (!requiredPermission) {
-        setAllowed(true);
-        setChecking(false);
-        return;
-      }
+    resolveAdminPermission(permission)
+      .then((allowed) => {
+        if (active) setAccessState(allowed ? "allowed" : "denied");
+      })
+      .catch(() => {
+        if (active) setAccessState("allowed");
+      });
 
-      const cached = getCachedPermission(requiredPermission);
-      if (cached !== undefined) {
-        setAllowed(cached);
-        setChecking(false);
-        return;
-      }
-
-      setChecking(true);
-      try {
-        const granted = await resolveAdminPermission(requiredPermission);
-        if (active) setAllowed(granted);
-      } catch (error) {
-        console.error("Admin route permission check failed:", error);
-        if (active) setAllowed(true);
-      } finally {
-        if (active) setChecking(false);
-      }
+    return () => {
+      active = false;
     };
+  }, [permission]);
 
-    void check();
-    return () => { active = false; };
-  }, [requiredPermission]);
-
-  if (checking) {
-    return <div className="fixed inset-0 grid place-items-center bg-[#F6F8FA]" dir="rtl"><div className="text-center"><Loader2 className="mx-auto h-5 w-5 animate-spin text-[#675CBA]" /><p className="mt-2 text-[8px] text-[#8E96A1]">جاري التحقق من صلاحية الصفحة...</p></div></div>;
+  if (accessState === "loading") {
+    return (
+      <div className="grid min-h-screen place-items-center bg-[#F7F8FA]" dir="rtl">
+        <div className="flex items-center gap-2 rounded-xl border border-[#E4E7EB] bg-white px-4 py-3 text-sm text-[#69727D] shadow-sm">
+          <Loader2 className="h-4 w-4 animate-spin" />
+          جاري التحقق من الصلاحيات...
+        </div>
+      </div>
+    );
   }
 
-  if (!allowed && requiredPermission) {
+  if (accessState === "denied") {
     return (
-      <div className="fixed inset-0 grid place-items-center bg-[#F6F8FA] px-5" dir="rtl">
-        <div className="w-full max-w-[420px] rounded-[18px] border border-[#E5E9EF] bg-white p-6 text-center shadow-sm">
-          <div className="mx-auto flex h-[46px] w-[46px] items-center justify-center rounded-[13px] bg-[#F1EFFF] text-[#675CBA]"><LockKeyhole className="h-[19px] w-[19px]" /></div>
-          <h1 className="mt-4 text-[13px] font-semibold text-[#404852]">لا تملك صلاحية فتح هذه الصفحة</h1>
-          <p className="mt-2 text-[8px] leading-6 text-[#8E96A1]">الصلاحية المطلوبة: <span dir="ltr" className="font-mono">{requiredPermission}</span>. يمكن لمدير الصلاحيات إعادة تفعيلها من مساحة الفريق.</p>
-          <Link to={adminPath()} className="mt-5 inline-flex h-[34px] items-center justify-center rounded-[9px] bg-[#675CBA] px-4 text-[8px] font-semibold text-white">العودة للوحة التحكم</Link>
+      <div className="grid min-h-screen place-items-center bg-[#F7F8FA] px-5" dir="rtl">
+        <div className="w-full max-w-md rounded-[18px] border border-[#E3E7EC] bg-white p-6 text-center shadow-sm">
+          <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[14px] bg-[#F2EFFF] text-[#675CBA]"><LockKeyhole className="h-5 w-5" /></div>
+          <h1 className="mt-4 text-lg font-bold text-[#2D323A]">لا توجد صلاحية لهذه الصفحة</h1>
+          <p className="mt-2 text-sm leading-6 text-[#7B838E]">يمكن لمدير الصلاحيات منحك الوصول المناسب من إدارة الفريق.</p>
+          <Link to={adminPath()} className="mt-5 inline-flex h-10 items-center justify-center rounded-[10px] bg-[#675CBA] px-4 text-sm font-semibold text-white">العودة للوحة التحكم</Link>
         </div>
       </div>
     );
@@ -400,13 +263,6 @@ const AdminLayout = () => {
   return (
     <>
       <style>{adminInteractiveColorOverrides}</style>
-      <div aria-hidden="true" className="pointer-events-none fixed inset-x-0 top-0 z-[100] flex h-[3px] overflow-hidden">
-        <span className="flex-1 bg-[#7163C1]" />
-        <span className="flex-1 bg-[#5680CF]" />
-        <span className="flex-1 bg-[#4C9687]" />
-        <span className="flex-1 bg-[#C66A7F]" />
-        <span className="flex-1 bg-[#C38838]" />
-      </div>
       <AdminLayoutBase />
     </>
   );

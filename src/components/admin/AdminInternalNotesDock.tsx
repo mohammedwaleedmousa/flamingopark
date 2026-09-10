@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Loader2, MessageSquareText, Pin, Plus, Search, X } from "lucide-react";
+import { Loader2, MessageSquareText, Pin, Plus, Search, Trash2, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
@@ -33,6 +33,7 @@ const AdminInternalNotesDock = (props: Props) => {
   const [notes, setNotes] = useState<InternalNote[]>([]);
   const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const [note, setNote] = useState("");
   const [pinned, setPinned] = useState(false);
   const [orders, setOrders] = useState<OrderOption[]>([]);
@@ -121,6 +122,41 @@ const AdminInternalNotesDock = (props: Props) => {
     }
   };
 
+  const removeNote = async (item: InternalNote) => {
+    const confirmed = window.confirm("هل تريد حذف هذه الملاحظة؟ لا يمكن التراجع عن الحذف.");
+    if (!confirmed) return;
+
+    setDeletingId(item.id);
+    try {
+      if (props.mode === "customer") {
+        await requireAdminPermission("customers.manage");
+        const { error } = await (supabase as any)
+          .from("customer_internal_notes")
+          .delete()
+          .eq("id", item.id)
+          .eq("customer_id", props.entityId);
+        if (error) throw error;
+      } else {
+        if (!selectedOrderId) return;
+        await requireAdminPermission("orders.manage");
+        const { error } = await (supabase as any)
+          .from("order_internal_notes")
+          .delete()
+          .eq("id", item.id)
+          .eq("order_id", selectedOrderId);
+        if (error) throw error;
+      }
+
+      setNotes((current) => current.filter((noteItem) => noteItem.id !== item.id));
+      toast({ title: "تم حذف الملاحظة" });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "تعذر الحذف";
+      toast({ title: "تعذر حذف الملاحظة", description: message, variant: "destructive" });
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <>
       <button
@@ -188,7 +224,22 @@ const AdminInternalNotesDock = (props: Props) => {
                       <div className="divide-y divide-[#EDF0F3]">
                         {notes.map((item) => (
                           <div key={item.id} className={cn("p-[10px]", item.is_pinned && "bg-[#FFF9EE]")}>
-                            <div className="flex items-start justify-between gap-2"><p className="text-[8.5px] leading-6 text-[#535B65]">{item.note}</p>{item.is_pinned ? <Pin className="mt-1 h-[11px] w-[11px] shrink-0 text-[#B17B33]" /> : null}</div>
+                            <div className="flex items-start justify-between gap-2">
+                              <p className="min-w-0 flex-1 text-[8.5px] leading-6 text-[#535B65]">{item.note}</p>
+                              <div className="flex shrink-0 items-center gap-1">
+                                {item.is_pinned ? <Pin className="h-[11px] w-[11px] text-[#B17B33]" /> : null}
+                                <button
+                                  type="button"
+                                  onClick={() => void removeNote(item)}
+                                  disabled={deletingId === item.id}
+                                  aria-label="حذف الملاحظة"
+                                  title="حذف الملاحظة"
+                                  className="flex h-[26px] w-[26px] items-center justify-center rounded-[7px] text-[#B36A6A] transition hover:bg-[#FFF0F0] hover:text-[#A23C3C] disabled:opacity-50"
+                                >
+                                  {deletingId === item.id ? <Loader2 className="h-[11px] w-[11px] animate-spin" /> : <Trash2 className="h-[11px] w-[11px]" />}
+                                </button>
+                              </div>
+                            </div>
                             <p className="mt-[4px] text-[6.5px] text-[#9BA2AC]">{new Date(item.created_at).toLocaleString("ar-EG")}</p>
                           </div>
                         ))}

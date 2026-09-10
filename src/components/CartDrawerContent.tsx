@@ -5,8 +5,10 @@ import { useNavigate } from "react-router-dom";
 import { useStore } from "@/store/useStore";
 import { useCurrency } from "@/lib/currency";
 
+const POST_AUTH_REDIRECT_KEY = "flamingo-post-auth-redirect";
+
 const CartDrawerContent = () => {
-  const { cart, isCartOpen, closeCart, removeFromCart, updateQuantity, getCartTotal, clearCart } = useStore();
+  const { customer, cart, isCartOpen, closeCart, removeFromCart, updateQuantity, getCartTotal, clearCart } = useStore();
 
   const navigate = useNavigate();
 
@@ -42,6 +44,14 @@ const CartDrawerContent = () => {
 
   const handleCheckout = () => {
     closeCart();
+
+    if (!customer || customer.id === "guest") {
+      window.sessionStorage.setItem(POST_AUTH_REDIRECT_KEY, "/checkout");
+      navigate("/auth?returnTo=%2Fcheckout");
+      return;
+    }
+
+    window.sessionStorage.removeItem(POST_AUTH_REDIRECT_KEY);
     navigate("/checkout");
   };
 

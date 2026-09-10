@@ -386,7 +386,6 @@ const CheckoutPage = () => {
   const createSecureOrder = async (items: unknown[]) => {
     const normalizedCustomerPhone = normalizeCheckoutPhone(String(customer?.phone || formData.phone || "").trim());
     const orderCountry = orderCountryFromPhone(normalizedCustomerPhone);
-    const checkoutCode = (appliedCoupon || couponCode.trim().toUpperCase()) || null;
     const { data, error } = await (supabase as any).rpc("create_secure_order_v3", {
       p_customer_name: String(customer?.name || formData.name || "").trim(),
       p_customer_phone: normalizedCustomerPhone,
@@ -399,7 +398,7 @@ const CheckoutPage = () => {
       p_payment_method: isCashPayment ? "cod" : paymentMethod,
       p_currency_mode: currencyMode,
       p_currency_code: currencyMode,
-      p_coupon_code: checkoutCode,
+      p_coupon_code: appliedCoupon || null,
       p_delivery_company_id: selectedDelivery || null,
     });
     if (error) { console.error("RPC ERROR FULL:", error); throw error; }

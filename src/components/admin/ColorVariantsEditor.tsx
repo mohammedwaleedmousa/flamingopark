@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { toast } from '@/hooks/use-toast';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -41,6 +41,7 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
 
   const [uploading, setUploading] = useState<number | null>(null);
   const [uploadProgress, setUploadProgress] = useState<UploadProgress | null>(null);
+  const sizeInputRefs = useRef<Record<number, HTMLInputElement | null>>({});
 
   useEffect(() => {
     if (uploading === null) return;
@@ -97,6 +98,52 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
 
   const removeColor = (i: number) => {
     onChange(value.filter((_, idx) => idx !== i));
+  };
+
+  const addSize = (colorIdx: number) => {
+    const input = sizeInputRefs.current[colorIdx];
+    const raw = input?.value.trim() || '';
+
+    if (!raw) {
+      toast({
+        title: 'أدخل المقاس أولاً',
+        variant: 'destructive',
+      });
+      input?.focus();
+      return;
+    }
+
+    const sizes = (value[colorIdx]?.sizes || []).map((size) =>
+      typeof size === 'string' ? size : size.size,
+    );
+
+    if (sizes.some((size) => size.trim().toLowerCase() === raw.toLowerCase())) {
+      toast({
+        title: 'المقاس موجود بالفعل',
+        variant: 'destructive',
+      });
+      input?.focus();
+      return;
+    }
+
+    const next = [...value];
+    next[colorIdx] = {
+      ...next[colorIdx],
+      sizes: [
+        ...(next[colorIdx].sizes || []),
+        {
+          size: raw,
+          stock: 0,
+        },
+      ],
+    };
+
+    onChange(next);
+
+    if (input) {
+      input.value = '';
+      input.focus();
+    }
   };
 
   const uploadImage = async (colorIdx: number, files: FileList) => {
@@ -638,57 +685,31 @@ const ColorVariantsEditor = ({ value, onChange }: Props) => {
                   </div>
                 )}
 
-                <div className="flex gap-2">
+                <div className="flex items-center gap-2">
                   <Input
+                    ref={(element) => {
+                      sizeInputRefs.current[ci] = element;
+                    }}
                     placeholder="أضف مقاساً"
                     dir="rtl"
-                    className="h-9 rounded-xl"
+                    className="h-10 flex-1 rounded-xl"
                     onKeyDown={(e) => {
-                      if (e.key !== 'Enter') {
-                        return;
-                      }
-
+                      if (e.key !== 'Enter') return;
                       e.preventDefault();
-
-                      const raw = (
-                        e.target as HTMLInputElement
-                      ).value.trim();
-
-                      if (!raw) return;
-
-                      const next = [...value];
-
-                      const sizes = (
-                        next[ci].sizes || []
-                      ).map((size) =>
-                        typeof size === 'string'
-                          ? size
-                          : size.size,
-                      );
-
-                      if (sizes.includes(raw)) {
-                        return;
-                      }
-
-                      next[ci].sizes = [
-                        ...(next[ci].sizes || []),
-                        {
-                          size: raw,
-                          stock: 0,
-                        },
-                      ];
-
-                      onChange(next);
-
-                      (
-                        e.target as HTMLInputElement
-                      ).value = '';
+                      addSize(ci);
                     }}
                   />
 
-                  <span className="text-[11px] text-muted-foreground self-center">
-                    اضغط Enter للإضافة
-                  </span>
+                  <Button
+                    type="button"
+                    size="icon"
+                    onClick={() => addSize(ci)}
+                    className="h-10 w-10 shrink-0 rounded-xl"
+                    aria-label="إضافة المقاس"
+                    title="إضافة المقاس"
+                  >
+                    <Plus className="h-4 w-4" />
+                  </Button>
                 </div>
               </div>
             </div>

@@ -1,6 +1,6 @@
 import { memo, useEffect, useMemo, useState } from "react";
 import type { MouseEvent, SyntheticEvent } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { Heart, ImageOff, ShoppingBag } from "lucide-react";
 
 import { Product, useStore } from "@/store/useStore";
@@ -43,6 +43,7 @@ const isCloudflareCatalogTransform = (url: string) => url.includes("/cdn-cgi/ima
 
 const ProductCard = ({ product, index = 2, badge, onQuickView }: ProductCardProps) => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   const isLiked = useFavorites((state) => state.favorites.some((favorite) => favorite.id === product.id));
   const toggleFavorite = useFavorites((state) => state.toggleFavorite);
@@ -140,8 +141,16 @@ const ProductCard = ({ product, index = 2, badge, onQuickView }: ProductCardProp
     event.stopPropagation();
 
     const variants = product.variants;
-    if (variants?.length && onQuickView) {
-      onQuickView(product);
+    const sizes = Array.isArray((product as any).sizes) ? (product as any).sizes : [];
+    const hasConfiguredSizes = Boolean((product as any).hasSizes || (product as any).has_sizes || sizes.length > 0);
+    const needsSelection = Boolean(variants?.length || colors.length || hasConfiguredSizes);
+
+    if (needsSelection) {
+      if (onQuickView) {
+        onQuickView(product);
+      } else {
+        navigate(`/product/${product.slug}`);
+      }
       return;
     }
 

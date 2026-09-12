@@ -6,10 +6,6 @@ const getViewportAwareWidth = (requestedWidth: number) => {
   const viewportWidth = Math.max(320, window.innerWidth || requestedWidth);
   const devicePixelRatio = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
 
-  // Large storefront images should scale with the real mobile viewport, but
-  // small UI images (brand logos/category thumbs) must never be upscaled to a
-  // blanket 480px minimum. Upscaling those wastes bandwidth without improving
-  // perceived sharpness.
   if (viewportWidth < 768) {
     const mobileDpr = Math.min(devicePixelRatio, 2);
     const mobileTarget = Math.ceil(viewportWidth * mobileDpr);
@@ -32,6 +28,27 @@ const getViewportAwareWidth = (requestedWidth: number) => {
 
 const isSupabasePublicStorageUrl = (url: URL) =>
   url.hostname.endsWith("supabase.co") && url.pathname.includes("/storage/v1/object/public/");
+
+const shouldBypassCloudflareTransform = (url: URL, requestedWidth: number) => {
+  const path = url.pathname;
+
+  if (
+    path.includes("/uploads/brands/") ||
+    path.includes("/uploads/categories/") ||
+    path.includes("/uploads/banners/")
+  ) {
+    return true;
+  }
+
+  // Some category thumbnails were historically saved under color-variants.
+  // Small UI imagery should prefer the known-good public Storage URL over a
+  // transform that can fail on weak networks or uncached resize variants.
+  if (requestedWidth <= 360 && path.includes("/uploads/color-variants/")) {
+    return true;
+  }
+
+  return false;
+};
 
 const getCloudflareOptions = (width: number, quality: number) => {
   const safeWidth = Math.max(240, Math.min(1920, Math.round(width)));
@@ -78,6 +95,10 @@ const buildOptimizedImageUrl = (
     }
 
     if (isSupabasePublicStorageUrl(u)) {
+      if (shouldBypassCloudflareTransform(u, width)) {
+        return u.toString();
+      }
+
       const colorVariantImage = u.pathname.includes("/uploads/color-variants/");
 
       if (viewportAware && colorVariantImage && width >= 1200) {
@@ -128,6 +149,16 @@ export const createImageSrcSet = (
 ): string | undefined => {
   if (!url?.trim() || !canTransformImage(url)) return undefined;
 
+  try {
+    const parsed = new URL(url, typeof window !== "undefined" ? window.location.origin : FLAMINGO_IMAGE_ZONE);
+    const requestedMax = Math.max(...widths.filter((width) => Number.isFinite(width) && width > 0), 0);
+    if (isSupabasePublicStorageUrl(parsed) && shouldBypassCloudflareTransform(parsed, requestedMax)) {
+      return undefined;
+    }
+  } catch {
+    return undefined;
+  }
+
   const candidates = Array.from(
     new Set(widths.filter((width) => Number.isFinite(width) && width > 0)),
   ).sort((a, b) => a - b);
@@ -138,8 +169,6 @@ export const createImageSrcSet = (
   const viewportMax = getViewportAwareWidth(requestedMax);
   const limitedCandidates = candidates.filter((width) => width <= viewportMax);
 
-  // Preserve a sharp final candidate close to the actual viewport need while
-  // preventing mobile browsers from choosing desktop-sized 1200–1400px files.
   if (viewportMax < requestedMax && !limitedCandidates.includes(viewportMax)) {
     limitedCandidates.push(viewportMax);
   }

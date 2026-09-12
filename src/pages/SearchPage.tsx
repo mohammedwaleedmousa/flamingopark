@@ -1,40 +1,34 @@
-import { useState, useEffect, useMemo } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { motion, AnimatePresence } from 'framer-motion';
-import { Search, X, Loader2, Filter, SlidersHorizontal, ChevronDown } from 'lucide-react';
+import { Loader2, Search, X } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import CartDrawer from '@/components/CartDrawer';
 import ProductCard from '@/components/ProductCard';
 import { supabase } from '@/integrations/supabase/client';
 import { PRODUCT_CARD_SELECT } from '@/lib/productCardData';
-import { useSiteContent, getSiteText } from '@/hooks/useSiteContent';
 import { Product } from '@/store/useStore';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 
-interface SearchFilters {
-  minPrice: number;
-  maxPrice: number;
-  categories: string[];
-  brands: string[];
-  colors: string[];
-  sizes: string[];
-  sortBy: 'relevance' | 'price_asc' | 'price_desc' | 'newest' | 'rating';
-  inStockOnly: boolean;
-}
+const PAGE_SIZE = 24;
 
 type SearchProductRow = {
-  id: string; name: string | null; name_ar: string | null; slug: string; price: number | string;
-  discount: number | null; description: string | null; description_ar: string | null;
-  images: string[] | null; color_variants: { images?: string[] }[] | null; category: string | null; brand: string | null;
-  in_stock: boolean | null; countries: string[] | null; is_best_seller: boolean | null; is_featured: boolean | null;
+  id: string;
+  name: string | null;
+  name_ar: string | null;
+  slug: string;
+  price: number | string;
+  discount: number | null;
+  description: string | null;
+  description_ar: string | null;
+  images: string[] | null;
+  color_variants: { images?: string[] }[] | null;
+  category: string | null;
+  brand: string | null;
+  in_stock: boolean | null;
+  countries: string[] | null;
+  is_best_seller: boolean | null;
+  is_featured: boolean | null;
 };
 
 const convertToProduct = (data: SearchProductRow): Product => ({
@@ -46,464 +40,179 @@ const convertToProduct = (data: SearchProductRow): Product => ({
   discount: data.discount,
   description: data.description || '',
   descriptionAr: data.description_ar || '',
-  images:
-  data.images?.length > 0
-    ? data.images
-    : (data.color_variants?.[0]?.images || []),
+  images: data.images?.length ? data.images : (data.color_variants?.[0]?.images || []),
   category: data.category || '',
   brand: data.brand || '',
-  inStock: data.in_stock || false,
+  inStock: Boolean(data.in_stock),
   countries: data.countries,
   isBestSeller: data.is_best_seller,
   isFeatured: data.is_featured,
 });
 
 const SearchPage = () => {
-  const { data: content } = useSiteContent('search_page_');
   const [searchParams, setSearchParams] = useSearchParams();
-  const navigate = useNavigate();
   const query = searchParams.get('q') || '';
-  
-  const [filters, setFilters] = useState<SearchFilters>({
-    minPrice: 0,
-    maxPrice: 10000,
-    categories: [],
-    brands: [],
-    colors: [],
-    sizes: [],
-    sortBy: 'relevance',
-    inStockOnly: false,
-  });
-
-  const { data: categories = [] } = useQuery({
-    queryKey: ['categories-all-active'],
-    queryFn: async () => {
-      const { data, error } = await supabase.from('categories').select('id,name,name_ar').eq('is_active', true);
-      if (error) throw error;
-      return data || [];
-    },
-  });
-  const categoryLabel = (id: string) => categories.find((category) => category.id === id)?.name_ar || id;
-
-  const [showFilters, setShowFilters] = useState(false);
+  const [inputValue, setInputValue] = useState(query);
   const [page, setPage] = useState(1);
-  const itemsPerPage = 24;
 
-  // Fetch search results
-  const { data: results = [], isLoading: isSearching } = useQuery({
-    queryKey: ['search-products', query, filters, page],
+  useEffect(() => {
+    setInputValue(query);
+    setPage(1);
+  }, [query]);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ['search-products-v2', query, page],
     queryFn: async () => {
-      if (!query.trim()) return [];
+      const clean = query.trim();
+      if (!clean) return { products: [] as Product[], total: 0 };
 
-      let q = supabase
+      const offset = (page - 1) * PAGE_SIZE;
+      const { data: matches, error: matchError } = await (supabase as any).rpc('search_storefront_product_ids', {
+        p_query: clean,
+        p_offset: offset,
+        p_limit: PAGE_SIZE,
+      });
+      if (matchError) throw matchError;
+
+      const rows = matches || [];
+      const ids = rows.map((row: any) => row.product_id).filter(Boolean);
+      const total = Number(rows[0]?.total_count || 0);
+      if (ids.length === 0) return { products: [] as Product[], total };
+
+      const { data: productRows, error } = await supabase
         .from('products')
         .select(PRODUCT_CARD_SELECT)
-        .or(`name_ar.ilike.%${query}%,description_ar.ilike.%${query}%,name.ilike.%${query}%,description.ilike.%${query}%`)
+        .in('id', ids)
         .eq('is_active', true);
-
-      // Apply filters
-      if (filters.minPrice > 0) q = q.gte('price', filters.minPrice);
-      if (filters.maxPrice < 10000) q = q.lte('price', filters.maxPrice);
-      if (filters.inStockOnly) q = q.eq('in_stock', true);
-      if (filters.categories.length > 0) q = q.in('category_id', filters.categories);
-      if (filters.brands.length > 0) q = q.in('brand', filters.brands);
-
-      // Apply sorting
-      switch (filters.sortBy) {
-        case 'price_asc':
-          q = q.order('price', { ascending: true });
-          break;
-        case 'price_desc':
-          q = q.order('price', { ascending: false });
-          break;
-        case 'newest':
-          q = q.order('created_at', { ascending: false });
-          break;
-        case 'rating':
-          q = q.order('rating', { ascending: false });
-          break;
-        default:
-          break;
-      }
-
-      // Pagination
-      const from = (page - 1) * itemsPerPage;
-      q = q.range(from, from + itemsPerPage - 1);
-
-      const { data, error } = await q;
       if (error) throw error;
-      return (data || []).map((row) => convertToProduct(row as unknown as SearchProductRow));
+
+      const byId = new Map((productRows || []).map((row: any) => [row.id, row]));
+      const products = ids
+        .map((id: string) => byId.get(id))
+        .filter(Boolean)
+        .map((row: any) => convertToProduct(row as SearchProductRow));
+
+      return { products, total };
     },
     enabled: query.trim().length > 0,
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
-  // Fetch facets (categories, brands, etc.)
-  const { data: facets = {} } = useQuery({
-    queryKey: ['search-facets', query],
-    queryFn: async () => {
-      if (!query.trim()) return {};
+  const products = data?.products || [];
+  const total = data?.total || 0;
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
-      const [categoriesRes, brandsRes] = await Promise.all([
-        supabase
-          .from('products')
-          .select('category_id')
-          .or(`name_ar.ilike.%${query}%,description_ar.ilike.%${query}%,name.ilike.%${query}%,description.ilike.%${query}%`)
-          .not('category_id', 'is', null)
-          .eq('is_active', true),
-        supabase
-          .from('products')
-          .select('brand')
-          .or(`name_ar.ilike.%${query}%,description_ar.ilike.%${query}%,name.ilike.%${query}%,description.ilike.%${query}%`)
-          .not('brand', 'is', null)
-          .eq('is_active', true),
-      ]);
-
-      const categories = [...new Set(categoriesRes.data?.map(p => p.category_id).filter(Boolean))];
-      const brands = [...new Set(brandsRes.data?.map(p => p.brand).filter(Boolean))];
-
-      return { categories, brands };
-    },
-    enabled: query.trim().length > 0,
-  });
-
-  const handleClearQuery = () => {
-    setSearchParams({});
-    setPage(1);
+  const submitSearch = () => {
+    const clean = inputValue.trim();
+    if (!clean) {
+      setSearchParams({});
+      return;
+    }
+    setSearchParams({ q: clean });
   };
 
-  const handleSortChange = (sortBy: SearchFilters['sortBy']) => {
-    setFilters({ ...filters, sortBy });
-    setPage(1);
-  };
+  const pageNumbers = useMemo(() => {
+    const start = Math.max(1, page - 2);
+    const end = Math.min(totalPages, start + 4);
+    return Array.from({ length: Math.max(0, end - start + 1) }, (_, index) => start + index);
+  }, [page, totalPages]);
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background" dir="rtl">
       <Navbar />
       <CartDrawer />
 
-      <main className="pt-24 pb-16">
-        {/* Hero Section - Enhanced */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-primary/10 via-purple-500/5 to-transparent">
-          {/* Animated background elements */}
-          <motion.div 
-            className="absolute top-0 right-0 w-96 h-96 bg-primary/5 rounded-full blur-3xl"
-            animate={{ y: [0, 30, 0] }}
-            transition={{ duration: 8, repeat: Infinity }}
-          />
-          <motion.div 
-            className="absolute bottom-0 left-0 w-72 h-72 bg-purple-500/5 rounded-full blur-3xl"
-            animate={{ y: [0, -30, 0] }}
-            transition={{ duration: 10, repeat: Infinity }}
-          />
-
-          <div className="container mx-auto px-4 py-16 md:py-20 relative z-10">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6 }}
-              className="max-w-4xl mx-auto"
-            >
-              {/* Search Title with Icon */}
-              <div className="flex items-center gap-3 mb-6 justify-center md:justify-start">
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 3, repeat: Infinity }}
-                  className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center"
-                >
-                  <Search className="w-6 h-6 text-primary" />
-                </motion.div>
-                <h1 className="font-heading text-4xl md:text-5xl bg-gradient-to-r from-primary to-purple-600 bg-clip-text text-transparent">
-                  {getSiteText(content, 'search_page_title', 'ابحث عن الأفضل')}
-                </h1>
+      <main className="pb-16 pt-24">
+        <section className="border-b border-border bg-card/40">
+          <div className="container mx-auto px-4 py-8 md:py-10">
+            <div className="mx-auto max-w-3xl">
+              <div className="mb-4 flex items-center gap-2">
+                <Search className="h-5 w-5 text-primary" />
+                <h1 className="text-xl font-semibold md:text-2xl">البحث في المتجر</h1>
               </div>
-              
-              {/* Results Summary */}
-              {query && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.2 }}
-                  className="text-center md:text-right mb-8"
-                >
-                  <p className="text-lg text-muted-foreground mb-2">
-                    البحث عن: <span className="font-heading text-primary text-xl">"{query}"</span>
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {isSearching ? (
-                      <span className="flex items-center gap-2 justify-center md:justify-start">
-                        <motion.span animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity }} className="inline-block">⟳</motion.span>
-                        جاري البحث...
-                      </span>
-                    ) : (
-                      <>
-                        <span className="font-heading text-primary text-lg">{results.length}</span> نتيجة متاحة
-                      </>
-                    )}
-                  </p>
-                </motion.div>
-              )}
 
-              {/* Enhanced Search Bar */}
-              <motion.div 
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="relative group"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-primary/20 to-purple-500/20 rounded-2xl blur-lg group-hover:blur-xl transition-all opacity-0 group-hover:opacity-100" />
-                <div className="relative flex items-center gap-3 bg-card border-2 border-border rounded-2xl p-1 focus-within:border-primary transition-all shadow-lg">
-                  <Search className="w-5 h-5 text-muted-foreground ml-4" />
-                  <input
-                    type="text"
-                    value={query}
-                    onChange={(e) => {
-                      setSearchParams({ q: e.target.value });
-                      setPage(1);
-                    }}
-                    placeholder={getSiteText(content, 'search_page_placeholder', 'ابحث عن منتجات، ماركات، فئات...')}
-                    className="flex-1 bg-transparent border-0 outline-none text-foreground placeholder:text-muted-foreground/60 py-3 text-lg"
-                  />
-                  {query && (
-                    <motion.button
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      onClick={() => {
-                        setSearchParams({});
-                        setPage(1);
-                      }}
-                      className="px-4 py-2 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition mr-1"
-                    >
-                      <X className="w-5 h-5" />
-                    </motion.button>
-                  )}
-                </div>
-              </motion.div>
+              <div className="flex items-center gap-2 rounded-xl border border-border bg-background p-2 shadow-sm">
+                <Search className="mr-2 h-5 w-5 shrink-0 text-muted-foreground" />
+                <input
+                  value={inputValue}
+                  onChange={(event) => setInputValue(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === 'Enter') submitSearch();
+                  }}
+                  placeholder="ابحث باسم المنتج أو الماركة مثل اديداس..."
+                  className="h-10 min-w-0 flex-1 bg-transparent px-2 text-sm outline-none"
+                />
+                {inputValue && (
+                  <button type="button" onClick={() => setInputValue('')} className="flex h-9 w-9 items-center justify-center rounded-lg text-muted-foreground hover:bg-muted">
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+                <button type="button" onClick={submitSearch} className="h-10 rounded-lg bg-primary px-5 text-sm font-semibold text-primary-foreground">
+                  بحث
+                </button>
+              </div>
 
-              {/* Quick Search Tags */}
-              {!query && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.4 }}
-                  className="mt-8 flex flex-wrap gap-3 justify-center md:justify-start"
-                >
-                  <span className="text-sm text-muted-foreground">ابحث عن:</span>
-                  {['مجوهرات', 'خواتم', 'أساور', 'قلائد'].map((tag) => (
-                    <motion.button
-                      key={tag}
-                      whileHover={{ scale: 1.05 }}
-                      whileTap={{ scale: 0.95 }}
-                      onClick={() => {
-                        setSearchParams({ q: tag });
-                        setPage(1);
-                      }}
-                      className="px-4 py-2 rounded-full bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20 transition text-sm"
-                    >
-                      {tag}
-                    </motion.button>
-                  ))}
-                </motion.div>
+              {query && !isLoading && (
+                <p className="mt-4 text-sm text-muted-foreground">
+                  وجدنا <span className="font-semibold text-foreground">{total}</span> نتيجة لـ <span className="font-semibold text-primary">“{query}”</span>
+                </p>
               )}
-            </motion.div>
+            </div>
           </div>
         </section>
 
-        {/* Results Section */}
-        <section className="container mx-auto px-4 py-12">
+        <section className="container mx-auto px-4 py-8">
           {!query.trim() ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-24"
-            >
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted mb-6">
-                <Search className="w-10 h-10 text-muted-foreground/50" />
-              </div>
-              <h2 className="font-heading text-2xl mb-2">ابدأ البحث</h2>
-              <p className="text-muted-foreground text-lg">
-                {getSiteText(content, 'search_page_empty', 'ابحث عن منتج لبدء التسوق')}
-              </p>
-            </motion.div>
-          ) : isSearching ? (
-            <div className="flex items-center justify-center py-24">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-12 h-12 rounded-full bg-primary/10 mb-4 animate-pulse">
-                  <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                </div>
-                <p className="text-muted-foreground">جاري البحث...</p>
-              </div>
+            <div className="py-20 text-center text-muted-foreground">اكتب اسم منتج أو ماركة لبدء البحث.</div>
+          ) : isLoading ? (
+            <div className="flex items-center justify-center gap-2 py-24 text-muted-foreground">
+              <Loader2 className="h-5 w-5 animate-spin" />
+              جاري البحث...
             </div>
-          ) : results.length === 0 ? (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="text-center py-24"
-            >
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-muted mb-6">
-                <Search className="w-10 h-10 text-muted-foreground/50" />
-              </div>
-              <h2 className="font-heading text-2xl mb-2">لم نجد نتائج</h2>
-              <p className="text-muted-foreground text-lg">
-                {getSiteText(content, 'search_page_no_results', 'جرّب كلمات مفتاحية مختلفة')}
-              </p>
-            </motion.div>
+          ) : products.length === 0 ? (
+            <div className="py-20 text-center">
+              <Search className="mx-auto mb-3 h-8 w-8 text-muted-foreground/50" />
+              <h2 className="font-semibold">لم نجد نتائج</h2>
+              <p className="mt-2 text-sm text-muted-foreground">جرّب اسم الماركة أو كلمة أبسط.</p>
+            </div>
           ) : (
             <>
-              {/* Enhanced Filter & Sort Bar */}
-              <motion.div
-                layout
-                className="mb-8 space-y-4"
-              >
-                {/* Top Controls */}
-                <div className="flex items-center justify-between gap-4 flex-wrap">
-                  <motion.button
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => setShowFilters(!showFilters)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/30 bg-primary/5 text-primary hover:bg-primary/10 transition md:hidden font-medium"
-                  >
-                    <SlidersHorizontal className="w-4 h-4" />
-                    {getSiteText(content, 'search_page_filter_btn', 'الفلاتر')}
-                    {(filters.categories.length > 0 || filters.brands.length > 0 || filters.inStockOnly) && (
-                      <span className="ml-2 px-2 py-1 rounded-full bg-primary text-white text-xs font-bold">
-                        {(filters.categories.length || 0) + (filters.brands.length || 0) + (filters.inStockOnly ? 1 : 0)}
-                      </span>
-                    )}
-                  </motion.button>
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-5 lg:grid-cols-4">
+                {products.map((product) => <ProductCard key={product.id} product={product} />)}
+              </div>
 
-                  {/* Sort Dropdown */}
-                  <div className="flex items-center gap-3 bg-card border border-border rounded-lg p-2">
-                    <span className="text-sm font-medium text-muted-foreground px-2">
-                      {getSiteText(content, 'search_page_sort', 'الفرز:')}
-                    </span>
-                    <select
-                      value={filters.sortBy}
-                      onChange={(e) => handleSortChange(e.target.value as SearchFilters['sortBy'])}
-                      className="px-3 py-1.5 rounded-lg border-0 bg-background text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-primary/50 transition cursor-pointer"
-                    >
-                      <option value="relevance">{getSiteText(content, 'search_sort_relevance', 'الصلة')}</option>
-                      <option value="newest">{getSiteText(content, 'search_sort_newest', 'الأحدث')}</option>
-                      <option value="price_asc">{getSiteText(content, 'search_sort_price_low', 'السعر: منخفض')}</option>
-                      <option value="price_desc">{getSiteText(content, 'search_sort_price_high', 'السعر: مرتفع')}</option>
-                      <option value="rating">{getSiteText(content, 'search_sort_rating', 'الأعلى تقييمًا')}</option>
-                    </select>
-                  </div>
-
-                  {/* Results Counter */}
-                  <motion.div 
-                    layout
-                    className="flex items-center gap-2 bg-primary/10 border border-primary/30 rounded-lg px-4 py-2"
-                  >
-                    <span className="text-sm text-muted-foreground">النتائج:</span>
-                    <span className="font-heading text-lg text-primary">{results.length}</span>
-                    <span className="text-sm text-muted-foreground">{getSiteText(content, 'search_page_results_word', 'منتج')}</span>
-                  </motion.div>
-                </div>
-
-                {/* Active Filters Display */}
-                <AnimatePresence>
-                  {(filters.categories.length > 0 || filters.brands.length > 0 || filters.inStockOnly) && (
-                    <motion.div
-                      initial={{ opacity: 0, height: 0 }}
-                      animate={{ opacity: 1, height: 'auto' }}
-                      exit={{ opacity: 0, height: 0 }}
-                      className="flex flex-wrap gap-2 items-center"
-                    >
-                      <span className="text-xs text-muted-foreground">الفلاتر النشطة:</span>
-                      
-                      {filters.inStockOnly && (
-                        <motion.button
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          onClick={() => setFilters({ ...filters, inStockOnly: false })}
-                          className="flex items-center gap-1 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-500/50 text-blue-700 text-xs hover:bg-blue-500/30 transition"
-                        >
-                          المتوفرة فقط <X className="w-3 h-3" />
-                        </motion.button>
-                      )}
-                      
-                      {filters.categories.map(cat => (
-                        <motion.button
-                          key={cat}
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          onClick={() => setFilters({ ...filters, categories: filters.categories.filter(c => c !== cat) })}
-                          className="flex items-center gap-1 px-3 py-1 rounded-full bg-green-500/20 border border-green-500/50 text-green-700 text-xs hover:bg-green-500/30 transition"
-                        >
-                          {categoryLabel(cat)} <X className="w-3 h-3" />
-                        </motion.button>
-                      ))}
-                      
-                      {filters.brands.map(brand => (
-                        <motion.button
-                          key={brand}
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          onClick={() => setFilters({ ...filters, brands: filters.brands.filter(b => b !== brand) })}
-                          className="flex items-center gap-1 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-500/50 text-purple-700 text-xs hover:bg-purple-500/30 transition"
-                        >
-                          {brand} <X className="w-3 h-3" />
-                        </motion.button>
-                      ))}
-                      
-                      <motion.button
-                        onClick={() => setFilters({
-                          minPrice: 0,
-                          maxPrice: 10000,
-                          categories: [],
-                          brands: [],
-                          colors: [],
-                          sizes: [],
-                          sortBy: 'relevance',
-                          inStockOnly: false,
-                        })}
-                        className="px-3 py-1 rounded-lg text-xs text-muted-foreground hover:text-foreground hover:bg-muted transition"
-                      >
-                        مسح الكل
-                      </motion.button>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
-
-              {/* Products Grid */}
-              <motion.div
-                layout
-                className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-6"
-              >
-                <AnimatePresence>
-                  {results.map((product, index) => (
-                    <motion.div
-                      key={product.id}
-                      layout
-                      initial={{ opacity: 0, scale: 0.8 }}
-                      animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      transition={{ delay: index * 0.05 }}
-                    >
-                      <ProductCard product={product} />
-                    </motion.div>
-                  ))}
-                </AnimatePresence>
-              </motion.div>
-
-              {/* Pagination */}
-              {results.length === itemsPerPage && (
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  className="flex justify-center mt-12"
-                >
+              {totalPages > 1 && (
+                <div className="mt-10 flex flex-wrap items-center justify-center gap-2">
                   <button
-                    onClick={() => {
-                      setPage(page + 1);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="btn-unified px-8 py-3 gap-2"
+                    type="button"
+                    disabled={page <= 1}
+                    onClick={() => { setPage((current) => Math.max(1, current - 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="h-9 rounded-lg border border-border px-4 text-sm disabled:opacity-40"
                   >
-                    {getSiteText(content, 'search_page_load_more', 'تحميل المزيد')}
+                    السابق
                   </button>
-                </motion.div>
+                  {pageNumbers.map((pageNumber) => (
+                    <button
+                      key={pageNumber}
+                      type="button"
+                      onClick={() => { setPage(pageNumber); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                      className={`h-9 min-w-9 rounded-lg px-3 text-sm ${pageNumber === page ? 'bg-primary text-primary-foreground' : 'border border-border'}`}
+                    >
+                      {pageNumber}
+                    </button>
+                  ))}
+                  <button
+                    type="button"
+                    disabled={page >= totalPages}
+                    onClick={() => { setPage((current) => Math.min(totalPages, current + 1)); window.scrollTo({ top: 0, behavior: 'smooth' }); }}
+                    className="h-9 rounded-lg border border-border px-4 text-sm disabled:opacity-40"
+                  >
+                    التالي
+                  </button>
+                </div>
               )}
             </>
           )}

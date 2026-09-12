@@ -128,23 +128,23 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
                 key={brand.id}
                 to={`/brands/${brand.slug}`}
                 onClick={() => saveStripPosition(brand.id)}
-                className="group flex w-[78px] shrink-0 snap-start flex-col items-center sm:w-[90px] md:w-[96px]"
+                className="group flex w-[94px] shrink-0 snap-start flex-col items-center md:w-[128px]"
               >
-                <div className="flex aspect-square w-full items-center justify-center rounded-[15px] border border-[#eee6e2] bg-white px-2.5 md:rounded-[16px] md:px-3">
+                <div className="flex aspect-square w-full items-center justify-center rounded-[16px] border border-[#eee6e2] bg-white px-3 md:rounded-[18px] md:px-4">
                   {brand.logo_url ? (
                     <img
-                      src={optimizeImage(brand.logo_url, 220, 78)}
+                      src={optimizeImage(brand.logo_url, 240, 78)}
                       alt={brand.name}
                       loading="lazy"
                       decoding="async"
-                      className="max-h-[44%] max-w-[82%] object-contain transition-transform duration-300 group-hover:scale-105 md:max-h-[42%]"
+                      className="max-h-[48%] max-w-[84%] object-contain transition-transform duration-300 group-hover:scale-105 md:max-h-[44%]"
                     />
                   ) : (
-                    <span className="text-center font-serif text-[9px] font-semibold md:text-[11px]">{brand.name}</span>
+                    <span className="text-center font-serif text-[10px] font-semibold md:text-[13px]">{brand.name}</span>
                   )}
                 </div>
 
-                <p className="mt-1.5 max-w-full truncate text-[8px] font-semibold text-[#3F3532] md:text-[8px]">
+                <p className="mt-1.5 max-w-full truncate text-[8px] font-semibold text-[#3F3532] md:mt-2 md:text-[9px]">
                   {brand.name}
                 </p>
               </Link>

@@ -1,0 +1,27 @@
+name: Production Read Load Test
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/production-read-load-test.yml'
+      - 'scripts/production-read-load-test.mjs'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  read-load-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Run safe staged production read test
+        env:
+          BASE_URL: https://flamingoparkaden.com
+          PRODUCT_SLUG: 1806-26
+        run: node scripts/production-read-load-test.mjs

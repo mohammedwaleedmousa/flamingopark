@@ -1,9 +1,9 @@
 import RequiredProductOptionsGuard from "@/components/RequiredProductOptionsGuard";
-import ProductsPageBase from "./ProductsPageBase";
+import ProductsPageServer from "./ProductsPageServer";
 
 const ProductsPage = () => (
   <RequiredProductOptionsGuard>
-    <ProductsPageBase />
+    <ProductsPageServer />
   </RequiredProductOptionsGuard>
 );
 

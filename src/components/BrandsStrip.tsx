@@ -24,7 +24,6 @@ interface BrandViewModel {
 }
 
 const BRAND_STRIP_POSITION_KEY = "flamingo-home-brand-strip-position";
-
 const normalizeBrandName = (value: string) => value.trim().toLocaleLowerCase();
 
 const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
@@ -52,11 +51,9 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
 
   const renderBrands = useMemo<BrandViewModel[]>(() => {
     const seen = new Set<string>();
-
     return brands.reduce<BrandViewModel[]>((result, brand) => {
       const key = normalizeBrandName(brand.name);
       if (!key || seen.has(key)) return result;
-
       seen.add(key);
       result.push({
         id: brand.id,
@@ -64,38 +61,28 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
         slug: brand.slug || brand.name.toLowerCase().trim().replace(/\s+/g, "-"),
         logo_url: brand.logo_url,
       });
-
       return result;
     }, []);
   }, [brands]);
 
   useLayoutEffect(() => {
     if (!enabled || !renderBrands.length || !scrollerRef.current) return;
-
     try {
       const saved = sessionStorage.getItem(BRAND_STRIP_POSITION_KEY);
       if (!saved) return;
-
       const parsed = JSON.parse(saved);
-      if (typeof parsed.scrollLeft === "number") {
-        scrollerRef.current.scrollLeft = parsed.scrollLeft;
-      }
-    } catch {
-      // Ignore malformed session state.
-    }
+      if (typeof parsed.scrollLeft === "number") scrollerRef.current.scrollLeft = parsed.scrollLeft;
+    } catch {}
   }, [enabled, renderBrands.length]);
 
   const saveStripPosition = (id: string) => {
     if (!scrollerRef.current) return;
-
     try {
       sessionStorage.setItem(
         BRAND_STRIP_POSITION_KEY,
         JSON.stringify({ scrollLeft: scrollerRef.current.scrollLeft, brandId: id }),
       );
-    } catch {
-      // Browsers can block session storage; navigation should still work.
-    }
+    } catch {}
   };
 
   if (!enabled || !renderBrands.length) return null;
@@ -111,7 +98,6 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
             </div>
             <h2 className="text-[16px] font-semibold md:text-[28px]">أشهر الماركات</h2>
           </div>
-
           <Link to="/brands" className="flex items-center gap-2 text-[7px] font-medium text-[#A95B61] md:text-[10px]">
             جميع الماركات
             <ArrowLeft className="h-4 w-4" />
@@ -128,25 +114,22 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
                 key={brand.id}
                 to={`/brands/${brand.slug}`}
                 onClick={() => saveStripPosition(brand.id)}
-                className="group flex w-[94px] shrink-0 snap-start flex-col items-center md:w-[128px]"
+                className="group flex w-[78px] shrink-0 flex-col items-center md:w-[78px]"
               >
-                <div className="flex aspect-square w-full items-center justify-center rounded-[16px] border border-[#eee6e2] bg-white px-3 md:rounded-[18px] md:px-4">
+                <div className="flex aspect-square w-full items-center justify-center rounded-[15px] border border-border/60 bg-white px-2.5">
                   {brand.logo_url ? (
                     <img
                       src={optimizeImage(brand.logo_url, 240, 78)}
                       alt={brand.name}
                       loading="lazy"
                       decoding="async"
-                      className="max-h-[45%] max-w-[82%] object-contain transition-transform duration-300 group-hover:scale-105 md:max-h-[38px]"
+                      className="max-h-[45%] max-w-[82%] object-contain transition-transform duration-300 group-hover:scale-105"
                     />
                   ) : (
-                    <span className="text-center font-serif text-[10px] font-semibold md:text-[13px]">{brand.name}</span>
+                    <span className="font-serif text-[10px] font-semibold">{brand.name}</span>
                   )}
                 </div>
-
-                <p className="mt-1.5 max-w-full truncate text-[8px] font-semibold text-[#3F3532] md:mt-2 md:text-[9px]">
-                  {brand.name}
-                </p>
+                <p className="mt-1.5 max-w-full truncate text-[8px] font-semibold text-[#3F3532]">{brand.name}</p>
               </Link>
             ))}
           </div>

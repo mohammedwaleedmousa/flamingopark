@@ -133,11 +133,11 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
                 <div className="flex aspect-square w-full items-center justify-center rounded-[16px] border border-[#eee6e2] bg-white px-3 md:rounded-[18px] md:px-4">
                   {brand.logo_url ? (
                     <img
-                      src={optimizeImage(brand.logo_url, 220, 78)}
+                      src={optimizeImage(brand.logo_url, 240, 78)}
                       alt={brand.name}
                       loading="lazy"
                       decoding="async"
-                      className="max-h-[40%] max-w-[76%] object-contain transition-transform duration-300 group-hover:scale-105 md:max-h-[38%]"
+                      className="max-h-[45%] max-w-[82%] object-contain transition-transform duration-300 group-hover:scale-105 md:max-h-[38px]"
                     />
                   ) : (
                     <span className="text-center font-serif text-[10px] font-semibold md:text-[13px]">{brand.name}</span>

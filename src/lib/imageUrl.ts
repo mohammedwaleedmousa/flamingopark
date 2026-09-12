@@ -1,6 +1,3 @@
-const SUPABASE_IMAGE_TRANSFORMATIONS_ENABLED =
-  String(import.meta.env.VITE_SUPABASE_IMAGE_TRANSFORMATIONS || "").toLowerCase() === "true";
-
 const FLAMINGO_IMAGE_ZONE = "https://flamingoparkaden.com";
 
 const getViewportAwareWidth = (requestedWidth: number) => {
@@ -24,6 +21,15 @@ const getViewportAwareWidth = (requestedWidth: number) => {
 const isSupabasePublicStorageUrl = (url: URL) =>
   url.hostname.endsWith("supabase.co") && url.pathname.includes("/storage/v1/object/public/");
 
+const getCloudflareOptions = (width: number, quality: number) => {
+  const safeWidth = Math.max(240, Math.min(1920, Math.round(width)));
+  const safeQuality = Math.max(60, Math.min(85, Math.round(quality)));
+  return `width=${safeWidth},quality=${safeQuality},format=auto,fit=scale-down,metadata=none`;
+};
+
+const buildCloudflareImageUrl = (source: string, width: number, quality: number) =>
+  `${FLAMINGO_IMAGE_ZONE}/cdn-cgi/image/${getCloudflareOptions(width, quality)}/${source}`;
+
 const canTransformImage = (rawUrl: string | null | undefined) => {
   if (!rawUrl?.trim()) return false;
 
@@ -31,10 +37,7 @@ const canTransformImage = (rawUrl: string | null | undefined) => {
     const baseUrl = typeof window !== "undefined" ? window.location.origin : FLAMINGO_IMAGE_ZONE;
     const url = new URL(rawUrl, baseUrl);
 
-    if (url.hostname.endsWith("unsplash.com")) return true;
-    if (isSupabasePublicStorageUrl(url)) return SUPABASE_IMAGE_TRANSFORMATIONS_ENABLED;
-
-    return false;
+    return url.hostname.endsWith("unsplash.com") || isSupabasePublicStorageUrl(url);
   } catch {
     return false;
   }
@@ -63,8 +66,6 @@ const buildOptimizedImageUrl = (
     }
 
     if (isSupabasePublicStorageUrl(u)) {
-      if (!SUPABASE_IMAGE_TRANSFORMATIONS_ENABLED) return url;
-
       const colorVariantImage = u.pathname.includes("/uploads/color-variants/");
 
       if (viewportAware && colorVariantImage && width >= 1200) {
@@ -77,14 +78,7 @@ const buildOptimizedImageUrl = (
         optimizedQuality = Math.min(optimizedQuality, 76);
       }
 
-      u.pathname = u.pathname.replace(
-        "/storage/v1/object/public/",
-        "/storage/v1/render/image/public/",
-      );
-      u.searchParams.set("width", String(optimizedWidth));
-      u.searchParams.set("quality", String(optimizedQuality));
-      u.searchParams.set("resize", "contain");
-      return u.toString();
+      return buildCloudflareImageUrl(u.toString(), optimizedWidth, optimizedQuality);
     }
 
     return url;
@@ -106,8 +100,7 @@ export const optimizeCatalogImage = (
 
     const safeWidth = Math.max(240, Math.min(640, Math.round(width)));
     const safeQuality = Math.max(60, Math.min(85, Math.round(quality)));
-    const options = `width=${safeWidth},quality=${safeQuality},format=auto,fit=scale-down,metadata=none`;
-    return `${FLAMINGO_IMAGE_ZONE}/cdn-cgi/image/${options}/${parsed.toString()}`;
+    return buildCloudflareImageUrl(parsed.toString(), safeWidth, safeQuality);
   } catch {
     return url;
   }
@@ -134,10 +127,29 @@ export const createImageSrcSet = (
     .join(", ");
 };
 
+const getCloudflareOriginalUrl = (src: string) => {
+  const marker = "/cdn-cgi/image/";
+  const markerIndex = src.indexOf(marker);
+  if (markerIndex === -1) return null;
+
+  const sourceStart = src.indexOf("/https://", markerIndex + marker.length);
+  if (sourceStart === -1) return null;
+
+  return src.slice(sourceStart + 1);
+};
+
 export const handleImageError = (event: { currentTarget: HTMLImageElement }) => {
   const image = event.currentTarget;
 
   if (image.dataset.fallbackApplied === "1") return;
+
+  const cloudflareOriginal = getCloudflareOriginalUrl(image.src);
+  if (cloudflareOriginal && image.dataset.originalTried !== "1") {
+    image.dataset.originalTried = "1";
+    image.removeAttribute("srcset");
+    image.src = cloudflareOriginal;
+    return;
+  }
 
   if (
     image.src.includes("/storage/v1/render/image/public/") &&

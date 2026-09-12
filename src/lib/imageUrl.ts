@@ -6,12 +6,16 @@ const getViewportAwareWidth = (requestedWidth: number) => {
   const viewportWidth = Math.max(320, window.innerWidth || requestedWidth);
   const devicePixelRatio = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
 
-  // Mobile storefront images do not need desktop-size transfers. Two DPR is
-  // enough for a sharp PDP/card image while avoiding 1200–1900px downloads.
+  // Large storefront images should scale with the real mobile viewport, but
+  // small UI images (brand logos/category thumbs) must never be upscaled to a
+  // blanket 480px minimum. Upscaling those wastes bandwidth without improving
+  // perceived sharpness.
   if (viewportWidth < 768) {
     const mobileDpr = Math.min(devicePixelRatio, 2);
     const mobileTarget = Math.ceil(viewportWidth * mobileDpr);
-    return Math.max(480, Math.min(requestedWidth, mobileTarget, 900));
+    const capped = Math.min(requestedWidth, mobileTarget, 900);
+    const mobileFloor = requestedWidth >= 480 ? 480 : Math.min(requestedWidth, 240);
+    return Math.max(mobileFloor, capped);
   }
 
   if (requestedWidth >= 1200) {

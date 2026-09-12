@@ -1,5 +1,18 @@
 import http from 'k6/http';
-import { check, sleep } from 'k6';
+import { check, group, sleep } from 'k6';
+
+const SUPABASE_URL = __ENV.SUPABASE_URL || 'https://hcomhdkmtqttzghjxjcb.supabase.co';
+const SUPABASE_ANON_KEY = __ENV.SUPABASE_ANON_KEY;
+
+if (!SUPABASE_ANON_KEY) {
+  throw new Error('SUPABASE_ANON_KEY is required. Pass it with -e SUPABASE_ANON_KEY=...');
+}
+
+const headers = {
+  apikey: SUPABASE_ANON_KEY,
+  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+  'Content-Type': 'application/json',
+};
 
 export const options = {
   stages: [
@@ -10,26 +23,49 @@ export const options = {
   ],
   thresholds: {
     http_req_failed: ['rate<0.01'],
-    http_req_duration: ['p(95)<3000'],
+    http_req_duration: ['p(95)<1500'],
+    'http_req_duration{endpoint:products}': ['p(95)<1200'],
+    'http_req_duration{endpoint:search}': ['p(95)<1200'],
   },
 };
 
-const SUPABASE_URL = 'https://xpxpzqaolcieldhmrezy.supabase.co';
-
 export default function () {
+  group('read-only storefront api', () => {
+    const products = http.get(
+      `${SUPABASE_URL}/rest/v1/products?select=id,name,name_ar,slug,price,discount,brand,in_stock,images&is_active=eq.true&order=created_at.desc&limit=24`,
+      { headers, tags: { endpoint: 'products' } },
+    );
 
-  const res = http.get(
-    `${SUPABASE_URL}/rest/v1/products?select=id,name,price&limit=20`,
-    {
-      headers: {
-        apikey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhweHB6cWFvbGNpZWxkaG1yZXp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NDA3MjMsImV4cCI6MjA5NzIxNjcyM30.v6aQn19pcd5VPCyIEzUdJ03tMaTl5eHwu6gzrtcazlQ',
-        Authorization: 'Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InhweHB6cWFvbGNpZWxkaG1yZXp5Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE2NDA3MjMsImV4cCI6MjA5NzIxNjcyM30.v6aQn19pcd5VPCyIEzUdJ03tMaTl5eHwu6gzrtcazlQ',
+    check(products, {
+      'products status 200': (r) => r.status === 200,
+      'products returns rows': (r) => {
+        try {
+          return Array.isArray(r.json()) && r.json().length > 0;
+        } catch {
+          return false;
+        }
       },
-    }
-  );
+    });
 
-  check(res, {
-    'Supabase status 200': (r) => r.status === 200,
+    sleep(0.4);
+
+    const search = http.post(
+      `${SUPABASE_URL}/rest/v1/rpc/search_storefront_product_ids`,
+      JSON.stringify({ p_query: 'اديداس', p_offset: 0, p_limit: 24 }),
+      { headers, tags: { endpoint: 'search' } },
+    );
+
+    check(search, {
+      'search status 200': (r) => r.status === 200,
+      'adidas search returns all products': (r) => {
+        try {
+          const rows = r.json();
+          return Array.isArray(rows) && rows.length >= 11;
+        } catch {
+          return false;
+        }
+      },
+    });
   });
 
   sleep(1);

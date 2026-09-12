@@ -5,43 +5,32 @@ import { useLocation } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { ADMIN_BASE_PATH } from "@/lib/adminRoutes";
 
-const STOREFRONT_TABLES = [
+// Keep realtime focused on data where a near-instant storefront refresh matters.
+// Static content (brands, banners, CMS copy, settings, campaigns, etc.) already
+// uses React Query caching and does not need a permanent realtime subscription
+// on every customer's device.
+const STOREFRONT_REALTIME_TABLES = [
   "products",
   "inventory_skus",
   "size_price_rules",
-  "categories",
-  "brands",
-  "brand_categories",
-  "brand_pages",
-  "brand_banners",
-  "brand_sections",
-  "brand_filters",
-  "product_brand_filters",
-  "brand_section_pages",
-  "brand_section_products",
-  "banners",
-  "homepage_sections",
-  "site_settings",
-  "site_content",
-  "offers",
-  "offers_settings",
-  "campaign_pages",
-  "delivery_companies",
-  "cod_regions",
-  "payment_methods",
-  "currencies",
-  "countries",
-  "product_reviews",
-  "reviews",
-  "product_questions",
 ] as const;
 
 const ORDER_QUERY_HINTS = ["order", "shipment", "checkout", "notification"] as const;
+const ORDER_REALTIME_PATHS = [
+  "/checkout",
+  "/order-confirmation",
+  "/my-orders",
+  "/my-shipments",
+  "/order-tracking",
+] as const;
 
 const isOrderFacingQuery = (queryKey: readonly unknown[]) => {
   const firstKey = String(queryKey[0] ?? "").toLowerCase();
   return ORDER_QUERY_HINTS.some((hint) => firstKey.includes(hint));
 };
+
+const shouldSubscribeToOrders = (pathname: string) =>
+  ORDER_REALTIME_PATHS.some((path) => pathname === path || pathname.startsWith(`${path}/`));
 
 const StorefrontRealtimeSync = () => {
   const queryClient = useQueryClient();
@@ -52,6 +41,7 @@ const StorefrontRealtimeSync = () => {
   const dirtyWhileHiddenRef = useRef(false);
 
   const enabled = !pathname.startsWith(ADMIN_BASE_PATH);
+  const ordersEnabled = enabled && shouldSubscribeToOrders(pathname);
 
   useEffect(() => {
     if (!enabled) return;
@@ -71,7 +61,13 @@ const StorefrontRealtimeSync = () => {
         dirtyWhileHiddenRef.current = true;
 
         if (refreshStorefront) {
-          void queryClient.invalidateQueries({ refetchType: "none" });
+          void queryClient.invalidateQueries({
+            predicate: (query) => {
+              const key = String(query.queryKey[0] ?? "").toLowerCase();
+              return key.includes("product") || key.includes("catalog") || key.includes("inventory");
+            },
+            refetchType: "none",
+          });
         } else if (refreshOrders) {
           void queryClient.invalidateQueries({
             predicate: (query) => isOrderFacingQuery(query.queryKey),
@@ -85,8 +81,13 @@ const StorefrontRealtimeSync = () => {
       dirtyWhileHiddenRef.current = false;
 
       if (refreshStorefront) {
-        void queryClient.invalidateQueries({ refetchType: "active" });
-        return;
+        void queryClient.invalidateQueries({
+          predicate: (query) => {
+            const key = String(query.queryKey[0] ?? "").toLowerCase();
+            return key.includes("product") || key.includes("catalog") || key.includes("inventory");
+          },
+          refetchType: "active",
+        });
       }
 
       if (refreshOrders) {
@@ -105,12 +106,13 @@ const StorefrontRealtimeSync = () => {
         window.clearTimeout(refreshTimerRef.current);
       }
 
-      refreshTimerRef.current = window.setTimeout(flushRefresh, 180);
+      // Batch bursts of stock/product changes into a single cache refresh.
+      refreshTimerRef.current = window.setTimeout(flushRefresh, 500);
     };
 
-    let channel = supabase.channel("storefront-live-content-v1");
+    let channel = supabase.channel(`storefront-live-critical-v2:${ordersEnabled ? "orders" : "catalog"}`);
 
-    for (const table of STOREFRONT_TABLES) {
+    for (const table of STOREFRONT_REALTIME_TABLES) {
       channel = channel.on(
         "postgres_changes",
         { event: "*", schema: "public", table },
@@ -118,11 +120,13 @@ const StorefrontRealtimeSync = () => {
       );
     }
 
-    channel = channel.on(
-      "postgres_changes",
-      { event: "*", schema: "public", table: "orders" },
-      () => scheduleRefresh("orders"),
-    );
+    if (ordersEnabled) {
+      channel = channel.on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "orders" },
+        () => scheduleRefresh("orders"),
+      );
+    }
 
     channel.subscribe((status) => {
       if (status === "CHANNEL_ERROR" || status === "TIMED_OUT") {
@@ -133,7 +137,19 @@ const StorefrontRealtimeSync = () => {
     const handleVisibilityChange = () => {
       if (document.visibilityState !== "visible" || !dirtyWhileHiddenRef.current) return;
       dirtyWhileHiddenRef.current = false;
-      void queryClient.invalidateQueries({ refetchType: "active" });
+
+      void queryClient.invalidateQueries({
+        predicate: (query) => {
+          const key = String(query.queryKey[0] ?? "").toLowerCase();
+          return (
+            key.includes("product") ||
+            key.includes("catalog") ||
+            key.includes("inventory") ||
+            (ordersEnabled && isOrderFacingQuery(query.queryKey))
+          );
+        },
+        refetchType: "active",
+      });
     };
 
     document.addEventListener("visibilitychange", handleVisibilityChange);
@@ -147,7 +163,7 @@ const StorefrontRealtimeSync = () => {
       document.removeEventListener("visibilitychange", handleVisibilityChange);
       void supabase.removeChannel(channel);
     };
-  }, [enabled, queryClient]);
+  }, [enabled, ordersEnabled, queryClient]);
 
   return null;
 };

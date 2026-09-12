@@ -122,7 +122,7 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
           ref={scrollerRef}
           className="-mx-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0"
         >
-          <div className="flex w-max gap-2.5 md:gap-3">
+          <div className="flex w-max gap-2.5 after:block after:w-5 after:shrink-0 after:content-[''] md:gap-3 md:after:w-8">
             {renderBrands.map((brand) => (
               <Link
                 key={brand.id}

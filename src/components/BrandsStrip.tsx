@@ -122,7 +122,7 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
           ref={scrollerRef}
           className="-mx-3 overflow-x-auto px-3 pb-1 [scrollbar-width:none] [-webkit-overflow-scrolling:touch] [&::-webkit-scrollbar]:hidden md:mx-0 md:px-0"
         >
-          <div className="flex w-max gap-2.5 after:block after:w-5 after:shrink-0 after:content-[''] md:gap-3 md:after:w-8">
+          <div className="flex w-max gap-2.5 pl-6 md:gap-3 md:pl-8">
             {renderBrands.map((brand) => (
               <Link
                 key={brand.id}
@@ -133,11 +133,11 @@ const BrandsStrip = ({ enabled = true }: { enabled?: boolean }) => {
                 <div className="flex aspect-square w-full items-center justify-center rounded-[16px] border border-[#eee6e2] bg-white px-3 md:rounded-[18px] md:px-4">
                   {brand.logo_url ? (
                     <img
-                      src={optimizeImage(brand.logo_url, 240, 78)}
+                      src={optimizeImage(brand.logo_url, 220, 78)}
                       alt={brand.name}
                       loading="lazy"
                       decoding="async"
-                      className="max-h-[48%] max-w-[84%] object-contain transition-transform duration-300 group-hover:scale-105 md:max-h-[44%]"
+                      className="max-h-[40%] max-w-[76%] object-contain transition-transform duration-300 group-hover:scale-105 md:max-h-[38%]"
                     />
                   ) : (
                     <span className="text-center font-serif text-[10px] font-semibold md:text-[13px]">{brand.name}</span>

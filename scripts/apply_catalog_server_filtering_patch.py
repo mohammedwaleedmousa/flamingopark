@@ -1,0 +1,278 @@
+from pathlib import Path
+
+path = Path("src/pages/ProductsPageBase.tsx")
+text = path.read_text(encoding="utf-8")
+
+start = text.find("type CatalogMetaProduct = {")
+end = text.find("\n\ninterface Category {", start)
+if start != -1 and end != -1:
+    text = text[:start] + text[end + 2:]
+
+text = text.replace("const META_BATCH_SIZE = 500;\n", "")
+
+s = text.find("const getProductColors = ")
+e = text.find("\n\nconst parseAudienceFilter", s)
+if s != -1 and e != -1:
+    text = text[:s] + text[e + 2:]
+
+s = text.find("const matchesAudienceFilter = ")
+e = text.find("\n\nconst isShoeCategoryScope", s)
+if s != -1 and e != -1:
+    text = text[:s] + text[e + 2:]
+
+s = text.find("const getFinalPrice = ")
+e = text.find("\n\n/* =========================================================\n   QUICK VIEW", s)
+if s != -1 and e != -1:
+    text = text[:s] + text[e + 2:]
+
+start_marker = "  /* =========================================================\n     CATALOG METADATA"
+end_marker = "  /* =========================================================\n     NORMAL SERVER PAGES"
+s = text.find(start_marker)
+e = text.find(end_marker, s)
+if s == -1 or e == -1:
+    raise SystemExit("Could not locate catalog metadata block")
+
+new_block = r'''  /* =========================================================
+     SERVER-SIDE FILTERING
+
+     Color / size / price filtering stays inside Postgres.
+     The browser no longer downloads full-catalog metadata.
+  ========================================================= */
+
+  const needsClientFiltering = colorFilter !== "all" || sizeFilter !== "all" || minPriceParam > 0 || maxPriceParam > 0;
+
+  type CatalogFacetResponse = {
+    colors?: Array<{ name?: string; hex?: string | null; hex2?: string | null }>;
+    sizes?: string[];
+    audiences?: ProductAudience[];
+    min_price?: number;
+    max_price?: number;
+    result_count?: number;
+  };
+
+  const { data: facetData, isLoading: facetMetadataLoading, isFetching: facetMetadataFetching } = useQuery({
+    queryKey: [
+      "catalog-server-facets",
+      draftLeafCategoryIds?.join(",") || "all",
+      searchQuery,
+      draftBrandFilter,
+      draftAudienceFilter,
+      draftSaleOnly,
+      draftInStockOnly,
+      draftColorFilter,
+      draftSizeFilter,
+      draftMinPriceParam,
+      draftMaxPriceParam,
+    ],
+    enabled: filtersOpen,
+    queryFn: async () => {
+      const { data, error } = await supabase.rpc("catalog_filter_facets", {
+        p_category_ids: draftLeafCategoryIds?.length ? draftLeafCategoryIds : null,
+        p_search: searchQuery.trim() || null,
+        p_brand: draftBrandFilter === "all" ? null : draftBrandFilter,
+        p_audience: draftAudienceFilter === "all" ? null : draftAudienceFilter,
+        p_sale_only: draftSaleOnly,
+        p_in_stock_only: draftInStockOnly,
+        p_color: draftColorFilter === "all" ? null : draftColorFilter,
+        p_size: draftSizeFilter === "all" ? null : draftSizeFilter,
+        p_min_price: draftMinPriceParam > 0 ? draftMinPriceParam : null,
+        p_max_price: draftMaxPriceParam > 0 ? draftMaxPriceParam : null,
+      });
+
+      if (error) throw error;
+      return (data || {}) as CatalogFacetResponse;
+    },
+    staleTime: 5 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
+  });
+
+  const filterMetadataLoading = filtersOpen && (facetMetadataLoading || facetMetadataFetching);
+
+  const colorsAvailable = useMemo<ColorSwatch[]>(() => {
+    return (facetData?.colors || [])
+      .map((color) => {
+        const name = (color.name || "").trim();
+        const key = name.toLowerCase();
+        return {
+          name,
+          hex: color.hex || NAMED_COLOR_HEX[name] || NAMED_COLOR_HEX[key] || "#E5E2DF",
+          hex2: color.hex2 || undefined,
+        };
+      })
+      .filter((color) => Boolean(color.name))
+      .sort((a, b) => a.name.localeCompare(b.name, "ar"));
+  }, [facetData]);
+
+  const sizesAvailable = useMemo(() => {
+    return [...(facetData?.sizes || [])].sort((a, b) => a.localeCompare(b, "ar", { numeric: true, sensitivity: "base" }));
+  }, [facetData]);
+
+  const availableAudienceOptions = useMemo(() => {
+    const available = new Set(facetData?.audiences || []);
+    return AUDIENCE_OPTIONS.filter((option) => available.has(option.value));
+  }, [facetData]);
+
+  const filterPriceBounds = useMemo(() => ({
+    min: Number(facetData?.min_price ?? 0),
+    max: Number(facetData?.max_price ?? 1000),
+  }), [facetData]);
+
+  const effectiveMin = minPriceParam || filterPriceBounds.min;
+  const effectiveMax = maxPriceParam || filterPriceBounds.max;
+
+  const [priceRange, setPriceRange] = useState<[number, number]>([0, 1000]);
+
+  useEffect(() => {
+    if (!filtersOpen || filterMetadataLoading) return;
+
+    setPriceRange([
+      draftMinPriceParam || filterPriceBounds.min,
+      draftMaxPriceParam || filterPriceBounds.max,
+    ]);
+  }, [filtersOpen, filterMetadataLoading, draftMinPriceParam, draftMaxPriceParam, filterPriceBounds]);
+
+  const draftResultCount = Number(facetData?.result_count ?? 0);
+
+'''
+text = text[:s] + new_block + text[e:]
+
+start_marker = "  /* =========================================================\n     CLIENT FILTERED PAGES"
+end_marker = "  /* =========================================================\n     PRODUCTS"
+s = text.find(start_marker)
+e = text.find(end_marker, s)
+if s == -1 or e == -1:
+    raise SystemExit("Could not locate client filtered pages block")
+
+filtered_block = r'''  /* =========================================================
+     SERVER FILTERED PAGES
+
+     Each page asks Postgres for only PAGE_SIZE matching IDs.
+  ========================================================= */
+
+  const filteredPageMetaQueries = useQueries({
+    queries: needsClientFiltering
+      ? Array.from({ length: loadedPage }, (_, pageIndex) => ({
+          queryKey: [
+            "catalog-server-filter-ids",
+            leafCategoryIds?.join(",") || "all",
+            searchQuery,
+            brandFilter,
+            audienceFilter,
+            saleOnly,
+            inStockOnly,
+            colorFilter,
+            sizeFilter,
+            minPriceParam,
+            maxPriceParam,
+            sortBy,
+            pageIndex + 1,
+          ],
+          queryFn: async () => {
+            const { data, error } = await supabase.rpc("catalog_filter_product_ids", {
+              p_category_ids: leafCategoryIds?.length ? leafCategoryIds : null,
+              p_search: searchQuery.trim() || null,
+              p_brand: brandFilter === "all" ? null : brandFilter,
+              p_audience: audienceFilter === "all" ? null : audienceFilter,
+              p_sale_only: saleOnly,
+              p_in_stock_only: inStockOnly,
+              p_color: colorFilter === "all" ? null : colorFilter,
+              p_size: sizeFilter === "all" ? null : sizeFilter,
+              p_min_price: minPriceParam > 0 ? minPriceParam : null,
+              p_max_price: maxPriceParam > 0 ? maxPriceParam : null,
+              p_sort: sortBy,
+              p_offset: pageIndex * PAGE_SIZE,
+              p_limit: PAGE_SIZE,
+            });
+
+            if (error) throw error;
+
+            const rows = (data || []) as Array<{ product_id: string; total_count: number | string }>;
+            return {
+              ids: rows.map((row) => row.product_id),
+              totalCount: rows.length ? Number(rows[0].total_count || 0) : 0,
+            };
+          },
+          staleTime: 5 * 60 * 1000,
+          gcTime: 15 * 60 * 1000,
+          refetchOnWindowFocus: false,
+          refetchOnReconnect: false,
+        }))
+      : [],
+  });
+
+  const filteredPageIdGroups = useMemo(() => {
+    return filteredPageMetaQueries
+      .map((query) => query.data?.ids || [])
+      .filter((ids) => ids.length > 0);
+  }, [filteredPageMetaQueries]);
+
+  const filteredServerCount = filteredPageMetaQueries[0]?.data?.totalCount || 0;
+  const filteredServerLoading = filteredPageMetaQueries.some((query) => query.isLoading || query.isFetching);
+
+  const filteredProductQueries = useQueries({
+    queries: needsClientFiltering
+      ? filteredPageIdGroups.map((ids, index) => ({
+          queryKey: ["catalog-filtered-page", ids.join(","), index + 1],
+          queryFn: async () => {
+            const { data, error } = await supabase
+              .from("products")
+              .select(PRODUCT_CARD_SELECT)
+              .in("id", ids);
+
+            if (error) throw error;
+
+            const mapped = (data || []).map(mapProductCard) as CatalogProduct[];
+            const mappedById = new Map(mapped.map((product) => [product.id, product]));
+
+            return ids
+              .map((id) => mappedById.get(id))
+              .filter((product): product is CatalogProduct => Boolean(product));
+          },
+          staleTime: 5 * 60 * 1000,
+          gcTime: 15 * 60 * 1000,
+          refetchOnWindowFocus: false,
+          refetchOnReconnect: false,
+        }))
+      : [],
+  });
+
+  const totalProductsCount = needsClientFiltering ? filteredServerCount : exactServerCount;
+
+'''
+text = text[:s] + filtered_block + text[e:]
+
+old_loading = '''  const isLoadingProducts = needsClientFiltering
+    ? catalogMetadataLoading ||
+      filteredProductQueries.some(
+        (query) =>
+          query.isLoading ||
+          query.isFetching
+      )
+    : normalProductQueries.some(
+        (query) =>
+          query.isLoading ||
+          query.isFetching
+      );'''
+new_loading = '''  const isLoadingProducts = needsClientFiltering
+    ? filteredServerLoading ||
+      filteredProductQueries.some((query) => query.isLoading || query.isFetching)
+    : normalProductQueries.some((query) => query.isLoading || query.isFetching);'''
+if old_loading not in text:
+    raise SystemExit("Could not locate isLoadingProducts block")
+text = text.replace(old_loading, new_loading, 1)
+
+old_counter = '{catalogMetadataLoading && needsClientFiltering ? <span className="h-3 w-6 animate-pulse rounded bg-[#EDE4E0]" /> : <span className="text-[12px] font-semibold leading-none text-[#B86168]">{totalProductsCount}</span>}'
+new_counter = '{filteredServerLoading && needsClientFiltering ? <span className="h-3 w-6 animate-pulse rounded bg-[#EDE4E0]" /> : <span className="text-[12px] font-semibold leading-none text-[#B86168]">{totalProductsCount}</span>}'
+if old_counter not in text:
+    raise SystemExit("Could not locate toolbar product counter")
+text = text.replace(old_counter, new_counter, 1)
+
+forbidden = ["META_BATCH_SIZE", "catalogMetadataLoading", "catalogMetadata = []", "facetMetadata = []", "matchingMetadata"]
+leftovers = [item for item in forbidden if item in text]
+if leftovers:
+    raise SystemExit(f"Heavy client filtering leftovers: {leftovers}")
+
+path.write_text(text, encoding="utf-8")
+print("ProductsPageBase.tsx patched successfully")

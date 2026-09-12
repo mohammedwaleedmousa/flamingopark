@@ -4,7 +4,6 @@ const FLAMINGO_LOADER_SRC = "/icons/flamingo-loader.png";
 const AUTO_RETRY_WINDOW_MS = 30_000;
 
 const LoadingScreen = () => {
-  const [slow, setSlow] = useState(false);
   const [flamingoReady, setFlamingoReady] = useState(false);
 
   useEffect(() => {
@@ -33,7 +32,6 @@ const LoadingScreen = () => {
     html.style.overflow = "hidden";
     html.style.overscrollBehavior = "none";
 
-    const slowTimer = window.setTimeout(() => setSlow(true), 8000);
     const retryKey = `flamingo-stalled-route-retry:${window.location.pathname}`;
     const autoRetryTimer = window.setTimeout(() => {
       const previousRetry = Number(window.sessionStorage.getItem(retryKey) || 0);
@@ -44,7 +42,6 @@ const LoadingScreen = () => {
     }, 12000);
 
     return () => {
-      window.clearTimeout(slowTimer);
       window.clearTimeout(autoRetryTimer);
 
       body.style.overflow = previousBodyOverflow;
@@ -67,46 +64,29 @@ const LoadingScreen = () => {
 
   return (
     <div className="fixed inset-0 z-[100] flex h-[100dvh] w-screen touch-none items-center justify-center overflow-hidden overscroll-none bg-white" dir="rtl" role="status" aria-live="polite" aria-label="جاري التحميل">
-      <div className="flex max-w-[320px] flex-col items-center px-6 text-center">
-        <img
-          src={FLAMINGO_LOADER_SRC}
-          alt=""
-          aria-hidden="true"
-          className="absolute h-px w-px opacity-0"
-          onLoad={() => setFlamingoReady(true)}
-          onError={() => setFlamingoReady(false)}
-        />
+      <img
+        src={FLAMINGO_LOADER_SRC}
+        alt=""
+        aria-hidden="true"
+        className="absolute h-px w-px opacity-0"
+        onLoad={() => setFlamingoReady(true)}
+        onError={() => setFlamingoReady(false)}
+      />
 
-        <div className="relative flex h-[170px] w-[132px] items-center justify-center">
-          {!flamingoReady && (
-            <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-[#E8D8D9] bg-[#FFF8F8] shadow-sm">
-              <span className="absolute h-8 w-8 animate-spin rounded-full border-[3px] border-[#F1D7DA] border-t-[#C96F79]" />
-              <span className="h-2.5 w-2.5 rounded-full bg-[#C96F79]" />
-            </div>
-          )}
-
-          {flamingoReady && (
-            <>
-              <div className="absolute inset-0 bg-[#F0D7D6] [mask-image:url('/icons/flamingo-loader.png')] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] [-webkit-mask-image:url('/icons/flamingo-loader.png')] [-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain]" />
-              <div className="flamingo-loader-reveal absolute inset-0 bg-[#C96F79] [mask-image:url('/icons/flamingo-loader.png')] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] [-webkit-mask-image:url('/icons/flamingo-loader.png')] [-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain]" />
-              <div className="flamingo-loader-sweep absolute inset-0 [mask-image:url('/icons/flamingo-loader.png')] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] [-webkit-mask-image:url('/icons/flamingo-loader.png')] [-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain]" />
-            </>
-          )}
-        </div>
-
-        <p className="mt-1 text-[11px] font-semibold text-[#493A36]">جاري فتح الصفحة...</p>
-
-        {slow && (
-          <div className="mt-4 w-full rounded-xl border border-[#F0DFE1] bg-[#FFF9F9] p-3">
-            <p className="text-[9px] leading-5 text-[#755F5B]">الاتصال بطيء أو ملف الصفحة لم يكتمل تحميله. سنحاول إعادة التحميل تلقائياً مرة واحدة.</p>
-            <button
-              type="button"
-              onClick={() => window.location.reload()}
-              className="mt-2 h-8 rounded-lg bg-[#C96F79] px-4 text-[9px] font-semibold text-white"
-            >
-              إعادة المحاولة الآن
-            </button>
+      <div className="relative flex h-[170px] w-[132px] items-center justify-center">
+        {!flamingoReady && (
+          <div className="relative flex h-14 w-14 items-center justify-center rounded-2xl border border-[#E8D8D9] bg-[#FFF8F8] shadow-sm">
+            <span className="absolute h-8 w-8 animate-spin rounded-full border-[3px] border-[#F1D7DA] border-t-[#C96F79]" />
+            <span className="h-2.5 w-2.5 rounded-full bg-[#C96F79]" />
           </div>
+        )}
+
+        {flamingoReady && (
+          <>
+            <div className="absolute inset-0 bg-[#F0D7D6] [mask-image:url('/icons/flamingo-loader.png')] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] [-webkit-mask-image:url('/icons/flamingo-loader.png')] [-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain]" />
+            <div className="flamingo-loader-reveal absolute inset-0 bg-[#C96F79] [mask-image:url('/icons/flamingo-loader.png')] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] [-webkit-mask-image:url('/icons/flamingo-loader.png')] [-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain]" />
+            <div className="flamingo-loader-sweep absolute inset-0 [mask-image:url('/icons/flamingo-loader.png')] [mask-position:center] [mask-repeat:no-repeat] [mask-size:contain] [-webkit-mask-image:url('/icons/flamingo-loader.png')] [-webkit-mask-position:center] [-webkit-mask-repeat:no-repeat] [-webkit-mask-size:contain]" />
+          </>
         )}
       </div>
 

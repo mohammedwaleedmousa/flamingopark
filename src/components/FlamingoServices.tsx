@@ -22,9 +22,11 @@ const FlamingoServices = () => {
       if (!data || !isBannerCurrentlyVisible(data)) return null;
       return data;
     },
-    staleTime: 0,
-    refetchOnMount: "always",
+    staleTime: 10 * 60 * 1000,
+    gcTime: 30 * 60 * 1000,
+    refetchOnMount: false,
     refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
   });
 
   if (!banner?.image_url) return null;

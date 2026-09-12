@@ -1,0 +1,1 @@
+Temporary note for product classification work in PR #120. Will be removed before merge.

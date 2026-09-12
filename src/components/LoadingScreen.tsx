@@ -30,9 +30,17 @@ const LoadingScreen = () => {
     html.style.overscrollBehavior = "none";
 
     const slowTimer = window.setTimeout(() => setSlow(true), 8000);
+    const retryKey = `flamingo-stalled-route-retry:${window.location.pathname}`;
+    const autoRetryTimer = window.setTimeout(() => {
+      if (window.sessionStorage.getItem(retryKey) === "1") return;
+      window.sessionStorage.setItem(retryKey, "1");
+      window.location.reload();
+    }, 12000);
 
     return () => {
       window.clearTimeout(slowTimer);
+      window.clearTimeout(autoRetryTimer);
+      window.sessionStorage.removeItem(retryKey);
 
       body.style.overflow = previousBodyOverflow;
       body.style.position = previousBodyPosition;
@@ -65,13 +73,13 @@ const LoadingScreen = () => {
 
         {slow && (
           <div className="mt-5 w-full rounded-xl border border-[#F0DFE1] bg-[#FFF9F9] p-3">
-            <p className="text-[9px] leading-5 text-[#755F5B]">الاتصال بطيء أو ملف الصفحة لم يكتمل تحميله.</p>
+            <p className="text-[9px] leading-5 text-[#755F5B]">الاتصال بطيء أو ملف الصفحة لم يكتمل تحميله. سنحاول إعادة التحميل تلقائياً مرة واحدة.</p>
             <button
               type="button"
               onClick={() => window.location.reload()}
               className="mt-2 h-8 rounded-lg bg-[#C96F79] px-4 text-[9px] font-semibold text-white"
             >
-              إعادة المحاولة
+              إعادة المحاولة الآن
             </button>
           </div>
         )}

@@ -6,8 +6,16 @@ const getViewportAwareWidth = (requestedWidth: number) => {
   const viewportWidth = Math.max(320, window.innerWidth || requestedWidth);
   const devicePixelRatio = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
 
+  // Mobile storefront images do not need desktop-size transfers. Two DPR is
+  // enough for a sharp PDP/card image while avoiding 1200–1900px downloads.
+  if (viewportWidth < 768) {
+    const mobileDpr = Math.min(devicePixelRatio, 2);
+    const mobileTarget = Math.ceil(viewportWidth * mobileDpr);
+    return Math.max(480, Math.min(requestedWidth, mobileTarget, 900));
+  }
+
   if (requestedWidth >= 1200) {
-    return Math.max(720, Math.min(requestedWidth, Math.ceil(viewportWidth * devicePixelRatio)));
+    return Math.max(720, Math.min(requestedWidth, Math.ceil(viewportWidth * Math.min(devicePixelRatio, 2))));
   }
 
   if (requestedWidth >= 700) {
@@ -69,8 +77,8 @@ const buildOptimizedImageUrl = (
       const colorVariantImage = u.pathname.includes("/uploads/color-variants/");
 
       if (viewportAware && colorVariantImage && width >= 1200) {
-        optimizedWidth = 640;
-        optimizedQuality = 82;
+        optimizedWidth = Math.min(optimizedWidth, 640);
+        optimizedQuality = Math.min(optimizedQuality, 82);
       }
 
       if (viewportAware && colorVariantImage && width >= 700 && width < 1200) {

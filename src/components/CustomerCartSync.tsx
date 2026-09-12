@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useStore } from "@/store/useStore";
 
-const SYNC_DELAY_MS = 900;
+const SYNC_DELAY_MS = 2500;
 
 const getConfirmedOrderId = () => {
   if (typeof window === "undefined" || window.location.pathname !== "/order-confirmation") return null;
@@ -24,7 +24,8 @@ const CustomerCartSync = () => {
     if (cart.length > 0) hadItems.current = true;
 
     timer.current = window.setTimeout(async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user;
       if (!user) return;
 
       const confirmedOrderId = getConfirmedOrderId();

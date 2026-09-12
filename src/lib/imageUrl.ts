@@ -130,7 +130,19 @@ export const createImageSrcSet = (
 
   if (candidates.length === 0) return undefined;
 
-  return candidates
+  const requestedMax = candidates[candidates.length - 1];
+  const viewportMax = getViewportAwareWidth(requestedMax);
+  const limitedCandidates = candidates.filter((width) => width <= viewportMax);
+
+  // Preserve a sharp final candidate close to the actual viewport need while
+  // preventing mobile browsers from choosing desktop-sized 1200–1400px files.
+  if (viewportMax < requestedMax && !limitedCandidates.includes(viewportMax)) {
+    limitedCandidates.push(viewportMax);
+  }
+
+  const responsiveCandidates = Array.from(new Set(limitedCandidates)).sort((a, b) => a - b);
+
+  return responsiveCandidates
     .map((width) => `${buildOptimizedImageUrl(url, width, quality, false)} ${width}w`)
     .join(", ");
 };

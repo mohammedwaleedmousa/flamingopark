@@ -2,10 +2,8 @@ const FLAMINGO_IMAGE_ZONE = "https://flamingoparkaden.com";
 
 const getViewportAwareWidth = (requestedWidth: number) => {
   if (typeof window === "undefined") return requestedWidth;
-
   const viewportWidth = Math.max(320, window.innerWidth || requestedWidth);
   const devicePixelRatio = Math.max(1, Math.min(window.devicePixelRatio || 1, 3));
-
   if (viewportWidth < 768) {
     const mobileDpr = Math.min(devicePixelRatio, 2);
     const mobileTarget = Math.ceil(viewportWidth * mobileDpr);
@@ -13,42 +11,16 @@ const getViewportAwareWidth = (requestedWidth: number) => {
     const mobileFloor = requestedWidth >= 480 ? 480 : Math.min(requestedWidth, 240);
     return Math.max(mobileFloor, capped);
   }
-
-  if (requestedWidth >= 1200) {
-    return Math.max(720, Math.min(requestedWidth, Math.ceil(viewportWidth * Math.min(devicePixelRatio, 2))));
-  }
-
+  if (requestedWidth >= 1200) return Math.max(720, Math.min(requestedWidth, Math.ceil(viewportWidth * Math.min(devicePixelRatio, 2))));
   if (requestedWidth >= 700) {
     const mediumDpr = Math.min(devicePixelRatio, 2);
     return Math.max(640, Math.min(requestedWidth, Math.ceil(viewportWidth * mediumDpr)));
   }
-
   return requestedWidth;
 };
 
 const isSupabasePublicStorageUrl = (url: URL) =>
   url.hostname.endsWith("supabase.co") && url.pathname.includes("/storage/v1/object/public/");
-
-const shouldBypassCloudflareTransform = (url: URL, requestedWidth: number) => {
-  const path = url.pathname;
-
-  if (
-    path.includes("/uploads/brands/") ||
-    path.includes("/uploads/categories/") ||
-    path.includes("/uploads/banners/")
-  ) {
-    return true;
-  }
-
-  // Some category thumbnails were historically saved under color-variants.
-  // Small UI imagery should prefer the known-good public Storage URL over a
-  // transform that can fail on weak networks or uncached resize variants.
-  if (requestedWidth <= 360 && path.includes("/uploads/color-variants/")) {
-    return true;
-  }
-
-  return false;
-};
 
 const getCloudflareOptions = (width: number, quality: number) => {
   const safeWidth = Math.max(240, Math.min(1920, Math.round(width)));
@@ -61,79 +33,45 @@ const buildCloudflareImageUrl = (source: string, width: number, quality: number)
 
 const canTransformImage = (rawUrl: string | null | undefined) => {
   if (!rawUrl?.trim()) return false;
-
   try {
     const baseUrl = typeof window !== "undefined" ? window.location.origin : FLAMINGO_IMAGE_ZONE;
     const url = new URL(rawUrl, baseUrl);
-
-    return url.hostname.endsWith("unsplash.com") || isSupabasePublicStorageUrl(url);
+    // Supabase Storage URLs are deliberately excluded. Direct public URLs are
+    // more reliable for the catalog than Cloudflare's remote image transform.
+    return url.hostname.endsWith("unsplash.com");
   } catch {
     return false;
   }
 };
 
-const buildOptimizedImageUrl = (
-  url: string | null | undefined,
-  width: number,
-  quality: number,
-  viewportAware: boolean,
-): string => {
+const buildOptimizedImageUrl = (url: string | null | undefined, width: number, quality: number, viewportAware: boolean): string => {
   if (!url || !url.trim()) return "/placeholder.svg";
-
   try {
     const baseUrl = typeof window !== "undefined" ? window.location.origin : FLAMINGO_IMAGE_ZONE;
     const u = new URL(url, baseUrl);
-    let optimizedWidth = viewportAware ? getViewportAwareWidth(width) : width;
-    let optimizedQuality = quality;
-
+    const optimizedWidth = viewportAware ? getViewportAwareWidth(width) : width;
     if (u.hostname.endsWith("unsplash.com")) {
       u.searchParams.set("w", String(optimizedWidth));
-      u.searchParams.set("q", String(optimizedQuality));
+      u.searchParams.set("q", String(quality));
       u.searchParams.set("auto", "format");
       u.searchParams.set("fit", "max");
       return u.toString();
     }
-
-    if (isSupabasePublicStorageUrl(u)) {
-      if (shouldBypassCloudflareTransform(u, width)) {
-        return u.toString();
-      }
-
-      const colorVariantImage = u.pathname.includes("/uploads/color-variants/");
-
-      if (viewportAware && colorVariantImage && width >= 1200) {
-        optimizedWidth = Math.min(optimizedWidth, 640);
-        optimizedQuality = Math.min(optimizedQuality, 82);
-      }
-
-      if (viewportAware && colorVariantImage && width >= 700 && width < 1200) {
-        optimizedWidth = Math.min(optimizedWidth, 360);
-        optimizedQuality = Math.min(optimizedQuality, 76);
-      }
-
-      return buildCloudflareImageUrl(u.toString(), optimizedWidth, optimizedQuality);
-    }
-
+    // Do not proxy Supabase images through /cdn-cgi/image. A transform failure
+    // was causing category and product images to render as broken images.
+    if (isSupabasePublicStorageUrl(u)) return u.toString();
     return url;
   } catch {
     return url;
   }
 };
 
-export const optimizeCatalogImage = (
-  url?: string | null,
-  width = 480,
-  quality = 78,
-): string => {
+export const optimizeCatalogImage = (url?: string | null, width = 480, quality = 78): string => {
   if (!url?.trim()) return "/placeholder.svg";
-
   try {
     const parsed = new URL(url, FLAMINGO_IMAGE_ZONE);
-    if (!isSupabasePublicStorageUrl(parsed)) return optimizeImage(url, width, quality);
-
-    const safeWidth = Math.max(240, Math.min(640, Math.round(width)));
-    const safeQuality = Math.max(60, Math.min(85, Math.round(quality)));
-    return buildCloudflareImageUrl(parsed.toString(), safeWidth, safeQuality);
+    if (isSupabasePublicStorageUrl(parsed)) return parsed.toString();
+    return optimizeImage(url, width, quality);
   } catch {
     return url;
   }
@@ -142,41 +80,16 @@ export const optimizeCatalogImage = (
 export const optimizeImage = (url?: string | null, width = 800, quality = 82): string =>
   buildOptimizedImageUrl(url, width, quality, true);
 
-export const createImageSrcSet = (
-  url: string | null | undefined,
-  widths: number[],
-  quality = 82,
-): string | undefined => {
+export const createImageSrcSet = (url: string | null | undefined, widths: number[], quality = 82): string | undefined => {
   if (!url?.trim() || !canTransformImage(url)) return undefined;
-
-  try {
-    const parsed = new URL(url, typeof window !== "undefined" ? window.location.origin : FLAMINGO_IMAGE_ZONE);
-    const requestedMax = Math.max(...widths.filter((width) => Number.isFinite(width) && width > 0), 0);
-    if (isSupabasePublicStorageUrl(parsed) && shouldBypassCloudflareTransform(parsed, requestedMax)) {
-      return undefined;
-    }
-  } catch {
-    return undefined;
-  }
-
-  const candidates = Array.from(
-    new Set(widths.filter((width) => Number.isFinite(width) && width > 0)),
-  ).sort((a, b) => a - b);
-
+  const candidates = Array.from(new Set(widths.filter((width) => Number.isFinite(width) && width > 0))).sort((a, b) => a - b);
   if (candidates.length === 0) return undefined;
-
   const requestedMax = candidates[candidates.length - 1];
   const viewportMax = getViewportAwareWidth(requestedMax);
   const limitedCandidates = candidates.filter((width) => width <= viewportMax);
-
-  if (viewportMax < requestedMax && !limitedCandidates.includes(viewportMax)) {
-    limitedCandidates.push(viewportMax);
-  }
-
-  const responsiveCandidates = Array.from(new Set(limitedCandidates)).sort((a, b) => a - b);
-
-  return responsiveCandidates
-    .map((width) => `${buildOptimizedImageUrl(url, width, quality, false)} ${width}w`)
+  if (viewportMax < requestedMax && !limitedCandidates.includes(viewportMax)) limitedCandidates.push(viewportMax);
+  return Array.from(new Set(limitedCandidates)).sort((a, b) => a - b)
+    .map((candidateWidth) => `${buildOptimizedImageUrl(url, candidateWidth, quality, false)} ${candidateWidth}w`)
     .join(", ");
 };
 
@@ -184,18 +97,14 @@ const getCloudflareOriginalUrl = (src: string) => {
   const marker = "/cdn-cgi/image/";
   const markerIndex = src.indexOf(marker);
   if (markerIndex === -1) return null;
-
   const sourceStart = src.indexOf("/https://", markerIndex + marker.length);
   if (sourceStart === -1) return null;
-
   return src.slice(sourceStart + 1);
 };
 
 export const handleImageError = (event: { currentTarget: HTMLImageElement }) => {
   const image = event.currentTarget;
-
   if (image.dataset.fallbackApplied === "1") return;
-
   const cloudflareOriginal = getCloudflareOriginalUrl(image.src);
   if (cloudflareOriginal && image.dataset.originalTried !== "1") {
     image.dataset.originalTried = "1";
@@ -203,19 +112,12 @@ export const handleImageError = (event: { currentTarget: HTMLImageElement }) => 
     image.src = cloudflareOriginal;
     return;
   }
-
-  if (
-    image.src.includes("/storage/v1/render/image/public/") &&
-    image.dataset.originalTried !== "1"
-  ) {
+  if (image.src.includes("/storage/v1/render/image/public/") && image.dataset.originalTried !== "1") {
     image.dataset.originalTried = "1";
     image.removeAttribute("srcset");
-    image.src = image.src
-      .replace("/storage/v1/render/image/public/", "/storage/v1/object/public/")
-      .split("?")[0];
+    image.src = image.src.replace("/storage/v1/render/image/public/", "/storage/v1/object/public/").split("?")[0];
     return;
   }
-
   image.dataset.fallbackApplied = "1";
   image.removeAttribute("srcset");
   image.src = "/placeholder.svg";

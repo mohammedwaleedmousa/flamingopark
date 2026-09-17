@@ -22,11 +22,13 @@ const findOptionSection = (label: Element) => {
 const RequiredProductOptionsGuard = ({ children }: RequiredProductOptionsGuardProps) => {
   const rootRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
-  const [colorChosen, setColorChosen] = useState(false);
+  // ProductDetailPageBase automatically selects the first color variant.
+  // Treat that default as a valid color choice so the UI and invoice match it.
+  const [colorChosen, setColorChosen] = useState(true);
   const [sizeChosen, setSizeChosen] = useState(false);
 
   useEffect(() => {
-    setColorChosen(false);
+    setColorChosen(true);
     setSizeChosen(false);
   }, [location.pathname, location.search]);
 

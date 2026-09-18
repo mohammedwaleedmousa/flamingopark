@@ -213,6 +213,15 @@ export async function updateOrderStatus(orderId: string, newStatus: string) {
   return { orderId, newStatus };
 }
 
+export async function updateOrderPaymentMethod(orderId: string, paymentMethod: "cod" | "bank") {
+  const { error } = await supabase
+    .from("orders")
+    .update({ payment_method: paymentMethod })
+    .eq("id", orderId);
+  if (error) throw error;
+  return { orderId, paymentMethod };
+}
+
 export async function deleteOrder(orderId: string) {
   const { error } = await supabase.from("orders").delete().eq("id", orderId);
   if (error) throw error;

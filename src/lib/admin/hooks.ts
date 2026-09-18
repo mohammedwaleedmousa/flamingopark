@@ -32,6 +32,20 @@ export function useUpdateOrderStatus() {
   });
 }
 
+export function useUpdateOrderPaymentMethod() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async ({ orderId, paymentMethod }: { orderId: string; paymentMethod: "cod" | "bank" }) => {
+      await requireAdminPermission("orders.manage");
+      return service.updateOrderPaymentMethod(orderId, paymentMethod);
+    },
+    onSuccess: () => {
+      service.invalidateAdminQueries(queryClient);
+      queryClient.invalidateQueries({ queryKey: ["admin-invoice-orders"] });
+    },
+  });
+}
+
 export function useDeleteOrder() {
   const queryClient = useQueryClient();
   return useMutation({

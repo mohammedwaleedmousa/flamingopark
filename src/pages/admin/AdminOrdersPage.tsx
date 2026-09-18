@@ -326,19 +326,8 @@ const StatusBadge = ({ status }: { status: string }) => {
 };
 
 /* =========================================================
-   PAYMENT BADGE
+   PAYMENT METHOD
 ========================================================= */
-
-const PaymentBadge = ({ paymentMethod }: { paymentMethod: string }) => {
-  const cod = String(paymentMethod || "").toLowerCase() === "cod";
-
-  return (
-    <span className={cn("inline-flex h-[27px] items-center gap-[5px] whitespace-nowrap rounded-[8px] border px-[8px] text-[8px] font-semibold", cod ? "border-[#EFE2C8] bg-[#FFF8EC] text-[#9A7133]" : "border-[#D8E8EC] bg-[#F1F8FA] text-[#557E88]")}>
-      <CircleDollarSign className="h-[10px] w-[10px]" strokeWidth={1.7} />
-      {paymentLabel(paymentMethod)}
-    </span>
-  );
-};
 
 const PaymentMethodSelect = ({
   paymentMethod,

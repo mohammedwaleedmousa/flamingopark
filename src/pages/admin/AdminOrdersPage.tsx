@@ -343,21 +343,24 @@ const PaymentMethodSelect = ({
   const normalized = String(paymentMethod || "").toLowerCase() === "cod" ? "cod" : "bank";
 
   return (
-    <Select value={normalized} onValueChange={(value) => onChange(value as "cod" | "bank")} disabled={loading}>
-      <SelectTrigger className={cn("h-[34px] w-[150px] rounded-[8px] border-[#E1E5EA] bg-white px-2.5 text-[9px] font-semibold shadow-none focus:ring-0", className)}>
-        <div className="flex min-w-0 items-center gap-1.5">
-          {loading ? <Loader2 className="h-3 w-3 shrink-0 animate-spin text-[#7E8791]" /> : <CircleDollarSign className="h-3 w-3 shrink-0 text-[#71808A]" />}
-          <SelectValue />
-        </div>
-      </SelectTrigger>
-      <SelectContent dir="rtl">
+    <div className={cn("relative inline-flex items-center", className)}>
+      <CircleDollarSign className="pointer-events-none absolute right-2.5 z-10 h-3 w-3 text-[#71808A]" />
+      {loading ? <Loader2 className="pointer-events-none absolute left-2.5 z-10 h-3 w-3 animate-spin text-[#7E8791]" /> : null}
+      <select
+        dir="rtl"
+        value={normalized}
+        disabled={loading}
+        onChange={(event) => onChange(event.target.value as "cod" | "bank")}
+        className="h-[34px] w-full min-w-[150px] cursor-pointer appearance-auto rounded-[8px] border border-[#E1E5EA] bg-white py-0 pl-8 pr-7 text-[9px] font-semibold text-[#56606B] outline-none disabled:cursor-wait disabled:opacity-70"
+        aria-label="طريقة الدفع"
+      >
         {paymentOptions.map((option) => (
-          <SelectItem key={option.value} value={option.value}>
+          <option key={option.value} value={option.value}>
             {option.label}
-          </SelectItem>
+          </option>
         ))}
-      </SelectContent>
-    </Select>
+      </select>
+    </div>
   );
 };
 
@@ -1005,7 +1008,7 @@ const AdminOrdersPage = () => {
                             paymentMethod={order.payment_method}
                             loading={updatePaymentMutation.isPending && updatingPaymentOrderId === order.id}
                             onChange={(value) => void updatePaymentMethod(order.id, value)}
-                            className="w-[156px]"
+                            className="w-[170px]"
                           />
 
                           <span className="inline-flex h-[28px] items-center gap-1.5 rounded-full border border-[#E5E7E3] bg-[#FAFBFC] px-2.5 text-[10px] text-[#7B807B]">
@@ -1663,7 +1666,7 @@ const AdminOrdersPage = () => {
                       paymentMethod={selectedOrder.payment_method}
                       loading={updatePaymentMutation.isPending && updatingPaymentOrderId === selectedOrder.id}
                       onChange={(value) => void updatePaymentMethod(selectedOrder.id, value)}
-                      className="mt-2 w-full bg-white"
+                      className="mt-2 w-full"
                     />
                   </div>
 

@@ -4,6 +4,7 @@ import { Link } from "react-router-dom";
 import {
   useAdminOrders,
   useUpdateOrderStatus,
+  useUpdateOrderPaymentMethod,
   useDeleteOrder,
   useBulkUpdateOrderStatus,
   useDeleteOrders,
@@ -125,6 +126,11 @@ type DeleteConfirmation = {
 ========================================================= */
 
 const PAGE_SIZE = 25;
+
+const paymentOptions = [
+  { value: "bank" as const, label: "تحويل بنكي" },
+  { value: "cod" as const, label: "الدفع عند الاستلام" },
+];
 
 const statusOptions = [
   {
@@ -334,6 +340,38 @@ const PaymentBadge = ({ paymentMethod }: { paymentMethod: string }) => {
   );
 };
 
+const PaymentMethodSelect = ({
+  paymentMethod,
+  onChange,
+  loading = false,
+  className,
+}: {
+  paymentMethod: string;
+  onChange: (value: "cod" | "bank") => void;
+  loading?: boolean;
+  className?: string;
+}) => {
+  const normalized = String(paymentMethod || "").toLowerCase() === "cod" ? "cod" : "bank";
+
+  return (
+    <Select value={normalized} onValueChange={(value) => onChange(value as "cod" | "bank")} disabled={loading}>
+      <SelectTrigger className={cn("h-[34px] w-[150px] rounded-[8px] border-[#E1E5EA] bg-white px-2.5 text-[9px] font-semibold shadow-none focus:ring-0", className)}>
+        <div className="flex min-w-0 items-center gap-1.5">
+          {loading ? <Loader2 className="h-3 w-3 shrink-0 animate-spin text-[#7E8791]" /> : <CircleDollarSign className="h-3 w-3 shrink-0 text-[#71808A]" />}
+          <SelectValue />
+        </div>
+      </SelectTrigger>
+      <SelectContent dir="rtl">
+        {paymentOptions.map((option) => (
+          <SelectItem key={option.value} value={option.value}>
+            {option.label}
+          </SelectItem>
+        ))}
+      </SelectContent>
+    </Select>
+  );
+};
+
 /* =========================================================
    EMPTY
 ========================================================= */
@@ -386,6 +424,7 @@ const AdminOrdersPage = () => {
   });
 
   const updateStatusMutation = useUpdateOrderStatus();
+  const updatePaymentMutation = useUpdateOrderPaymentMethod();
   const deleteOrderMutation = useDeleteOrder();
   const bulkUpdateMutation = useBulkUpdateOrderStatus();
   const deleteOrdersMutation = useDeleteOrders();
@@ -491,6 +530,60 @@ const AdminOrdersPage = () => {
         title: "تعذر تحديث الطلب",
         description:
           "حدث خطأ أثناء تحديث حالة الطلب.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  /* =========================================================
+     UPDATE PAYMENT METHOD
+  ========================================================= */
+
+  const updatePaymentMethod = async (
+    orderId: string,
+    paymentMethod: "cod" | "bank",
+  ) => {
+    const previousPaymentMethod =
+      selectedOrder?.id === orderId
+        ? selectedOrder.payment_method
+        : null;
+
+    try {
+      setSelectedOrder((current) =>
+        current?.id === orderId
+          ? {
+              ...current,
+              payment_method: paymentMethod,
+            }
+          : current,
+      );
+
+      await updatePaymentMutation.mutateAsync({
+        orderId,
+        paymentMethod,
+      });
+
+      toast({
+        title: "تم تحديث طريقة الدفع",
+        description: `تم تغيير طريقة الدفع إلى ${paymentLabel(paymentMethod)}.`,
+      });
+    } catch (error) {
+      console.error(error);
+
+      if (previousPaymentMethod) {
+        setSelectedOrder((current) =>
+          current?.id === orderId
+            ? {
+                ...current,
+                payment_method: previousPaymentMethod,
+              }
+            : current,
+        );
+      }
+
+      toast({
+        title: "تعذر تحديث طريقة الدفع",
+        description: "حدث خطأ أثناء حفظ طريقة الدفع الجديدة.",
         variant: "destructive",
       });
     }
@@ -669,6 +762,10 @@ const AdminOrdersPage = () => {
 
   const updatingOrderId = (
     updateStatusMutation.variables as any
+  )?.orderId;
+
+  const updatingPaymentOrderId = (
+    updatePaymentMutation.variables as any
   )?.orderId;
 
   return (
@@ -915,7 +1012,12 @@ const AdminOrdersPage = () => {
                         </div>
 
                         <div className="mt-2.5 flex flex-wrap items-center gap-1.5">
-                          <PaymentBadge paymentMethod={order.payment_method} />
+                          <PaymentMethodSelect
+                            paymentMethod={order.payment_method}
+                            loading={updatePaymentMutation.isPending && updatingPaymentOrderId === order.id}
+                            onChange={(value) => void updatePaymentMethod(order.id, value)}
+                            className="w-[156px]"
+                          />
 
                           <span className="inline-flex h-[28px] items-center gap-1.5 rounded-full border border-[#E5E7E3] bg-[#FAFBFC] px-2.5 text-[10px] text-[#7B807B]">
                             <MapPin className="h-3 w-3" />
@@ -1136,7 +1238,11 @@ const AdminOrdersPage = () => {
                         {/* PAYMENT */}
 
                         <td className="px-3">
-                          <PaymentBadge paymentMethod={order.payment_method} />
+                          <PaymentMethodSelect
+                            paymentMethod={order.payment_method}
+                            loading={updatePaymentMutation.isPending && updatingPaymentOrderId === order.id}
+                            onChange={(value) => void updatePaymentMethod(order.id, value)}
+                          />
                         </td>
 
                         {/* STATUS */}
@@ -1564,11 +1670,12 @@ const AdminOrdersPage = () => {
                       طريقة الدفع
                     </div>
 
-                    <div className="mt-1 text-[12px] font-medium text-[#4D524D]">
-                      {paymentLabel(
-                        selectedOrder.payment_method,
-                      )}
-                    </div>
+                    <PaymentMethodSelect
+                      paymentMethod={selectedOrder.payment_method}
+                      loading={updatePaymentMutation.isPending && updatingPaymentOrderId === selectedOrder.id}
+                      onChange={(value) => void updatePaymentMethod(selectedOrder.id, value)}
+                      className="mt-2 w-full bg-white"
+                    />
                   </div>
 
                   <div className="rounded-[9px] bg-[#F7F9FB] p-3">

@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "@/hooks/use-toast";
 import { CURRENCY_RATES, convertPrice, getActiveCurrencies, getRateSnapshot } from "@/lib/currency";
+import { calculateOrderTotals } from "@/lib/orderTotals";
 import { Check, CircleDollarSign, FilePlus2, Loader2, Package, Plus, ReceiptText, Search, ShoppingBag, Trash2, Truck, UserRound, WalletCards, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -153,7 +154,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
   });
 
   const subtotal = useMemo(() => items.reduce((sum, item) => sum + Number(item.price || 0) * Math.max(1, Number(item.quantity || 1)), 0), [items]);
-  const total = Math.max(0, subtotal + deliveryFee - discountAmount);
+  const { total, discountAmount: appliedDiscountAmount } = calculateOrderTotals(subtotal, deliveryFee, discountAmount);
 
   const resetForm = () => {
     setCustomerName("");
@@ -242,7 +243,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
 
     if (deliveryFee < 0) return "رسوم التوصيل لا يمكن أن تكون سالبة.";
     if (discountAmount < 0) return "الخصم لا يمكن أن يكون سالبًا.";
-    if (discountAmount > subtotal + deliveryFee) return "الخصم أكبر من قيمة الفاتورة.";
+    if (discountAmount > subtotal) return "الخصم لا يمكن أن يتجاوز قيمة المنتجات؛ رسوم التوصيل لا يشملها الخصم.";
 
     return null;
   };
@@ -271,8 +272,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
       }));
       const nativeSubtotal = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
       const nativeDeliveryFee = toDisplay(deliveryFee);
-      const nativeDiscountAmount = Math.min(nativeSubtotal + nativeDeliveryFee, toDisplay(discountAmount));
-      const nativeTotal = Math.max(0, nativeSubtotal + nativeDeliveryFee - nativeDiscountAmount);
+      const { discountAmount: nativeDiscountAmount, total: nativeTotal } = calculateOrderTotals(nativeSubtotal, nativeDeliveryFee, toDisplay(discountAmount));
 
       const payload = {
         order_number: orderNumber,
@@ -289,7 +289,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
         discount_amount: nativeDiscountAmount,
         coupon_code: couponCode.trim() || null,
         total: nativeTotal,
-        total_base: total,
+        total_base: toBase(nativeTotal),
         delivery_company_id: deliveryCompanyId === "none" ? null : deliveryCompanyId,
         payment_method: paymentMethod,
         status: orderStatus,
@@ -499,12 +499,13 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
                 </FormSection>
 
                 <FormSection title="الخصم" icon={CircleDollarSign}>
+                  <p className="text-[9px] text-[#9299A3]">الخصم على قيمة المنتجات فقط، ولا يشمل رسوم التوصيل.</p>
                   <Field label="كود / مرجع الخصم">
                     <Input value={couponCode} onChange={(event) => setCouponCode(event.target.value)} placeholder="اختياري" className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[10px] shadow-none focus-visible:ring-0" />
                   </Field>
 
                   <Field label={`قيمة الخصم (${currencySymbol})`}>
-                    <Input type="number" min={0} step={currencyMode === "SAR" ? "0.01" : "1"} value={Number(toDisplay(discountAmount).toFixed(currencyMode === "SAR" ? 2 : 0))} onChange={(event) => setDiscountAmount(Math.max(0, toBase(Number(event.target.value) || 0)))} className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[10px] shadow-none focus-visible:ring-0" />
+                    <Input type="number" min={0} max={toDisplay(subtotal)} step={currencyMode === "SAR" ? "0.01" : "1"} value={Number(toDisplay(discountAmount).toFixed(currencyMode === "SAR" ? 2 : 0))} onChange={(event) => setDiscountAmount(Math.max(0, toBase(Number(event.target.value) || 0)))} className="h-[40px] rounded-[9px] border-[#E2E6EB] bg-[#F8FAFC] text-[10px] shadow-none focus-visible:ring-0" />
                   </Field>
                 </FormSection>
 
@@ -517,7 +518,7 @@ const NewInvoiceCreator = ({ open, onClose, onCreated }: NewInvoiceCreatorProps)
                   <div className="space-y-[8px] p-[12px]">
                     <SummaryRow label="المجموع" value={`${toDisplay(subtotal).toLocaleString("en-US")} ${currencySymbol}`} />
                     <SummaryRow label="التوصيل" value={`${toDisplay(deliveryFee).toLocaleString("en-US")} ${currencySymbol}`} />
-                    <SummaryRow label="الخصم" value={`- ${toDisplay(discountAmount).toLocaleString("en-US")} ${currencySymbol}`} negative={discountAmount > 0} />
+                    <SummaryRow label="خصم المنتجات" value={`- ${toDisplay(appliedDiscountAmount).toLocaleString("en-US")} ${currencySymbol}`} negative={appliedDiscountAmount > 0} />
 
                     <div className="border-t border-[#E8EBEF] pt-[9px]">
                       <div className="flex items-end justify-between gap-[10px]">

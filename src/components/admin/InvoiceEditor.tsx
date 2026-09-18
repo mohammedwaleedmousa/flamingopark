@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { toast } from "@/hooks/use-toast";
 import { CURRENCY_RATES, getRateSnapshot } from "@/lib/currency";
+import { calculateOrderTotals } from "@/lib/orderTotals";
 import { CheckCircle2, CircleOff, Download, FileClock, FileText, Loader2, Package, Pencil, Plus, Printer, ReceiptText, RotateCcw, Save, Trash2, UserRound, X, type LucideIcon } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -116,11 +117,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
       subtotal += Number(item.price || 0) * Math.max(1, Number(item.quantity || 1));
     });
 
-    const deliveryFee = Number(current.delivery_fee || 0);
-    const discountAmount = Number(current.discount_amount || 0);
-    const total = Math.max(0, subtotal + deliveryFee - discountAmount);
-
-    return { subtotal, deliveryFee, discountAmount, total };
+    return calculateOrderTotals(subtotal, Number(current.delivery_fee || 0), Number(current.discount_amount || 0));
   }, [isEditing, editedOrder, order]);
 
   const reviewStatus = (order?.invoice_review_status || (order?.invoice_url ? "pending" : "unreviewed")) as InvoiceReviewStatus;
@@ -196,7 +193,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
     if (editedOrder.items.some((item) => !item.product_name.trim() || item.quantity < 1 || item.price < 0)) return "راجع بيانات بنود الفاتورة.";
     if (editedOrder.delivery_fee < 0) return "رسوم التوصيل لا يمكن أن تكون سالبة.";
     if (Number(editedOrder.discount_amount || 0) < 0) return "الخصم لا يمكن أن يكون سالبًا.";
-    if (Number(editedOrder.discount_amount || 0) > calculatedTotals.subtotal + Number(editedOrder.delivery_fee || 0)) return "الخصم أكبر من قيمة الفاتورة.";
+    if (Number(editedOrder.discount_amount || 0) > calculatedTotals.subtotal) return "الخصم لا يمكن أن يتجاوز قيمة المنتجات؛ رسوم التوصيل لا يشملها الخصم.";
 
     return null;
   };
@@ -224,7 +221,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
         items: editedOrder.items as any,
         subtotal: calculatedTotals.subtotal,
         delivery_fee: Number(editedOrder.delivery_fee || 0),
-        discount_amount: Number(editedOrder.discount_amount || 0),
+        discount_amount: calculatedTotals.discountAmount,
         total: calculatedTotals.total,
         total_base: toBase(calculatedTotals.total),
         invoice_review_status: shouldReturnToReview ? "pending" : "unreviewed",
@@ -480,7 +477,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                           </div>
 
                           <div>
-                            {isEditing ? <Input type="number" min={0} step={currencyMode === "SAR" ? "0.01" : "1"} value={Number(toDisplay(item.price).toFixed(currencyMode === "SAR" ? 2 : 0))} onChange={(event) => updateItem(index, { price: Math.max(0, toBase(Number(event.target.value) || 0)) })} className="h-[32px] w-[100px] rounded-[7px] border-[#E2E6EB] text-[9px] shadow-none focus-visible:ring-0" /> : <span className="text-[10px] text-[#68717B]">{toDisplay(item.price).toLocaleString("en-US")} {currencySymbol}</span>}
+                            {isEditing ? <Input type="number" min={0} step={currencyMode === "SAR" ? "0.01" : "1"} value={Number(toDisplay(item.price).toFixed(currencyMode === "SAR" ? 2 : 0))} onChange={(event) => updateItem(index, { price: Math.max(0, Number(event.target.value) || 0) })} className="h-[32px] w-[100px] rounded-[7px] border-[#E2E6EB] text-[9px] shadow-none focus-visible:ring-0" /> : <span className="text-[10px] text-[#68717B]">{toDisplay(item.price).toLocaleString("en-US")} {currencySymbol}</span>}
                           </div>
 
                           <span className="text-[10px] font-semibold text-[#59616B]">{toDisplay(item.price * item.quantity).toLocaleString("en-US")} {currencySymbol}</span>
@@ -512,7 +509,7 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                     {isEditing ? (
                       <div className="flex items-center justify-between gap-[10px]">
                         <span className="text-[9px] text-[#858D97]">التوصيل</span>
-                        <Input type="number" min={0} value={Number(toDisplay(editedOrder?.delivery_fee || 0).toFixed(currencyMode === "SAR" ? 2 : 0))} onChange={(event) => setEditedOrder((current) => current ? { ...current, delivery_fee: Math.max(0, toBase(Number(event.target.value) || 0)) } : current)} className="h-[32px] w-[120px] rounded-[7px] border-[#E2E6EB] text-[9px] shadow-none focus-visible:ring-0" />
+                        <Input type="number" min={0} step={currencyMode === "SAR" ? "0.01" : "1"} value={Number(toDisplay(editedOrder?.delivery_fee || 0).toFixed(currencyMode === "SAR" ? 2 : 0))} onChange={(event) => setEditedOrder((current) => current ? { ...current, delivery_fee: Math.max(0, Number(event.target.value) || 0) } : current)} className="h-[32px] w-[120px] rounded-[7px] border-[#E2E6EB] text-[9px] shadow-none focus-visible:ring-0" />
                       </div>
                     ) : (
                       <InvoiceTotalRow label="التوصيل" value={`${toDisplay(calculatedTotals.deliveryFee).toLocaleString("en-US")} ${currencySymbol}`} />
@@ -521,11 +518,13 @@ const InvoiceEditor = ({ order, open, onClose, onUpdate }: InvoiceEditorProps) =
                     {isEditing ? (
                       <div className="flex items-center justify-between gap-[10px]">
                         <span className="text-[9px] text-[#858D97]">الخصم</span>
-                        <Input type="number" min={0} value={Number(toDisplay(editedOrder?.discount_amount || 0).toFixed(currencyMode === "SAR" ? 2 : 0))} onChange={(event) => setEditedOrder((current) => current ? { ...current, discount_amount: Math.max(0, toBase(Number(event.target.value) || 0)) } : current)} className="h-[32px] w-[120px] rounded-[7px] border-[#E2E6EB] text-[9px] shadow-none focus-visible:ring-0" />
+                        <Input type="number" min={0} max={calculatedTotals.subtotal} step={currencyMode === "SAR" ? "0.01" : "1"} value={Number(toDisplay(editedOrder?.discount_amount || 0).toFixed(currencyMode === "SAR" ? 2 : 0))} onChange={(event) => setEditedOrder((current) => current ? { ...current, discount_amount: Math.max(0, Number(event.target.value) || 0) } : current)} className="h-[32px] w-[120px] rounded-[7px] border-[#E2E6EB] text-[9px] shadow-none focus-visible:ring-0" />
                       </div>
                     ) : (
                       <InvoiceTotalRow label="الخصم" value={`- ${toDisplay(calculatedTotals.discountAmount).toLocaleString("en-US")} ${currencySymbol}`} negative={calculatedTotals.discountAmount > 0} />
                     )}
+
+                    <p className="text-[8px] text-[#8D949E]">الخصم على قيمة المنتجات فقط، ولا يشمل رسوم التوصيل.</p>
 
                     <div className="border-t border-[#E7EAEF] pt-[8px]">
                       <div className="flex items-end justify-between gap-[10px]">

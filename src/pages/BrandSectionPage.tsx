@@ -77,6 +77,7 @@ const BrandSectionPage = () => {
           .eq("section_id", section!.id)
           .eq("products.is_active", true)
           .eq("products.brand_id", brand!.id)
+          .order("products(created_at)", { ascending: false })
           .range(from, from + PAGE_SIZE - 1);
 
         if (error) throw error;

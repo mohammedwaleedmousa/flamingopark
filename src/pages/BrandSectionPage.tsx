@@ -67,7 +67,7 @@ const BrandSectionPage = () => {
 
   const productQueries = useQueries({
     queries: Array.from({ length: loadedPage }, (_, pageIndex) => ({
-      queryKey: ["brand-section-products-fast-v1", section?.id, brand?.id, pageIndex + 1],
+      queryKey: ["brand-section-products-fast-v2", section?.id, brand?.id, pageIndex + 1],
       enabled: Boolean(section?.id && brand?.id),
       queryFn: async () => {
         const from = pageIndex * PAGE_SIZE;

@@ -72,19 +72,16 @@ const BrandSectionPage = () => {
       queryFn: async () => {
         const from = pageIndex * PAGE_SIZE;
         const { data, error } = await (supabase as any)
-          .from("brand_section_products")
-          .select(`product_id,products!inner(${PRODUCT_CARD_SELECT})`)
-          .eq("section_id", section!.id)
-          .eq("products.is_active", true)
-          .eq("products.brand_id", brand!.id)
-          .order("products(created_at)", { ascending: false })
+          .from("products")
+          .select(`${PRODUCT_CARD_SELECT},brand_section_products!inner(section_id)`)
+          .eq("is_active", true)
+          .eq("brand_id", brand!.id)
+          .eq("brand_section_products.section_id", section!.id)
+          .order("created_at", { ascending: false })
           .range(from, from + PAGE_SIZE - 1);
 
         if (error) throw error;
-        return (data || [])
-          .map((row: any) => row.products)
-          .filter(Boolean)
-          .map(mapProductCard) as Product[];
+        return (data || []).map(mapProductCard) as Product[];
       },
       staleTime: 10 * 60 * 1000,
       gcTime: 30 * 60 * 1000,

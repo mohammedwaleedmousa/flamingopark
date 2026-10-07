@@ -1,4 +1,5 @@
 import { createClient, type SupabaseClient } from "npm:@supabase/supabase-js@2.112.0";
+import { readAalClaim } from "../_shared/jwtClaims.ts";
 
 type InvoiceBody = { action?: unknown; orderId?: unknown; trackingToken?: unknown; pdfBase64?: unknown };
 const DEFAULT_ORIGINS = ["https://flamingopark.vercel.app","https://flamingopark.store","https://www.flamingopark.store","https://flamingoparkaden.com","https://www.flamingoparkaden.com","http://localhost:5173","http://localhost:8080"];
@@ -30,13 +31,28 @@ Deno.serve(async (req) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL"); const serviceRoleKey = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"); const anonKey = Deno.env.get("SUPABASE_ANON_KEY");
   if (!supabaseUrl || !serviceRoleKey || !anonKey) return json({ error: "Invoice service unavailable" }, 500, origin);
   const service = createClient(supabaseUrl, serviceRoleKey, { auth: { autoRefreshToken: false, persistSession: false } });
-  const auth = createClient(supabaseUrl, anonKey, { auth: { autoRefreshToken: false, persistSession: false }, global: { headers: { Authorization: req.headers.get("authorization") || "" } } });
-  const { data: { user } } = await auth.auth.getUser();
+  const auth = createClient(supabaseUrl, anonKey, { auth: { autoRefreshToken: false, persistSession: false } });
+  const authorization = req.headers.get("authorization") || "";
+  const tokenMatch = authorization.match(/^Bearer\s+(.+)$/i);
+  const accessToken = tokenMatch?.[1]?.trim() || "";
+  let user = null;
+  let aal = "aal1";
+  if (accessToken) {
+    // getUser(accessToken) validates the JWT before any claims from it are trusted.
+    const { data, error } = await auth.auth.getUser(accessToken);
+    if (!error && data.user) {
+      user = data.user;
+      aal = readAalClaim(accessToken);
+    }
+  }
   const { data: order, error: orderError } = await service.from("orders").select("id,order_number,invoice_url,owner_user_id,tracking_token_hash").eq("id", orderId).maybeSingle();
   if (orderError || !order) return json({ error: "Invoice access denied" }, 403, origin);
 
   let isAdmin = false;
   if (user) { const { data: role } = await service.from("user_roles").select("id").eq("user_id", user.id).eq("role", "admin").maybeSingle(); isAdmin = Boolean(role); }
+  // Sensitive administrator invoice operations require a JWT issued at MFA assurance level 2.
+  // Enforce this at the Edge Function boundary because service-role database calls bypass RLS.
+  if (isAdmin && aal !== "aal2") return json({ error: "MFA verification required" }, 403, origin);
   const isOwner = Boolean(user && order.owner_user_id === user.id);
   const validTrackingToken = Boolean(trackingToken && order.tracking_token_hash && await hashToken(trackingToken) === order.tracking_token_hash);
   if (!isAdmin && !isOwner && !validTrackingToken) return json({ error: "Invoice access denied" }, 403, origin);

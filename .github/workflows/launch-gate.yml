@@ -21,6 +21,7 @@ jobs:
           cache: npm
       - run: npm ci
       - run: node --test scripts/verify-order-totals.mjs
+      - run: node --test scripts/verify-invoice-mfa.mjs
       - run: node scripts/verify-critical-flows.mjs
       - run: npm run lint
       - run: npx tsc -p tsconfig.app.json --noEmit

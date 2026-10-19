@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigationType, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { Check, ChevronDown, ChevronRight, Package, RotateCcw, SlidersHorizontal, X } from "lucide-react";
 
@@ -11,6 +11,7 @@ import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
+import { restoreCatalogScroll } from "@/lib/catalogScroll";
 
 interface BrandRow {
   id: string;
@@ -42,6 +43,14 @@ const SORT_OPTIONS: { value: SortOption; label: string; description: string }[] 
 
 const BrandProductsPage = () => {
   const { slug } = useParams<{ slug: string }>();
+  const location = useLocation();
+  const navType = useNavigationType();
+
+  useEffect(() => {
+    if (navType === "POP") {
+      restoreCatalogScroll(`${location.pathname}${location.search}`);
+    }
+  }, [navType, location.pathname, location.search]);
 
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);

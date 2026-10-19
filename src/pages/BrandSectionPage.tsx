@@ -1,5 +1,5 @@
-import { useMemo, useState } from "react";
-import { Link, Navigate, useParams } from "react-router-dom";
+import { useEffect, useMemo, useState } from "react";
+import { Link, Navigate, useLocation, useNavigationType, useParams } from "react-router-dom";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { ChevronDown, ChevronRight, Package } from "lucide-react";
 
@@ -11,6 +11,7 @@ import ProductCardSkeleton from "@/components/ProductCardSkeleton";
 
 import { supabase } from "@/integrations/supabase/client";
 import { PRODUCT_CARD_SELECT, mapProductCard } from "@/lib/productCardData";
+import { restoreCatalogScroll } from "@/lib/catalogScroll";
 import type { Product } from "@/store/useStore";
 
 interface BrandSectionRow {
@@ -35,6 +36,14 @@ const PAGE_SIZE = 16;
 
 const BrandSectionPage = () => {
   const { slug, sectionSlug } = useParams<{ slug: string; sectionSlug: string }>();
+  const location = useLocation();
+  const navType = useNavigationType();
+
+  useEffect(() => {
+    if (navType === "POP") {
+      restoreCatalogScroll(`${location.pathname}${location.search}`);
+    }
+  }, [navType, location.pathname, location.search]);
   const [sort, setSort] = useState<SortType>("new");
   const [inStockOnly, setInStockOnly] = useState(false);
   const [loadedPage, setLoadedPage] = useState(1);

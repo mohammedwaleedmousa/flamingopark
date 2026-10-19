@@ -195,7 +195,7 @@ const BrandSectionPage = () => {
             <div className="flex min-h-[250px] items-center justify-center border-y border-border/60 text-center"><div><Package className="mx-auto h-5 w-5 text-muted-foreground" /><h2 className="mt-3 text-[12px] font-semibold">لا توجد منتجات مطابقة</h2></div></div>
           ) : (
             <>
-              <div className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4">
+              <div id="products-grid" className="grid grid-cols-2 gap-x-3 gap-y-6 sm:grid-cols-3 md:gap-x-5 md:gap-y-8 lg:grid-cols-4">
                 {visibleProducts.map((product, index) => <ProductCard key={product.id} product={product} index={index} />)}
               </div>
               {hasMore && <div className="flex justify-center pt-9"><button type="button" disabled={productsLoading} onClick={() => setLoadedPage((page) => page + 1)} className="h-11 rounded-full border border-border bg-background px-7 text-[10px] font-medium text-foreground disabled:opacity-50">{productsLoading ? "جاري التحميل..." : "عرض المزيد"}</button></div>}

@@ -116,7 +116,6 @@ const Navbar = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [searchFocused, setSearchFocused] = useState(false);
   const [searchIndex, setSearchIndex] = useState<SearchSuggestion[]>(() => searchIndexCache || []);
-  const restoreScrollOnUnlockRef = useRef(true);
   const searchResultsRef = useRef<HTMLDivElement | null>(null);
 
   const navigate = useNavigate();
@@ -175,27 +174,14 @@ const Navbar = () => {
   useEffect(() => {
     if (!searchFocused) return;
 
-    const scrollY = window.scrollY;
-    const body = document.body;
-    const html = document.documentElement;
-    const previousBody = { position: body.style.position, top: body.style.top, left: body.style.left, right: body.style.right, width: body.style.width, overflow: body.style.overflow };
-    const previousHtml = { overflow: html.style.overflow, overscrollBehavior: html.style.overscrollBehavior };
-
+    // Do not switch the page to position:fixed when search opens:
+    // that moves the visual viewport and causes a noticeable jump on mobile.
+    // Prevent background gestures without changing document geometry.
     const preventBackgroundScroll = (event: Event) => {
-      const target = event.target as Node | null;
-      if (target && searchResultsRef.current?.contains(target)) return;
-      event.preventDefault();
+      const target = event.target;
+      if (target instanceof Node && searchResultsRef.current?.contains(target)) return;
+      if (event.cancelable) event.preventDefault();
     };
-
-    restoreScrollOnUnlockRef.current = true;
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.left = "0";
-    body.style.right = "0";
-    body.style.width = "100%";
-    body.style.overflow = "hidden";
-    html.style.overflow = "hidden";
-    html.style.overscrollBehavior = "none";
 
     document.addEventListener("touchmove", preventBackgroundScroll, { passive: false });
     document.addEventListener("wheel", preventBackgroundScroll, { passive: false });
@@ -203,16 +189,6 @@ const Navbar = () => {
     return () => {
       document.removeEventListener("touchmove", preventBackgroundScroll);
       document.removeEventListener("wheel", preventBackgroundScroll);
-      body.style.position = previousBody.position;
-      body.style.top = previousBody.top;
-      body.style.left = previousBody.left;
-      body.style.right = previousBody.right;
-      body.style.width = previousBody.width;
-      body.style.overflow = previousBody.overflow;
-      html.style.overflow = previousHtml.overflow;
-      html.style.overscrollBehavior = previousHtml.overscrollBehavior;
-      if (restoreScrollOnUnlockRef.current) window.scrollTo(0, scrollY);
-      restoreScrollOnUnlockRef.current = true;
     };
   }, [searchFocused]);
 
@@ -229,7 +205,6 @@ const Navbar = () => {
   }));
 
   const closeSearch = () => {
-    restoreScrollOnUnlockRef.current = true;
     setSearchFocused(false);
     setSearchTerm("");
   };
@@ -237,7 +212,6 @@ const Navbar = () => {
   const runSearch = (value: string) => {
     const cleaned = value.trim();
     if (!cleaned) return;
-    restoreScrollOnUnlockRef.current = false;
     navigate(`/products?search=${encodeURIComponent(cleaned)}`);
     setSearchTerm("");
     setSearchFocused(false);

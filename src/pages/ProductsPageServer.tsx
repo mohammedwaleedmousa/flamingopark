@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { ChevronDown, Heart, SlidersHorizontal, X } from "lucide-react";
-import { useSearchParams } from "react-router-dom";
+import { useLocation, useNavigationType, useSearchParams } from "react-router-dom";
+import { catalogScrollKey, restoreCatalogScroll } from "@/lib/catalogScroll";
 
 import CartDrawer from "@/components/CartDrawer";
 import Footer from "@/components/Footer";
@@ -79,7 +80,16 @@ const parseAudience = (value: string | null): AudienceFilter =>
 
 const ProductsPageServer = () => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const [loadedPages, setLoadedPages] = useState(1);
+  const location = useLocation();
+  const navigationType = useNavigationType();
+  const catalogPath = `${location.pathname}${location.search}`;
+  const pagesStorageKey = `flamingopark:catalog-pages:${catalogPath}`;
+  const previousCatalogPath = useRef(catalogPath);
+  const restoredPath = useRef<string | null>(null);
+  const [loadedPages, setLoadedPages] = useState(() => {
+    const saved = Number(sessionStorage.getItem(pagesStorageKey));
+    return Number.isInteger(saved) && saved >= 1 ? Math.min(saved, 100) : 1;
+  });
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [sortOpen, setSortOpen] = useState(false);
   const [draft, setDraft] = useState(() => new URLSearchParams(searchParams));
@@ -275,8 +285,26 @@ const ProductsPageServer = () => {
   const draftCount = Number(facets?.result_count ?? 0);
 
   useEffect(() => {
-    setLoadedPages(1);
-  }, [categorySlug, searchQuery, brandFilter, audienceFilter, colorFilter, sizeFilter, minPrice, maxPrice, saleOnly, inStockOnly, sortBy]);
+    // Keep the current loaded batch count when returning from a product detail.
+    if (previousCatalogPath.current !== catalogPath) {
+      previousCatalogPath.current = catalogPath;
+      restoredPath.current = null;
+      setLoadedPages(1);
+      sessionStorage.removeItem(pagesStorageKey);
+    }
+  }, [catalogPath, pagesStorageKey]);
+
+  useEffect(() => {
+    sessionStorage.setItem(pagesStorageKey, String(loadedPages));
+  }, [pagesStorageKey, loadedPages]);
+
+  useEffect(() => {
+    if (navigationType !== "POP" || loadingProducts || !products.length) return;
+    if (restoredPath.current === catalogPath) return;
+    if (!sessionStorage.getItem(catalogScrollKey(catalogPath))) return;
+    restoredPath.current = catalogPath;
+    restoreCatalogScroll(catalogPath);
+  }, [navigationType, loadingProducts, products.length, catalogPath]);
 
   useEffect(() => {
     if (!filtersOpen || facetsLoading) return;
@@ -373,7 +401,7 @@ const ProductsPageServer = () => {
           </div>
         </section>
 
-        <section className="mx-auto max-w-[1600px] px-2.5 pt-3 md:px-6 md:pt-5">
+        <section id="products-grid" className="mx-auto max-w-[1600px] px-2.5 pt-3 md:px-6 md:pt-5">
           {loadingProducts && products.length === 0 ? (
             <div className="grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
               {Array.from({ length: 10 }).map((_, index) => <div key={index} className="aspect-[4/5] animate-pulse rounded-2xl bg-[#F3EEEB]" />)}

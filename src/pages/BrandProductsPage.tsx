@@ -76,29 +76,17 @@ const BrandProductsPage = () => {
 
     if (!shouldLock) return;
 
-    const scrollY = window.scrollY;
+    // Keep the document in place while the filter/sort sheet is open.
+    // Switching body to position:fixed and restoring with scrollTo caused jumps.
     const body = document.body;
-
-    const previousPosition = body.style.position;
-    const previousTop = body.style.top;
-    const previousWidth = body.style.width;
     const previousOverflow = body.style.overflow;
-
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.width = "100%";
+    const previousOverscroll = body.style.overscrollBehavior;
     body.style.overflow = "hidden";
+    body.style.overscrollBehavior = "none";
 
     return () => {
-      body.style.position = previousPosition;
-      body.style.top = previousTop;
-      body.style.width = previousWidth;
       body.style.overflow = previousOverflow;
-
-      window.scrollTo({
-        top: scrollY,
-        behavior: "auto",
-      });
+      body.style.overscrollBehavior = previousOverscroll;
     };
   }, [filtersOpen, sortOpen]);
 

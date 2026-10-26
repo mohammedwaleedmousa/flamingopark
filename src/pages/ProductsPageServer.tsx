@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQueries, useQuery } from "@tanstack/react-query";
 import { ChevronDown, Heart, SlidersHorizontal, X } from "lucide-react";
-import { useLocation, useNavigationType, useSearchParams } from "react-router-dom";
+import { useLocation, useSearchParams } from "react-router-dom";
 import { catalogScrollKey, restoreCatalogScroll } from "@/lib/catalogScroll";
 
 import CartDrawer from "@/components/CartDrawer";
@@ -81,7 +81,6 @@ const parseAudience = (value: string | null): AudienceFilter =>
 const ProductsPageServer = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const location = useLocation();
-  const navigationType = useNavigationType();
   const catalogPath = `${location.pathname}${location.search}`;
   const pagesStorageKey = `flamingopark:catalog-pages:${catalogPath}`;
   const previousCatalogPath = useRef(catalogPath);
@@ -299,12 +298,40 @@ const ProductsPageServer = () => {
   }, [pagesStorageKey, loadedPages]);
 
   useEffect(() => {
-    if (navigationType !== "POP" || loadingProducts || !products.length) return;
+    // Keep the browsing position when the same URL is refreshed or reopened
+    // within this tab. Save frequently enough to survive a hard reload.
+    const savePosition = () => {
+      sessionStorage.setItem(
+        `flamingopark:catalog-scroll:${catalogPath}`,
+        JSON.stringify({ top: Math.max(0, window.scrollY) }),
+      );
+    };
+
+    let queued = false;
+    const onScroll = () => {
+      if (queued) return;
+      queued = true;
+      requestAnimationFrame(() => {
+        queued = false;
+        savePosition();
+      });
+    };
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("pagehide", savePosition);
+    return () => {
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("pagehide", savePosition);
+    };
+  }, [catalogPath]);
+
+  useEffect(() => {
+    if (loadingProducts || !products.length) return;
     if (restoredPath.current === catalogPath) return;
     if (!sessionStorage.getItem(catalogScrollKey(catalogPath))) return;
     restoredPath.current = catalogPath;
     restoreCatalogScroll(catalogPath);
-  }, [navigationType, loadingProducts, products.length, catalogPath]);
+  }, [loadingProducts, products.length, catalogPath]);
 
   useEffect(() => {
     if (!filtersOpen || facetsLoading) return;

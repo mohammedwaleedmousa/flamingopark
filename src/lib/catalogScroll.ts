@@ -53,7 +53,7 @@ const findLoadMoreButton = () => {
   );
 };
 
-export const restoreCatalogScroll = (path: string) => {
+export const restoreCatalogScroll = (path: string, onFinished?: () => void) => {
   const key = catalogScrollKey(path);
   const saved = sessionStorage.getItem(key);
 
@@ -73,12 +73,16 @@ export const restoreCatalogScroll = (path: string) => {
     sessionStorage.removeItem(key);
 
     requestAnimationFrame(() => {
-      window.scrollTo({ top: snapshot.top, left: 0, behavior: "auto" });
-
-      // Images/cards can settle a frame later; apply the saved position once more.
-      requestAnimationFrame(() => {
-        window.scrollTo({ top: snapshot.top, left: 0, behavior: "auto" });
-      });
+      // Apply once only: repeated scrollTo calls visibly shake the storefront.
+      const anchor = snapshot.productId
+        ? Array.from(document.querySelectorAll<HTMLElement>("[data-catalog-product-id]"))
+            .find((item) => item.dataset.catalogProductId === snapshot.productId)
+        : null;
+      const desiredTop = anchor && snapshot.top > 0
+        ? Math.min(snapshot.top, Math.max(0, document.documentElement.scrollHeight - window.innerHeight))
+        : snapshot.top;
+      window.scrollTo({ top: desiredTop, left: 0, behavior: "instant" });
+      onFinished?.();
     });
   };
 

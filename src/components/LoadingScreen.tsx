@@ -9,29 +9,6 @@ const LoadingScreen = () => {
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const scrollY = window.scrollY;
-    const body = document.body;
-    const html = document.documentElement;
-
-    const previousBodyOverflow = body.style.overflow;
-    const previousBodyPosition = body.style.position;
-    const previousBodyTop = body.style.top;
-    const previousBodyLeft = body.style.left;
-    const previousBodyRight = body.style.right;
-    const previousBodyWidth = body.style.width;
-    const previousHtmlOverflow = html.style.overflow;
-    const previousOverscroll = html.style.overscrollBehavior;
-
-    body.style.overflow = "hidden";
-    body.style.position = "fixed";
-    body.style.top = `-${scrollY}px`;
-    body.style.left = "0";
-    body.style.right = "0";
-    body.style.width = "100%";
-
-    html.style.overflow = "hidden";
-    html.style.overscrollBehavior = "none";
-
     const retryKey = `flamingo-stalled-route-retry:${window.location.pathname}`;
     const autoRetryTimer = window.setTimeout(() => {
       const previousRetry = Number(window.sessionStorage.getItem(retryKey) || 0);
@@ -41,25 +18,7 @@ const LoadingScreen = () => {
       window.location.reload();
     }, 12000);
 
-    return () => {
-      window.clearTimeout(autoRetryTimer);
-
-      body.style.overflow = previousBodyOverflow;
-      body.style.position = previousBodyPosition;
-      body.style.top = previousBodyTop;
-      body.style.left = previousBodyLeft;
-      body.style.right = previousBodyRight;
-      body.style.width = previousBodyWidth;
-
-      html.style.overflow = previousHtmlOverflow;
-      html.style.overscrollBehavior = previousOverscroll;
-
-      window.scrollTo({
-        top: scrollY,
-        left: 0,
-        behavior: "auto",
-      });
-    };
+    return () => window.clearTimeout(autoRetryTimer);
   }, []);
 
   return (

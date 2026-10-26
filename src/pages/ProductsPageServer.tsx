@@ -85,6 +85,7 @@ const ProductsPageServer = () => {
   const pagesStorageKey = `flamingopark:catalog-pages:${catalogPath}`;
   const previousCatalogPath = useRef(catalogPath);
   const restoredPath = useRef<string | null>(null);
+  const scrollWriteReady = useRef(false);
   const [loadedPages, setLoadedPages] = useState(() => {
     const saved = Number(sessionStorage.getItem(pagesStorageKey));
     return Number.isInteger(saved) && saved >= 1 ? Math.min(saved, 100) : 1;
@@ -288,6 +289,7 @@ const ProductsPageServer = () => {
     if (previousCatalogPath.current !== catalogPath) {
       previousCatalogPath.current = catalogPath;
       restoredPath.current = null;
+      scrollWriteReady.current = false;
       setLoadedPages(1);
       sessionStorage.removeItem(pagesStorageKey);
     }
@@ -301,6 +303,7 @@ const ProductsPageServer = () => {
     // Keep the browsing position when the same URL is refreshed or reopened
     // within this tab. Save frequently enough to survive a hard reload.
     const savePosition = () => {
+      if (!scrollWriteReady.current) return;
       sessionStorage.setItem(
         `flamingopark:catalog-scroll:${catalogPath}`,
         JSON.stringify({ top: Math.max(0, window.scrollY) }),
@@ -328,9 +331,14 @@ const ProductsPageServer = () => {
   useEffect(() => {
     if (loadingProducts || !products.length) return;
     if (restoredPath.current === catalogPath) return;
-    if (!sessionStorage.getItem(catalogScrollKey(catalogPath))) return;
     restoredPath.current = catalogPath;
-    restoreCatalogScroll(catalogPath);
+    if (!sessionStorage.getItem(catalogScrollKey(catalogPath))) {
+      scrollWriteReady.current = true;
+      return;
+    }
+    restoreCatalogScroll(catalogPath, () => {
+      scrollWriteReady.current = true;
+    });
   }, [loadingProducts, products.length, catalogPath]);
 
   useEffect(() => {

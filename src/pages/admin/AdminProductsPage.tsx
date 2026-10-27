@@ -60,7 +60,7 @@ const AdminProductsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const [searchInput, setSearchInput] = useState(() => sessionStorage.getItem("admin-products-search") || "");
-  const search = useDebounce(searchInput, 350);
+  const search = useDebounce(searchInput, 120);
 
   const [status, setStatus] = useState<"all" | "active" | "inactive">(() => (sessionStorage.getItem("admin-products-status") as "all" | "active" | "inactive") || "all");
   const [stock, setStock] = useState<"all" | "in" | "out">(() => (sessionStorage.getItem("admin-products-stock") as "all" | "in" | "out") || "all");
@@ -76,6 +76,13 @@ const AdminProductsPage = () => {
   const [confirmDelete, setConfirmDelete] = useState<{ id?: string; bulk?: boolean } | null>(null);
 
   const didHydrateFilters = useRef(false);
+  const latestProductsRequest = useRef(0);
+  const activeProductsRequest = useRef<AbortController | null>(null);
+
+  useEffect(() => () => {
+    latestProductsRequest.current += 1;
+    activeProductsRequest.current?.abort();
+  }, []);
 
   useEffect(() => {
     if (!didHydrateFilters.current) { didHydrateFilters.current = true; return; }
@@ -162,12 +169,23 @@ const AdminProductsPage = () => {
   }, [availableBrandNames, brandFilter]);
 
   useEffect(() => {
+    // Avoid fetching with the old search term while the user is still typing.
+    if (searchInput !== search) return;
     void fetchProducts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput, search, status, stock, page, categoryFilter, brandFilter, categoryScope]);
+
+  useEffect(() => {
+    // Search/filter changes do not affect the catalog-wide totals.
     void fetchProductStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, status, stock, page, categoryFilter, brandFilter, categoryScope]);
+  }, []);
 
   const fetchProducts = async () => {
+    const requestId = ++latestProductsRequest.current;
+    activeProductsRequest.current?.abort();
+    const controller = new AbortController();
+    activeProductsRequest.current = controller;
     setIsLoading(true);
     setSelected(new Set());
 
@@ -175,6 +193,7 @@ const AdminProductsPage = () => {
       setProducts([]);
       setTotal(0);
       setIsLoading(false);
+      activeProductsRequest.current = null;
       return;
     }
 
@@ -202,16 +221,33 @@ const AdminProductsPage = () => {
     const from = (page - 1) * PAGE_SIZE;
     const to = from + PAGE_SIZE - 1;
 
-    const { data, count, error } = await query.order("sort_order", { ascending: true }).order("created_at", { ascending: false }).range(from, to);
+    try {
+      const { data, count, error } = await query
+        .order("sort_order", { ascending: true })
+        .order("created_at", { ascending: false })
+        .range(from, to)
+        .abortSignal(controller.signal);
 
-    if (error) {
-      toast({ title: "خطأ", description: "فشل في تحميل المنتجات", variant: "destructive" });
-    } else {
-      setProducts((data || []) as DbProduct[]);
-      setTotal(count || 0);
+      // A slower request must never replace a more recent search result.
+      if (requestId !== latestProductsRequest.current || controller.signal.aborted) return;
+
+      if (error) {
+        toast({ title: "خطأ", description: "فشل في تحميل المنتجات", variant: "destructive" });
+      } else {
+        setProducts((data || []) as DbProduct[]);
+        setTotal(count || 0);
+      }
+    } catch (error) {
+      if (requestId === latestProductsRequest.current && !controller.signal.aborted) {
+        console.error("Failed to load admin products", error);
+        toast({ title: "خطأ", description: "فشل في تحميل المنتجات", variant: "destructive" });
+      }
+    } finally {
+      if (requestId === latestProductsRequest.current) {
+        activeProductsRequest.current = null;
+        setIsLoading(false);
+      }
     }
-
-    setIsLoading(false);
   };
 
   const fetchProductStats = async () => {
@@ -351,8 +387,16 @@ const AdminProductsPage = () => {
     await fetchProducts();
   };
 
+  const changeSearch = (value: string) => {
+    // Invalidate the in-flight request immediately, not after the debounce.
+    latestProductsRequest.current += 1;
+    activeProductsRequest.current?.abort();
+    setSearchInput(value);
+    setPage(1);
+  };
+
   const clearFilters = () => {
-    setSearchInput("");
+    changeSearch("");
     setStatus("all");
     setStock("all");
     setCategoryFilter("all");
@@ -507,10 +551,10 @@ const AdminProductsPage = () => {
             <div className="relative">
               <Search className="pointer-events-none absolute right-[12px] top-1/2 h-[13px] w-[13px] -translate-y-1/2 text-[#969EA8]" strokeWidth={1.7} />
 
-              <Input value={searchInput} onChange={(event) => setSearchInput(event.target.value)} placeholder="ابحث باسم المنتج أو slug..." className="h-[40px] rounded-[10px] border-[#E3E7EC] bg-[#F8FAFC] pr-[35px] pl-[34px] text-[10px] font-medium shadow-none placeholder:text-[#A4ABB4] focus-visible:border-[#D7DBE5] focus-visible:bg-white focus-visible:ring-0" />
+              <Input value={searchInput} onChange={(event) => changeSearch(event.target.value)} placeholder="ابحث باسم المنتج أو slug..." className="h-[40px] rounded-[10px] border-[#E3E7EC] bg-[#F8FAFC] pr-[35px] pl-[34px] text-[10px] font-medium shadow-none placeholder:text-[#A4ABB4] focus-visible:border-[#D7DBE5] focus-visible:bg-white focus-visible:ring-0" />
 
               {searchInput && (
-                <button type="button" onClick={() => setSearchInput("")} aria-label="مسح البحث" className="absolute left-[8px] top-1/2 flex h-[24px] w-[24px] -translate-y-1/2 items-center justify-center rounded-[7px] text-[#9AA1AB] transition-colors hover:bg-white hover:text-[#5C6470]">
+                <button type="button" onClick={() => changeSearch("")} aria-label="مسح البحث" className="absolute left-[8px] top-1/2 flex h-[24px] w-[24px] -translate-y-1/2 items-center justify-center rounded-[7px] text-[#9AA1AB] transition-colors hover:bg-white hover:text-[#5C6470]">
                   <X className="h-[11px] w-[11px]" />
                 </button>
               )}

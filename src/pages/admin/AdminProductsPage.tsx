@@ -46,10 +46,11 @@ interface FilterCategory {
 }
 
 const PAGE_SIZE = 25;
+const CATALOG_BATCH_SIZE = 1000;
 
 const AdminProductsPage = () => {
-  const [products, setProducts] = useState<DbProduct[]>([]);
-  const [total, setTotal] = useState(0);
+  // Keep a complete list in memory so typing never waits for a network request.
+  const [catalog, setCatalog] = useState<DbProduct[]>([]);
   const [stats, setStats] = useState({ total: 0, active: 0, inStock: 0, outOfStock: 0 });
 
   const [page, setPage] = useState(() => {
@@ -59,7 +60,6 @@ const AdminProductsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const [searchInput, setSearchInput] = useState(() => sessionStorage.getItem("admin-products-search") || "");
-  // Query Supabase on every change, without a timer or debounce.
   const search = searchInput;
 
   const [status, setStatus] = useState<"all" | "active" | "inactive">(() => (sessionStorage.getItem("admin-products-status") as "all" | "active" | "inactive") || "all");
@@ -69,7 +69,6 @@ const AdminProductsPage = () => {
   const [bulkCategoryId, setBulkCategoryId] = useState("");
 
   const [categories, setCategories] = useState<FilterCategory[]>([]);
-  const [availableBrandNames, setAvailableBrandNames] = useState<string[]>([]);
 
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [bulkBusy, setBulkBusy] = useState(false);
@@ -131,54 +130,64 @@ const AdminProductsPage = () => {
     return categories.filter((category) => scopedIds.has(category.id));
   }, [categories, categoryFilter]);
 
-  useEffect(() => {
-    const fetchBrandNames = async () => {
-      let query = supabase.from("products").select("brand,category,category_id");
+  const filteredProducts = useMemo(() => {
+    const term = search.trim().toLocaleLowerCase();
+    const categoryIds = new Set(categoryScope.map((category) => category.id));
+    const categoryValues = new Set(categoryScope.flatMap((category) => [category.slug, category.name, category.name_ar]).filter(Boolean));
 
-      if (categoryFilter === "__uncategorized__") {
-        query = query.is("category_id", null);
-      } else if (categoryFilter !== "all") {
-        if (categoryScope.length === 0) {
-          setAvailableBrandNames([]);
-          return;
-        }
-
-        const categoryIds = categoryScope.map((category) => category.id);
-        const categoryValues = categoryScope.flatMap((category) => [category.slug, category.name, category.name_ar]).filter(Boolean).map((value) => `"${value.split('"').join('\\"')}"`);
-
-        query = query.or(`category_id.in.(${categoryIds.join(",")}),category.in.(${categoryValues.join(",")})`);
+    return catalog.filter((product) => {
+      if (term && ![product.name, product.name_ar, product.slug].some((value) => (value || "").toLocaleLowerCase().includes(term))) return false;
+      if (status !== "all" && product.is_active !== (status === "active")) return false;
+      if (stock !== "all" && product.in_stock !== (stock === "in")) return false;
+      if (categoryFilter === "__uncategorized__" && product.category_id != null) return false;
+      if (categoryFilter !== "all" && categoryFilter !== "__uncategorized__") {
+        if (categoryScope.length === 0 || (!categoryIds.has(product.category_id || "") && !categoryValues.has(product.category))) return false;
       }
+      return brandFilter === "all" || product.brand === brandFilter;
+    });
+  }, [catalog, search, status, stock, categoryFilter, categoryScope, brandFilter]);
 
-      const { data, error } = await query;
+  const total = filteredProducts.length;
+  const products = useMemo(
+    () => filteredProducts.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE),
+    [filteredProducts, page],
+  );
 
-      if (error) {
-        console.error("Failed to load product brands", error);
-        return;
-      }
+  const availableBrandNames = useMemo(() => {
+    const categoryIds = new Set(categoryScope.map((category) => category.id));
+    const categoryValues = new Set(categoryScope.flatMap((category) => [category.slug, category.name, category.name_ar]).filter(Boolean));
 
-      const names = Array.from(new Set((data || []).map((product) => product.brand?.trim()).filter((value): value is string => Boolean(value)))).sort((a, b) => a.localeCompare(b, "ar"));
+    const names = catalog
+      .filter((product) => {
+        if (categoryFilter === "__uncategorized__") return product.category_id == null;
+        if (categoryFilter === "all") return true;
+        return categoryIds.has(product.category_id || "") || categoryValues.has(product.category);
+      })
+      .map((product) => product.brand?.trim())
+      .filter((value): value is string => Boolean(value));
 
-      setAvailableBrandNames(names);
-    };
-
-    void fetchBrandNames();
-  }, [categoryFilter, categoryScope]);
+    return Array.from(new Set(names)).sort((a, b) => a.localeCompare(b, "ar"));
+  }, [catalog, categoryFilter, categoryScope]);
 
   useEffect(() => {
+    // Do not clear a persisted brand filter before its catalog has loaded.
+    if (isLoading || (categoryFilter !== "all" && categories.length === 0)) return;
     if (brandFilter !== "all" && !availableBrandNames.includes(brandFilter)) setBrandFilter("all");
-  }, [availableBrandNames, brandFilter]);
+  }, [availableBrandNames, brandFilter, isLoading, categoryFilter, categories.length]);
 
   useEffect(() => {
-    // Start a new search immediately for every keystroke.
+    // Search and filter changes are synchronous in memory. Fetch only on mount
+    // or after an admin mutation, never on each keystroke or page change.
     void fetchProducts();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [search, status, stock, page, categoryFilter, brandFilter, categoryScope]);
-
-  useEffect(() => {
-    // Search/filter changes do not affect the catalog-wide totals.
     void fetchProductStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    if (!isLoading && page > Math.max(1, Math.ceil(total / PAGE_SIZE))) {
+      setPage(Math.max(1, Math.ceil(total / PAGE_SIZE)));
+    }
+  }, [isLoading, page, total]);
 
   const fetchProducts = async () => {
     const requestId = ++latestProductsRequest.current;
@@ -186,59 +195,36 @@ const AdminProductsPage = () => {
     const controller = new AbortController();
     activeProductsRequest.current = controller;
     setIsLoading(true);
-    setSelected(new Set());
-
-    if (categoryFilter !== "all" && categoryFilter !== "__uncategorized__" && categoryScope.length === 0) {
-      setProducts([]);
-      setTotal(0);
-      setIsLoading(false);
-      activeProductsRequest.current = null;
-      return;
-    }
-
-    let query = supabase.from("products").select("id,name,name_ar,slug,price,discount,category,category_id,brand,brand_id,in_stock,is_active,countries,images,color_variants,sort_order", { count: "exact" });
-
-    if (search.trim()) {
-      const term = `%${search.trim()}%`;
-      query = query.or(`name.ilike.${term},name_ar.ilike.${term},slug.ilike.${term}`);
-    }
-
-    if (status !== "all") query = query.eq("is_active", status === "active");
-    if (stock !== "all") query = query.eq("in_stock", stock === "in");
-
-    if (categoryFilter === "__uncategorized__") {
-      query = query.is("category_id", null);
-    } else if (categoryFilter !== "all") {
-      const categoryIds = categoryScope.map((category) => category.id);
-      const categoryValues = categoryScope.flatMap((category) => [category.slug, category.name, category.name_ar]).filter(Boolean).map((value) => `"${value.split('"').join('\\"')}"`);
-
-      query = query.or(`category_id.in.(${categoryIds.join(",")}),category.in.(${categoryValues.join(",")})`);
-    }
-
-    if (brandFilter !== "all") query = query.eq("brand", brandFilter);
-
-    const from = (page - 1) * PAGE_SIZE;
-    const to = from + PAGE_SIZE - 1;
 
     try {
-      const { data, count, error } = await query
-        .order("sort_order", { ascending: true })
-        .order("created_at", { ascending: false })
-        .range(from, to)
-        .abortSignal(controller.signal);
+      const nextCatalog: DbProduct[] = [];
 
-      // A slower request must never replace a more recent search result.
-      if (requestId !== latestProductsRequest.current || controller.signal.aborted) return;
+      // Supabase limits response sizes per request; read every page so local
+      // search includes products outside the initially visible 25 rows.
+      for (let from = 0; ; from += CATALOG_BATCH_SIZE) {
+        const { data, error } = await supabase
+          .from("products")
+          .select("id,name,name_ar,slug,price,discount,category,category_id,brand,brand_id,in_stock,is_active,countries,images,color_variants,sort_order,created_at")
+          .order("sort_order", { ascending: true })
+          .order("created_at", { ascending: false })
+          .order("id", { ascending: true })
+          .range(from, from + CATALOG_BATCH_SIZE - 1)
+          .abortSignal(controller.signal);
 
-      if (error) {
-        toast({ title: "خطأ", description: "فشل في تحميل المنتجات", variant: "destructive" });
-      } else {
-        setProducts((data || []) as DbProduct[]);
-        setTotal(count || 0);
+        if (requestId !== latestProductsRequest.current || controller.signal.aborted) return;
+        if (error) throw error;
+
+        nextCatalog.push(...((data || []) as DbProduct[]));
+        if (!data || data.length < CATALOG_BATCH_SIZE) break;
+      }
+
+      if (requestId === latestProductsRequest.current) {
+        setCatalog(nextCatalog);
+        setSelected(new Set());
       }
     } catch (error) {
       if (requestId === latestProductsRequest.current && !controller.signal.aborted) {
-        console.error("Failed to load admin products", error);
+        console.error("Failed to load admin product catalog", error);
         toast({ title: "خطأ", description: "فشل في تحميل المنتجات", variant: "destructive" });
       }
     } finally {
@@ -270,7 +256,7 @@ const AdminProductsPage = () => {
   const toggleActive = async (id: string, currentState: boolean) => {
     const next = !currentState;
 
-    setProducts((current) => current.map((product) => product.id === id ? { ...product, is_active: next } : product));
+    setCatalog((current) => current.map((product) => product.id === id ? { ...product, is_active: next } : product));
 
     const { error } = await supabase.from("products").update({ is_active: next }).eq("id", id);
 

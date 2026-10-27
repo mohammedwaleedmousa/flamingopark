@@ -11,7 +11,6 @@ import { BarChart3, Boxes, CheckCircle2, Edit, Eye, EyeOff, Filter, Layers3, Loa
 import { cn } from "@/lib/utils";
 import { AdminPagination } from "@/components/admin/AdminPagination";
 import AdminPageHeader from "@/components/admin/AdminPageHeader";
-import { useDebounce } from "@/hooks/useDebounce";
 import { optimizeImage } from "@/lib/imageUrl";
 
 interface DbProduct {
@@ -60,7 +59,8 @@ const AdminProductsPage = () => {
   const [isLoading, setIsLoading] = useState(true);
 
   const [searchInput, setSearchInput] = useState(() => sessionStorage.getItem("admin-products-search") || "");
-  const search = useDebounce(searchInput, 120);
+  // Query Supabase on every change, without a timer or debounce.
+  const search = searchInput;
 
   const [status, setStatus] = useState<"all" | "active" | "inactive">(() => (sessionStorage.getItem("admin-products-status") as "all" | "active" | "inactive") || "all");
   const [stock, setStock] = useState<"all" | "in" | "out">(() => (sessionStorage.getItem("admin-products-stock") as "all" | "in" | "out") || "all");
@@ -169,11 +169,10 @@ const AdminProductsPage = () => {
   }, [availableBrandNames, brandFilter]);
 
   useEffect(() => {
-    // Avoid fetching with the old search term while the user is still typing.
-    if (searchInput !== search) return;
+    // Start a new search immediately for every keystroke.
     void fetchProducts();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchInput, search, status, stock, page, categoryFilter, brandFilter, categoryScope]);
+  }, [search, status, stock, page, categoryFilter, brandFilter, categoryScope]);
 
   useEffect(() => {
     // Search/filter changes do not affect the catalog-wide totals.

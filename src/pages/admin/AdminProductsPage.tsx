@@ -184,10 +184,10 @@ const AdminProductsPage = () => {
   }, []);
 
   useEffect(() => {
-    if (!isLoading && page > Math.max(1, Math.ceil(total / PAGE_SIZE))) {
+    if (!isLoading && (categoryFilter === "all" || categories.length > 0) && page > Math.max(1, Math.ceil(total / PAGE_SIZE))) {
       setPage(Math.max(1, Math.ceil(total / PAGE_SIZE)));
     }
-  }, [isLoading, page, total]);
+  }, [isLoading, page, total, categoryFilter, categories.length]);
 
   const fetchProducts = async () => {
     const requestId = ++latestProductsRequest.current;

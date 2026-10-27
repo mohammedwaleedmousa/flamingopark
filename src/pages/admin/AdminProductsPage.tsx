@@ -29,6 +29,7 @@ interface DbProduct {
   brand: string;
   brand_id: string | null;
   in_stock: boolean;
+  stock_quantity: number | null;
   countries: string[];
   is_active: boolean;
   is_featured: boolean;
@@ -51,7 +52,13 @@ const CATALOG_BATCH_SIZE = 1000;
 const AdminProductsPage = () => {
   // Keep a complete list in memory so typing never waits for a network request.
   const [catalog, setCatalog] = useState<DbProduct[]>([]);
-  const [stats, setStats] = useState({ total: 0, active: 0, inStock: 0, outOfStock: 0 });
+  // Totals come from the same cached catalog; no separate statistics query.
+  const stats = useMemo(() => ({
+    total: catalog.length,
+    active: catalog.filter((product) => product.is_active).length,
+    inStock: catalog.filter((product) => (product.stock_quantity ?? 0) > 0).length,
+    outOfStock: catalog.filter((product) => (product.stock_quantity ?? 0) <= 0).length,
+  }), [catalog]);
 
   const [page, setPage] = useState(() => {
     const saved = Number(sessionStorage.getItem("admin-products-page") || 1);
@@ -179,7 +186,6 @@ const AdminProductsPage = () => {
     // Search and filter changes are synchronous in memory. Fetch only on mount
     // or after an admin mutation, never on each keystroke or page change.
     void fetchProducts();
-    void fetchProductStats();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -204,7 +210,7 @@ const AdminProductsPage = () => {
       for (let from = 0; ; from += CATALOG_BATCH_SIZE) {
         const { data, error } = await supabase
           .from("products")
-          .select("id,name,name_ar,slug,price,discount,category,category_id,brand,brand_id,in_stock,is_active,countries,images,color_variants,sort_order,created_at")
+          .select("id,name,name_ar,slug,price,discount,category,category_id,brand,brand_id,in_stock,stock_quantity,is_active,countries,images,color_variants,sort_order,created_at")
           .order("sort_order", { ascending: true })
           .order("created_at", { ascending: false })
           .order("id", { ascending: true })
@@ -235,24 +241,6 @@ const AdminProductsPage = () => {
     }
   };
 
-  const fetchProductStats = async () => {
-    const { data, error } = await supabase.from("products").select("is_active,in_stock,stock_quantity");
-
-    if (error) {
-      console.error("Failed to fetch product stats", error);
-      return;
-    }
-
-    const rows = data || [];
-
-    setStats({
-      total: rows.length,
-      active: rows.filter((product) => product.is_active).length,
-      inStock: rows.filter((product) => (product.stock_quantity ?? 0) > 0).length,
-      outOfStock: rows.filter((product) => (product.stock_quantity ?? 0) <= 0).length,
-    });
-  };
-
   const toggleActive = async (id: string, currentState: boolean) => {
     const next = !currentState;
 
@@ -268,7 +256,6 @@ const AdminProductsPage = () => {
 
     toast({ title: "تم", description: next ? "تم تفعيل المنتج" : "تم تعطيل المنتج" });
 
-    await fetchProductStats();
   };
 
   const deleteOne = async (id: string) => {
@@ -281,7 +268,7 @@ const AdminProductsPage = () => {
 
     toast({ title: "تم", description: "تم حذف المنتج" });
 
-    await Promise.all([fetchProducts(), fetchProductStats()]);
+    await fetchProducts();
   };
 
   const toggleSelectAll = () => {
@@ -321,7 +308,7 @@ const AdminProductsPage = () => {
 
     toast({ title: "تم", description: `تم تحديث ${ids.length} منتج` });
 
-    await Promise.all([fetchProducts(), fetchProductStats()]);
+    await fetchProducts();
   };
 
   const bulkDelete = async () => {
@@ -342,7 +329,7 @@ const AdminProductsPage = () => {
 
     toast({ title: "تم", description: `تم حذف ${ids.length} منتج` });
 
-    await Promise.all([fetchProducts(), fetchProductStats()]);
+    await fetchProducts();
   };
 
   const bulkAssignCategory = async () => {

@@ -1,4 +1,11 @@
 const FLAMINGO_IMAGE_ZONE = "https://flamingoparkaden.com";
+const FLAMINGO_STORAGE_HOST = "hcomhdkmtqttzghjxjcb.supabase.co";
+const STOREFRONT_IMAGE_DIRECTORY = "/src/assets/storefront-images";
+const storefrontImages = import.meta.glob<string>("/src/assets/storefront-images/**/*.webp", {
+  eager: true,
+  import: "default",
+  query: "?url",
+});
 
 const getViewportAwareWidth = (requestedWidth: number) => {
   if (typeof window === "undefined") return requestedWidth;
@@ -21,6 +28,22 @@ const getViewportAwareWidth = (requestedWidth: number) => {
 
 const isSupabasePublicStorageUrl = (url: URL) =>
   url.hostname.endsWith("supabase.co") && url.pathname.includes("/storage/v1/object/public/");
+
+const getStorefrontImage = (url: URL, width: number, catalog: boolean) => {
+  if (url.hostname !== FLAMINGO_STORAGE_HOST || url.search || url.hash) return undefined;
+  const match = url.pathname.match(/^\/storage\/v1\/object\/public\/uploads\/(banners|categories|color-variants)\/([\w-]+)(?:\.[a-z0-9]+)?$/i);
+  if (!match) return undefined;
+
+  const [, folder, name] = match;
+  if (folder === "color-variants" && !catalog) return undefined;
+
+  const path = `${STOREFRONT_IMAGE_DIRECTORY}/${folder}/${name}`;
+  if (folder === "banners" && width <= 900) {
+    const mobileImage = storefrontImages[`${path}-mobile.webp`];
+    if (mobileImage) return mobileImage;
+  }
+  return storefrontImages[`${path}.webp`];
+};
 
 const getCloudflareOptions = (width: number, quality: number) => {
   const safeWidth = Math.max(240, Math.min(1920, Math.round(width)));
@@ -59,7 +82,7 @@ const buildOptimizedImageUrl = (url: string | null | undefined, width: number, q
     }
     // Do not proxy Supabase images through /cdn-cgi/image. A transform failure
     // was causing category and product images to render as broken images.
-    if (isSupabasePublicStorageUrl(u)) return u.toString();
+    if (isSupabasePublicStorageUrl(u)) return getStorefrontImage(u, optimizedWidth, false) || u.toString();
     return url;
   } catch {
     return url;
@@ -70,7 +93,7 @@ export const optimizeCatalogImage = (url?: string | null, width = 480, quality =
   if (!url?.trim()) return "/placeholder.svg";
   try {
     const parsed = new URL(url, FLAMINGO_IMAGE_ZONE);
-    if (isSupabasePublicStorageUrl(parsed)) return parsed.toString();
+    if (isSupabasePublicStorageUrl(parsed)) return getStorefrontImage(parsed, width, true) || parsed.toString();
     return optimizeImage(url, width, quality);
   } catch {
     return url;

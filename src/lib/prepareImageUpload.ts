@@ -137,6 +137,13 @@ function canvasToWebp(canvas: HTMLCanvasElement, quality: number): Promise<Blob>
   });
 }
 
+function fileFromCanvasBlob(blob: Blob): File {
+  const extension = UPLOAD_EXTENSION_BY_MIME[blob.type];
+  if (!extension) throw new Error("تعذر تحديد صيغة الصورة بعد الضغط");
+
+  return new File([blob], `${createUploadId()}.${extension}`, { type: blob.type });
+}
+
 function drawScaledCanvas(
   source: CanvasImageSource,
   sourceWidth: number,
@@ -240,11 +247,11 @@ async function compressStandardImage(
         if (blob.size <= targetBytes) {
           if (blob.size >= file.size && file.size <= targetBytes) return file;
 
-          return new File([blob], `${createUploadId()}.webp`, {
-            type: "image/webp",
-            lastModified: Date.now(),
-          });
+          return fileFromCanvasBlob(blob);
         }
+
+        // Browsers can return PNG when WebP encoding is unavailable. PNG ignores quality.
+        if (blob.type !== "image/webp") break;
       }
 
       const longest = Math.max(canvas.width, canvas.height);
@@ -257,10 +264,7 @@ async function compressStandardImage(
     }
 
     if (bestBlob && bestBlob.size < file.size) {
-      return new File([bestBlob], `${createUploadId()}.webp`, {
-        type: "image/webp",
-        lastModified: Date.now(),
-      });
+      return fileFromCanvasBlob(bestBlob);
     }
 
     if (file.size <= targetBytes) return file;
@@ -305,10 +309,6 @@ export async function prepareImageUpload(
   const targetBytes = Math.round(maxSizeMB * 1024 * 1024);
   const maxDimension = Math.max(720, opts.maxWidthOrHeight ?? DEFAULT_MAX_DIMENSION);
   const declaredMime = inferImageMimeType(file);
-
-  if (DIRECT_UPLOAD_MIMES.has(declaredMime)) {
-    return compressStandardImage(file, maxDimension, targetBytes);
-  }
 
   const sniffedMime = await sniffImageMimeType(file);
   const mime = sniffedMime || declaredMime;

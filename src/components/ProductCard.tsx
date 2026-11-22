@@ -39,8 +39,6 @@ const isHeicImage = (url: string) => {
   return cleanUrl.endsWith(".heic") || cleanUrl.endsWith(".heif");
 };
 
-const isCloudflareCatalogTransform = (url: string) => url.includes("/cdn-cgi/image/");
-
 const ProductCard = ({ product, index = 2, badge, onQuickView }: ProductCardProps) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -110,7 +108,7 @@ const ProductCard = ({ product, index = 2, badge, onQuickView }: ProductCardProp
   const handleMainImageError = (event: SyntheticEvent<HTMLImageElement>) => {
     const image = event.currentTarget;
 
-    if (mainImage && isCloudflareCatalogTransform(image.currentSrc || image.src) && image.dataset.originalTried !== "1") {
+    if (mainImage && optimizedMainImage !== mainImage && image.dataset.originalTried !== "1") {
       image.dataset.originalTried = "1";
       image.removeAttribute("srcset");
       image.src = mainImage;

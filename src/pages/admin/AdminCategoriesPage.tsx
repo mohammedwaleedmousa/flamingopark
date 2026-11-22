@@ -325,73 +325,24 @@ const AdminCategoriesPage = () => {
     setUploading(true);
 
     try {
-      const [{ default: imageCompression }, { default: heic2any }] = await Promise.all([import("browser-image-compression"), import("heic2any")]);
-
-      let uploadFile: File = file;
-
-      const extension = file.name.split(".").pop()?.toLowerCase();
-
-      const isHeic = extension === "heic" || extension === "heif" || file.type === "image/heic" || file.type === "image/heif";
-
-      if (isHeic) {
-        try {
-          const converted = await heic2any({
-            blob: file,
-            toType: "image/jpeg",
-            quality: 0.9,
-          });
-
-          const convertedBlob = Array.isArray(converted) ? converted[0] : converted;
-
-          uploadFile = new File([convertedBlob], file.name.replace(/\.(heic|heif)$/i, ".jpg"), {
-            type: "image/jpeg",
-          });
-        } catch (error: any) {
-          const browserReadable = String(error?.message || "").toLowerCase().includes("already browser readable");
-
-          if (!browserReadable) throw error;
-
-          uploadFile = file;
-        }
-      }
-
-      const compressedFile = await imageCompression(uploadFile, {
+      const { uploadOptimizedImage } = await import("@/lib/prepareImageUpload");
+      const imageUrl = await uploadOptimizedImage(file, "categories", {
         maxSizeMB: 0.45,
         maxWidthOrHeight: 1200,
-        useWebWorker: true,
-        fileType: "image/webp",
-        initialQuality: 0.86,
       });
-
-      const uniquePart = typeof crypto !== "undefined" && "randomUUID" in crypto ? crypto.randomUUID() : `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
-
-      const path = `categories/${uniquePart}.webp`;
-
-      const { error: uploadError } = await supabase.storage.from("uploads").upload(path, compressedFile, {
-        contentType: "image/webp",
-        cacheControl: "31536000",
-        upsert: false,
-      });
-
-      if (uploadError) throw uploadError;
-
-      const { data } = supabase.storage.from("uploads").getPublicUrl(path);
 
       setFormData((current) => ({
         ...current,
-        image_url: data.publicUrl,
+        image_url: imageUrl,
       }));
 
-      toast({
-        title: "تم رفع الصورة",
-        description: "تم تحسين الصورة وتحويلها إلى WebP.",
-      });
-    } catch (error: any) {
+      toast({ title: "تم رفع الصورة" });
+    } catch (error) {
       console.error("Category image upload error:", error);
 
       toast({
         title: "فشل رفع الصورة",
-        description: error?.message || "تعذر معالجة الصورة.",
+        description: error instanceof Error ? error.message : "تعذر معالجة الصورة.",
         variant: "destructive",
       });
     } finally {

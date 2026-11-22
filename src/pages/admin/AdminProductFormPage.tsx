@@ -52,9 +52,9 @@ interface ProductFeature {
   desc: string;
 }
 
-const prepareImage = async (file: File) => {
-  const { prepareImageUpload } = await import('@/lib/prepareImageUpload');
-  return prepareImageUpload(file);
+const uploadImage = async (file: File, folder: string) => {
+  const { uploadOptimizedImage } = await import('@/lib/prepareImageUpload');
+  return uploadOptimizedImage(file, folder);
 };
 
 const parseLocalizedNumber = (value: string) => Number(
@@ -970,14 +970,8 @@ const AdminProductFormPage = () => {
                       if (!file) return;
                       setUploadingAccessoryImage(true);
                       try {
-                        const prepared = await prepareImage(file);
-                        const path = `accessories/${Date.now()}-${prepared.name}`;
-                        const { error } = await supabase.storage
-                          .from('uploads')
-                          .upload(path, prepared, { contentType: 'image/webp', cacheControl: '31536000', upsert: false });
-                        if (error) throw error;
-                        const { data: urlData } = supabase.storage.from('uploads').getPublicUrl(path);
-                        setNewAccessory(prev => ({ ...prev, image_url: urlData.publicUrl }));
+                        const imageUrl = await uploadImage(file, 'accessories');
+                        setNewAccessory(prev => ({ ...prev, image_url: imageUrl }));
                       } catch (err: any) {
                         toast({ title: 'فشل رفع الصورة', description: err?.message, variant: 'destructive' });
                       } finally {
@@ -1272,13 +1266,7 @@ const AdminProductFormPage = () => {
                                 const urls: string[] = [];
                                 for (const f of files) {
                                   try {
-                                    const prepared = await prepareImage(f);
-                                    const path = `products/quality-${Date.now()}-${Math.random().toString(36).slice(2, 8)}.webp`;
-                                    const { error } = await supabase.storage.from('uploads').upload(path, prepared, { contentType: 'image/webp', cacheControl: '31536000', upsert: false });
-                                    if (!error) {
-                                      const { data } = supabase.storage.from('uploads').getPublicUrl(path);
-                                      urls.push(data.publicUrl);
-                                    }
+                                    urls.push(await uploadImage(f, 'products/quality'));
                                   } catch (err: any) {
                                     toast({ title: `فشل رفع ${f.name}`, description: err?.message, variant: 'destructive' });
                                   }

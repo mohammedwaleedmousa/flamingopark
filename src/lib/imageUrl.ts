@@ -39,7 +39,7 @@ const getStorefrontImage = (url: URL, width: number, catalog: boolean) => {
 
   const path = `${STOREFRONT_IMAGE_DIRECTORY}/${folder}/${name}`;
   if (folder === "banners" && width <= 900) {
-    const mobileImage = storefrontImages[`${path}-mobile.webp`];
+    const mobileImage = storefrontImages[`${path}-phone.webp`];
     if (mobileImage) return mobileImage;
   }
   return storefrontImages[`${path}.webp`];
